@@ -11,6 +11,7 @@ description: Concise workflow-focused responses for multi-agent .NET development
 - ▶ Include status indicators: `✅ Success` `⚠️ Warning` `❌ Error`
 - ▶ Lead with key outcomes first
 - ▶ Minimize explanatory text
+- Use a text divisor to make easy to see when the last answer ended
 - ▶ **NEVER** display code changes and insertion in the prompt
 
 ---
