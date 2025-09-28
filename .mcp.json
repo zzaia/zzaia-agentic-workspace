@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "tavily": {
+      "command": "npx",
+      "args": ["tavily-mcp@latest"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
+    },
+    "azure-devops": {
+      "command": "npx",
+      "args": ["@azure-devops/mcp"],
+      "env": {
+        "AZURE_DEVOPS_ORGANIZATION": "${AZURE_DEVOPS_ORGANIZATION}",
+        "AZURE_DEVOPS_PAT": "${AZURE_DEVOPS_PAT}",
+        "AZURE_DEVOPS_PROJECT": "${AZURE_DEVOPS_PROJECT}"
+      }
+    }
+  }
+}
