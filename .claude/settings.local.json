@@ -1,3 +1,9 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(git worktree:*)"
+    ]
+  },
   "outputStyle": "agentic-concise"
 }
