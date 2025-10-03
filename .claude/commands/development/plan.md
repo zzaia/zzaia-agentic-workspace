@@ -51,15 +51,18 @@ Generate or update comprehensive, actionable plans for user-requested work by an
 
 5. **Plan Finalization**
 
-   - Create one concise risk analysis documentation using the @agent-zzaia-documentation-architect
-   - Create one concise plan documentation using the @agent-zzaia-documentation-architect
-     - The plan documentation must have a step-by-step implementation diagram, and step checkboxes with descriptions
-   - Create a concise architecture documentation using the @agent-zzaia-documentation-architect
-     - Each application involved in the plan must have it's own architecture documentation
-     - The architecture documentation must have the mermaid sequential diagram about the application logical flow that will be implemented
-   - Create all documentations in `./workspace/work-items/<WorkItemName>` folder
+   - Use zzaia-documentation-architect to generate implementation plan documentation
+   - **MANDATORY**: Use `implementation-plan.md` template from `.claude/templates/documentation/`
+   - **MANDATORY**: Use `service-implementation-plan.md` template for each service/application
+   - Generate comprehensive implementation plan with:
+     - Phase hierarchy with Gantt chart
+     - Parallel vs sequential execution strategy
+     - Team structure and resource allocation
+     - Success criteria and risk mitigation
+     - Timeline summary and next steps
+   - Create service-specific implementation plans for each application
    - Display the overall information in prompt
-   - Estimate agentic developing time, complexity, and resource requirements
+   - Estimate agentic developing effort, complexity, and resource requirements
 
 6. **User Interaction & Improvements**
 
@@ -124,11 +127,24 @@ sequenceDiagram
 /plan create API documentation for microservices
 ```
 
+## DOCUMENTATION TEMPLATES
+
+MANDATORY EXCLUSIVE TEMPLATES:
+
+- `implementation-plan.md` - Master implementation plan
+- `service-implementation-plan.md` - Service-specific implementation details
+
+## OUTPUT LOCATIONS
+
+- `./workspace/work-items/<WorkItemName>/implementation-plan.md`
+- `./workspace/work-items/<WorkItemName>/<service-name>/<service-name>-implementation-plan.md`
+
 ## OUTPUT
 
 - Interactive clarification session with user
 - Critical analysis and risk assessment from task clarifier
-- Comprehensive action plan with phase breakdown
-- Implementation strategy and alternatives
+- Comprehensive implementation plan with phase breakdown
+- Implementation strategy with parallel/sequential execution
 - Resource requirements and time estimates
-- Documentation and knowledge transfer plan
+- Service-specific implementation plans
+- All documentation using mandatory templates
