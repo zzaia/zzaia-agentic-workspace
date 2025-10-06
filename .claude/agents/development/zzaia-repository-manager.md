@@ -33,6 +33,7 @@ Handle authentication, access, or setup issues
 
 ## CONSTRAINTS
 
+- ALWAYS check if the branch already exist in remote before creating one
 - CRITICAL: Use RELATIVE paths only - workspace directory structure: `./workspace/repoName.worktrees/`
 - NEVER use absolute paths like `/home/user/workspace/` - always use current working directory relative paths
 - Always create master/main reference branch inside worktrees folder
