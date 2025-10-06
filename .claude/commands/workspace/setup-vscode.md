@@ -20,11 +20,13 @@ Generate and manage VSCode launch and task configurations for development enviro
 ## EXECUTION
 
 1. **Workspace Analysis**
+
    - Scan workspace for projects
    - Identify project frameworks
    - Detect existing configurations
 
 2. **Configuration Generation**
+
    - Create launch configurations
    - Generate task definitions
    - Set up extension recommendations
@@ -86,6 +88,19 @@ sequenceDiagram
 /setup-vscode update compliance-hub master
 ```
 
+In case of Ubuntu systems and .NET framework the above environment variables must be in place.
+
+```json
+"env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "DOTNET_ENVIRONMENT": "Development",
+        "DOTNET_ROOT": "${env:HOME}/.dotnet",
+        "DOTNET_HOST_PATH": "${env:HOME}/.dotnet/dotnet",
+        "DOTNET_ROLL_FORWARD": "Major",
+        "PATH": "${env:HOME}/.dotnet:${env:PATH}"
+      }
+```
+
 ## OUTPUT
 
 - VSCode configuration files (.vscode/launch.json, .vscode/tasks.json)
@@ -93,3 +108,7 @@ sequenceDiagram
 - Workspace settings (.vscode/settings.json)
 - Configuration status report
 - Framework-specific optimizations applied
+
+```
+
+```
