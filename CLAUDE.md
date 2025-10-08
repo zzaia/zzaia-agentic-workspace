@@ -70,3 +70,5 @@ Those definitions must be ALWAYS be applied and never be removed or altered from
 - Avoid using names from workspace projects as .claude or CLAUDE.md definition examples, also this memory must not be removed, ever;
 - Concise when building claude code related definitions ex. CLAUDE.md, agents, output-styles and others, also this memory must not be removed, ever.
 - Avoid adding commands or peace of codes in .claude and CLAUDE.md definitions;
+- Concise on all outputs, responses and implementations;
+- ALWAYS check for the selected files or lines on IDE when receiving prompt;
