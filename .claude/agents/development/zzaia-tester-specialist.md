@@ -50,6 +50,7 @@ Validate application quality through A-to-B endpoint testing, API contract verif
 - Follow application folder structure and naming conventions
 - Ensure tests run against live application instances
 - Focus on detection and reporting, not remediation
+- ALWAYS Concise and acertive implementations
 
 ## CAPABILITIES
 
