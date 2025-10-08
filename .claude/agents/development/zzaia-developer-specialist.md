@@ -30,7 +30,7 @@ Develop solutions following architectural principles. MANDATORY: Apply language 
    - Write comprehensive testing per language standards
    - Ensure successful builds and tests
    - Maintain code quality and architectural consistency
-   - Concise and acertive implementations
+   - ALWAYS Concise and acertive implementations
    - Apply SOLID principles
    - Apply DDD principles
    - Apply TDD principles

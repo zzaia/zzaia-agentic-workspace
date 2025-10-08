@@ -1,6 +1,6 @@
 ---
 name: /test
-description: Execute all existing tests using framework detection and comprehensive test execution
+description: Develop and run tests using framework detection and comprehensive test execution
 parameters:
   - name: repoName
     description: Repository name in workspace
@@ -18,7 +18,7 @@ parameters:
 
 ## PURPOSE
 
-Execute all existing tests within a specific project using framework detection to run building, unit, integration, and a-b or load testing comprehensively.
+Develop and run all existing tests within a specific project using framework detection to run building, unit, integration, and a-b or load testing comprehensively.
 
 ## EXECUTION
 
@@ -89,6 +89,31 @@ sequenceDiagram
 # Test a-b tests
 /test frontend-app main dashboard ab
 ```
+
+### Testing Types
+
+1. Load Testing (Primary Use Case)
+   Simulating normal expected load
+   Testing system performance under typical user traffic
+2. Stress Testing
+   Testing beyond normal capacity
+   Finding breaking points and system limits
+3. Spike Testing
+   Testing sudden traffic increases
+   Validating system behavior during traffic spikes
+4. Volume Testing
+   Testing with large amounts of data
+   Database performance under heavy data loads
+5. Smoke Testing
+   Basic functionality verification
+   Quick sanity checks with minimal load
+6. API Testing
+   Functional API testing (not just performance)
+   Response validation
+   Data integrity checks
+7. End-to-End Testing
+   Browser automation with k6/browser extension
+   User journey testing
 
 ## OUTPUT
 
