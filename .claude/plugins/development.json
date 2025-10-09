@@ -1,0 +1,25 @@
+{
+  "name": "zzaia-development",
+  "version": "1.0.0",
+  "description": "Software development lifecycle operations across multiple languages",
+  "category": "development",
+  "commands": [
+    "/development:develop",
+    "/development:build",
+    "/development:test",
+    "/development:review",
+    "/development:migrations",
+    "/development:git",
+    "/development:update-dotnet-packages"
+  ],
+  "agents": [
+    "zzaia-developer-specialist",
+    "zzaia-tester-specialist",
+    "zzaia-code-reviewer"
+  ],
+  "rules": [
+    "dotnet-coding-rules",
+    "python-coding-rules",
+    "javascript-coding-rules"
+  ]
+}

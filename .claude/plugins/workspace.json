@@ -1,0 +1,13 @@
+{
+  "name": "zzaia-workspace",
+  "version": "1.0.0",
+  "description": "Multi-repository workspace configuration and management",
+  "category": "workspace",
+  "commands": [
+    "/workspace:new",
+    "/workspace:setup-vscode"
+  ],
+  "agents": [
+    "zzaia-repository-manager"
+  ]
+}

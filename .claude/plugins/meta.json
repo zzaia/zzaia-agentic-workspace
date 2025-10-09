@@ -1,0 +1,14 @@
+{
+  "name": "zzaia-meta",
+  "version": "1.0.0",
+  "description": "System configuration and Claude Code utilities",
+  "category": "meta",
+  "commands": [
+    "/ask",
+    "/websearch"
+  ],
+  "agents": [
+    "zzaia-meta-agent",
+    "zzaia-meta-command"
+  ]
+}
