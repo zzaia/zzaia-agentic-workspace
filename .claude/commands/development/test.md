@@ -37,7 +37,13 @@ Develop and run all existing tests within a specific project using framework det
    - Identify test types: unit, integration, a-b testing
    - Determine build requirements
 
-3. **Test Execution**
+3. **Develop Test cases**
+
+   - Skip this step in case of just running tests
+   - Executes implementation using zzaia-developer-specialist agent
+     - Can execute multiple agents for parallel implementations
+
+4. **Test Execution**
    - Execute build process if required
    - Run specified test types or all available tests
    - Apply test type filtering (unit, integration, load, ab)
