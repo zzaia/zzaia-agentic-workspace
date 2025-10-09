@@ -1,0 +1,15 @@
+{
+  "name": "zzaia-management",
+  "version": "1.0.0",
+  "description": "Project management and work item coordination",
+  "category": "management",
+  "commands": [
+    "/management:work-items",
+    "/management:plan",
+    "/management:architect"
+  ],
+  "agents": [
+    "zzaia-work-item-manager",
+    "zzaia-task-clarifier"
+  ]
+}

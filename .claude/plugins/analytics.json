@@ -1,0 +1,15 @@
+{
+  "name": "zzaia-analytics",
+  "version": "1.0.0",
+  "description": "Machine learning dataset discovery and analysis workflows",
+  "category": "analytics",
+  "commands": [
+    "/analytics:explorate",
+    "/analytics:analyze"
+  ],
+  "agents": [
+    "zzaia-domain-exploration",
+    "zzaia-dataset-exploration",
+    "zzaia-problem-exploration"
+  ]
+}
