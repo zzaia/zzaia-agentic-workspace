@@ -14,6 +14,9 @@ parameters:
   - name: testType
     description: Optional test type filter (unit, integration, load, ab, all)
     required: false
+  - name: testFramework
+    description: Optional test framework selection (k6, locust)
+    required: false
 ---
 
 ## PURPOSE
@@ -35,8 +38,6 @@ Develop and run all existing tests within a specific project using framework det
    - Determine build requirements
 
 3. **Test Execution**
-   - NEVER try to fix tests or applications
-   - NEVER try to implement new tests
    - Execute build process if required
    - Run specified test types or all available tests
    - Apply test type filtering (unit, integration, load, ab)
@@ -47,6 +48,7 @@ Develop and run all existing tests within a specific project using framework det
 ## AGENTS
 
 - **zzaia-tester-specialist**: Framework detection and comprehensive test execution in readonly mode
+- **zzaia-developer-specialist**: Developer agent when a test need to be implemented or changed
 
 ## WORKFLOW
 
@@ -112,8 +114,13 @@ sequenceDiagram
    Response validation
    Data integrity checks
 7. End-to-End Testing
-   Browser automation with k6/browser extension
+   Browser automation testing
    User journey testing
+
+### Testing Frameworks
+
+1. Grafana K6, using JavaScript code to define testing cases
+2. Locust, using python code to define testing cases
 
 ## OUTPUT
 
