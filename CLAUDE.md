@@ -59,9 +59,7 @@ Language-specific coding standards are defined in `.claude/rules/` directory:
 
 - Agent orchestration system with specialized responsibilities
 - Language-appropriate architecture across all projects
-- Single active branch per repository per session
 - Cross-repository feature development coordination
-- Quality-first approach with mandatory testing
 
 ## MANDATORY DEFINITIONS
 
@@ -70,5 +68,5 @@ Those definitions must be ALWAYS be applied and never be removed or altered from
 - Avoid using names from workspace projects as .claude or CLAUDE.md definition examples, also this memory must not be removed, ever;
 - Concise when building claude code related definitions ex. CLAUDE.md, agents, output-styles and others, also this memory must not be removed, ever.
 - Avoid adding commands or peace of codes in .claude and CLAUDE.md definitions;
-- Concise on all outputs, responses and implementations;
-- ALWAYS check for the selected files or lines on IDE when receiving prompt;
+- ALWAYS be Concise on all outputs, responses and implementations;
+- ALWAYS be check for the selected files or lines on IDE when receiving prompt;
