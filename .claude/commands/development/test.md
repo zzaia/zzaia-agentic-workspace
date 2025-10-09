@@ -145,7 +145,8 @@ tests/k6/
 │       ├── helpers.js          # Domain-specific business logic
 │       └── {test-name}.js      # Test scenario (uses domain helpers)
 ├── run-local.sh                # Local execution script
-└── run-{env}.sh                # Environment execution scripts
+├── run-{env}.sh                # Environment execution scripts
+└── README.md                   # Documentation (setup, usage, structure)
 ```
 
 **Key Principles:**
