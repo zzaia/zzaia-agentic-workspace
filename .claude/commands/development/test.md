@@ -50,6 +50,8 @@ Develop and run all existing tests within a specific project using framework det
    - Execute tests with coverage analysis
    - Generate comprehensive test reports
    - In case of not finding tests just skip testing
+   - Executes tests using zzaia-tester-specialist agent
+     - Can execute multiple agents for parallel testing
 
 ## AGENTS
 
@@ -150,6 +152,7 @@ tests/k6/
 ```
 
 **Key Principles:**
+
 - `lib/helpers.js` - Generic, URL-agnostic utilities (httpPost, httpGet, poll, validators)
 - `scenarios/{domain}/helpers.js` - Domain-specific logic using generic helpers
 - Global env vars: `AUTH_TOKEN`, `BASE_URL`
