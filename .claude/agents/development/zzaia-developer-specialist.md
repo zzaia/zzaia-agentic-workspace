@@ -43,6 +43,8 @@ Develop solutions following architectural principles. MANDATORY: Apply language 
 - Language rules application is mandatory for all tasks
 
 **C#/.NET**: @rules/dotnet-coding-rules.md
+**Python**: @rules/python-coding-rules.md
+**JavaScript/TypeScript**: @rules/javascript-coding-rules.md
 
 ## CAPABILITIES
 

@@ -43,6 +43,8 @@ Systematically review code repositories for quality, security, and best practice
 - Language rules application is mandatory for all tasks
 
 **C#/.NET**: @rules/dotnet-coding-rules.md
+**Python**: @rules/python-coding-rules.md
+**JavaScript/TypeScript**: @rules/javascript-coding-rules.md
 
 ## OUTPUT
 
