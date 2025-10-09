@@ -1,10 +1,13 @@
 ---
 name: /new
-description: Add new project repository to workspace or create new worktree branch
+description: Add new remote project repository worktrees to workspace at master/main branch or a specific one branch
 parameters:
-  - name: input
-    description: Repository URLs to clone OR "repository_name branch_name" to create new worktree branch
+  - name: repo 
+    description: Repository URLs to clone 
     required: true
+  - name: branch 
+    description: Remote branch name to clone or create
+    required: false 
 ---
 
 ## PURPOSE
@@ -32,6 +35,8 @@ Handle two primary operations:
 1. **Input Parsing**
    - Extract repository name and branch name
    - Validate existing worktree structure
+   - Default remote branch master/main
+   - If branch is specified check in remote for it before creating new local one 
 
 2. **Agent Dispatch**
    - Call zzaia-repository-manager for branch creation
