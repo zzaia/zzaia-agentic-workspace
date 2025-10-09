@@ -125,8 +125,34 @@ sequenceDiagram
 
 ### Testing Frameworks
 
-1. Grafana K6, using JavaScript code to define testing cases
-2. Locust, using python code to define testing cases
+1. **Grafana K6** - JavaScript-based load testing
+2. **Locust** - Python-based load testing
+
+### K6 Test File Structure Example
+
+Recommended structure for K6 tests with reusable generic helpers:
+
+```
+tests/k6/
+├── config/
+│   ├── local.json              # Local env config
+│   └── stg.json                # STG env config
+├── lib/
+│   ├── config-loader.js        # Config management
+│   └── helpers.js              # Generic URL-agnostic helpers
+├── scenarios/
+│   └── {domain}/               # Domain-specific folder (e.g., orders, markets)
+│       ├── helpers.js          # Domain-specific business logic
+│       └── {test-name}.js      # Test scenario (uses domain helpers)
+├── run-local.sh                # Local execution script
+└── run-{env}.sh                # Environment execution scripts
+```
+
+**Key Principles:**
+- `lib/helpers.js` - Generic, URL-agnostic utilities (httpPost, httpGet, poll, validators)
+- `scenarios/{domain}/helpers.js` - Domain-specific logic using generic helpers
+- Global env vars: `AUTH_TOKEN`, `BASE_URL`
+- Separation of concerns: generic utilities vs. business logic
 
 ## OUTPUT
 
