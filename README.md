@@ -174,5 +174,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **Marketplace**: [.claude/marketplace.json](.claude/marketplace.json)
 - **Issues**: [GitHub Issues](https://github.com/zzaia/zzaia-agentic-workspace/issues)
 - **Built with**: [Claude Code](https://claude.ai/code)
-
----
