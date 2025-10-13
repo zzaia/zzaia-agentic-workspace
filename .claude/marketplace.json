@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zzaia/transfero-agentic-workspace"
+    "url": "https://github.com/zzaia/zzaia-agentic-workspace"
   },
   "license": "MIT",
   "keywords": [
@@ -23,13 +23,7 @@
     "workspace",
     "automation"
   ],
-  "categories": [
-    "analytics",
-    "development",
-    "management",
-    "workspace",
-    "meta"
-  ],
+  "categories": ["analytics", "development", "management", "workspace", "meta"],
   "plugins": [
     {
       "id": "analytics",
@@ -74,7 +68,7 @@
   "requirements": {
     "claudeCode": ">=1.0.0"
   },
-  "homepage": "https://github.com/zzaia/transfero-agentic-workspace",
-  "documentation": "https://github.com/zzaia/transfero-agentic-workspace#readme",
-  "bugs": "https://github.com/zzaia/transfero-agentic-workspace/issues"
+  "homepage": "https://github.com/zzaia/zzaia-agentic-workspace",
+  "documentation": "https://github.com/zzaia/zzaia-agentic-workspace#readme",
+  "bugs": "https://github.com/zzaia/zzaia-agentic-workspace/issues"
 }

@@ -10,8 +10,8 @@
 ### Clone and Use Locally
 
 ```bash
-git clone https://github.com/raphaelpizzaia/transfero-agentic-workspace.git
-cd transfero-agentic-workspace
+git clone https://github.com/zzaia/zzaia-agentic-workspace.git
+cd zzaia-agentic-workspace
 ```
 
 ### Use as Remote Plugin
@@ -23,7 +23,7 @@ Add to your `.claude/plugins.json`:
   "plugins": [
     {
       "name": "zzaia-workspace",
-      "url": "https://github.com/raphaelpizzaia/transfero-agentic-workspace"
+      "url": "https://github.com/zzaia/zzaia-agentic-workspace"
     }
   ]
 }
@@ -172,7 +172,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 - **Documentation**: [CLAUDE.md](CLAUDE.md)
 - **Marketplace**: [.claude/marketplace.json](.claude/marketplace.json)
-- **Issues**: [GitHub Issues](https://github.com/raphaelpizzaia/transfero-agentic-workspace/issues)
+- **Issues**: [GitHub Issues](https://github.com/zzaia/zzaia-agentic-workspace/issues)
 - **Built with**: [Claude Code](https://claude.ai/code)
 
 ---
