@@ -8,13 +8,16 @@
 ## 🚀 Quick Start
 
 ### Clone and Use Locally
+
 ```bash
 git clone https://github.com/raphaelpizzaia/transfero-agentic-workspace.git
 cd transfero-agentic-workspace
 ```
 
 ### Use as Remote Plugin
+
 Add to your `.claude/plugins.json`:
+
 ```json
 {
   "plugins": [
@@ -29,12 +32,14 @@ Add to your `.claude/plugins.json`:
 ## 📋 Available Commands
 
 ### Analytics
+
 Machine learning dataset discovery and analysis workflows.
 
 - [**`/analytics:explorate`**](.claude/commands/analytics/workflows/explorate.md) - Domain and dataset exploration
 - [**`/analytics:analyze`**](.claude/commands/analytics/workflows/analyze.md) - Dataset analysis and visualization
 
 ### Development
+
 Software development lifecycle operations.
 
 - [**`/development:develop`**](.claude/commands/development/develop.md) - Full development workflow
@@ -46,6 +51,7 @@ Software development lifecycle operations.
 - [**`/development:update-dotnet-packages`**](.claude/commands/development/update-dotnet-packages.md) - Package management
 
 ### Management
+
 Project management and work item coordination.
 
 - [**`/management:work-items`**](.claude/commands/management/work-items.md) - Work item retrieval
@@ -53,12 +59,14 @@ Project management and work item coordination.
 - [**`/management:architect`**](.claude/commands/management/architect.md) - Architecture specifications
 
 ### Workspace
+
 Multi-repository workspace configuration.
 
 - [**`/workspace:new`**](.claude/commands/workspace/new.md) - Add repository
 - [**`/workspace:setup-vscode`**](.claude/commands/workspace/setup-vscode.md) - VS Code configuration
 
 ### Meta
+
 System utilities and information.
 
 - [**`/ask`**](.claude/commands/ask.md) - Context-aware Q&A
@@ -86,14 +94,14 @@ sequenceDiagram
 
 ## 🤖 Specialized Agents
 
-| Agent | Role | Definition |
-|-------|------|------------|
-| [**zzaia-task-clarifier**](.claude/agents/zzaia-task-clarifier.md) | Requirements Analysis | Task specifications |
-| [**zzaia-developer-specialist**](.claude/agents/development/zzaia-developer-specialist.md) | Implementation | Multi-language development |
-| [**zzaia-documentation-architect**](.claude/agents/zzaia-documentation-architect.md) | Documentation | Documentation creation |
-| [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md) | Repository Coordination | Worktree operations |
-| [**zzaia-tester-specialist**](.claude/agents/development/zzaia-tester-specialist.md) | Quality Assurance | Build and test validation |
-| [**zzaia-code-reviewer**](.claude/agents/development/zzaia-code-reviewer.md) | Code Quality | Static analysis |
+| Agent                                                                                      | Role                    | Definition                 |
+| ------------------------------------------------------------------------------------------ | ----------------------- | -------------------------- |
+| [**zzaia-task-clarifier**](.claude/agents/zzaia-task-clarifier.md)                         | Requirements Analysis   | Task specifications        |
+| [**zzaia-developer-specialist**](.claude/agents/development/zzaia-developer-specialist.md) | Implementation          | Multi-language development |
+| [**zzaia-documentation-architect**](.claude/agents/zzaia-documentation-architect.md)       | Documentation           | Documentation creation     |
+| [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md)                 | Repository Coordination | Worktree operations        |
+| [**zzaia-tester-specialist**](.claude/agents/development/zzaia-tester-specialist.md)       | Quality Assurance       | Build and test validation  |
+| [**zzaia-code-reviewer**](.claude/agents/development/zzaia-code-reviewer.md)               | Code Quality            | Static analysis            |
 
 ## 📁 Structure
 
@@ -143,10 +151,13 @@ workspace/            # Multi-repository workspace
 ## 💡 Usage Modes
 
 ### Local Workspace
+
 Clone repository and use with VS Code workspace functionality for multi-repository development, this way you can improve the agentic system beside the normal development.
 
 ### Modular Plugins
+
 Install individual plugin categories:
+
 - **Analytics**: `.claude/plugins/analytics.json`
 - **Development**: `.claude/plugins/development.json`
 - **Management**: `.claude/plugins/management.json`
@@ -165,5 +176,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **Built with**: [Claude Code](https://claude.ai/code)
 
 ---
-
-**Made with ❤️ by [Raphael Pizzaia](https://github.com/raphaelpizzaia)**
