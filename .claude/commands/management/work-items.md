@@ -97,7 +97,7 @@ sequenceDiagram
 
 ```bash
 # List recent project work items
-/work-items --project "Transfero" --limit 10
+/work-items --project "Finance" --limit 10
 
 # Find specific work item (detailed view)
 /work-items --id 46104
