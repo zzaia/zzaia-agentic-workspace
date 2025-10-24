@@ -74,7 +74,7 @@ sequenceDiagram
 
 ## DOCUMENTATION TEMPLATES
 
-MANDATORY EXCLUSIVE TEMPLATES:
+**MANDATORY**: Use those exclusive templates defined in the `.claude/templates/documentation/` folder: 
 
 - `architecture-overview.md`
 - `event-notifications.md` (if event-driven)
@@ -96,7 +96,8 @@ MANDATORY EXCLUSIVE TEMPLATES:
 - Defines service boundaries and interactions
 - Documents architectural decisions
 - Provides high-level system overview
-- NO implementation-specific details
+- Do not add implementation-specific details
+- Be concise 
 - Presents architectural insights for user review before documentation generation
 - Allows user to confirm or adjust architecture before proceeding
 
