@@ -38,6 +38,7 @@ Generate comprehensive architectural documentation for a system, focusing on arc
    - Generate documentation using predefined templates
    - Create C4 diagrams (Context and Container levels)
    - Document event flows for event-driven systems
+   - **NEVER** write code implementations, configurations 
 
 ## AGENTS
 
