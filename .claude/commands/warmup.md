@@ -16,7 +16,9 @@ Establish session-wide conversational guidelines by reading CLAUDE.md and applyi
 
 ## EXECUTION
 
-1. **Load Configuration**: Read @CLAUDE.md from project root
+1. **Load Configuration**: 
+   - Read @CLAUDE.md from project root
+   - Focus the context in provided repo and branch, when specified
 
 2. **Apply Guidelines**: Set conversational rules for current session
    - Keep explanations brief and concise
