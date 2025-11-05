@@ -1,6 +1,13 @@
 ---
 description: Initialize session with CLAUDE.md guidelines and conversational rules
-argument-hint: "[optional: verbose]"
+argument-hint: "[repo: repoName] [brach: branchName] "
+parameters:
+  - name: repo 
+    description: Repository name to focus the work inside the workspace  
+    required: false 
+  - name: branch 
+    description: Branch name to focus the work inside the workspace  
+    required: false 
 ---
 
 ## PURPOSE

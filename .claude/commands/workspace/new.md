@@ -1,6 +1,7 @@
 ---
 name: /new
 description: Add new remote project repository worktrees to workspace at master/main branch or a specific one branch
+argument-hint: "[repo: repoName | repoUrl] [brach: branchName] "
 parameters:
   - name: repo 
     description: Repository URLs to clone 
