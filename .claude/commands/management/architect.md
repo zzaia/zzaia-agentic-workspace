@@ -39,6 +39,7 @@ Generate comprehensive architectural documentation for a system, focusing on arc
    - Create C4 diagrams (Context and Container levels)
    - Document event flows for event-driven systems
    - **NEVER** write code implementations, configurations 
+   - Focus on design decisions and not implementations
 
 ## AGENTS
 

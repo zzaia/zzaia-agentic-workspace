@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(git clone:*)",
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(mkdir:*)",
+      "Bash(git symbolic-ref:*)",
+      "Bash(tree:*)",
+      "Bash(python3:*)",
+      "SlashCommand(/websearch deep learning classification models 2025)",
+      "SlashCommand(/websearch:*)"
     ]
   },
   "outputStyle": "agentic-concise"
