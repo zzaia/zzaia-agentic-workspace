@@ -25,6 +25,7 @@ Establish session-wide conversational guidelines by reading CLAUDE.md and applyi
    - Go deeper in subjects, avoid superficiality
    - No compliments or judgments
    - Follow agentic output style
+   - Do not display changes in console when editing files. 
 
 3. **Confirm Setup**: Report configuration status and active rules
 
