@@ -69,6 +69,7 @@ Multi-repository workspace configuration.
 
 System utilities and information.
 
+- [**`/warmup`**](.claude/commands/warmup.md) - Context-aware focus 
 - [**`/ask`**](.claude/commands/ask.md) - Context-aware Q&A
 - [**`/websearch`**](.claude/commands/websearch.md) - Web search integration
 
