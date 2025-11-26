@@ -8,102 +8,134 @@ Template for system-wide architecture documentation covering all services, infra
 
 The document should contain:
 
-- High-level system architecture with C4 Context diagram (mermaid)
-- Application responsibilities and service descriptions
-- Infrastructure components and dependencies
-- Development and deployment tooling
-- Key architectural decisions and rationale
-- External service integrations
-- Communication patterns and protocols
+- High-level system description
+- Architecture Decision Records (ADRs) for key decisions
+- C4 Context diagram (mermaid)
+- C4 Container diagram (mermaid)
+- Project structure (ASCII tree)
+- Architecture components summary
+- Technology stack table
+- Related documentation links
 
 The architecture overview document must follow this format:
 
 ```md
-# [projectName] - System Architecture Overview
+# [Project Name] - Architecture Overview
 
-[systemDescription]
+[Brief system description and architectural approach]
 
-## System Architecture Diagram
+---
 
-[C4Context mermaid diagram showing:
-- Actors/Users
-- Frontend containers
-- API Gateway/BFF
-- Backend services
-- Infrastructure components (databases, caching, messaging)
-- External services
-- Relationships with protocols]
+### ADR 001: [Decision Title]
 
-## Application Responsibilities
+**Decision**: [What was decided]
 
-### [applicationName]
-[applicationDescription]
+[Details in bullet points]
 
-Key responsibilities:
-- [responsibility1]
-- [responsibility2]
-- [...]
+**Rationale**: [Why this decision was made and its benefits]
 
-### [nextApplication]
-[...]
+---
 
-## Infrastructure Overview
+### ADR 002: [Next Decision]
 
-Infrastructure components and configuration:
+[Follow same pattern]
 
-- [infrastructureComponent1]: [description]
-- [infrastructureComponent2]: [description]
-- [...]
+---
 
-Database architecture:
-- [databaseType]: [configuration and purpose]
-- [...]
+[Additional ADRs as needed]
 
-Messaging/Event infrastructure:
-- [messagingSystem]: [configuration]
-- [...]
+## C4 Context Diagram
 
-## Development and Deployment
+\```mermaid
+C4Context
+    title System Context
 
-Development tooling:
-- [tool1] for [purpose]
-- [tool2] for [purpose]
-- [...]
+    Person(user, "User Type", "User description")
 
-Deployment strategy:
-- [deploymentApproach]
-- [...]
+    System(mainSystem, "System Name", "System description")
 
-## Key Architectural Decisions
+    System_Ext(externalSystem, "External System", "External system description")
 
-### [decisionTitle1]
-[decisionDescription]
+    Rel(user, mainSystem, "Uses", "Protocol")
+    Rel(externalSystem, mainSystem, "Provides data", "Protocol")
 
-Rationale:
-- [reason1]
-- [reason2]
-- [...]
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
+\```
 
-### [decisionTitle2]
-[...]
+## C4 Container Diagram
 
-## External Service Integration
+\```mermaid
+C4Container
+    title Container Architecture
 
-External services and APIs:
-- [serviceName]: [purpose and integration method]
-- [...]
+    System_Boundary(layer1, "Layer 1") {
+        Container(container1, "Container 1", "Tech", "Description")
+        Container(container2, "Container 2", "Tech", "Description")
+    }
 
-## Communication Patterns
+    System_Boundary(layer2, "Layer 2") {
+        Container(container3, "Container 3", "Tech", "Description")
+        Container(container4, "Container 4", "Tech", "Description")
+    }
 
-Service communication:
-- [pattern1]: [description]
-- [pattern2]: [description]
-- [...]
+    System_Boundary(layer3, "Layer 3") {
+        Container(storage1, "Storage 1", "Tech", "Description")
+        Container(storage2, "Storage 2", "Tech", "Description")
+    }
 
-## Security Architecture
+    Rel(container1, container2, "Relationship")
+    Rel(container2, container3, "Relationship")
+    Rel(container3, storage1, "Writes")
 
-Security measures:
-- [securityMeasure1]
-- [securityMeasure2]
-- [...]
-```
+    UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
+\```
+
+## Project Structure
+
+\```
+[ProjectName]/
+├── src/
+│   ├── [ProjectName].sln
+│   ├── [Component1]/
+│   ├── [Component2]/
+│   └── Shared/
+├── deploy/
+│   ├── k8s/
+│   ├── docker/
+│   └── [orchestration]/
+├── docs/
+│   ├── architecture-overview.md
+│   └── [subsystem]/
+└── tests/
+\```
+
+## Architecture Components
+
+### [Component Category 1]
+- **[Component Name]**: [Brief description] ([Technologies])
+
+**Details**: [Link to detailed documentation]
+
+### [Component Category 2]
+- **[Component Name]**: [Brief description]
+
+### [Platform/Infrastructure]
+- **[Infrastructure Component]**: [Brief description]
+- **[Security Component]**: [Brief description]
+- **[Observability Component]**: [Brief description]
+
+## Technology Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| [Layer 1] | [Technologies] |
+| [Layer 2] | [Technologies] |
+| [Layer 3] | [Technologies] |
+| [Layer 4] | [Technologies] |
+
+## Related Documentation
+
+- [Doc Title 1](path/to/doc.md) - Description
+- [Doc Title 2](path/to/doc.md) - Description
+- [Doc Title 3](path/to/doc.md) - Description
+\```
