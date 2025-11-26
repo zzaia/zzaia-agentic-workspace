@@ -8,163 +8,161 @@ Template for individual service architecture documentation including container d
 
 The document should contain:
 
-- Service description and responsibilities
-- C4 Container diagram showing internal components (mermaid)
+- Service description and core responsibilities
+- Architecture Decision Records (ADRs)
+- C4 Container diagram (mermaid)
 - Sequence diagrams for key flows (mermaid)
 - Clean Architecture layer structure (ASCII tree)
-- Key design decisions and patterns
-- Authentication and authorization strategy
-- Integration patterns with other services
-- Persistency and caching strategies
-- Security best practices
+- Technical implementation details
 
 The service architecture document must follow this format:
 
 ```md
-# [serviceName] - [serviceDomain] Architecture
+# [Service Name] Architecture
 
-[serviceDescription]
+[Brief service description and purpose]
 
-## C4 Model - Container Diagram
+## Core Responsibilities
 
-[C4Container mermaid diagram showing:
-- Actors/Persons
-- Internal containers (API, services, layers)
-- External databases
-- External containers/systems
-- Relationships with protocols]
+[Description of what this service does]
 
-## [primaryFlowName] Flow
+---
 
-[Sequence mermaid diagram showing:
-- Participants (Client, Service, Database, External Services)
-- Request/response flow
-- Alternative paths (alt/else blocks)
-- Notes for important decisions
-- Error handling paths]
+### ADR 001: [Decision Title]
+
+**Decision**: [What was decided]
+
+[Details in bullet points or paragraphs]
+
+**Rationale**: [Why this decision was made]
+
+---
+
+### ADR 002: [Next Decision]
+
+[Follow same pattern]
+
+---
+
+[Additional ADRs as needed]
+
+## C4 Container Diagram
+
+\```mermaid
+C4Container
+    title Container diagram for [Service Name]
+
+    System_Ext(externalSystem, "External System", "Description")
+
+    Container_Boundary(serviceBoundary, "[Service Name]") {
+        Container(api, "API Layer", "Tech", "Description")
+        Container(application, "Application Layer", "MediatR", "CQRS orchestration")
+        Container(domain, "Domain Layer", "Models", "Business rules")
+        Container(infrastructure, "Infrastructure Layer", "Tech", "Integrations")
+    }
+
+    System_Ext(database, "Database", "Tech")
+    Container_Ext(messaging, "Messaging", "Kafka/Dapr")
+
+    Rel(externalSystem, api, "Uses", "Protocol")
+    Rel(api, application, "Orchestrates")
+    Rel(application, domain, "Uses")
+    Rel(application, infrastructure, "Calls")
+    Rel(infrastructure, database, "Persists", "Protocol")
+    Rel(infrastructure, messaging, "Publishes", "Events")
+
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
+\```
+
+## [Primary Flow Name]
+
+\```mermaid
+sequenceDiagram
+    participant Client as Client
+    participant API as API Layer
+    participant App as Application
+    participant Domain as Domain
+    participant DB as Database
+    participant Event as Event Bus
+
+    Note over Client,Event: [Flow Description]
+    Client->>API: Request
+    API->>App: Command/Query
+    App->>Domain: Execute logic
+    Domain->>DB: Persist
+    DB-->>Domain: Acknowledgment
+    Domain->>Event: Publish event
+    Event-->>Domain: Confirmation
+    Domain-->>App: Result
+    App-->>API: Response
+    API-->>Client: Response
+
+    alt Error case
+        App->>App: Handle error
+        App-->>API: Error response
+    end
+\```
 
 ## Clean Architecture Layer Structure
 
-[ASCII tree showing:
-ServiceName/
-├── Domain/
+\```
+[ServiceName]/
+├── Common/ (Shared libraries)
+│   └── [SharedComponents]/
+├── [ServiceName].Domain/
 │   ├── Entities/
 │   ├── ValueObjects/
-│   └── Events/
-├── Application/
+│   ├── DomainEvents/
+│   └── Enums/
+├── [ServiceName].Application/
 │   ├── Commands/
 │   ├── Queries/
+│   ├── Handlers/
+│   ├── Behaviors/
+│   ├── Validators/
+│   ├── Mappings/
+│   ├── DTOs/
 │   └── Interfaces/
-├── Infrastructure/
+├── [ServiceName].Infrastructure/
 │   ├── Persistence/
-│   ├── Services/
-│   └── Events/
-└── API/
-    ├── Controllers/
-    └── Middleware/]
+│   ├── Integration/
+│   ├── Messaging/
+│   └── Services/
+├── [ServiceName].API/
+│   ├── Controllers/
+│   ├── Middleware/
+│   └── Extensions/
+└── [ServiceName].Tests/
+    ├── Unit/
+    └── Integration/
+\```
 
-## Key Responsibilities
-
-1. **[responsibilityTitle1]**
-   - [detail1]
-   - [detail2]
-   - [...]
-
-2. **[responsibilityTitle2]**
-   - [detail1]
-   - [detail2]
-   - [...]
-
-[...]
-
-## Key Design Decisions
-
-### [decisionCategory1]
-- [decision1]
-- [decision2]
-- [...]
-
-### [decisionCategory2]
-- [decision1]
-- [decision2]
-- [...]
-
-[...]
-
-## Exception Handling
-[exceptionHandlingStrategy]
-
-## Event Driven Design
-[eventDrivenDesignStrategy]
+## Event-Driven Design
+[Event handling strategy and patterns]
 
 ## Logging
-[loggingStrategy]
-
-## Authentication & Authorization
-[authStrategy]
-
-### [authFlowName]
-1. [step1]
-2. [step2]
-3. [step3]
-[...]
-
-### [nextAuthFlow]
-[...]
-
-## Exposed Endpoints
-[endpointExposureStrategy]
+[Logging strategy and pipeline behaviors]
 
 ## Mapping
-[mappingStrategy]
-
-## Internal Service Integration
-[serviceIntegrationStrategy]
-
-Integration details:
-- [integrationDetail1]
-- [integrationDetail2]
-- [...]
+[Mapping library and patterns]
 
 ## Secret Store
-[secretManagementStrategy]
+[Secret management strategy]
+
+## Environment Variables
+[Environment variable management]
 
 ## Validation Rules
-[validationStrategy]
+[Validation strategy]
 
-## Persistency
-[persistencyStrategy]
+## Resilience Patterns
+[Circuit breaker, retry, timeout configurations]
 
-Persistency details:
-- [persistencyDetail1]
-- [persistencyDetail2]
-- [...]
-
-## Security Best Practices
-
-### [securityCategory1]
-- [securityItem1]
-- [securityItem2]
-- [...]
-
-### [securityCategory2]
-- [securityItem1]
-- [securityItem2]
-- [...]
-
-[...]
+## Scaling Strategy
+[HPA configuration and replica strategy]
 
 ## Recommended Tools
-
-- [tool1]
-- [tool2]
-- [tool3]
-[...]
-
-### [exampleTitle]
-```[language]
-[exampleCode]
-```
-
-[Repeat for additional code examples]
-```
+- [Tool 1]
+- [Tool 2]
+- [Tool 3]
+\```
