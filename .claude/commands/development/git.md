@@ -128,9 +128,42 @@ sequenceDiagram
 - Commit confirmations
 - Error and validation messages
 
+## COMMIT ATTRIBUTION
+
+All commits created by this command MUST include the following attribution footer:
+
+```
+🤖 Generated with zzaia workspace
+
+Co-Authored-By: <current-model-name>
+```
+
+**Format Requirements**:
+- Use "zzaia workspace" as the tool reference
+- Include current model attribution without email (e.g., "Claude Sonnet 4.5", "Claude Opus 4.5")
+- Dynamically use the model name that is currently active
+- Add blank line before attribution block
+- Place at end of commit message body
+
+**Example Full Commit**:
+```
+feat: implement user authentication
+
+- Add JWT token generation
+- Implement password hashing
+- Create login endpoint
+
+🤖 Generated with zzaia workspace
+
+Co-Authored-By: Claude Sonnet 4.5
+```
+
+**Note**: The model name in the example above should be replaced with the actual current model being used (e.g., Claude Opus 4.5, Claude Haiku 4, etc.)
+
 ## CONSTRAINTS
 
 1. Branch names MUST follow standardized prefixes
-2. Commit messages should use conventional commit format
-3. Operations execute in current repository context
-4. Direct git command execution with standardized formatting
+2. Commit messages MUST use conventional commit format
+3. Commit messages MUST include zzaia workspace attribution
+4. Operations execute in current repository context
+5. Direct git command execution with standardized formatting
