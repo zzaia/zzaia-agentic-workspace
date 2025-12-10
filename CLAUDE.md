@@ -61,6 +61,22 @@ Language-specific coding standards are defined in `.claude/rules/` directory:
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
 
+## Git Commit Convention
+
+When creating commits, use the following attribution format:
+
+```
+<commit message>
+
+🤖 Generated with zzaia workspace
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+- Use "zzaia workspace" instead of external tool references
+- Keep model attribution for transparency
+- Follow conventional commit format for messages
+
 ## MANDATORY DEFINITIONS
 
 Those definitions must be ALWAYS be applied and never be removed or altered from this document by the /init command;
