@@ -70,11 +70,12 @@ When creating commits, use the following attribution format:
 
 🤖 Generated with zzaia workspace
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+Co-Authored-By: <current-model-name>
 ```
 
 - Use "zzaia workspace" instead of external tool references
-- Keep model attribution for transparency
+- Include current model name dynamically (e.g., "Claude Sonnet 4.5", "Claude Opus 4.5")
+- Keep model attribution for transparency (without email)
 - Follow conventional commit format for messages
 
 ## MANDATORY DEFINITIONS
