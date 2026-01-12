@@ -21,34 +21,18 @@ parameters:
 
 ## PURPOSE
 
-Enable efficient document discovery and extraction from web sources by searching for PDF and Word documents (doc, docx) through direct URLs or keyword-based web searches. The command provides user confirmation checkpoints before listing documents and downloading, supports filtering on target pages, and integrates with web scraping tools and web search capabilities.
+Discover and extract PDF/Word documents from web sources using browser automation (Playwright) or web search.
 
 ## EXECUTION
 
-1. **Input Validation & Search Discovery**: Validate parameters and determine search strategy
-   - Validate that either url or search parameter is provided (mutually exclusive)
-   - If search provided, use the web search command to locate document sources
-   - If url provided, prepare direct scraping of target page
-   - Parse and validate filters parameter if provided
-
-2. **Document Discovery & Extraction**: Locate and catalog documents on target source
-   - Scrape target page/URL for document links (PDF, doc, docx only)
-   - Extract metadata for each document (title, size, type, URL)
-   - Apply user-specified filters to refine results
-   - Compile comprehensive list of discovered documents
-
-3. **User Confirmation & Download Coordination**: Confirm actions before execution
-   - Present formatted list of all discovered documents
-   - Request user confirmation to proceed with download
-   - If download enabled, confirm output path and disk space
-   - Coordinate batch downloading of confirmed documents
-   - Report progress and handle partial failures
+1. **Strategy**: Playwright for form-based sites, WebSearch/WebFetch for static sites
+2. **Automation**: Navigate, fill forms, submit, extract links via browser_run_code
+3. **Extraction**: Parse document URLs and metadata, apply filters
+4. **Confirmation**: Present results, download if user confirms
 
 ## AGENTS
 
-- **zzaia-task-clarifier**: Clarify document search criteria and filter requirements
-- **web-scraper-agent**: Execute document extraction from target URLs using MCP tools
-- **document-processor-agent**: Extract metadata and process document listings
+- **agent-general-purpose**: Clarify search criteria and filters and execute the scraping.
 
 ## WORKFLOW
 
@@ -56,74 +40,38 @@ Enable efficient document discovery and extraction from web sources by searching
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant TC as Task Clarifier
-    participant WS as Web Scraper
-    participant WF as Web Fetch/Search
-    participant DP as Document Processor
+    participant B as Browser/Search
 
     U->>C: /scraping <parameters>
-    C->>TC: Validate parameters and search criteria
-    TC-->>C: Confirmation of input validity
-
-    alt Search by Keywords
-        C->>WF: Web search for document sources
-        WF-->>C: List of potential document sources
-    else Direct URL
-        C->>C: Prepare target URL for scraping
-    end
-
-    C->>WS: Scrape target page for documents
-    WS->>WF: Fetch page content with MCP tools
-    WF-->>WS: Page HTML/content
-
-    WS->>DP: Extract document links and metadata
-    DP-->>WS: Structured document list with metadata
-
-    WS-->>C: Return discovered documents
-
-    C->>U: Present formatted document list
-    U->>C: Confirm listing and download intent
-
-    alt Download Enabled
-        C->>WS: Batch download confirmed documents
-        WS->>WF: Download each document
-        WF-->>WS: Document binary data
-        WS->>C: Save to output-path
-        C->>U: Report download completion and file locations
-    else No Download
-        C->>U: Return document metadata only
-    end
+    C->>B: Navigate/Search
+    B-->>C: Extract documents
+    C->>U: Present results
+    U->>C: Confirm download
+    C->>U: Download files
 ```
 
 ## ACCEPTANCE CRITERIA
 
-- Command accepts either url or search parameter (mutually exclusive, at least one required)
-- Discovers and lists only PDF and Word documents (doc, docx extensions)
-- Extracts document metadata including title, size, type, and source URL
-- Applies user-specified filters to refine document search results
-- Presents complete document list requiring explicit user confirmation before download
-- Downloads documents to specified output path with progress reporting
-- Handles network errors and partial failures gracefully
-- Integrates with web search capabilities for keyword-based document discovery
-- Provides meaningful error messages for invalid parameters or failed operations
-- All user confirmations are explicit and documented in output
+- Prioritizes Playwright for interactive sites, fallback to WebSearch
+- Discovers PDF/Word documents with metadata extraction
+- Applies filters, requires user confirmation for downloads
+- Handles errors gracefully with meaningful messages
 
 ## EXAMPLES
 
-```
-/scraping url=https://example.com/documents filters='{"format": "pdf", "date": "2024"}'
+```bash
+# Form-based site with filters
+/document:scraping url=https://site.com/search filters='{"term": "value"}'
 
-/scraping search="machine learning research papers" download=true output-path=/workspace/downloads/ml-papers
+# Web search with download
+/document:scraping search="research papers 2025" download=true output-path=/workspace/docs
 
-/scraping url=https://company.com/resources filters='{"category": "technical", "language": "english"}' download=false
-
-/scraping search="legal compliance documents 2025" download=true
+# URL without download
+/document:scraping url=https://site.com/resources download=false
 ```
 
 ## OUTPUT
 
-- Formatted table of discovered documents with metadata (title, type, size, URL)
-- Confirmation prompts for listing and download actions
-- Download progress reporting with file paths and status
-- Summary statistics (total documents found, downloaded count, file sizes)
-- Error logs for failed document retrievals
+- Document table with metadata (title, type, size, URL)
+- Confirmation prompts and download progress
+- Summary statistics and error logs
