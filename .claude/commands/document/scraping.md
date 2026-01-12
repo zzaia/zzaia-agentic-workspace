@@ -32,7 +32,7 @@ Discover and extract PDF/Word documents from web sources using browser automatio
 
 ## AGENTS
 
-- **agent-general-purpose**: Clarify search criteria and filters and execute the scraping.
+- **agent-general-purpose**: Clarify search criteria and filters and execute the scraping. Use multiple agents in case of parallel tasks.
 
 ## WORKFLOW
 
