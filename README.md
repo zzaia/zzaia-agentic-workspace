@@ -125,6 +125,8 @@ sequenceDiagram
 │   ├── dotnet-coding-rules.md
 │   ├── python-coding-rules.md
 │   └── javascript-coding-rules.md
+├── hooks/             # Session lifecycle hooks
+│   └── SessionStart   # 1Password secret injection
 ├── marketplace.json   # Marketplace configuration
 └── plugin.json        # Main plugin config
 
@@ -140,6 +142,46 @@ workspace/            # Multi-repository workspace
 4. **Documentation** - Automated generation
 5. **Quality Gates** - Code review and validation
 6. **Version Control** - Conventional commits
+
+## 🔌 MCP Tools Integration
+
+External service integrations via Model Context Protocol servers.
+
+| Tool | Purpose | Environment Variable |
+|------|---------|---------------------|
+| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` |
+| **GitHub** | Repository operations, PRs, issues | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| **Azure DevOps** | Work item management | `AZURE_DEVOPS_PAT`, `AZURE_DEVOPS_ORGANIZATION`, `AZURE_DEVOPS_PROJECT` |
+| **Postman** | API collections, mocks, monitors | `POSTMAN_API_KEY` |
+| **Figma** | Design data extraction, assets | `FIGMA_API_KEY` |
+| **Grafana** | Dashboards, Prometheus, Loki, alerts | `GRAFANA_URL`, `GRAFANA_API_KEY` |
+| **Playwright** | Browser automation, screenshots | None (local) |
+| **VS Code** | IDE integration, diff, file ops | None (local) |
+
+## 🔐 1Password Integration
+
+Automatic secret injection at session start using 1Password CLI.
+
+### Prerequisites
+
+1. Install [1Password CLI](https://developer.1password.com/docs/cli/get-started/)
+2. Configure vaults with required secrets
+3. Sign in: `op signin`
+
+### How It Works
+
+The `.claude/hooks/SessionStart` hook:
+- Authenticates with 1Password CLI
+- Uses `op inject` for single-call secret resolution
+- Writes exports to `CLAUDE_ENV_FILE` for session persistence
+
+### Adding New Secrets
+
+Edit `.claude/hooks/SessionStart` and add new entries:
+
+```bash
+export NEW_SECRET="op://vault-name/item-name/field-name"
+```
 
 ## 🛡️ Quality Standards
 

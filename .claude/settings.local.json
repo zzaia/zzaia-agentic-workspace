@@ -8,8 +8,23 @@
       "Bash(tree:*)",
       "Bash(python3:*)",
       "SlashCommand(/websearch deep learning classification models 2025)",
-      "SlashCommand(/websearch:*)"
+      "SlashCommand(/websearch:*)",
+      "Bash(git --git-dir=.git --work-tree=. config core.bare false)",
+      "Bash(git --git-dir=.git remote:*)",
+      "Bash(git --git-dir=.git branch:*)"
     ]
   },
-  "outputStyle": "agentic-concise"
+  "outputStyle": "agentic-concise",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/SessionStart"
+          }
+        ]
+      }
+    ]
+  }
 }
