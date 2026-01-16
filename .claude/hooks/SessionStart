@@ -4,22 +4,36 @@
 # Uses CLAUDE_ENV_FILE mechanism for environment variable persistence
 # Requires: 1Password CLI (op) installed and configured
 # Performance: Single op inject call resolves all secrets at once
-op account list &>/dev/null || eval $(op signin)
+
+echo "🔐 Loading secrets from 1Password..." >&2
+
+eval $(op signin)
 
 if [ -n "$CLAUDE_ENV_FILE" ]; then
-  op inject -i <(cat << 'EOF'
+  TEMP_IN=$(mktemp)
+  TEMP_OUT=$(mktemp)
+  
+  cat > "$TEMP_IN" << 'EOF'
 export TAVILY_API_KEY="op://zzaia/tavily/credential"
 export AZURE_DEVOPS_ORGANIZATION="op://zzaia/azure-devops/organization"
 export AZURE_DEVOPS_PAT="op://zzaia/azure-devops/pat"
 export AZURE_DEVOPS_PROJECT="op://zzaia/azure-devops/project"
 export GITHUB_PERSONAL_ACCESS_TOKEN="op://zzaia/github-pat/credential"
 export POSTMAN_API_KEY="op://zzaia/postman/api-key"
-export FIGMA_API_KEY="op://zzaia/figma/api-key"
 export GRAFANA_URL="op://zzaia/grafana/url"
 export GRAFANA_API_KEY="op://zzaia/grafana/api-key"
 EOF
-) >> "$CLAUDE_ENV_FILE"
-  echo "✓ Secrets exported to session"
+
+  if op inject -i "$TEMP_IN" -o "$TEMP_OUT" 2>&1; then
+    cat "$TEMP_OUT" >> "$CLAUDE_ENV_FILE"
+    echo "✓ Secrets exported to session" >&2
+  else
+    echo "✗ Failed to inject secrets" >&2
+  fi
+  
+  rm -f "$TEMP_IN" "$TEMP_OUT"
+else
+  echo "⚠️  CLAUDE_ENV_FILE not set" >&2
 fi
 
 exit 0
