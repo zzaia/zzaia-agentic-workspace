@@ -1,0 +1,25 @@
+#!/bin/bash
+# SessionStart Hook - 1Password Secret Injection
+# Automatically injects secrets from 1Password into Claude Code session
+# Uses CLAUDE_ENV_FILE mechanism for environment variable persistence
+# Requires: 1Password CLI (op) installed and configured
+# Performance: Single op inject call resolves all secrets at once
+op account list &>/dev/null || eval $(op signin)
+
+if [ -n "$CLAUDE_ENV_FILE" ]; then
+  op inject -i <(cat << 'EOF'
+export TAVILY_API_KEY="op://zzaia/tavily/credential"
+export AZURE_DEVOPS_ORGANIZATION="op://zzaia/azure-devops/organization"
+export AZURE_DEVOPS_PAT="op://zzaia/azure-devops/pat"
+export AZURE_DEVOPS_PROJECT="op://zzaia/azure-devops/project"
+export GITHUB_PERSONAL_ACCESS_TOKEN="op://zzaia/github-pat/credential"
+export POSTMAN_API_KEY="op://zzaia/postman/api-key"
+export FIGMA_API_KEY="op://zzaia/figma/api-key"
+export GRAFANA_URL="op://zzaia/grafana/url"
+export GRAFANA_API_KEY="op://zzaia/grafana/api-key"
+EOF
+) >> "$CLAUDE_ENV_FILE"
+  echo "✓ Secrets exported to session"
+fi
+
+exit 0
