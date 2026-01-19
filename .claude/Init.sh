@@ -1,0 +1,15 @@
+#!/bin/bash
+# Init Hook - Claude Code Terminal Initialization
+# Initializes the Claude Code terminal environment
+# Signs in to 1Password for secret management
+# Launches Claude Code with disabled permission checks
+
+echo "🔐 Initializing the claude code terminal ...." 
+
+# Sign in to 1Password to enable secret injection
+eval $(op signin)
+
+# Laungh claude code terminal with disabled permission checks
+claude --dangerously-skip-permissions
+
+exit 0
