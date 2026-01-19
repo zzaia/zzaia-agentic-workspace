@@ -10,10 +10,7 @@ echo "🔐 Loading secrets from 1Password..." >&2
 eval $(op signin)
 
 if [ -n "$CLAUDE_ENV_FILE" ]; then
-  TEMP_IN=$(mktemp)
-  TEMP_OUT=$(mktemp)
-  
-  cat > "$TEMP_IN" << 'EOF'
+  op inject -i <(cat << 'EOF'
 export TAVILY_API_KEY="op://zzaia/tavily/credential"
 export AZURE_DEVOPS_ORGANIZATION="op://zzaia/azure-devops/organization"
 export AZURE_DEVOPS_PAT="op://zzaia/azure-devops/pat"
@@ -23,15 +20,9 @@ export POSTMAN_API_KEY="op://zzaia/postman/api-key"
 export GRAFANA_URL="op://zzaia/grafana/url"
 export GRAFANA_API_KEY="op://zzaia/grafana/api-key"
 EOF
-
-  if op inject -i "$TEMP_IN" -o "$TEMP_OUT" 2>&1; then
-    cat "$TEMP_OUT" >> "$CLAUDE_ENV_FILE"
-    echo "✓ Secrets exported to session" >&2
-  else
+) >> "$CLAUDE_ENV_FILE" 2>&1 && \
+    echo "✓ Secrets exported to session" >&2 || \
     echo "✗ Failed to inject secrets" >&2
-  fi
-  
-  rm -f "$TEMP_IN" "$TEMP_OUT"
 else
   echo "⚠️  CLAUDE_ENV_FILE not set" >&2
 fi
