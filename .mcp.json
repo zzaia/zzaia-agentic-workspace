@@ -1,24 +1,24 @@
 {
   "mcpServers": {
     "tavily": {
-      "command": "npx",
-      "args": ["tavily-mcp@latest"],
+      "command": "op",
+      "args": ["run", "--", "npx", "tavily-mcp@latest"],
       "env": {
-        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+        "TAVILY_API_KEY": "op://zzaia/tavily/credential"
       }
     },
     "azure-devops": {
-      "command": "npx",
+      "command": "op",
       "args": [
-        "@azure-devops/mcp@next",
-        "${AZURE_DEVOPS_ORGANIZATION}",
-        "-a",
-        "envvar"
+        "run",
+        "--",
+        "sh",
+        "-c",
+        "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"
       ],
       "env": {
-        "AZURE_DEVOPS_ORGANIZATION": "${AZURE_DEVOPS_ORGANIZATION}",
-        "ADO_MCP_AUTH_TOKEN": "${AZURE_DEVOPS_PAT}",
-        "AZURE_DEVOPS_PROJECT": "${AZURE_DEVOPS_PROJECT}"
+        "ADO_MCP_AUTH_TOKEN": "op://zzaia/azure-devops/pat",
+        "AZURE_DEVOPS_ORGANIZATION": "op://zzaia/azure-devops/organization"
       }
     },
     "playwright": {
