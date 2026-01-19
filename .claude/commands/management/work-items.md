@@ -58,7 +58,7 @@ Provide a unified interface for retrieving and managing work items across multip
 
 2. **Work Item Retrieval**
 
-   - Connect to selected platform's API
+   - Connect to selected platform's API via MCP TOOL
    - Apply provided filters sequentially
    - Retrieve work items matching filter criteria
 
