@@ -11,14 +11,10 @@ eval $(op signin)
 
 if [ -n "$CLAUDE_ENV_FILE" ]; then
   op inject -i <(cat << 'EOF'
-export TAVILY_API_KEY="op://zzaia/tavily/credential"
-export AZURE_DEVOPS_ORGANIZATION="op://zzaia/azure-devops/organization"
-export AZURE_DEVOPS_PAT="op://zzaia/azure-devops/pat"
-export AZURE_DEVOPS_PROJECT="op://zzaia/azure-devops/project"
-export GITHUB_PERSONAL_ACCESS_TOKEN="op://zzaia/github-pat/credential"
-export POSTMAN_API_KEY="op://zzaia/postman/api-key"
-export GRAFANA_URL="op://zzaia/grafana/url"
-export GRAFANA_API_KEY="op://zzaia/grafana/api-key"
+export TAVILY_API_KEY="op://bloquo/tavily/credential"
+export AZURE_DEVOPS_ORGANIZATION="op://bloquo/azure-devops/organization"
+export AZURE_DEVOPS_PAT="op://bloquo/azure-devops/pat"
+export AZURE_DEVOPS_PROJECT="op://bloquo/azure-devops/project"
 EOF
 ) >> "$CLAUDE_ENV_FILE" 2>&1 && \
     echo "✓ Secrets exported to session" >&2 || \
