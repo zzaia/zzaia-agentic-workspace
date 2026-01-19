@@ -9,10 +9,15 @@
     },
     "azure-devops": {
       "command": "npx",
-      "args": ["@azure-devops/mcp"],
+      "args": [
+        "@azure-devops/mcp@next",
+        "${AZURE_DEVOPS_ORGANIZATION}",
+        "-a",
+        "envvar"
+      ],
       "env": {
         "AZURE_DEVOPS_ORGANIZATION": "${AZURE_DEVOPS_ORGANIZATION}",
-        "AZURE_DEVOPS_PAT": "${AZURE_DEVOPS_PAT}",
+        "ADO_MCP_AUTH_TOKEN": "${AZURE_DEVOPS_PAT}",
         "AZURE_DEVOPS_PROJECT": "${AZURE_DEVOPS_PROJECT}"
       }
     },
@@ -20,50 +25,9 @@
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
-      }
-    },
-    "postman": {
-      "command": "npx",
-      "args": ["-y", "@postman/postman-mcp-server@latest", "--full"],
-      "env": {
-        "POSTMAN_API_KEY": "${POSTMAN_API_KEY}"
-      }
-    },
-    "figma": {
-      "command": "npx",
-      "args": ["-y", "figma-mcp-pro@latest"],
-      "env": {
-        "FIGMA_API_KEY": "${FIGMA_API_KEY}"
-      }
-    },
     "vscode": {
       "command": "npx",
       "args": ["-y", "vscode-mcp-server"]
-    },
-    "kubernetes": {
-      "command": "npx",
-      "args": ["-y", "kubernetes-mcp-server@latest"]
-    },
-    "docker": {
-      "command": "uvx",
-      "args": ["mcp-server-docker"]
-    },
-    "k6": {
-      "command": "uvx",
-      "args": ["--directory", "${HOME}/k6-mcp-server", "run", "k6_server.py"]
-    },
-    "grafana": {
-      "command": "npx",
-      "args": ["-y", "@leval/mcp-grafana"],
-      "env": {
-        "GRAFANA_URL": "${GRAFANA_URL}",
-        "GRAFANA_API_KEY": "${GRAFANA_API_KEY}"
-      }
     }
   }
 }
