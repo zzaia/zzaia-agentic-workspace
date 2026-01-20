@@ -7,7 +7,6 @@
       "Bash(git symbolic-ref:*)",
       "Bash(tree:*)",
       "Bash(python3:*)",
-      "SlashCommand(/websearch deep learning classification models 2025)",
       "SlashCommand(/websearch:*)",
       "Bash(git --git-dir=.git --work-tree=. config core.bare false)",
       "Bash(git --git-dir=.git remote:*)",

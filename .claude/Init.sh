@@ -12,4 +12,7 @@ eval $(op signin)
 # Laungh claude code terminal with disabled permission checks
 claude --dangerously-skip-permissions --verbose
 
+# Sign out of 1Password to clean up session
+eval $(op signout)
+
 exit 0
