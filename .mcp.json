@@ -4,7 +4,7 @@
       "command": "op",
       "args": ["run", "--", "npx", "tavily-mcp@latest"],
       "env": {
-        "TAVILY_API_KEY": "op://zzaia/tavily/credential"
+        "TAVILY_API_KEY": "op://${VAULT_NAME}/tavily/credential"
       }
     },
     "azure-devops": {
@@ -17,8 +17,8 @@
         "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"
       ],
       "env": {
-        "ADO_MCP_AUTH_TOKEN": "op://zzaia/azure-devops/pat",
-        "AZURE_DEVOPS_ORGANIZATION": "op://zzaia/azure-devops/organization"
+        "ADO_MCP_AUTH_TOKEN": "op://${VAULT_NAME}/azure-devops/pat",
+        "AZURE_DEVOPS_ORGANIZATION": "op://${VAULT_NAME}/azure-devops/organization"
       }
     },
     "playwright": {
