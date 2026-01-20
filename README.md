@@ -7,12 +7,35 @@
 
 ## 🚀 Quick Start
 
-### Clone and Use Locally
+### Prerequisites
 
-```bash
-git clone https://github.com/zzaia/zzaia-agentic-workspace.git
-cd zzaia-agentic-workspace
-```
+1. **1Password CLI**: Install from [1Password CLI Documentation](https://developer.1password.com/docs/cli/get-started/)
+2. **1Password Account**: Configure a vault with your service credentials
+3. **Git & Node.js**: Required for workspace operations
+
+### Initialize ZZAIA Agentic Workspace
+
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/zzaia/zzaia-agentic-workspace.git
+   cd zzaia-agentic-workspace
+   ```
+
+2. **Launch the Workspace**
+   ```bash
+   .claude/Init.sh
+   ```
+   
+   When prompted, enter your 1Password vault name (e.g.,`dev-secrets`, etc.)
+
+3. **Authenticate with 1Password**
+   Follow the 1Password CLI authentication prompts to enable secret injection
+
+The workspace will automatically:
+- Load your vault configuration
+- Inject secrets from 1Password
+- Launch Claude Code with MCP servers configured
+- Enable all workspace commands and agents
 
 ### Use as Remote Plugin
 
@@ -160,28 +183,77 @@ External service integrations via Model Context Protocol servers.
 
 ## 🔐 1Password Integration
 
-Automatic secret injection at session start using 1Password CLI.
-
-### Prerequisites
-
-1. Install [1Password CLI](https://developer.1password.com/docs/cli/get-started/)
-2. Configure vaults with required secrets
-3. Sign in: `op signin`
+The workspace uses 1Password CLI for secure, dynamic secret management across all MCP servers and services.
 
 ### How It Works
 
-The `.claude/hooks/SessionStart` hook:
-- Authenticates with 1Password CLI
-- Uses `op inject` for single-call secret resolution
-- Writes exports to `CLAUDE_ENV_FILE` for session persistence
+1. **Vault Configuration**
+   - The `.mcp.json` file references secrets using `op://${VAULT_NAME}/item/field` syntax
+   - Vault name is set dynamically at workspace initialization
 
-### Adding New Secrets
+2. **Initialization Flow**
+   ```
+   User runs Init.sh → Prompts for vault name → Exports VAULT_NAME
+   → Signs in to 1Password → Launches Claude Code → Secrets injected
+   ```
 
-Edit `.claude/hooks/SessionStart` and add new entries:
+3. **Secret Resolution**
+   - MCP servers use `op run` command to resolve secrets at runtime
+   - Secrets are never stored in files, only referenced
+   - Each service retrieves its required credentials automatically
 
-```bash
-export NEW_SECRET="op://vault-name/item-name/field-name"
+### Vault Structure
+
+Organize your 1Password vault with items for each service:
+
 ```
+your-vault/
+  ├── tavily/
+  │   └── credential (API key)
+  ├── azure-devops/
+  │   ├── pat (Personal Access Token)
+  │   └── organization (Organization name)
+  ├── github/
+  │   └── token (Personal Access Token)
+  └── postman/
+      └── api-key (API Key)
+```
+
+### Adding New Services
+
+1. **Create 1Password Item**
+   ```bash
+   op item create --category=login \
+     --title="service-name" \
+     --vault="${VAULT_NAME}" \
+     credential="your-secret-key"
+   ```
+
+2. **Update .mcp.json**
+   ```json
+   {
+     "mcpServers": {
+       "service-name": {
+         "command": "op",
+         "args": ["run", "--", "command"],
+         "env": {
+           "API_KEY": "op://${VAULT_NAME}/service-name/credential"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Restart Workspace**
+   Secrets are loaded at initialization
+
+### Security Benefits
+
+- **No Plaintext Secrets**: Credentials never stored in configuration files
+- **Dynamic Resolution**: Secrets fetched only when needed
+- **Vault Isolation**: Different vaults for different environments (dev, prod)
+- **Audit Trail**: 1Password tracks all secret access
+- **Team Sharing**: Securely share vault access without exposing secrets
 
 ## 🛡️ Quality Standards
 
