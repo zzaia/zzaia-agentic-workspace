@@ -7,6 +7,14 @@ parameters:
     description: Optional work item ID (ADO-xxxxx, GH-xxxxx) or system description
     required: false
     type: string
+  - name: work-description
+    description: Optional work description 
+    required: false
+    type: string
+  - name: work-directory
+    description: Work directory to add the documentation 
+    required: true 
+    type: string
 ---
 
 ## PURPOSE
