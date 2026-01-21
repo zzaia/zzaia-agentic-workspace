@@ -69,31 +69,38 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant P as workflow
-    participant MgmtW as Management<br/>(Work Items)
-    participant WkspM as Workspace<br/>(Branch)
-    participant DevD as Development<br/>(Develop)
-    participant DevG as Development<br/>(Git)
-    participant MgmtP as Management<br/>(PR)
+    participant P as /implement Workflow
+    participant MgmtW as /management:work-items
+    participant WkspM as /workspace:new
+    participant DevA as /development:architect
+    participant DevD as /development:develop
+    participant DevG as /development:git
+    participant MgmtP as /management:pull-request
 
-    U->>P: /implement workitem=1605<br/>target_branch=develop<br/>branch_name=feature/...<br/>description="..."
+    U->>P: /implement workitem=1605<br/>repository_name=fiat-service<br/>target_branch=develop<br/>branch_name=feature/...<br/>description="..."
 
-    P->>MgmtW: /management:work-items<br/>${workitem}
-    MgmtW-->>P: Work item details<br/>(title, description,<br/>criteria)
+    P->>MgmtW: Retrieve work item
+    MgmtW-->>P: Work item details
 
-    P->>WkspM: /workspace:new<br/>target_branch=${target_branch}<br/>new_branch_name=${branch_name}
-    WkspM-->>P: Feature branch created<br/>and ready
+    P->>WkspM: Create feature branch
+    WkspM-->>P: Branch ready
 
-    P->>DevD: /development:develop<br/>workitem=${workitem}<br/>branch=${branch_name}<br/>description=${description}
-    DevD-->>P: Implementation complete<br/>with tests and docs
+    P->>DevA: Generate SDD documentation
+    DevA-->>P: Architecture & spec docs
 
-    P->>DevG: /development:git<br/>branch=${branch_name}
-    DevG-->>P: Changes committed<br/>and pushed
+    P->>U: Review SDD documentation
+    U-->>P: Approve/update specs
 
-    P->>MgmtP: /management:pull-request<br/>source_branch=${branch_name}<br/>target_branch=${target_branch}<br/>workitem=${workitem}
-    MgmtP-->>P: PR created and ready<br/>for review
+    P->>DevD: Implement from approved SDD
+    DevD-->>P: Implementation complete
 
-    P-->>U: workflow execution<br/>complete with PR link
+    P->>DevG: Commit and push
+    DevG-->>P: Changes pushed
+
+    P->>MgmtP: Create pull request
+    MgmtP-->>P: PR created
+
+    P-->>U: Workflow complete<br/>PR link & summary
 ```
 
 ## ACCEPTANCE CRITERIA
