@@ -9,7 +9,7 @@ parameters:
     description: Repository name to work on 
     required: true
   - name: target_branch
-    description: Base branch to create feature branch from (e.g., develop, main)
+    description: Base branch to create feature branch from, usually remote (e.g., develop, main)
     required: true
   - name: branch_name
     description: Name of the feature branch to create (e.g., feature/implement-some-stuff)
@@ -30,6 +30,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Call `/management:work-items` with workitem parameter
    - Obtain title, description, and acceptance criteria
    - Pass retrieved context to implementation phase
+   - **MANDATORY** work-item must have non-empty descriptions
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -37,28 +38,36 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Prepare worktree for development
    - Verify branch is ready for code changes
 
-3. **Clarify Feature**: Execute development based on work item requirements
+3. **Clarify Feature**: Ask user for important clarifying questions about the feature 
+
+   - Call `/ask` with branch, work directory, and description parameters
+   - Clarify all requirements with the user before going to next phase 
+   - Use the tool **AskUserQuestion** to inquiry the user answers
+
+4. **Implement Documentation**: Implement the SDD documentation in a concise manner 
 
    - Call `/development:architect` with branch, work directory, and description parameters
    - Clarify all requirements with the user before implementing documentations
-   - Implement all necessary Specification Driven Design (SDD) documentation to implement the feature  
+   - Implement one small necessary Specification Driven Design (SDD) documentation to implement the feature  
+   - **MANDATORY** This must be very concise and have only the relevant feature information
 
-4. **Wait User Approval**: Execute development based on work item requirements
+5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation 
    - User should make some changes to SDD before next phase
+   - Use the tool **AskUserQuestion** to inquiry the user answers
 
-5. **Implement Feature**: Execute development based on SDD documentation
+6. **Implement Feature**: Execute development based on SDD documentation
 
-   - Call `/development:develop` with approved SDD documentation 
+   - Call `/development:develop` in branch_name with approved SDD documentation 
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
-6. **Commit and Push**: Stage, commit, and push all changes
+7. **Commit and Push**: Stage, commit, and push all changes
 
    - Call `/development:git` with branch parameter
    - Create conventional commit message referencing work item
    - Push changes to remote origin
 
-7. **Create Pull Request**: Open pull request for review
+8. **Create Pull Request**: Open pull request for review
 
    - Call `/management:pull-request` with source_branch, target_branch, workitem parameters
    - Link PR to original work item

@@ -14,7 +14,7 @@ export VAULT_NAME
 eval $(op signin)
 
 # Laungh claude code terminal with disabled permission checks
-claude --dangerously-skip-permissions --verbose
+claude --dangerously-skip-permissions
 
 # Sign out of 1Password to clean up session
 eval $(op signout)
