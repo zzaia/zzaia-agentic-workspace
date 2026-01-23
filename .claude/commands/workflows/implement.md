@@ -30,7 +30,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Call `/management:work-items` with workitem parameter
    - Obtain title, description, and acceptance criteria
    - Pass retrieved context to implementation phase
-   - **MANDATORY** work-item must have non-empty descriptions
+   - **MANDATORY**  Must use the work item descriptions and it must not be empty 
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
