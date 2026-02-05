@@ -24,20 +24,6 @@
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
-    },
-    "vscode": {
-      "command": "npx",
-      "args": ["-y", "vscode-mcp-server"]
-    },
-    "microsoft-365": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@softeria/ms-365-mcp-server",
-        "--org-mode",
-        "--preset",
-        "personal,work,excel,search"
-      ]
     }
   }
 }

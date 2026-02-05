@@ -206,9 +206,21 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-
 # Claude IDE
-.vscode
 workspace/*
 !settings.local.json
 *.code-workspace
+
+# Ignore build output
+bin/
+obj/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
