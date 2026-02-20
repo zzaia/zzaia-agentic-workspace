@@ -36,7 +36,12 @@ workspace/
 │   ├── feature/{name}/      # Feature branches
 │   └── repository-metadata.json
 ├── tasks/                   # Task specifications
+host/                        # Aspire AppHost template
 ```
+
+## AppHost Template
+
+`host/` contains a .NET Aspire AppHost used to run workspace applications with shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing. Add workspace project references and configure `ApplicationInjection.cs` extensions per development session.
 
 ## Development Workflow
 
