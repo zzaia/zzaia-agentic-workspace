@@ -6,9 +6,9 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "apphost:build",
-      "program": "${workspaceFolder}/Zzaia.AppHost/bin/Debug/net9.0/Zzaia.AppHost.dll",
+      "program": "${workspaceFolder}/host/Zzaia.AppHost/bin/Debug/net10.0/Zzaia.AppHost.dll",
       "args": [],
-      "cwd": "${workspaceFolder}/Zzaia.AppHost",
+      "cwd": "${workspaceFolder}/host/Zzaia.AppHost",
       "stopAtEntry": false,
       "console": "internalConsole",
       "env": {
