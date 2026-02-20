@@ -7,7 +7,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/Zzaia.AppHost/Zzaia.AppHost.csproj",
+        "${workspaceFolder}/host/Zzaia.AppHost/Zzaia.AppHost.csproj",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary"
       ],
