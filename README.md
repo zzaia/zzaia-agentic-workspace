@@ -96,6 +96,16 @@ System utilities and information.
 - [**`/ask`**](.claude/commands/ask.md) - Context-aware Q&A
 - [**`/websearch`**](.claude/commands/websearch.md) - Web search integration
 
+## 🖥️ AppHost Template
+
+The `host/` directory contains a .NET Aspire AppHost — a template for running workspace applications alongside shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing during development.
+
+- Add workspace service project references to `.csproj` pointing to worktree paths
+- Configure `Applications/ApplicationInjection.cs` extension methods per service
+- All infrastructure settings are driven by `appsettings.json`
+
+> See [host/README.md](host/README.md) for full setup details.
+
 ## 🏗️ Architecture
 
 ```mermaid

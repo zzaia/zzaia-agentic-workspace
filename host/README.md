@@ -1,73 +1,66 @@
 # Zzaia.AppHost
 
-.NET Aspire orchestration host for managing multi-service development environments.
+.NET Aspire orchestration template for running workspace applications with shared infrastructure during development and testing.
 
-## Architecture
+## Purpose
 
-This AppHost project orchestrates the FiatService microservice infrastructure using .NET Aspire, providing:
-
-- Shared infrastructure resources (PostgreSQL, Redis, RabbitMQ)
-- Service configuration and dependency management
-- Local development environment orchestration
+Agentic workspace template that spins up shared infrastructure (PostgreSQL, Redis, RabbitMQ) and wires workspace service projects for integrated validation and testing. Workspace project references are added dynamically per development session.
 
 ## Project Structure
 
 ```
 Zzaia.AppHost/
 ├── Applications/
-│   └── ApplicationInjection.cs    # Application-specific configuration
+│   └── ApplicationInjection.cs    # Extension methods per application
+├── Settings/
+│   ├── AppHostSettings.cs         # Centralized settings root
+│   ├── ApplicationSettings.cs     # Per-application settings
+│   ├── ResourceSettings.cs        # Infrastructure resource settings
+│   └── SettingsExtensions.cs      # Builder extension methods
 ├── Properties/
-│   └── launchSettings.json          # Launch profiles
-├── Program.cs                       # Main orchestration configuration
-├── appsettings.json                 # Application settings
-├── appsettings.Development.json     # Development settings
-└── Zzaia.AppHost.csproj            # Project file
+│   └── launchSettings.json
+├── Program.cs                     # Orchestration entry point
+├── appsettings.json               # Infrastructure & application config
+└── Zzaia.AppHost.csproj
 ```
 
 ## Infrastructure Resources
 
-### PostgreSQL
-- Image: postgres:16.2-alpine
-- Database: fiatdb
-- Lifecycle: Persistent
+| Resource   | Image                          | Lifecycle  |
+|------------|--------------------------------|------------|
+| PostgreSQL | postgres:16.2-alpine           | Persistent |
+| Redis      | redis:7.2-alpine               | Persistent |
+| RabbitMQ   | rabbitmq:3.13-management-alpine| Persistent |
 
-### Redis
-- Image: redis:7.2-alpine
-- Lifecycle: Persistent
+All resource images and tags are driven by `appsettings.json` under the `AppHost` section.
 
-### RabbitMQ
-- Image: rabbitmq:3.13-management-alpine
-- Lifecycle: Persistent
+## Adding Workspace Applications
 
-```
+1. Add `ProjectReference` to `.csproj` pointing to the workspace worktree service
+2. Uncomment and configure the `ApplicationInjection.cs` extension method
+3. Add application settings to `appsettings.json` under `AppHost.Applications`
 
-The Aspire dashboard will be available at:
-- HTTP: http://localhost:15000
-- HTTPS: https://localhost:17001
-
-## Adding New Services
-
-To add additional services, create extension methods in the `Applications/` directory following the pattern in `ApplicationInjection.cs`:
+Extension method pattern:
 
 ```csharp
-public static IDistributedApplicationBuilder AddYourService(
+public static IDistributedApplicationBuilder AddYourServiceApplication(
     this IDistributedApplicationBuilder builder,
     IResourceBuilder<PostgresServerResource> postgres,
     IResourceBuilder<RedisResource> redis,
-    IResourceBuilder<RabbitMQServerResource> rabbitMq)
+    IResourceBuilder<RabbitMQServerResource> rabbitMq,
+    RabbitMqSettings rabbitMqSettings,
+    YourServiceSettings settings)
 {
-    // Configure your service here
+    // configure resources
     return builder;
 }
 ```
 
+## Dashboard
+
+- HTTP: http://localhost:15000
+- HTTPS: https://localhost:17001
+
 ## Dependencies
 
-The AppHost references workspace projects but workspace projects do NOT reference the AppHost. This maintains proper architectural boundaries.
-
-## Clean Architecture Compliance
-
-- Explicit type usage throughout
-- Self-documenting code structure
-- Clear separation of concerns
-- Extension-based service configuration
+AppHost references workspace project paths directly. Workspace projects do NOT reference AppHost.
