@@ -1,8 +1,15 @@
 ---
-name: explorate
+name: /explorate
 description: Comprehensive research workflow for domain, problem, and dataset exploration
 argument-hint: "[--domain <context>]"
 version: 1.0
+agents:
+  - name: zzaia-domain-exploration
+    description: Identifies top commercially viable problems in data science and software engineering
+  - name: zzaia-problem-exploration
+    description: Transforms problem statements into comprehensive technical research reports
+  - name: zzaia-dataset-exploration
+    description: Discovers and evaluates optimal machine learning datasets
 ---
 
 ## Usage

@@ -2,6 +2,9 @@
 name: /review
 description: Comprehensive code review across git changes, repositories, and pull requests
 argument-hint: "--target changes|repo|pr [--path <path>] [--pr <url>] [--depth light|standard|deep]"
+agents:
+  - name: zzaia-code-reviewer
+    description: Comprehensive code quality review and static analysis
 parameters:
   - name: target
     description: The review target (changes/repo/pr)
@@ -48,10 +51,6 @@ Conduct comprehensive code reviews with multi-dimensional analysis, providing ac
    - Provide actionable recommendations
    - Highlight critical findings
    - Suggest potential refactoring strategies
-
-## AGENTS
-
-- **zzaia-code-reviewer**: Comprehensive code quality review and static analysis
 
 ## WORKFLOW
 

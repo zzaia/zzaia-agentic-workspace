@@ -52,6 +52,12 @@ This is the command layout that must be created or updated in the local `.claude
 ---
 name: /<command-name>
 description: <command-description>
+argument-hint: "--<param-name> <value> [--<optional-param> <value>]"
+agents:
+  - name: <agent-name>
+    description: <agent-responsibility>
+  - name: <agent-name>
+    description: <agent-responsibility>
 parameters:
   - name: <param-name>
     description: <param-description>
@@ -77,11 +83,6 @@ parameters:
 3. **<Phase 3>**: <Description>
    - <Action 1>
    - <Action 2>
-
-## AGENTS
-
-- **<agent-name>**: <responsibility>
-- **<agent-name>**: <responsibility>
 
 ## WORKFLOW
 

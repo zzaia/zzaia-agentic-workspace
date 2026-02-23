@@ -2,6 +2,9 @@
 name: /websearch
 description: Standardized web search protocol for comprehensive information gathering
 argument-hint: "--query <text> [--focus <area>]"
+agents:
+  - name: general-purpose
+    description: Web search execution, content analysis, and information structuring
 parameters:
   - name: query
     description: Search query or topic to research
@@ -31,10 +34,6 @@ Provide standardized, unified web search protocol for comprehensive information 
    - Assess source credibility and authority
    - Ensure information relevance
    - Document search methodology
-
-## AGENTS
-
-- **general-purpose**: Web search execution, content analysis, and information structuring
 
 ## WORKFLOW
 

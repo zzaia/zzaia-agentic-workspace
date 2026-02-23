@@ -2,6 +2,9 @@
 name: /pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
 argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch <branch>] [--to-branch <branch>] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
+agents:
+  - name: zzaia-code-reviewer
+    description: Multi-repository coordination, branch validation, and pull request code review
 parameters:
   - name: action
     description: Operation to perform (create|read|update)
@@ -73,10 +76,6 @@ Unified pull request management across Azure DevOps and GitHub with support for 
    - Publish reviews when requested
    - Apply PR templates to description
    - Link work items automatically (Azure DevOps)
-
-## AGENTS
-
-- **zzaia-code-reviewer**: Multi-repository coordination and branch validation
 
 ## WORKFLOW
 

@@ -2,6 +2,11 @@
 name: /plan
 description: Generate or update comprehensive action plans for user-requested work in a multi-repository workspace
 argument-hint: "--work-description <text>"
+agents:
+  - name: zzaia-task-clarifier
+    description: Critical analysis, problem understanding, and improvement recommendations (analysis-only, no file creation)
+  - name: implementation-plan
+    description: Master implementation plan document generation
 parameters:
   - name: work-description
     description: Detailed description of the work to be planned
@@ -60,12 +65,6 @@ Generate or update comprehensive, actionable plans for user-requested work by an
    - Ask if user has any improvements or rectifications
    - Refine the plan and documents with user input
 
-## AGENTS
-
-- **zzaia-task-clarifier**: Critical analysis, problem understanding, and improvement recommendations (analysis-only, no file creation)
-- **zzaia-implementation-plan**: Master implementation plan document generation
-- **zzaia-service-architecture**: Per-service architecture documentation (when needed)
-
 ## WORKFLOW
 
 ```mermaid
@@ -109,7 +108,6 @@ sequenceDiagram
 **MANDATORY**: Use these template agents to generate each document:
 
 - `zzaia-implementation-plan` → `./workspace/work-items/<WorkItemName>/implementation-plan.md`
-- `zzaia-service-architecture` → `./workspace/work-items/<WorkItemName>/<service-name>/<service-name>-architecture.md` (if needed)
 
 ## OUTPUT
 

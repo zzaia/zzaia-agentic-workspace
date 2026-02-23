@@ -2,6 +2,11 @@
 name: /test
 description: Develop and run tests using framework detection and comprehensive test execution
 argument-hint: "--repo <name> --branch <name> --project <name> [--type unit|integration|load|ab|all] [--framework k6|locust|NBomber]"
+agents:
+  - name: zzaia-tester-specialist
+    description: Framework detection and comprehensive test execution in readonly mode
+  - name: zzaia-developer-specialist
+    description: Developer agent when a test needs to be implemented or changed
 parameters:
   - name: repo
     description: Repository name in workspace
@@ -53,11 +58,6 @@ Develop and run all existing tests within a specific project using framework det
    - In case of not finding tests just skip testing
    - Executes tests using zzaia-tester-specialist agent
      - Can execute multiple agents for parallel testing
-
-## AGENTS
-
-- **zzaia-tester-specialist**: Framework detection and comprehensive test execution in readonly mode
-- **zzaia-developer-specialist**: Developer agent when a test need to be implemented or changed
 
 ## WORKFLOW
 

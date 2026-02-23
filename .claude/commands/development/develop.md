@@ -2,6 +2,9 @@
 name: /develop
 description: Full task development workflow with multi-agent orchestration
 argument-hint: "--task <description> --repo <name> --branch <name>"
+agents:
+  - name: zzaia-developer-specialist
+    description: Implementation and development tasks with user feedback integration
 parameters:
   - name: task
     description: Task description or requirements
@@ -39,10 +42,6 @@ Execute focused implementation tasks for development work. Uses task specificati
    - Ask for user improvements
    - Execute them via developer specialist and continues loop
    - Process completes when implementation satisfies user requirements
-
-## AGENTS
-
-- **zzaia-developer-specialist**: Implementation and development tasks with user feedback integration
 
 ## WORKFLOW
 
