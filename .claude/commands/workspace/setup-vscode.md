@@ -1,11 +1,12 @@
 ---
 name: /setup-vscode
 description: Generate and manage VSCode launch and task configurations for development environments
+argument-hint: "[--mode all|project|validate|update] [--repo <name>] [--branch <name>]"
 parameters:
   - name: mode
     description: Configuration mode (all, project, validate, update)
     required: false
-  - name: repoName
+  - name: repo
     description: Target repository name
     required: false
   - name: branch

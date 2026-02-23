@@ -1,6 +1,7 @@
 ---
 name: /work-items
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
+argument-hint: "[--project <name>] [--title <text>] [--id <id>] [--assignee <user>] [--status <state>] [--since <date>] [--until <date>] [--platform azure|github|git-lab] [--limit <n>]"
 parameters:
   - name: --project
     description: Filter work items by project name

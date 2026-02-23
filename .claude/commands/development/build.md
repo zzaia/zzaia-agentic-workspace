@@ -1,8 +1,9 @@
 ---
 name: /build
 description: Multi-framework build with error reporting across repositories
+argument-hint: "--repo <name> --branch <name> --project <name>"
 parameters:
-  - name: repoName
+  - name: repo
     description: Repository name in workspace
     required: true
   - name: branch

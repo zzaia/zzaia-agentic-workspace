@@ -1,6 +1,7 @@
 ---
 name: /websearch
 description: Standardized web search protocol for comprehensive information gathering
+argument-hint: "--query <text> [--focus <area>]"
 parameters:
   - name: query
     description: Search query or topic to research

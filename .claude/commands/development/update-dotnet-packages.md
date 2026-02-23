@@ -1,6 +1,7 @@
 ---
 name: /update-dotnet-packages
 description: Update NuGet packages with comprehensive validation and safety checks
+argument-hint: "--repoName <name> --branch <name> [--target all|project|outdated|major]"
 parameters:
   - name: repoName
     description: Repository name in workspace

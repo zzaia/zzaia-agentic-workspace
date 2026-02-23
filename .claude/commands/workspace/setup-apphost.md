@@ -1,6 +1,7 @@
 ---
 name: /setup-apphost
 description: Configure the ZZAIA Aspire AppHost with workspace applications and shared infrastructure
+argument-hint: "--applications \"<name[:branch]> [name[:branch] ...]\""
 parameters:
   - name: applications
     description: "Space-separated list of applications to register. Format: `name` (uses master) or `name:branch` (uses specific branch). Example: order-service payment-service:feature/checkout"

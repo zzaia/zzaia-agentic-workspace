@@ -1,6 +1,7 @@
 ---
 name: /pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
+argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch <branch>] [--to-branch <branch>] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
 parameters:
   - name: action
     description: Operation to perform (create|read|update)
@@ -23,7 +24,7 @@ parameters:
   - name: work-item
     description: Associated work item ID (Azure DevOps)
     required: false
-  - name: pr-id
+  - name: pr
     description: Pull request ID for read/update operations
     required: false
   - name: title

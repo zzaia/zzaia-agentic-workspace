@@ -1,6 +1,6 @@
 ---
 description: Initialize session with CLAUDE.md guidelines and conversational rules
-argument-hint: "[repo: repoName] [brach: branchName] "
+argument-hint: "[--repo: <name>] [--brach: <name>] "
 parameters:
   - name: repo 
     description: Repository name to focus the work inside the workspace  

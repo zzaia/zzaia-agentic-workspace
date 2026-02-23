@@ -1,6 +1,7 @@
 ---
 name: /git
 description: Execute comprehensive Git version control operations with standardized branch management
+argument-hint: "--action init|branch|commit|merge|status [--repository <name>] [--branch <name>] [--message <text>]"
 parameters:
   - name: action
     description: The git operation to perform (init, branch, commit, merge, status)
@@ -8,7 +9,7 @@ parameters:
   - name: repository
     description: Target repository name for the operation
     required: false
-  - name: branch_name
+  - name: branch
     description: Branch name following standardized prefixes
     required: false
   - name: message

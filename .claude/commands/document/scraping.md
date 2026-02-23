@@ -1,6 +1,7 @@
 ---
 name: /scraping
 description: Search, extract, and download PDF and Word documents from URLs or web searches with filtering capabilities and user confirmation checkpoints
+argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>]"
 parameters:
   - name: url
     description: Direct URL to scrape documents from (mutually exclusive with search)

@@ -1,8 +1,9 @@
 ---
 name: /plan
 description: Generate or update comprehensive action plans for user-requested work in a multi-repository workspace
+argument-hint: "--work-description <text>"
 parameters:
-  - name: work_description
+  - name: work-description
     description: Detailed description of the work to be planned
     required: true
 ---

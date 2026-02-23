@@ -1,6 +1,7 @@
 ---
 name: /architect
 description: Generate comprehensive architectural documentation from a work item or description
+argument-hint: "--work-description <text> --work-directory <path>"
 category: development
 parameters:
   - name: work-description
