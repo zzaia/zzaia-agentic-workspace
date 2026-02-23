@@ -7,8 +7,6 @@ agents:
     description: Analyze work item requirements and validate acceptance criteria
   - name: zzaia-repository-manager
     description: Manage homologation branch creation across multiple repositories
-  - name: zzaia-documentation-architect
-    description: Generate focused Test Plan documentation with test cases and validation criteria
   - name: zzaia-tester-specialist
     description: Implement tests, execute test suites, and generate testing reports
   - name: zzaia-developer-specialist
