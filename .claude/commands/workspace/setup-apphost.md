@@ -2,6 +2,9 @@
 name: /setup-apphost
 description: Configure the ZZAIA Aspire AppHost with workspace applications and shared infrastructure
 argument-hint: "--applications \"<name[:branch]> [name[:branch] ...]\""
+agents:
+  - name: zzaia-developer-specialist
+    description: Implements all configuration changes following .NET coding rules and AppHost documentation patterns
 parameters:
   - name: applications
     description: "Space-separated list of applications to register. Format: `name` (uses master) or `name:branch` (uses specific branch). Example: order-service payment-service:feature/checkout"
@@ -49,11 +52,6 @@ Each application resolves to `workspace/{name}.worktrees/{branch}/` — defaults
    - Use `mcp__aspire__select_apphost` to select it
    - Use `mcp__aspire__list_resources` to confirm all services appear
    - Report final status to user
-
-## AGENTS
-
-- **zzaia-developer-specialist**: Implements all configuration changes following .NET coding rules and AppHost documentation patterns
-- **Aspire MCP**: Validates AppHost resource registration
 
 ## WORKFLOW
 

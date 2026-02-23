@@ -2,6 +2,11 @@
 name: /ask
 description: Intelligent answering, query and clarification system with read-only access
 argument-hint: "--question <text> [--context <path|topic|repo>]"
+agents:
+  - name: zzaia-task-clarifier
+    description: Query analysis related to tasks and codebases
+  - name: general-purpose
+    description: Web research and external information gathering
 parameters:
   - name: question
     description: Natural language question or query to be answered
@@ -36,13 +41,6 @@ Provide intelligent question answering, clarification or query through read-only
    - Synthesize comprehensive answer from one or multiple sources
    - Provide actionable insights
    - Suggest follow-up actions
-
-## AGENTS
-
-ALWAYS Use specific agents defined here, select by description
-
-- **zzaia-task-clarifier**: Agent for query analysis related to tasks in codebases
-- **general-purpose**: Agent for web research and external information gathering using /websearch command
 
 ## WORKFLOW
 

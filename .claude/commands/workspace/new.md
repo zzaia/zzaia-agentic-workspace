@@ -2,6 +2,9 @@
 name: /new
 description: Add new remote project repository worktrees to workspace at master/main branch or a specific one branch
 argument-hint: "[--repo: repoName | repoUrl] [--brach: branchName] "
+agents:
+  - name: zzaia-repository-manager
+    description: Handles repository cloning, worktree management, and workspace integration
 parameters:
   - name: repo 
     description: Repository URLs to clone 
@@ -47,10 +50,6 @@ Handle two primary operations:
    - Checkout new branch
    - Configure worktree metadata
    - Report operation status
-
-## AGENTS
-
-- **zzaia-repository-manager**: Handles repository cloning, worktree management, and workspace integration
 
 ## WORKFLOW
 

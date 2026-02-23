@@ -3,6 +3,17 @@ name: /architect
 description: Generate comprehensive architectural documentation from a work item or description
 argument-hint: "--work-description <text> --work-directory <path>"
 category: development
+agents:
+  - name: zzaia-task-clarifier
+    description: Requirements analysis and architectural scoping
+  - name: architecture-overview
+    description: Architecture overview with ADRs and C4 diagrams
+  - name: service-architecture
+    description: Individual service architecture documentation
+  - name: service-data-models
+    description: Entity, value objects, and data modeling documentation
+  - name: event-notifications
+    description: Event catalog, topics, and pub/sub configuration
 parameters:
   - name: work-description
     description: System or service description
@@ -39,14 +50,6 @@ Generate comprehensive architectural documentation for a system, focusing on arc
    - Document event flows for event-driven systems
    - **NEVER** write code implementations or configurations
    - Focus on design decisions and not implementations
-
-## AGENTS
-
-- **zzaia-task-clarifier**: Requirements analysis and architectural scoping
-- **zzaia-architecture-overview**: Architecture overview with ADRs and C4 diagrams
-- **zzaia-service-architecture**: Individual service architecture documentation
-- **zzaia-service-data-models**: Entity, value objects, and data modeling documentation
-- **zzaia-event-notifications**: Event catalog, topics, and pub/sub configuration
 
 ## WORKFLOW
 
