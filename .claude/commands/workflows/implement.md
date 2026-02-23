@@ -18,6 +18,17 @@ parameters:
   - name: description
     description: Implementation description/details for the developer
     required: true
+agents:
+  - name: zzaia-task-clarifier
+    description: Analyze work item requirements and clarify acceptance criteria
+  - name: zzaia-repository-manager
+    description: Manage feature branch creation and worktree setup
+  - name: zzaia-documentation-architect
+    description: Generate concise SDD documentation for the feature
+  - name: zzaia-developer-specialist
+    description: Implement feature based on approved SDD documentation
+  - name: zzaia-tester-specialist
+    description: Validate build quality and test coverage
 ---
 
 ## PURPOSE
