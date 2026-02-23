@@ -131,6 +131,38 @@ sequenceDiagram
 /management:pull-request --action create --portal github --project MyOrg --repo my-repo --from-branch bugfix/issue-123 --to-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
 ```
 
+## TEMPLATE
+
+The pull request title must follow the patter:
+
+`feat:title`
+`test:title`
+`bug:title`
+
+```md
+## Summary
+
+<!-- Brief description of the changes -->
+
+## Work Item
+
+- Closes #{{work-item}}
+
+## Changes
+
+-
+
+## Testing
+
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Manually tested
+
+## Notes
+
+<!-- Any additional context for reviewers -->
+```
+
 ## OUTPUT
 
 - **Status Indicator**: ✅ Success | ⚠️ Warning | ❌ Error
