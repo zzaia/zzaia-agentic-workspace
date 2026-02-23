@@ -39,28 +39,30 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Prepare worktree for development
    - Verify branch is ready for code changes
 
-3. **Clarify Feature**: Ask user for important clarifying questions about the feature 
-
-   - Call `/ask` with branch, work directory, and description parameters
-   - Clarify all requirements with the user before going to next phase 
-   - Use the tool **AskUserQuestion** to inquiry the user answers
-
-4. **Implement Documentation**: Implement the SDD documentation in a concise manner 
+3. **Implement Documentation**: Implement the SDD documentation in a concise manner 
 
    - Call `/development:architect` with branch, work directory, and description parameters
+   - Clarify all requirements with the user before going to next phase 
+   - Use the tool **AskUserQuestion** to inquiry the user for clarifying questions
    - Clarify all requirements with the user before implementing documentations
    - Implement one small necessary Specification Driven Design (SDD) documentation to implement the feature  
    - **MANDATORY** This must be very concise and have only the relevant feature information
 
-5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation 
+4. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation 
    - User should make some changes to SDD before next phase
    - Use the tool **AskUserQuestion** to inquiry the user answers
 
-6. **Implement Feature**: Execute development based on SDD documentation
+5. **Implement Feature**: Execute development based on SDD documentation
 
    - Call `/development:develop` in branch_name with approved SDD documentation 
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
+
+6. **Review Changes**: Stage, commit, and push all changes
+
+   - Call `/development:review` for all developed changes 
+   - Use the tool **AskUserQuestion** to inquiry the user answers about what to fix or improve
+   - Call `/development:develop` to  fix or improve the code 
 
 7. **Commit and Push**: Stage, commit, and push all changes
 
