@@ -150,6 +150,8 @@ else
     echo "[12/12] k6 already installed"
 fi
 
+pip install pypdf python-docx
+
 echo ""
 echo "✅ Installation complete."
 echo "⚠️  Restart your terminal or run: source ~/.bashrc"
