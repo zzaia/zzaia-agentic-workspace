@@ -21,7 +21,6 @@ Multi-agent orchestration system for multi-language development workflows across
 
 - **zzaia-task-clarifier** - Requirements analysis (advisory only)
 - **zzaia-developer-specialist** - Multi-language implementation with architectural principles
-- **zzaia-documentation-architect** - Comprehensive documentation creation
 - **zzaia-repository-manager** - Multi-repository worktree coordination
 - **zzaia-tester-specialist** - Build validation and quality assurance
 
