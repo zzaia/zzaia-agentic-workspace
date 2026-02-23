@@ -1,0 +1,51 @@
+{
+  "name": "zzaia-workspace",
+  "version": "1.0.0",
+  "description": "Multi-agent orchestration system for software engineering workflows across analytics, development, management, and workspace operations",
+  "commands": [
+    "/ask",
+    "/warmup",
+    "/websearch",
+    "/analytics:workflows:explorate",
+    "/analytics:workflows:analyze",
+    "/development:develop",
+    "/development:build",
+    "/development:test",
+    "/development:review",
+    "/development:migrations",
+    "/development:git",
+    "/development:update-dotnet-packages",
+    "/management:work-items",
+    "/management:plan",
+    "/management:architect",
+    "/management:pull-request",
+    "/workspace:new",
+    "/workspace:setup-vscode",
+    "/workspace:setup-apphost",
+    "/document:read",
+    "/document:scraping",
+    "/workflows:implement",
+    "/workflows:homologate"
+  ],
+  "agents": [
+    "zzaia-domain-exploration",
+    "zzaia-dataset-exploration",
+    "zzaia-problem-exploration",
+    "zzaia-developer-specialist",
+    "zzaia-tester-specialist",
+    "zzaia-code-reviewer",
+    "zzaia-workitem-manager",
+    "zzaia-task-clarifier",
+    "zzaia-repository-manager",
+    "zzaia-meta-agent",
+    "zzaia-meta-command"
+  ],
+  "rules": [
+    "dotnet-coding-rules",
+    "python-coding-rules",
+    "javascript-coding-rules"
+  ],
+  "hooks": [
+    "extract-document.py"
+  ]
+}

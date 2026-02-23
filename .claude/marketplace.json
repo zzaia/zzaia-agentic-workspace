@@ -2,7 +2,7 @@
   "name": "ZZAIA Agentic Workspace",
   "identifier": "zzaia-workspace",
   "version": "1.0.0",
-  "description": "Multi-agent orchestration system for software engineering workflows across analytics, development, documentation, and management",
+  "description": "Multi-agent orchestration system for software engineering workflows across analytics, development, management, and workspace operations",
   "author": {
     "name": "Raphael Pizzaia",
     "email": "raphael.pizzaia@example.com",
@@ -23,48 +23,7 @@
     "workspace",
     "automation"
   ],
-  "categories": ["analytics", "development", "management", "workspace", "meta"],
-  "plugins": [
-    {
-      "id": "analytics",
-      "name": "Analytics",
-      "description": "ML dataset discovery and analysis",
-      "config": ".claude/plugins/analytics.json"
-    },
-    {
-      "id": "development",
-      "name": "Development",
-      "description": "Multi-language development lifecycle",
-      "config": ".claude/plugins/development.json"
-    },
-    {
-      "id": "management",
-      "name": "Management",
-      "description": "Project and work item coordination",
-      "config": ".claude/plugins/management.json"
-    },
-    {
-      "id": "workspace",
-      "name": "Workspace",
-      "description": "Multi-repository configuration",
-      "config": ".claude/plugins/workspace.json"
-    },
-    {
-      "id": "meta",
-      "name": "Meta",
-      "description": "System utilities",
-      "config": ".claude/plugins/meta.json"
-    }
-  ],
-  "features": [
-    "Multi-agent orchestration",
-    "Cross-repository workflows",
-    "Language-agnostic development",
-    "Automated testing and quality gates",
-    "Work item integration (Azure DevOps, GitHub)",
-    "ML dataset exploration",
-    "Conventional commits"
-  ],
+  "plugin": ".claude/plugins/plugin.json",
   "requirements": {
     "claudeCode": ">=1.0.0"
   },
