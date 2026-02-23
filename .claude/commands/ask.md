@@ -1,6 +1,7 @@
 ---
 name: /ask
 description: Intelligent answering, query and clarification system with read-only access
+argument-hint: "--question <text> [--context <path|topic|repo>]"
 parameters:
   - name: question
     description: Natural language question or query to be answered

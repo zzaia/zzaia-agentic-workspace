@@ -1,6 +1,7 @@
 ---
 name: /develop
 description: Full task development workflow with multi-agent orchestration
+argument-hint: "--task <description> --repo <name> --branch <name>"
 parameters:
   - name: task
     description: Task description or requirements

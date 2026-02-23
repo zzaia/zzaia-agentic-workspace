@@ -1,18 +1,19 @@
 ---
 name: /implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
+argument-hint: "--work-item <id> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:
-  - name: workitem
+  - name: work-item
     description: Work item ID to implement (e.g., 1605)
     required: true
-  - name: repository_name 
+  - name: repo 
     description: Repository name to work on 
     required: true
-  - name: target_branch
-    description: Base branch to create feature branch from, usually remote (e.g., develop, main)
+  - name: target-branch
+    description: Base branch to create feature branch from, usually remote (e.g., develop, main), it is the target branch during the pull request creation
     required: true
-  - name: branch_name
-    description: Name of the feature branch to create (e.g., feature/implement-some-stuff)
+  - name: working-branch
+    description: Name of the feature branch to create (e.g., feature/implement-some-stuff) and work on
     required: true
   - name: description
     description: Implementation description/details for the developer

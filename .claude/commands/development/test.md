@@ -1,8 +1,9 @@
 ---
 name: /test
 description: Develop and run tests using framework detection and comprehensive test execution
+argument-hint: "--repo <name> --branch <name> --project <name> [--type unit|integration|load|ab|all] [--framework k6|locust|NBomber]"
 parameters:
-  - name: repoName
+  - name: repo
     description: Repository name in workspace
     required: true
   - name: branch
@@ -11,10 +12,10 @@ parameters:
   - name: project
     description: Project name to test within the repository
     required: true
-  - name: testType
+  - name: type 
     description: Optional test type filter (unit, integration, load, ab, all)
     required: false
-  - name: testFramework
+  - name: framework
     description: Optional test framework selection (k6, locust)
     required: false
 ---
@@ -129,6 +130,7 @@ sequenceDiagram
 
 1. **Grafana K6** - JavaScript-based load testing
 2. **Locust** - Python-based load testing
+2. **NBomber** - C#-based load testing
 
 ### K6 Test File Structure Example
 
