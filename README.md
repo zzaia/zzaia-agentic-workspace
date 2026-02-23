@@ -7,11 +7,20 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Optional 
 
-1. **1Password CLI**: Install from [1Password CLI Documentation](https://developer.1password.com/docs/cli/get-started/)
-2. **1Password Account**: Configure a vault with your service credentials
-3. **Git & Node.js**: Required for workspace operations
+1. **1Password CLI** — [Installation guide](https://developer.1password.com/docs/cli/get-started/)
+2. **1Password Account** — Configure a vault with your service credentials
+
+### Install Dependencies in Ubuntu
+
+Run [`.claude/Install.sh`](.claude/Install.sh) to install all required tools:
+
+```bash
+bash .claude/Install.sh
+```
+
+Installs: `git`, `node.js`, `VS Code`, `Claude Code CLI`, `1Password`, `Docker`, `.NET SDK`, `Aspire workload`, `Dapr CLI`, `Aspirate`, `Anaconda`, `k6`, `pypdf`, `python-docx`
 
 ### Initialize ZZAIA Agentic Workspace
 
@@ -25,8 +34,7 @@
    ```bash
    .claude/Init.sh
    ```
-   
-   When prompted, enter your 1Password vault name (e.g.,`dev-secrets`, etc.)
+   When prompted, enter your 1Password vault name (e.g., `dev-secrets`)
 
 3. **Authenticate with 1Password**
    Follow the 1Password CLI authentication prompts to enable secret injection
@@ -37,6 +45,20 @@ The workspace will automatically:
 - Launch Claude Code with MCP servers configured
 - Enable all workspace commands and agents
 
+### Example: Implement and Homologate a Feature
+
+```bash
+# 1. Implement a work item (creates branch, SDD doc, code, PR)
+/workflows:implement work-item=1042 repos=order-service target-branches=develop working-branches=feature/add-order-status description="Add order status tracking endpoint with history log"
+
+# 2. After implementation is merged, homologate the feature (creates test plan, runs tests against AppHost, files bugs) specially great for multi application testing
+/workflows:homologate work-item=1042 repos=order-service target-branches=develop working-branches=homolog/sprint-12 description="Validate order status endpoint against acceptance criteria"
+
+# 3. For each bug work item created in step 2, implement the fix
+/workflows:implement work-item=1055 repos=order-service target-branches=develop working-branches=fix/order-status-empty-response description="Fix order status returning empty response when no history exists"
+/workflows:implement work-item=1056 repos=order-service target-branches=develop working-branches=fix/order-status-403 description="Fix 403 on order status endpoint for non-admin users"
+```
+
 ### Use as Remote Plugin
 
 Add to your `.claude/plugins.json`:
@@ -44,15 +66,14 @@ Add to your `.claude/plugins.json`:
 ```json
 {
   "plugins": [
-    {
-      "name": "zzaia-workspace",
-      "url": "https://github.com/zzaia/zzaia-agentic-workspace"
-    }
+    { "name": "zzaia-workspace", "url": "https://github.com/zzaia/zzaia-agentic-workspace" }
   ]
 }
 ```
 
 ## 📋 Available Commands
+
+All individual commands can be called to by users to make individual operations, workflows are a combination of multiple commands.
 
 ### Analytics
 
@@ -80,6 +101,7 @@ Project management and work item coordination.
 - [**`/management:work-items`**](.claude/commands/management/work-items.md) - Work item retrieval
 - [**`/management:plan`**](.claude/commands/management/plan.md) - Project planning
 - [**`/management:architect`**](.claude/commands/management/architect.md) - Architecture specifications
+- [**`/management:pull-request`**](.claude/commands/management/pull-request.md) - Pull request management
 
 ### Workspace
 
@@ -87,12 +109,27 @@ Multi-repository workspace configuration.
 
 - [**`/workspace:new`**](.claude/commands/workspace/new.md) - Add repository
 - [**`/workspace:setup-vscode`**](.claude/commands/workspace/setup-vscode.md) - VS Code configuration
+- [**`/workspace:setup-apphost`**](.claude/commands/workspace/setup-apphost.md) - Aspire AppHost setup
+
+### Document
+
+Document content extraction and retrieval.
+
+- [**`/document:read`**](.claude/commands/document/read.md) - Extract PDF and Word document content
+- [**`/document:scraping`**](.claude/commands/document/scraping.md) - Search and download documents from web
+
+### Workflows
+
+End-to-end orchestration workflows, that are a combination of sequential minor commands, that aims to a major task automation.
+
+- [**`/workflows:implement`**](.claude/commands/workflows/implement.md) - Full implementation from work item to PR
+- [**`/workflows:homologate`**](.claude/commands/workflows/homologate.md) - Multi-app acceptance testing workflow
 
 ### Meta
 
 System utilities and information.
 
-- [**`/warmup`**](.claude/commands/warmup.md) - Context-aware focus 
+- [**`/warmup`**](.claude/commands/warmup.md) - Context-aware focus
 - [**`/ask`**](.claude/commands/ask.md) - Context-aware Q&A
 - [**`/websearch`**](.claude/commands/websearch.md) - Web search integration
 
@@ -107,6 +144,9 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 > See [host/README.md](host/README.md) for full setup details.
 
 ## 🏗️ Architecture
+ 
+The agentic system is composed a single orchestrator agent that can call other sub-agents by using simple commands (skills). 
+   
 
 ```mermaid
 sequenceDiagram
@@ -128,14 +168,16 @@ sequenceDiagram
 
 ## 🤖 Specialized Agents
 
-| Agent                                                                                      | Role                    | Definition                 |
-| ------------------------------------------------------------------------------------------ | ----------------------- | -------------------------- |
-| [**zzaia-task-clarifier**](.claude/agents/zzaia-task-clarifier.md)                         | Requirements Analysis   | Task specifications        |
-| [**zzaia-developer-specialist**](.claude/agents/development/zzaia-developer-specialist.md) | Implementation          | Multi-language development |
-| [**zzaia-documentation-architect**](.claude/agents/zzaia-documentation-architect.md)       | Documentation           | Documentation creation     |
-| [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md)                 | Repository Coordination | Worktree operations        |
-| [**zzaia-tester-specialist**](.claude/agents/development/zzaia-tester-specialist.md)       | Quality Assurance       | Build and test validation  |
-| [**zzaia-code-reviewer**](.claude/agents/development/zzaia-code-reviewer.md)               | Code Quality            | Static analysis            |
+| Agent | Role |
+| ----- | ---- |
+| [**zzaia-task-clarifier**](.claude/agents/management/zzaia-task-clarifier.md) | Requirements analysis |
+| [**zzaia-developer-specialist**](.claude/agents/development/zzaia-developer-specialist.md) | Multi-language implementation |
+| [**zzaia-tester-specialist**](.claude/agents/development/zzaia-tester-specialist.md) | Build and test validation |
+| [**zzaia-code-reviewer**](.claude/agents/development/zzaia-code-reviewer.md) | Code quality and static analysis |
+| [**zzaia-repository-manager**](.claude/agents/workspace/zzaia-repository-manager.md) | Multi-repository worktree coordination |
+| [**zzaia-workitem-manager**](.claude/agents/management/zzaia-workitem-manager.md) | Azure DevOps and GitHub work items |
+| [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent generation utilities |
+| [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation utilities |
 
 ## 📁 Structure
 
@@ -143,53 +185,33 @@ sequenceDiagram
 .claude/
 ├── agents/              # AI agent definitions
 ├── commands/            # Command configurations
-│   ├── analytics/      # ML and data analysis
-│   ├── development/    # Software development
-│   ├── management/     # Project management
-│   ├── workspace/      # Repository management
-│   └── meta/          # System utilities
-├── plugins/            # Plugin configurations
-│   ├── analytics.json
-│   ├── development.json
-│   ├── management.json
-│   ├── workspace.json
-│   └── meta.json
-├── rules/             # Language-specific standards
-│   ├── dotnet-coding-rules.md
-│   ├── python-coding-rules.md
-│   └── javascript-coding-rules.md
-├── hooks/             # Session lifecycle hooks
-│   └── SessionStart   # 1Password secret injection
-├── marketplace.json   # Marketplace configuration
-└── plugin.json        # Main plugin config
-
-CLAUDE.md              # System guidance
-workspace/            # Multi-repository workspace
+│   ├── analytics/
+│   ├── development/
+│   ├── document/
+│   ├── management/
+│   ├── workspace/
+│   └── workflows/
+├── hooks/               # Lifecycle hooks and scripts
+│   └── extract-document.py
+├── plugins/
+│   └── plugin.json      # Single plugin configuration
+├── rules/               # Language-specific standards
+marketplace.json         # Marketplace configuration
+CLAUDE.md                # System guidance
+workspace/               # Multi-repository workspace
 ```
 
-## 🔄 Workflow
-
-1. **Task Analysis** - Requirements clarification
-2. **Implementation** - Multi-language development
-3. **Testing** - Comprehensive test execution
-4. **Documentation** - Automated generation
-5. **Quality Gates** - Code review and validation
-6. **Version Control** - Conventional commits
 
 ## 🔌 MCP Tools Integration
 
-External service integrations via Model Context Protocol servers.
+External service integrations via Model Context Protocol servers configured in [`.mcp.json`](.mcp.json).
 
-| Tool | Purpose | Environment Variable |
+| Tool | Purpose | Secret (1Password) |
 |------|---------|---------------------|
-| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` |
-| **GitHub** | Repository operations, PRs, issues | `GITHUB_PERSONAL_ACCESS_TOKEN` |
-| **Azure DevOps** | Work item management | `AZURE_DEVOPS_PAT`, `AZURE_DEVOPS_ORGANIZATION`, `AZURE_DEVOPS_PROJECT` |
-| **Postman** | API collections, mocks, monitors | `POSTMAN_API_KEY` |
-| **Figma** | Design data extraction, assets | `FIGMA_API_KEY` |
-| **Grafana** | Dashboards, Prometheus, Loki, alerts | `GRAFANA_URL`, `GRAFANA_API_KEY` |
+| **Tavily** | Web search, extract, crawl, map | `op://${VAULT_NAME}/tavily/credential` |
+| **Azure DevOps** | Work items, PRs, pipelines, repos | `op://${VAULT_NAME}/azure-devops/pat` |
 | **Playwright** | Browser automation, screenshots | None (local) |
-| **VS Code** | IDE integration, diff, file ops | None (local) |
+| **Aspire** | AppHost resource inspection and control | None (local) |
 
 ## 🔐 1Password Integration
 
@@ -220,13 +242,9 @@ Organize your 1Password vault with items for each service:
 your-vault/
   ├── tavily/
   │   └── credential (API key)
-  ├── azure-devops/
-  │   ├── pat (Personal Access Token)
-  │   └── organization (Organization name)
-  ├── github/
-  │   └── token (Personal Access Token)
-  └── postman/
-      └── api-key (API Key)
+  └── azure-devops/
+      ├── pat (Personal Access Token)
+      └── organization (Organization name)
 ```
 
 ### Adding New Services
@@ -279,15 +297,9 @@ your-vault/
 
 Clone repository and use with VS Code workspace functionality for multi-repository development, this way you can improve the agentic system beside the normal development.
 
-### Modular Plugins
+### Plugin
 
-Install individual plugin categories:
-
-- **Analytics**: `.claude/plugins/analytics.json`
-- **Development**: `.claude/plugins/development.json`
-- **Management**: `.claude/plugins/management.json`
-- **Workspace**: `.claude/plugins/workspace.json`
-- **Meta**: `.claude/plugins/meta.json`
+Single unified plugin at `.claude/plugins/plugin.json` — includes all commands, agents, rules, and hooks.
 
 ## 📄 License
 

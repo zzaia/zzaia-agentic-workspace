@@ -17,12 +17,16 @@ Multi-agent orchestration system for multi-language development workflows across
 
 ### Agent Architecture
 
-6 specialized agents in `.claude/agents/`:
+Specialized agents in `.claude/agents/`:
 
-- **zzaia-task-clarifier** - Requirements analysis (advisory only)
-- **zzaia-developer-specialist** - Multi-language implementation with architectural principles
+- **zzaia-task-clarifier** - Requirements analysis
+- **zzaia-developer-specialist** - Multi-language implementation
 - **zzaia-repository-manager** - Multi-repository worktree coordination
 - **zzaia-tester-specialist** - Build validation and quality assurance
+- **zzaia-code-reviewer** - Code quality and static analysis
+- **zzaia-workitem-manager** - Azure DevOps and GitHub work item management
+- **zzaia-meta-agent** - Agent generation utilities
+- **zzaia-meta-command** - Command generation utilities
 
 ## Workspace Structure
 
