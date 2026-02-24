@@ -208,6 +208,7 @@ __marimo__/
 
 # Claude IDE
 workspace/*
+host/*
 !settings.local.json
 *.code-workspace
 
