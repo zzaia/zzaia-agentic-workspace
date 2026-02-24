@@ -1,32 +1,44 @@
 #!/usr/bin/env python3
-"""Extract text from PDF and Word documents."""
+"""Extract text and images from PDF and Word documents."""
 
 import sys
+import base64
 from pathlib import Path
 from typing import Tuple
 
 
 def extract_pdf(file_path: Path) -> Tuple[str, int, str]:
-    """Extract text from PDF file.
+    """Extract text and images from PDF file using pymupdf.
 
     Args:
         file_path: Path to PDF file.
 
     Returns:
-        Tuple of (text content, page count, filename).
+        Tuple of (content, page count, filename).
     """
     try:
-        from pypdf import PdfReader
+        import fitz
     except ImportError:
-        return "", 0, "Error: pypdf not installed. Run: pip install pypdf"
+        return "", 0, "Error: pymupdf not installed. Run: pip install pymupdf"
     try:
-        reader = PdfReader(str(file_path))
-        page_count = len(reader.pages)
-        text = ""
-        for idx, page in enumerate(reader.pages, 1):
-            text += f"\n--- Page {idx} ---\n"
-            text += page.extract_text()
-        return text, page_count, file_path.name
+        doc = fitz.open(str(file_path))
+        page_count = len(doc)
+        content = ""
+        for idx in range(page_count):
+            page = doc[idx]
+            content += f"\n--- Page {idx + 1} ---\n"
+            content += page.get_text()
+            images = page.get_images(full=True)
+            for img_idx, img in enumerate(images):
+                xref = img[0]
+                base_image = doc.extract_image(xref)
+                img_bytes = base_image["image"]
+                img_ext = base_image["ext"]
+                img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+                content += f"\n[IMAGE {img_idx + 1} — {img_ext.upper()} — base64]\n"
+                content += f"data:image/{img_ext};base64,{img_b64}\n"
+        doc.close()
+        return content, page_count, file_path.name
     except Exception as e:
         return "", 0, f"Error reading PDF: {str(e)}"
 
