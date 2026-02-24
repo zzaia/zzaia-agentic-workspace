@@ -2,6 +2,7 @@
 name: /setup-apphost
 description: Configure the ZZAIA Aspire AppHost with workspace applications and shared infrastructure
 argument-hint: "--applications \"<name[:branch]> [name[:branch] ...]\""
+tools: Aspire
 agents:
   - name: zzaia-developer-specialist
     description: Implements all configuration changes following .NET coding rules and AppHost documentation patterns
@@ -76,13 +77,14 @@ sequenceDiagram
     C-->>U: Configuration complete, resources registered
 ```
 
-## ACCEPTANCE CRITERIA
+## MANDATORY ACCEPTANCE CRITERIA
 
 - All application worktrees discovered and validated
 - Configurations follow patterns documented in `host/README.md`
 - No compilation errors after changes
 - All services appear in Aspire MCP resource list
 - Docker daemon is running
+- The AppHost must be running successfully
 
 ## EXAMPLES
 
