@@ -78,3 +78,4 @@ Those definitions must be ALWAYS be applied and never be removed or altered from
 - Avoid adding commands or peace of codes in .claude and CLAUDE.md definitions;
 - ALWAYS be Concise on all outputs, responses and implementations;
 - ALWAYS be check for the selected files or lines on IDE when receiving prompt;
+- ALWAYS read and follow agent definitions specified in command frontmatter before executing — never skip or replace agents defined there;
