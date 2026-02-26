@@ -50,7 +50,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 3. **Implement Documentation**: Implement the SDD documentation in a concise manner 
 
-   - Call `/development:architect` with branch, work directory, and description parameters
+   - Call `/management:architect` with branch, work directory, and description parameters
    - Clarify all requirements with the user before going to next phase 
    - Use the tool **AskUserQuestion** to inquiry the user for clarifying questions
    - Clarify all requirements with the user before implementing documentations
