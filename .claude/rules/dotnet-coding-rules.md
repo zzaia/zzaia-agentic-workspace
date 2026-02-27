@@ -13,12 +13,10 @@
 ### Code Quality Rules
 
 - Self-documenting code
-- Avoid blank lines inside methods
 - Clear naming conventions with pascal case
 - Maximum of three words combined in names ex: `CreateBankAccountAsync`, `BankReferenceCode`
 - Use `Async` in names when returning tasks
 - No inline comments
-- No inline spaces
 - Fix build warnings
 
 ### Testing Standards
