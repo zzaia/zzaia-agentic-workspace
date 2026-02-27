@@ -1,55 +1,44 @@
 ---
 name: /architect
-description: Generate comprehensive architectural documentation from a work item or description
-argument-hint: "--work-description <text> --work-directory <path>"
+description: Explore architecture concepts and generate clarifying questions from context (docs, work items, workspace code)
+argument-hint: "[--work-description <text>] [--work-directory <path>]"
 category: development
 agents:
   - name: zzaia-task-clarifier
-    description: Requirements analysis and architectural scoping
-  - name: template-architecture-overview
-    description: Architecture overview with ADRs and C4 diagrams
-  - name: template-service-architecture
-    description: Individual service architecture documentation
-  - name: template-service-data-model
-    description: Entity, value objects, and data modeling documentation
-  - name: template-event-notification
-    description: Event catalog, topics, and pub/sub configuration
+    description: Generate relevant and clarifying architectural questions based on context analysis
 parameters:
   - name: work-description
-    description: System or service description
-    required: true
+    description: Optional description or context about the system or feature
+    required: false
     type: string
   - name: work-directory
-    description: Work directory to add the documentation
-    required: true
+    description: Workspace directory to explore for context
+    required: false
     type: string
 ---
 
 ## PURPOSE
 
-Generate comprehensive architectural documentation for a system, focusing on architectural overview, components, and design patterns without implementation details.
+Explore architecture concepts and surface clarifying questions using `zzaia-task-clarifier`. Analyzes available context — documentation, work items, and workspace implementations — to identify architectural gaps, decisions needed, and areas requiring deeper understanding. 
 
 ## EXECUTION
 
-1. **Requirements Analysis**:
+1. **Context Analysis**: Gather and analyze all available input
+   - Read provided description or work item context
+   - Explore workspace directory for existing implementations and patterns
+   - Scan available documentation and ADRs
+   - Identify technology stack, service boundaries, and integration points
 
-   - zzaia-task-clarifier analyzes the provided description
-   - Identify architectural components and service boundaries
-   - Define technical decision framework
+2. **Architectural Question Generation**: Use `zzaia-task-clarifier` to
+   - Surface architectural concerns and decision gaps
+   - Generate clarifying questions grouped by concern (scalability, integration, data, security, etc.)
+   - Identify missing context that affects architectural decisions
+   - Highlight conflicts or inconsistencies found in existing code or docs
 
-2. **Architectural Insights Review**:
-
-   - Present architectural insights to user for approval
-   - Show identified components, services, and design patterns
-   - Highlight key architectural decisions
-   - Wait for user confirmation before proceeding
-
-3. **Documentation Generation**:
-   - Delegate to the appropriate template agents to generate each document
-   - Create C4 diagrams (Context and Container levels)
-   - Document event flows for event-driven systems
-   - **NEVER** write code implementations or configurations
-   - Focus on design decisions and not implementations
+3. **Presentation**: Deliver structured findings to the user
+   - Organize questions by architectural concern category
+   - Reference specific files, patterns, or work items where relevant
+   - Suggest areas for deeper investigation
 
 ## WORKFLOW
 
@@ -57,51 +46,29 @@ Generate comprehensive architectural documentation for a system, focusing on arc
 sequenceDiagram
     participant U as User
     participant C as /architect Command
-    participant TC as Task Clarifier
-    participant TA as Template Agents
-    participant O as Output
+    participant TC as zzaia-task-clarifier
 
     U->>C: /architect [description] [directory]
-    C->>TC: Analyze requirements
-    TC->>TC: Identify architectural components
-    TC-->>C: Return architectural insights
-    C-->>U: Present insights for review
-    U->>C: Confirm or adjust architecture
-    C->>TA: Delegate to template agents
-    TA->>O: Create documentation files
-    TA->>O: Generate C4 and sequence diagrams
-    O-->>U: Return generated documentation
+    C->>C: Analyze workspace context and docs
+    C->>TC: Delegate architectural question generation
+    TC->>TC: Identify gaps and decision points
+    TC-->>C: Return structured questions and insights
+    C-->>U: Present architectural findings
 ```
-
-## DOCUMENTATION AGENTS
-
-**MANDATORY**: Use these template agents to generate each document:
-
-- `template-architecture-overview` → `docs/architecture-overview.md`
-- `template-service-architecture` → `docs/{service-name}-architecture.md`
-- `template-service-data-model` → `docs/{service-name}-data-models.md`
-- `template-event-notification` → `docs/event-notifications.md` (if event-driven)
 
 ## ACCEPTANCE CRITERIA
 
-- Generates comprehensive architectural documentation
-- Creates C4 Context and Container diagrams
-- Defines service boundaries and interactions
-- Documents architectural decisions
-- Provides high-level system overview
-- Do not add implementation-specific details
-- Be concise
-- Presents architectural insights for user review before documentation generation
-- Allows user to confirm or adjust architecture before proceeding
+- Surfaces specific, contextual architectural questions
+- References workspace patterns and existing implementations
+- Groups questions by architectural concern
+- Identifies gaps and decision points clearly
+- Does NOT generate documentation artifacts
+- Does NOT delegate to template agents
 
 ## EXAMPLES
 
-```bash
-/architect "Build a scalable e-commerce platform" ./workspace/ecommerce.worktrees/master
 ```
-
-## NOTES
-
-- Focus exclusively on architectural aspects
-- Delegate all document generation to template agents
-- Generate complete architectural documentation
+/architect --work-description "Multi-tenant SaaS with microservices"
+/architect --work-directory ./workspace/payments.worktrees/master
+/architect --work-description "Event-driven order processing" --work-directory ./workspace/orders.worktrees/feature/checkout
+```
