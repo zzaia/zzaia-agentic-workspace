@@ -1,5 +1,5 @@
 ---
-name: service-data-models
+name: template-service-data-model
 description: Generates docs/service-data-models.md for a target service by exploring its codebase to extract entities, value objects, domain events, aggregate roots, database constraints, migration strategy, data seeding, and performance optimizations. Renders a Mermaid ERD from real entity relationships. Use when asked to document data models for a service.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, Task
 model: sonnet

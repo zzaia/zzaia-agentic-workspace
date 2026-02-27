@@ -6,13 +6,13 @@ category: development
 agents:
   - name: zzaia-task-clarifier
     description: Requirements analysis and architectural scoping
-  - name: architecture-overview
+  - name: template-architecture-overview
     description: Architecture overview with ADRs and C4 diagrams
-  - name: service-architecture
+  - name: template-service-architecture
     description: Individual service architecture documentation
-  - name: service-data-models
+  - name: template-service-data-model
     description: Entity, value objects, and data modeling documentation
-  - name: event-notifications
+  - name: template-event-notification
     description: Event catalog, topics, and pub/sub configuration
 parameters:
   - name: work-description
@@ -77,10 +77,10 @@ sequenceDiagram
 
 **MANDATORY**: Use these template agents to generate each document:
 
-- `zzaia-architecture-overview` → `docs/architecture-overview.md`
-- `zzaia-service-architecture` → `docs/{service-name}-architecture.md`
-- `zzaia-service-data-models` → `docs/{service-name}-data-models.md`
-- `zzaia-event-notifications` → `docs/event-notifications.md` (if event-driven)
+- `template-architecture-overview` → `docs/architecture-overview.md`
+- `template-service-architecture` → `docs/{service-name}-architecture.md`
+- `template-service-data-model` → `docs/{service-name}-data-models.md`
+- `template-event-notification` → `docs/event-notifications.md` (if event-driven)
 
 ## ACCEPTANCE CRITERIA
 

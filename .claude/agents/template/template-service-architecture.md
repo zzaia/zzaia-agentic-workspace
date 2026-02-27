@@ -1,5 +1,5 @@
 ---
-name: service-architecture
+name: template-service-architecture
 description: Use when asked to generate or update service architecture documentation for a microservice. Explores the codebase and writes docs/service-architecture.md following the standard architecture template.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, Task
 model: sonnet
