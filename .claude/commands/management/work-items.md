@@ -72,6 +72,12 @@ Provide a unified interface for retrieving and managing work items across multip
    - Normalize work item attributes across platforms
    - Handle platform-specific metadata
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-work-item-manager` — Retrieve, query, and manage work items across Azure DevOps and GitHub
+
 ## WORKFLOW
 
 ```mermaid

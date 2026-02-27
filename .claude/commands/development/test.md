@@ -59,6 +59,13 @@ Develop and run all existing tests within a specific project using framework det
    - Executes tests using zzaia-tester-specialist agent
      - Can execute multiple agents for parallel testing
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-tester-specialist` — Framework detection and comprehensive test execution in readonly mode
+- `zzaia-developer-specialist` — Developer agent when a test needs to be implemented or changed
+
 ## WORKFLOW
 
 ```mermaid

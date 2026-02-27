@@ -19,6 +19,14 @@ agents:
 
 # Explorate Command
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-domain-exploration` — Identifies top commercially viable problems in data science and software engineering
+- `zzaia-problem-exploration` — Transforms problem statements into comprehensive technical research reports
+- `zzaia-dataset-exploration` — Discovers and evaluates optimal machine learning datasets
+
 ## Workflow Steps
 
 0. **Domain Exploration**

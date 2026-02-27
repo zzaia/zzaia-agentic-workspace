@@ -85,6 +85,15 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Link PR to original work item
    - Prepare for code review and merge
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-task-clarifier` — Analyze work item requirements and clarify acceptance criteria
+- `zzaia-repository-manager` — Manage feature branch creation and worktree setup
+- `zzaia-developer-specialist` — Implement feature based on approved SDD documentation
+- `zzaia-tester-specialist` — Validate build quality and test coverage
+
 ## WORKFLOW DIAGRAM
 
 ```mermaid

@@ -52,6 +52,12 @@ Conduct comprehensive code reviews with multi-dimensional analysis, providing ac
    - Highlight critical findings
    - Suggest potential refactoring strategies
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-code-reviewer` — Comprehensive code quality review and static analysis
+
 ## WORKFLOW
 
 ```mermaid

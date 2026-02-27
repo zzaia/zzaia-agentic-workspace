@@ -43,6 +43,12 @@ Execute focused implementation tasks for development work. Uses task specificati
    - Execute them via developer specialist and continues loop
    - Process completes when implementation satisfies user requirements
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-developer-specialist` — Implementation and development tasks with user feedback integration
+
 ## WORKFLOW
 
 ```mermaid

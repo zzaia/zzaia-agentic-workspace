@@ -12,6 +12,12 @@ agents:
 ## Overview
 The `/analyze` command provides a structured workflow for dataset analysis, encompassing download, visualization, and exploration phases.
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-notebook-development` — Dataset download, visualization, and exploration via Jupyter notebooks
+
 ## Workflow Phases
 
 ### 0. Dataset Download

@@ -35,6 +35,12 @@ Provide standardized, unified web search protocol for comprehensive information 
    - Ensure information relevance
    - Document search methodology
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `general-purpose` — Web search execution, content analysis, and information structuring
+
 ## WORKFLOW
 
 ```mermaid

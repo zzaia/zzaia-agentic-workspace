@@ -42,6 +42,13 @@ Provide intelligent question answering, clarification or query through read-only
    - Provide actionable insights
    - Suggest follow-up actions
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-task-clarifier` — Query analysis related to tasks and codebases
+- `general-purpose` — Web research and external information gathering
+
 ## WORKFLOW
 
 ```mermaid

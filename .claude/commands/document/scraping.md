@@ -34,6 +34,12 @@ Discover and extract PDF/Word documents from web sources using browser automatio
 3. **Extraction**: Parse document URLs and metadata, apply filters
 4. **Confirmation**: Present results, download if user confirms
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `general-purpose` — Clarifies search criteria, executes scraping, and handles parallel document discovery tasks
+
 ## WORKFLOW
 
 ```mermaid
