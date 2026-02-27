@@ -2,6 +2,9 @@
 name: /work-items
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
 argument-hint: "[--project <name>] [--title <text>] [--id <id>] [--assignee <user>] [--status <state>] [--since <date>] [--until <date>] [--platform azure|github|git-lab] [--limit <n>]"
+agents:
+  - name: zzaia-work-item-manager
+    description: Retrieve, query, and manage work items across Azure DevOps and GitHub
 parameters:
   - name: --project
     description: Filter work items by project name
