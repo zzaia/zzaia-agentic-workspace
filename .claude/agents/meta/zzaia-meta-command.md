@@ -38,6 +38,7 @@ Create command configurations in a defined standard pattern for the multi-agent 
 - Follow workspace multi-repository structure;
 - Integrate with existing agent orchestration system;
 - ALWAYS use sequential mermaid diagrams;
+- Always include a `## DELEGATION` section when agents are defined in frontmatter;
 
 ## CAPABILITIES
 
@@ -83,6 +84,12 @@ parameters:
 3. **<Phase 3>**: <Description>
    - <Action 1>
    - <Action 2>
+
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `<agent-name>` — <agent-responsibility>
 
 ## WORKFLOW
 

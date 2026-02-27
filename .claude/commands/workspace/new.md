@@ -51,6 +51,12 @@ Handle two primary operations:
    - Configure worktree metadata
    - Report operation status
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-repository-manager` — Handles repository cloning, worktree management, and workspace integration
+
 ## WORKFLOW
 
 ```mermaid

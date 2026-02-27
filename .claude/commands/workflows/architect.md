@@ -69,6 +69,13 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/document:write` to generate the SDD documentation for each created child work-item 
    - Use `/management:work-items` to update each child work item description with finalized SDD documentation 
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-work-item-manager` — Retrieve and manage work items in Azure DevOps, post discussions, and update descriptions
+- `zzaia-task-clarifier` — Analyze and decompose requirements for architecture planning
+
 ## WORKFLOW
 
 ```mermaid

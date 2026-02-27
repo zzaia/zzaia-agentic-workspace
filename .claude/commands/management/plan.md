@@ -65,6 +65,13 @@ Generate or update comprehensive, actionable plans for user-requested work by an
    - Ask if user has any improvements or rectifications
    - Refine the plan and documents with user input
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-task-clarifier` — Critical analysis, problem understanding, and improvement recommendations (analysis-only, no file creation)
+- `implementation-plan` — Master implementation plan document generation
+
 ## WORKFLOW
 
 ```mermaid

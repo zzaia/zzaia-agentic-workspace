@@ -77,6 +77,12 @@ Unified pull request management across Azure DevOps and GitHub with support for 
    - Apply PR templates to description
    - Link work items automatically (Azure DevOps)
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-code-reviewer` — Multi-repository coordination, branch validation, and pull request code review
+
 ## WORKFLOW
 
 ```mermaid

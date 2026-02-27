@@ -54,6 +54,12 @@ Each application resolves to `workspace/{name}.worktrees/{branch}/` — defaults
    - Use `mcp__aspire__list_resources` to confirm all services appear
    - Report final status to user
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-developer-specialist` — Implements all configuration changes following .NET coding rules and AppHost documentation patterns
+
 ## WORKFLOW
 
 ```mermaid

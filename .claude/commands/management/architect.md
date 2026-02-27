@@ -40,6 +40,12 @@ Explore architecture concepts and surface clarifying questions using `zzaia-task
    - Reference specific files, patterns, or work items where relevant
    - Suggest areas for deeper investigation
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-task-clarifier` — Generate relevant and clarifying architectural questions based on context analysis
+
 ## WORKFLOW
 
 ```mermaid
