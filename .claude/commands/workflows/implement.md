@@ -79,11 +79,10 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Create conventional commit message referencing work item
    - Push changes to remote origin
 
-8. **Create Pull Request**: Open pull request for review
+8. **Create Draft Pull Request**: Open pull request 
 
-   - Call `/management:pull-request` with source_branch, target_branch, workitem parameters
-   - Link PR to original work item
-   - Prepare for code review and merge
+   - Call `/management:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
+   - Link PR to original work item 
 
 ## DELEGATION
 
