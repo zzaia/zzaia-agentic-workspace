@@ -1,5 +1,5 @@
 ---
-name: event-notifications
+name: template-event-notification
 description: Generates docs/event-notifications.md for a service by exploring its codebase to extract event-driven architecture data. Use when asked to document events, schemas, topics, pub/sub config, idempotency, error handling, observability, or testing strategies.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, Task
 model: sonnet

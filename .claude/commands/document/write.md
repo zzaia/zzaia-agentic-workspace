@@ -3,17 +3,17 @@ name: document:write
 description: Write markdown documentation using specialized agent templates for architecture, services, data models, and event catalogs. Output to local files and remote Wiki page.
 argument-hint: "[document-type] [title] [--output <path>] [--wiki] [--repo <name>]"
 agents:
-  - name: architecture-overview
+  - name: template-architecture-overview
     description: Architecture overview with ADRs and C4 diagrams
-  - name: service-architecture
+  - name: template-service-architecture
     description: Individual service architecture documentation
-  - name: service-data-models
+  - name: template-service-data-model
     description: Entity, value objects, and data modeling documentation
-  - name: event-notifications
+  - name: template-event-notification
     description: Event catalog, topics, and pub/sub configuration
 parameters:
   - name: document-type
-    description: Type of document to write (architecture-overview, service-architecture, service-data-models, event-notifications)
+    description: Type of document to write (template-architecture-overview, template-service-architecture, template-service-data-model, template-event-notification)
     required: false
   - name: title
     description: Document title or subject
@@ -36,10 +36,10 @@ Write markdown documentation with specialized agent templates ensuring consisten
 ## EXECUTION
 
 1. **Clarify Document Type**: Identify or ask which documentation type to write
-   - Architecture overview with ADRs and C4 diagrams
-   - Individual service architecture
-   - Service data models and entities
-   - Event notifications and pub/sub catalog
+   - template-architecture-overview: Architecture overview with ADRs and C4 diagrams
+   - template-service-architecture: Individual service architecture
+   - template-service-data-model: Service data models and entities
+   - template-event-notification: Event notifications and pub/sub catalog
 
 2. **Route to Specialized Agent**: Dispatch to appropriate agent based on document type
    - Agent handles template structure, formatting, and conventions
@@ -83,10 +83,10 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/document:write architecture-overview "System Architecture"
-/document:write service-architecture "User Service" --output /home/raphael-pizzaia/zzaia/docs/user-service.md
-/document:write service-data-models "Order Entity" --output /home/raphael-pizzaia/zzaia/docs/order-models.md --wiki
-/document:write event-notifications "Payment Events" --repo payments --wiki
+/document:write template-architecture-overview "System Architecture"
+/document:write template-service-architecture "User Service" --output docs/user-service.md
+/document:write template-service-data-model "Order Entity" --output docs/order-models.md --wiki
+/document:write template-event-notification "Payment Events" --repo payments --wiki
 ```
 
 ## OUTPUT
