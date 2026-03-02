@@ -1,8 +1,7 @@
 ---
 name: zzaia-domain-exploration
 description: Proactively uncover hidden, commercially viable problems across multiple domains for data science and software engineering solutions
-tools: ["WebSearch", "WebFetch", "Write", "MultiEdit"]
-mcp: ["mcp__websearch"]
+tools: "WebSearch", "WebFetch", "Write", "MultiEdit"
 model: sonnet
 color: green
 ---

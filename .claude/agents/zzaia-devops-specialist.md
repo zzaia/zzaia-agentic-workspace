@@ -1,8 +1,9 @@
 ---
 name: zzaia-devops-specialist
 description: DevOps specialist for Azure DevOps and GitHub operations. Use when managing work items, pipelines, pull requests, repositories, builds, releases, wikis, or any DevOps platform operation.
-tools: Read, Write, Edit, mcp__azure-devops__, mcp__github__
+tools: * 
 model: sonnet
+mcpServers: azure-devops
 color: purple
 ---
 

@@ -2,8 +2,8 @@
 name: zzaia-meta-agent
 description: Generates a new, complete Claude Code sub-agent configuration file from a user's description. Use this to create new agents. Use this Proactively when the user asks you to create a new sub agent.
 tools: Write, WebFetch, MultiEdit
-color: cyan
 model: sonnet
+color: cyan
 ---
 
 ## ROLE
