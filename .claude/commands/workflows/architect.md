@@ -3,7 +3,7 @@ name: /architect
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
 argument-hint: "--main-work-item <id> [--description <text>]"
 agents:
-  - name: zzaia-work-item-manager
+  - name: zzaia-devops-specialist
     description: Retrieve and manage work items in Azure DevOps, post discussions, and update descriptions
   - name: zzaia-task-clarifier
     description: Analyze and decompose requirements for architecture planning
@@ -32,7 +32,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 ## EXECUTION
 
 1. **Retrieve Work Item Chain**
-   - Call `/management:work-items` with `main-work-item` parameter to retrieve the full hierarchy
+   - Call `/devops:work-item` with `main-work-item` parameter to retrieve the full hierarchy
    - Collect Title, Description, Acceptance Criteria from each level (Epic → Feature → User Story → Task)
    - **MANDATORY** Main work item description must not be empty
 
@@ -44,30 +44,30 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 
 3. **Generate Main Work Item Architecture**
    - Call `/development:architect` with main work item context and description parameter
-   - Call `/management:work-items` to post a discussion on the main work item with all clarification questions as a numbered list
+   - Call `/devops:work-item` to post a discussion on the main work item with all clarification questions as a numbered list
    - **MANDATORY** Do NOT create child work items or update descriptions with architectural documentation before user responds
 
 4. **Validate Main Work Item**
    - Use the tool **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
-   - Call `/management:work-items` to read all discussion answers from the main work item
-   - Call `/management:work-items` and `/document:write` to update main work item related description with finalized SDD documentation in markdown following the templates
+   - Call `/devops:work-item` to read all discussion answers from the main work item
+   - Call `/devops:work-item` and `/document:write` to update main work item related description with finalized SDD documentation in markdown following the templates
 
 5. **Create Child Work Items**
-   - Call `/management:work-items` to create the full child hierarchy (Features, User Stories, Tasks) without the SDD documentation yet
+   - Call `/devops:work-item` to create the full child hierarchy (Features, User Stories, Tasks) without the SDD documentation yet
    - Each level must have appropriate SDD granularity: Epic (system), Feature (component), User Story (functional), Task (implementation)
    - Leaf tasks must be designed as independent pull requests where possible
-   - Call `/management:work-items` to establish dependency links (`related`, `consumes-from`) between dependent items
+   - Call `/devops:work-item` to establish dependency links (`related`, `consumes-from`) between dependent items
 
 6. **Generate Child Work Item Architecture**
    - Call `/management:architect` to think about the architecture for each created child work-item 
-   - Call `/management:work-items` to post a single discussion on **each** child work item with all clarification questions as a numbered list
+   - Call `/devops:work-item` to post a single discussion on **each** child work item with all clarification questions as a numbered list
    - **MANDATORY** Do NOT update descriptions before user responds
 
 7. **Validate Child Work Items**
    - Use the tool **AskUserQuestion** to ask user to reply to all Azure DevOps discussions and confirm to continue
-   - Call `/management:work-items` to read discussion answers from each child work item
+   - Call `/devops:work-item` to read discussion answers from each child work item
    - Call `/document:write` to generate the SDD documentation for each created child work-item 
-   - Use `/management:work-items` to update each child work item description with finalized SDD documentation 
+   - Use `/devops:work-item` to update each child work item description with finalized SDD documentation 
 
 ## DELEGATION
 

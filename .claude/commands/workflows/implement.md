@@ -37,7 +37,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/management:work-items` with workitem parameter
+   - Call `/devops:work-item` with workitem parameter
    - Obtain title, description, and acceptance criteria
    - Pass retrieved context to implementation phase
    - **MANDATORY**  Must use the work item descriptions and it must not be empty 
@@ -81,7 +81,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 8. **Create Draft Pull Request**: Open pull request 
 
-   - Call `/management:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
+   - Call `/devops:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
    - Link PR to original work item 
 
 ## DELEGATION
@@ -99,12 +99,12 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 sequenceDiagram
     participant U as User
     participant P as /implement Workflow
-    participant MgmtW as /management:work-items
+    participant MgmtW as /devops:work-item
     participant WkspM as /workspace:new
     participant DevA as /development:architect
     participant DevD as /development:develop
     participant DevG as /development:git
-    participant MgmtP as /management:pull-request
+    participant MgmtP as /devops:pull-request
 
     U->>P: /implement workitem=1605<br/>repository_name=fiat-service<br/>target_branch=develop<br/>branch_name=feature/...<br/>description="..."
 

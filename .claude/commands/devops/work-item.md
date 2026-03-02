@@ -1,9 +1,9 @@
 ---
-name: /work-items
+name: /work-item
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
 argument-hint: "[--project <name>] [--title <text>] [--id <id>] [--assignee <user>] [--status <state>] [--since <date>] [--until <date>] [--platform azure|github|git-lab] [--limit <n>]"
 agents:
-  - name: zzaia-work-item-manager
+  - name: zzaia-devops-specialist
     description: Retrieve, query, and manage work items across Azure DevOps and GitHub
 parameters:
   - name: --project
@@ -76,14 +76,14 @@ Provide a unified interface for retrieving and managing work items across multip
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-work-item-manager` — Retrieve, query, and manage work items across Azure DevOps and GitHub
+- `zzaia-devops-specialist` — Retrieve, query, and manage work items across Azure DevOps and GitHub
 
 ## WORKFLOW
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as /work-items
+    participant C as /devops:work-item
     participant A as WorkItem Agents
     participant P as DevOps Platforms
 
@@ -107,19 +107,19 @@ sequenceDiagram
 
 ```bash
 # List recent project work items
-/work-items --project "Finance" --limit 10
+/devops:work-item --project "Finance" --limit 10
 
 # Find specific work item (detailed view)
-/work-items --id 46104
+/devops:work-item --id 46104
 
 # Filter by assignee and status
-/work-items --assignee "john.doe" --status "Active"
+/devops:work-item --assignee "john.doe" --status "Active"
 
 # Time-based filtering
-/work-items --since "2025-09-01" --project "Crypto Hub"
+/devops:work-item --since "2025-09-01" --project "Crypto Hub"
 
 # Specify platform explicitly
-/work-items --platform azure --project "Engineering"
+/devops:work-item --platform azure --project "Engineering"
 ```
 
 ## OUTPUT FORMAT

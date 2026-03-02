@@ -35,7 +35,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 ## EXECUTION
 
-1. **Retrieve Work Item**: Call `/management:work-items` to fetch work item details
+1. **Retrieve Work Item**: Call `/devops:work-item` to fetch work item details
 
    - Extract title, description, acceptance criteria
    - Validate work item description is not empty
@@ -86,14 +86,14 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 9. **Create Bug Work Items**: For each issue found in test execution
 
-   - Call `/management:work-items` (create mode) for each bug
+   - Call `/devops:work-item` (create mode) for each bug
    - Include: title, detailed description, steps to reproduce, expected vs actual behavior, affected repo/application, severity
    - Link bugs to original work item
    - Provide summary of all created bug work items
 
 10. **Create Pull Requests**: Open pull requests for all repositories
 
-    - Call `/management:pull-request` for each repo with source_branch, target_branch, and work-item parameters
+    - Call `/devops:pull-request` for each repo with source_branch, target_branch, and work-item parameters
     - Link each PR to the original work item
     - Provide all PR URLs in final summary
 
@@ -112,7 +112,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 sequenceDiagram
     participant U as User
     participant C as /homologate
-    participant WI as /management:work-items
+    participant WI as /devops:work-item
     participant WS as /workspace:new
     participant AR as /management:architect
     participant DT as /development:test
@@ -120,8 +120,8 @@ sequenceDiagram
     participant DD as /development:develop
     participant DG as /development:git
     participant SA as /workspace:setup-apphost
-    participant BW as /management:work-items
-    participant PR as /management:pull-request
+    participant BW as /devops:work-item
+    participant PR as /devops:pull-request
 
     U->>C: /homologate (work-item, repos, branches, description)
     C->>C: Validate parameters

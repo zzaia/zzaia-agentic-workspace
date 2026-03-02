@@ -3,8 +3,8 @@ name: /pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
 argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch <branch>] [--to-branch <branch>] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
 agents:
-  - name: zzaia-code-reviewer
-    description: Multi-repository coordination, branch validation, and pull request code review
+  - name: zzaia-devops-specialist
+    description: Execute all Azure DevOps and GitHub pull request operations including creation, retrieval, updates, and code review publishing
 parameters:
   - name: action
     description: Operation to perform (create|read|update)
@@ -81,7 +81,7 @@ Unified pull request management across Azure DevOps and GitHub with support for 
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-code-reviewer` — Multi-repository coordination, branch validation, and pull request code review
+- `zzaia-devops-specialist` — Execute all Azure DevOps and GitHub pull request operations including creation, retrieval, updates, and code review publishing
 
 ## WORKFLOW
 
@@ -93,7 +93,7 @@ sequenceDiagram
     participant PORTAL as Portal API
     participant WS as Workspace
 
-    U->>CMD: /management:pull-request --action <op> --portal <p>
+    U->>CMD: /devops:pull-request --action <op> --portal <p>
     CMD->>VAL: Validate parameters and context
     VAL->>WS: Check workspace metadata
     WS-->>VAL: Branch/repo info
@@ -126,15 +126,15 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/management:pull-request --action create --portal azure --project MyProject --repo MyRepo --from-branch feature/new-feature --to-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
+/devops:pull-request --action create --portal azure --project MyProject --repo MyRepo --from-branch feature/new-feature --to-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
 
-/management:pull-request --action read --portal github --project MyOrg --repo my-repo --pr-id 45
+/devops:pull-request --action read --portal github --project MyOrg --repo my-repo --pr-id 45
 
-/management:pull-request --action update --portal azure --project MyProject --repo MyRepo --pr-id 78 --reviewers user1@example.com,user2@example.com --labels "ready-for-review,high-priority"
+/devops:pull-request --action update --portal azure --project MyProject --repo MyRepo --pr-id 78 --reviewers user1@example.com,user2@example.com --labels "ready-for-review,high-priority"
 
-/management:pull-request --action update --portal github --project MyOrg --repo my-repo --pr-id 12 --title "Updated title" --template true
+/devops:pull-request --action update --portal github --project MyOrg --repo my-repo --pr-id 12 --title "Updated title" --template true
 
-/management:pull-request --action create --portal github --project MyOrg --repo my-repo --from-branch bugfix/issue-123 --to-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
+/devops:pull-request --action create --portal github --project MyOrg --repo my-repo --from-branch bugfix/issue-123 --to-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
 ```
 
 ## TEMPLATE
