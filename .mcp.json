@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "tavily": {
-      "command": "op",
-      "args": ["run", "--", "npx", "tavily-mcp@latest"],
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@latest"],
       "env": {
         "TAVILY_API_KEY": "op://${VAULT_NAME}/tavily/credential"
       }
