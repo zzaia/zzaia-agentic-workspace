@@ -1,7 +1,7 @@
 ---
 name: template-architecture-overview
 description: Generates architecture-overview.md documents for software projects. Use when asked to document, create, or update architecture documentation for a project or repository.
-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, Task
+tools: Read, Write, Edit
 model: sonnet
 color: cyan
 ---

@@ -1,7 +1,7 @@
 ---
 name: integration-tests-plan
 description: Use when asked to generate or update an integration tests plan document for a service or project. Explores codebase, test files, and infrastructure config to produce docs/integration-tests-plan.md.
-tools: Read, Write, Edit, Glob, Grep, Bash, Task
+tools: Read, Write, Edit
 model: sonnet
 color: red
 ---

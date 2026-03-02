@@ -1,7 +1,7 @@
 ---
 name: implementation-plan
 description: Generates docs/implementation-plan.md for a project by analyzing requirements, existing code structure, and task specifications. Use when a master implementation plan with Gantt chart, phased breakdown, Fibonacci effort estimates, team structure, success criteria, and risk mitigation is needed.
-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, Task
+tools: Read, Write, Edit
 model: sonnet
 color: green
 ---
