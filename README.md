@@ -96,12 +96,18 @@ Software development lifecycle operations.
 
 ### Management
 
-Project management and work item coordination.
+Project management and architecture coordination.
 
-- [**`/management:work-items`**](.claude/commands/management/work-items.md) - Work item retrieval
 - [**`/management:plan`**](.claude/commands/management/plan.md) - Project planning
 - [**`/management:architect`**](.claude/commands/management/architect.md) - Architecture specifications
-- [**`/management:pull-request`**](.claude/commands/management/pull-request.md) - Pull request management
+
+### DevOps
+
+DevOps platform operations across Azure DevOps and GitHub.
+
+- [**`/devops:work-item`**](.claude/commands/devops/work-item.md) - Work item retrieval and management
+- [**`/devops:pull-request`**](.claude/commands/devops/pull-request.md) - Pull request management
+- [**`/devops:debug-pipeline`**](.claude/commands/devops/debug-pipeline.md) - Pipeline log diagnostics
 
 ### Workspace
 
@@ -110,6 +116,7 @@ Multi-repository workspace configuration.
 - [**`/workspace:new`**](.claude/commands/workspace/new.md) - Add repository
 - [**`/workspace:setup-vscode`**](.claude/commands/workspace/setup-vscode.md) - VS Code configuration
 - [**`/workspace:setup-apphost`**](.claude/commands/workspace/setup-apphost.md) - Aspire AppHost setup
+- [**`/workspace:debug-apphost`**](.claude/commands/workspace/debug-apphost.md) - AppHost log diagnostics
 
 ### Document
 
@@ -122,6 +129,7 @@ Document content extraction and retrieval.
 
 End-to-end orchestration workflows, that are a combination of sequential minor commands, that aims to a major task automation.
 
+- [**`/workflows:architect`**](.claude/commands/workflows/architect.md) - Specification Driven Design orchestration
 - [**`/workflows:implement`**](.claude/commands/workflows/implement.md) - Full implementation from work item to PR
 - [**`/workflows:homologate`**](.claude/commands/workflows/homologate.md) - Multi-app acceptance testing workflow
 
