@@ -1,7 +1,7 @@
 ---
 name: zzaia-document-specialist
 description: Specialist for document operations — reading PDF/Word files via extract-document.py hook, writing markdown docs using template sub-agents, and scraping/discovering documents from web sources using Playwright and Tavily MCP tools.
-tools: Read, Write, WebFetch, WebSearch
+tools: * 
 mcpServers:
   - playwright
   - tavily
