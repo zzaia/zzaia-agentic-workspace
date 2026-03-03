@@ -47,42 +47,49 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Call `/workspace:new` with repository_name, target_branch, new_branch_name parameters
    - Prepare worktree for development
    - Verify branch is ready for code changes
+   - Verify that the target branch is updated
 
-3. **Implement Documentation**: Implement the SDD documentation in a concise manner 
+3. **Think & Architect**: Analyze requirements and design the solution
 
    - Call `/management:architect` with branch, work directory, and description parameters
-   - Clarify all requirements with the user before going to next phase 
+   - Clarify all requirements with the user before going to next phase
    - Use the tool **AskUserQuestion** to inquiry the user for clarifying questions
-   - Clarify all requirements with the user before implementing documentations
-   - Implement one small necessary Specification Driven Design (SDD) documentation to implement the feature  
-   - **MANDATORY** This must be very concise and have only the relevant feature information
+   - Produce a concise architecture design covering only what is relevant to the feature
+   - **MANDATORY** All open questions must be resolved before proceeding to documentation
 
-4. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation 
-   - User should make some changes to SDD before next phase
+4. **Write Documentation**: Produce the SDD documentation from the architecture design
+
+   - Call `/document:write` with the architecture output from phase 3 as input
+   - Generate one concise Specification Driven Design (SDD) document for the feature
+   - **MANDATORY** Documentation must be written to file before user approval phase
+
+5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation
+
+   - User should make changes to SDD before next phase
    - Use the tool **AskUserQuestion** to inquiry the user answers
 
-5. **Implement Feature**: Execute development based on SDD documentation
+6. **Implement Feature**: Execute development based on SDD documentation
 
-   - Call `/development:develop` in branch_name with approved SDD documentation 
+   - Call `/development:develop` in branch_name with approved SDD documentation
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
-6. **Review Changes**: Stage, commit, and push all changes
+7. **Review Changes**: Review all developed changes
 
-   - Call `/development:review` for all developed changes 
+   - Call `/development:review` for all developed changes
    - Use the tool **AskUserQuestion** to inquiry the user answers about what to fix or improve
-   - Call `/development:develop` to  fix or improve the code 
+   - Call `/development:develop` to fix or improve the code
 
-7. **Commit and Push**: Stage, commit, and push all changes
+8. **Commit and Push**: Stage, commit, and push all changes
 
    - Call `/development:git` with branch parameter
    - Create conventional commit message referencing work item
    - Push changes to remote origin
 
-8. **Create Draft Pull Request**: Open pull request 
+9. **Create Draft Pull Request**: Open pull request
 
    - Call `/devops:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
-   - Link PR to original work item 
+   - Link PR to original work item
 
 ## DELEGATION
 
@@ -98,38 +105,50 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant P as /implement Workflow
-    participant MgmtW as /devops:work-item
-    participant WkspM as /workspace:new
-    participant DevA as /development:architect
-    participant DevD as /development:develop
-    participant DevG as /development:git
-    participant MgmtP as /devops:pull-request
+    participant P as /workflow:implement
+    participant WI as /devops:work-item
+    participant WN as /workspace:new
+    participant MA as /management:architect
+    participant DW as /document:write
+    participant DD as /development:develop
+    participant DR as /development:review
+    participant DG as /development:git
+    participant PR as /devops:pull-request
 
-    U->>P: /implement workitem=1605<br/>repository_name=fiat-service<br/>target_branch=develop<br/>branch_name=feature/...<br/>description="..."
+    U->>P: /workflow:implement <params>
 
-    P->>MgmtW: Retrieve work item
-    MgmtW-->>P: Work item details
+    P->>WI: Retrieve work item
+    WI-->>P: Work item details
 
-    P->>WkspM: Create feature branch
-    WkspM-->>P: Branch ready
+    P->>WN: Create feature branch
+    WN-->>P: Branch ready
 
-    P->>DevA: Generate SDD documentation
-    DevA-->>P: Architecture & spec docs
+    P->>MA: Think & architect
+    MA-->>P: Architecture design
 
-    P->>U: Review SDD documentation
-    U-->>P: Approve/update specs
+    P->>DW: Write SDD documentation
+    DW-->>P: SDD file written
 
-    P->>DevD: Implement from approved SDD
-    DevD-->>P: Implementation complete
+    P->>U: AskUserQuestion (review SDD)
+    U-->>P: Approved / changes requested
 
-    P->>DevG: Commit and push
-    DevG-->>P: Changes pushed
+    P->>DD: Implement from approved SDD
+    DD-->>P: Implementation complete
 
-    P->>MgmtP: Create pull request
-    MgmtP-->>P: PR created
+    P->>DR: Review changes
+    DR-->>P: Review report
+    P->>U: AskUserQuestion (fix/improve?)
+    U-->>P: Feedback
+    P->>DD: Apply fixes
+    DD-->>P: Fixes applied
 
-    P-->>U: Workflow complete<br/>PR link & summary
+    P->>DG: Commit and push
+    DG-->>P: Changes pushed
+
+    P->>PR: Create draft pull request
+    PR-->>P: PR created
+
+    P-->>U: Workflow complete — PR link & summary
 ```
 
 ## ACCEPTANCE CRITERIA
