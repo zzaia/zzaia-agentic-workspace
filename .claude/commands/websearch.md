@@ -3,8 +3,8 @@ name: /websearch
 description: Standardized web search protocol for comprehensive information gathering
 argument-hint: "--query <text> [--focus <area>]"
 agents:
-  - name: general-purpose
-    description: Web search execution, content analysis, and information structuring
+  - name: zzaia-web-searcher
+    description: Web search execution via Tavily MCP tools, content analysis, and information structuring
 parameters:
   - name: query
     description: Search query or topic to research
@@ -39,7 +39,7 @@ Provide standardized, unified web search protocol for comprehensive information 
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `general-purpose` — Web search execution, content analysis, and information structuring
+- `zzaia-web-searcher` — Web search execution via Tavily MCP tools, content analysis, and information structuring
 
 ## WORKFLOW
 
@@ -47,16 +47,16 @@ Provide standardized, unified web search protocol for comprehensive information 
 sequenceDiagram
     participant U as User
     participant C as /websearch Command
-    participant GP as General Purpose Agent
+    participant WS as Web Searcher Agent
     participant W as Web Sources
 
     U->>C: /websearch <query> [focus]
-    C->>GP: Execute search strategy
-    GP->>W: Query multiple sources
-    W-->>GP: Search results
-    GP->>GP: Validate and cross-reference
-    GP->>GP: Structure information
-    GP-->>C: Formatted results
+    C->>WS: Execute search strategy
+    WS->>W: Query multiple sources
+    W-->>WS: Search results
+    WS->>WS: Validate and cross-reference
+    WS->>WS: Structure information
+    WS-->>C: Formatted results
     C-->>U: Comprehensive search report
 ```
 
