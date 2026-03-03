@@ -13,18 +13,5 @@
       "Bash(git --git-dir=.git branch:*)"
     ]
   },
-  "outputStyle": "agentic-concise",
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "document:read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/extract-document.py"
-          }
-        ]
-      }
-    ]
-  }
+  "outputStyle": "agentic-concise"
 }
