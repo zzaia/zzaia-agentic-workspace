@@ -48,7 +48,5 @@
     "python-coding-rules",
     "javascript-coding-rules"
   ],
-  "hooks": [
-    "extract-document.py"
-  ]
+  "hooks": []
 }

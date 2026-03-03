@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Extract text and images from PDF and Word documents."""
 
-import sys
 import base64
+import sys
 from pathlib import Path
 from typing import Tuple
 
@@ -14,7 +14,7 @@ def extract_pdf(file_path: Path) -> Tuple[str, int, str]:
         file_path: Path to PDF file.
 
     Returns:
-        Tuple of (content, page count, filename).
+        Tuple of (content, page count, filename or error message).
     """
     try:
         import fitz
@@ -50,7 +50,7 @@ def extract_docx(file_path: Path) -> Tuple[str, int, str]:
         file_path: Path to DOCX file.
 
     Returns:
-        Tuple of (text content, section count, filename).
+        Tuple of (text content, section count, filename or error message).
     """
     try:
         from docx import Document
