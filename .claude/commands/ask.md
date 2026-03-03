@@ -5,8 +5,8 @@ argument-hint: "--question <text> [--context <path|topic|repo>]"
 agents:
   - name: zzaia-task-clarifier
     description: Query analysis related to tasks and codebases
-  - name: general-purpose
-    description: Web research and external information gathering
+  - name: zzaia-web-searcher
+    description: Web research and external information gathering via Tavily MCP tools
 parameters:
   - name: question
     description: Natural language question or query to be answered
@@ -47,7 +47,7 @@ Provide intelligent question answering, clarification or query through read-only
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-task-clarifier` — Query analysis related to tasks and codebases
-- `general-purpose` — Web research and external information gathering
+- `zzaia-web-searcher` — Web research and external information gathering via Tavily MCP tools
 
 ## WORKFLOW
 
@@ -56,7 +56,7 @@ sequenceDiagram
     participant U as User
     participant C as /ask Command
     participant TC as Task Clarifier
-    participant GP as General Purpose
+    participant WS as Web Searcher
     participant S as System/Files
 
     U->>C: /ask <question> [context]
@@ -68,8 +68,8 @@ sequenceDiagram
         S-->>TC: Local data
     and
         alt External research needed
-            C->>GP: Use /websearch command
-            GP-->>C: Web research results
+            C->>WS: Use /websearch command
+            WS-->>C: Web research results
         end
     end
 
