@@ -49,14 +49,14 @@ The workspace will automatically:
 
 ```bash
 # 1. Implement a work item (creates branch, SDD doc, code, PR)
-/workflows:implement work-item=1042 repos=order-service target-branches=develop working-branches=feature/add-order-status description="Add order status tracking endpoint with history log"
+/workflow:implement work-item=1042 repos=order-service target-branches=develop working-branches=feature/add-order-status description="Add order status tracking endpoint with history log"
 
 # 2. After implementation is merged, homologate the feature (creates test plan, runs tests against AppHost, files bugs) specially great for multi application testing
-/workflows:homologate work-item=1042 repos=order-service target-branches=develop working-branches=homolog/sprint-12 description="Validate order status endpoint against acceptance criteria"
+/workflow:homologate work-item=1042 repos=order-service target-branches=develop working-branches=homolog/sprint-12 description="Validate order status endpoint against acceptance criteria"
 
 # 3. For each bug work item created in step 2, implement the fix
-/workflows:implement work-item=1055 repos=order-service target-branches=develop working-branches=fix/order-status-empty-response description="Fix order status returning empty response when no history exists"
-/workflows:implement work-item=1056 repos=order-service target-branches=develop working-branches=fix/order-status-403 description="Fix 403 on order status endpoint for non-admin users"
+/workflow:implement work-item=1055 repos=order-service target-branches=develop working-branches=fix/order-status-empty-response description="Fix order status returning empty response when no history exists"
+/workflow:implement work-item=1056 repos=order-service target-branches=develop working-branches=fix/order-status-403 description="Fix 403 on order status endpoint for non-admin users"
 ```
 
 ### Use as Remote Plugin
@@ -79,8 +79,8 @@ All individual commands can be called to by users to make individual operations,
 
 Machine learning dataset discovery and analysis workflows.
 
-- [**`/analytics:explorate`**](.claude/commands/analytics/workflows/explorate.md) - Domain and dataset exploration
-- [**`/analytics:analyze`**](.claude/commands/analytics/workflows/analyze.md) - Dataset analysis and visualization
+- [**`/analytics:explorate`**](.claude/commands/analytics/workflow/explorate.md) - Domain and dataset exploration
+- [**`/analytics:analyze`**](.claude/commands/analytics/workflow/analyze.md) - Dataset analysis and visualization
 
 ### Development
 
@@ -108,6 +108,7 @@ DevOps platform operations across Azure DevOps and GitHub.
 - [**`/devops:work-item`**](.claude/commands/devops/work-item.md) - Work item retrieval and management
 - [**`/devops:pull-request`**](.claude/commands/devops/pull-request.md) - Pull request management
 - [**`/devops:debug-pipeline`**](.claude/commands/devops/debug-pipeline.md) - Pipeline log diagnostics
+- [**`/devops:run-pipeline`**](.claude/commands/devops/run-pipeline.md) - Run new or existing pipelines
 
 ### Workspace
 
@@ -125,13 +126,14 @@ Document content extraction and retrieval.
 - [**`/document:read`**](.claude/commands/document/read.md) - Extract PDF and Word document content
 - [**`/document:scraping`**](.claude/commands/document/scraping.md) - Search and download documents from web
 
-### Workflows
+### Workflow
 
 End-to-end orchestration workflows, that are a combination of sequential minor commands, that aims to a major task automation.
 
-- [**`/workflows:architect`**](.claude/commands/workflows/architect.md) - Specification Driven Design orchestration
-- [**`/workflows:implement`**](.claude/commands/workflows/implement.md) - Full implementation from work item to PR
-- [**`/workflows:homologate`**](.claude/commands/workflows/homologate.md) - Multi-app acceptance testing workflow
+- [**`/workflow:architect`**](.claude/commands/workflow/architect.md) - Specification Driven Design orchestration
+- [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
+- [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
+- [**`/workflow:fix-pipeline`**](.claude/commands/workflow/fix-pipeline.md) - Iterative pipeline repair loop
 
 ### Meta
 
@@ -198,7 +200,7 @@ sequenceDiagram
 │   ├── document/
 │   ├── management/
 │   ├── workspace/
-│   └── workflows/
+│   └── workflow/
 ├── hooks/               # Lifecycle hooks and scripts
 │   └── extract-document.py
 ├── plugins/
