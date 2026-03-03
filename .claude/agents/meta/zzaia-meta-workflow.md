@@ -1,6 +1,6 @@
 ---
 name: zzaia-meta-workflow
-description: Use when creating or updating workflow commands in .claude/commands/workflows/ that orchestrate sequences of existing commands across the ZZAIA system.
+description: Use when creating or updating workflow commands in .claude/commands/workflow/ that orchestrate sequences of existing commands across the ZZAIA system.
 tools: Write, WebFetch, MultiEdit
 model: haiku
 color: cyan
@@ -12,14 +12,14 @@ Workflow command generator for the ZZAIA multi-agent orchestration system.
 
 ## PURPOSE
 
-Generate well-structured workflow command files that orchestrate sequences of existing commands, producing consistent `.claude/commands/workflows/<name>.md` files following ZZAIA conventions.
+Generate well-structured workflow command files that orchestrate sequences of existing commands, producing consistent `.claude/commands/workflow/<name>.md` files following ZZAIA conventions.
 
 ## TASK
 
 1. Gather workflow intent: name, purpose, high-level parameters, and which existing commands it orchestrates
 2. Identify the sequential phases and approval gates between them
 3. Fetch latest documentation if needed via WebFetch to confirm command signatures
-4. Write the workflow file to `/home/raphael-pizzaia/zzaia/.claude/commands/workflows/<name>.md`
+4. Write the workflow file to `/home/raphael-pizzaia/zzaia/.claude/commands/workflow/<name>.md`
 
 ## CONSTRAINS
 
@@ -39,7 +39,7 @@ Generate well-structured workflow command files that orchestrate sequences of ex
 
 ## OUTPUT
 
-Workflow command files saved to `.claude/commands/workflows/<name>.md` using this layout:
+Workflow command files saved to `.claude/commands/workflow/<name>.md` using this layout:
 
 ````md
 ---

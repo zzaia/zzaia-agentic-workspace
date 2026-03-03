@@ -6,8 +6,8 @@
     "/ask",
     "/warmup",
     "/websearch",
-    "/analytics:workflows:explorate",
-    "/analytics:workflows:analyze",
+    "/analytics:workflow:explorate",
+    "/analytics:workflow:analyze",
     "/development:develop",
     "/development:build",
     "/development:test",
@@ -24,8 +24,8 @@
     "/workspace:setup-apphost",
     "/document:read",
     "/document:scraping",
-    "/workflows:implement",
-    "/workflows:homologate"
+    "/workflow:implement",
+    "/workflow:homologate"
   ],
   "agents": [
     "zzaia-domain-exploration",

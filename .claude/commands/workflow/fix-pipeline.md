@@ -1,5 +1,5 @@
 ---
-name: /workflows:fix-pipeline
+name: /workflow:fix-pipeline
 description: Iterative pipeline repair loop until successful completion
 argument-hint: "--portal <platform> [--file <path>] [--project <name>] [--pipeline <id-or-name>] [--branch <branch>] [--run <id>] [--max-iterations <count>]"
 parameters:
