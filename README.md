@@ -180,14 +180,15 @@ sequenceDiagram
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-task-clarifier**](.claude/agents/management/zzaia-task-clarifier.md) | Requirements analysis |
-| [**zzaia-developer-specialist**](.claude/agents/development/zzaia-developer-specialist.md) | Multi-language implementation |
-| [**zzaia-tester-specialist**](.claude/agents/development/zzaia-tester-specialist.md) | Build and test validation |
-| [**zzaia-code-reviewer**](.claude/agents/development/zzaia-code-reviewer.md) | Code quality and static analysis |
-| [**zzaia-repository-manager**](.claude/agents/workspace/zzaia-repository-manager.md) | Multi-repository worktree coordination |
-| [**zzaia-workitem-manager**](.claude/agents/management/zzaia-workitem-manager.md) | Azure DevOps and GitHub work items |
+| [**zzaia-task-clarifier**](.claude/agents/zzaia-task-clarifier.md) | Requirements analysis |
+| [**zzaia-developer-specialist**](.claude/agents/zzaia-developer-specialist.md) | Multi-language implementation |
+| [**zzaia-tester-specialist**](.claude/agents/zzaia-tester-specialist.md) | Build and test validation |
+| [**zzaia-code-reviewer**](.claude/agents/zzaia-code-reviewer.md) | Code quality and static analysis |
+| [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md) | Multi-repository worktree coordination |
+| [**zzaia-devops-specialist**](.claude/agents/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
 | [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent generation utilities |
 | [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation utilities |
+| [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation utilities |
 
 ## 📁 Structure
 

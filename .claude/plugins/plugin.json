@@ -34,11 +34,12 @@
     "zzaia-developer-specialist",
     "zzaia-tester-specialist",
     "zzaia-code-reviewer",
-    "zzaia-workitem-manager",
+    "zzaia-devops-specialist",
     "zzaia-task-clarifier",
     "zzaia-repository-manager",
     "zzaia-meta-agent",
-    "zzaia-meta-command"
+    "zzaia-meta-command",
+    "zzaia-meta-workflow"
   ],
   "rules": [
     "dotnet-coding-rules",
