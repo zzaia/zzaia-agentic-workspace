@@ -24,9 +24,10 @@ Specialized agents in `.claude/agents/`:
 - **zzaia-repository-manager** - Multi-repository worktree coordination
 - **zzaia-tester-specialist** - Build validation and quality assurance
 - **zzaia-code-reviewer** - Code quality and static analysis
-- **zzaia-workitem-manager** - Azure DevOps and GitHub work item management
+- **zzaia-devops-specialist** - Azure DevOps and GitHub DevOps operations
 - **zzaia-meta-agent** - Agent generation utilities
 - **zzaia-meta-command** - Command generation utilities
+- **zzaia-meta-workflow** - Workflow command generation utilities
 
 ## Workspace Structure
 
