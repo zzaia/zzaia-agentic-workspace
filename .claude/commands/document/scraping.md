@@ -3,8 +3,8 @@ name: /scraping
 description: Search, extract, and download PDF and Word documents from URLs or web searches with filtering capabilities and user confirmation checkpoints
 argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>]"
 agents:
-  - name: general-purpose
-    description: Clarifies search criteria, executes scraping, and handles parallel document discovery tasks
+  - name: zzaia-document-specialist
+    description: Discovers and downloads PDF/Word documents using Playwright and Tavily MCP tools
 parameters:
   - name: url
     description: Direct URL to scrape documents from (mutually exclusive with search)
@@ -38,7 +38,7 @@ Discover and extract PDF/Word documents from web sources using browser automatio
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `general-purpose` — Clarifies search criteria, executes scraping, and handles parallel document discovery tasks
+- `zzaia-document-specialist` — Discovers and downloads PDF/Word documents using Playwright and Tavily MCP tools
 
 ## WORKFLOW
 

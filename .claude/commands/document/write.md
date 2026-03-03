@@ -3,6 +3,8 @@ name: document:write
 description: Write markdown documentation using specialized agent templates for architecture, services, data models, and event catalogs. Output to local files and remote Wiki page.
 argument-hint: "[document-type] [title] [--output <path>] [--wiki] [--repo <name>]"
 agents:
+  - name: zzaia-document-specialist
+    description: Orchestrate document writing, route to template agents, write output files and Wiki pages
   - name: template-architecture-overview
     description: Architecture overview with ADRs and C4 diagrams
   - name: template-service-architecture
@@ -55,6 +57,7 @@ Write markdown documentation with specialized agent templates ensuring consisten
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
+- `zzaia-document-specialist` — Orchestrate document writing, route to template agents, write output files and Wiki pages
 - `template-architecture-overview` — Architecture overview with ADRs and C4 diagrams
 - `template-service-architecture` — Individual service architecture documentation
 - `template-service-data-model` — Entity, value objects, and data modeling documentation

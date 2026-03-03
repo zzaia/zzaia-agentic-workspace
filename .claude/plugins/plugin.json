@@ -38,6 +38,7 @@
     "zzaia-task-clarifier",
     "zzaia-repository-manager",
     "zzaia-web-searcher",
+    "zzaia-document-specialist",
     "zzaia-meta-agent",
     "zzaia-meta-command",
     "zzaia-meta-workflow"
