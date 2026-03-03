@@ -27,6 +27,8 @@ parameters:
 agents:
   - name: zzaia-devops-specialist
     description: Queries pipeline logs, triggers runs, tracks run IDs and completion status
+  - name: zzaia-repository-manager
+    description: Adds branch worktree to workspace if not already present
   - name: zzaia-developer-specialist
     description: Implements fixes to pipeline YAML and related source files based on issue reports
 ---
@@ -45,28 +47,40 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
    - Track returned run ID for subsequent phases
    - **MANDATORY** Record iteration 1 start time and initial issue count
 
-2. **Fix Issues** — Implement targeted fixes from the issue report
+2. **Setup Workspace** — Ensure target branch is available locally
+
+   - Call `/workspace:new` with `--repo <project> --branch <branch>`
+   - Skip if branch worktree already exists in workspace
+   - **MANDATORY** Branch must be checked out before fixes are applied
+
+3. **Fix Issues** — Implement targeted fixes from the issue report
 
    - Call `/development:develop` with issue report as task context
    - Pass pipeline ID, branch, and list of failures to fix
    - **MANDATORY** Fixes must target pipeline YAML and source files identified in issue report
    - Await completion and capture fix summary
 
-3. **Re-run Pipeline** — Trigger new pipeline run on target branch
+4. **Commit & Push** — Persist fixes to remote branch
+
+   - Call `/development:git` with commit message summarizing fixes applied
+   - Push changes to `<branch>` on remote
+   - **MANDATORY** Changes must be pushed before triggering re-run
+
+5. **Re-run Pipeline** — Trigger new pipeline run on target branch
 
    - Call `/devops:run-pipeline` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
    - Capture new run ID and wait for completion
    - **MANDATORY** Extract run ID from response for next debug phase
 
-4. **Evaluate Result** — Check pipeline run status
+6. **Evaluate Result** — Check pipeline run status
 
    - Use **AskUserQuestion** tool to query user for pipeline outcome confirmation or inspection
    - Parse run result: **Success** or **Failure**
    - Increment iteration counter
 
-5. **Loop Control** — Decide next action
+7. **Loop Control** — Decide next action
 
-   - **On Success**: Call `/devops:run-pipeline` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch> --status final` to report completion
+   - **On Success**: stop loop and report completion summary
    - **On Failure and iterations < max**: Go back to Phase 1 with new run ID
    - **On Failure and iterations >= max**: Report partial progress and stop
 
@@ -75,6 +89,7 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-devops-specialist` — Debug pipeline logs, trigger runs, track run IDs, and confirm completion status
+- `zzaia-repository-manager` — Add branch worktree to workspace if not already present
 - `zzaia-developer-specialist` — Analyze issue reports and implement fixes to pipeline files and source code
 
 ## WORKFLOW DIAGRAM
@@ -82,14 +97,17 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant W as /workflows:fix-pipeline
+    participant W as /workflow:fix-pipeline
     participant DBG as /devops:debug-pipeline
+    participant WN as /workspace:new
     participant FIX as /development:develop
+    participant GIT as /development:git
     participant RUN as /devops:run-pipeline
     participant A1 as zzaia-devops-specialist
-    participant A2 as zzaia-developer-specialist
+    participant A2 as zzaia-repository-manager
+    participant A3 as zzaia-developer-specialist
 
-    U->>W: /workflows:fix-pipeline <params>
+    U->>W: /workflow:fix-pipeline <params>
     W->>W: Initialize loop (iteration = 0)
 
     loop Until success or max iterations
@@ -98,10 +116,20 @@ sequenceDiagram
         DBG-->>A1: Issue report
         A1-->>W: Structured issues + run ID
 
-        W->>A2: Invoke fix phase with issue report
-        A2->>FIX: Implement fixes
-        FIX-->>A2: Fix summary
-        A2-->>W: Fixes applied
+        W->>A2: Ensure branch in workspace
+        A2->>WN: Add worktree if missing
+        WN-->>A2: Workspace ready
+        A2-->>W: Branch available
+
+        W->>A3: Invoke fix phase with issue report
+        A3->>FIX: Implement fixes
+        FIX-->>A3: Fix summary
+        A3-->>W: Fixes applied
+
+        W->>A3: Commit and push fixes
+        A3->>GIT: Commit + push to branch
+        GIT-->>A3: Changes pushed
+        A3-->>W: Git done
 
         W->>A1: Invoke re-run phase
         A1->>RUN: Trigger pipeline run
@@ -113,8 +141,6 @@ sequenceDiagram
         W->>W: Increment iteration counter
 
         alt Success
-            W->>A1: Report final status
-            A1-->>W: Completion confirmed
             W-->>U: Workflow complete
         else Failure and iterations < max
             W->>W: Continue loop with new run ID
@@ -126,7 +152,7 @@ sequenceDiagram
 
 ## ACCEPTANCE CRITERIA
 
-- Workflow successfully orchestrates `/devops:debug-pipeline`, `/development:develop`, and `/devops:run-pipeline` in sequence
+- Workflow successfully orchestrates `/devops:debug-pipeline`, `/workspace:new`, `/development:develop`, `/development:git`, and `/devops:run-pipeline` in sequence
 - Loop continues until pipeline succeeds or max iterations is reached
 - Each iteration extracts new run ID from pipeline run response and uses it in next debug phase
 - Iteration counter and safety limit are enforced
@@ -137,13 +163,13 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/workflows:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
+/workflow:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
 
-/workflows:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline
+/workflow:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline
 
-/workflows:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --branch feature/my-feature --max-iterations 3
+/workflow:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --branch feature/my-feature --max-iterations 3
 
-/workflows:fix-pipeline --portal azure --project MyProject --pipeline 42 --run 1850
+/workflow:fix-pipeline --portal azure --project MyProject --pipeline 42 --run 1850
 ```
 
 ## OUTPUT
