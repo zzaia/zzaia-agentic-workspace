@@ -2,6 +2,9 @@
 name: document:read
 description: Extract text from PDF and Word documents and inject content into conversation context
 argument-hint: "--file <path> [--summary]"
+agents:
+  - name: zzaia-document-specialist
+    description: Extract and structure content from PDF and Word documents
 hooks:
   - event: PreToolUse
     script: .claude/hooks/extract-document.py
@@ -38,6 +41,12 @@ Extract structured text content from PDF and Word documents to reference in conv
    - Page count (PDF) or section count (DOCX)
    - Total character count
    - Full extracted text
+
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-document-specialist` — Extract and structure content from PDF and Word documents
 
 ## WORKFLOW
 

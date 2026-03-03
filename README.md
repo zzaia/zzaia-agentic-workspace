@@ -187,6 +187,7 @@ sequenceDiagram
 | [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md) | Multi-repository worktree coordination |
 | [**zzaia-devops-specialist**](.claude/agents/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
 | [**zzaia-web-searcher**](.claude/agents/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
+| [**zzaia-document-specialist**](.claude/agents/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
 | [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent generation utilities |
 | [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation utilities |
 | [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation utilities |
