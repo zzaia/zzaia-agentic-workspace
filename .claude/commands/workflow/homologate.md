@@ -65,18 +65,23 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
    - Execute tests to verify they detect both passing and failing scenarios
    - Ensure test coverage across all specified repositories
 
-6. **Review and Fix**: Call `/development:review` and `/development:develop` as needed
+6. **Commit Initial Tests**: Call `/development:git` for all repos/branches
+
+   - Commit test implementations with meaningful messages referencing work item
+   - Push to working branches in all repositories
+
+7. **Review and Fix**: Call `/development:review` and `/development:develop` as needed
 
    - Review test implementations for quality and completeness
    - Request fixes via **AskUserQuestion** if improvements needed
    - Re-run tests after fixes
 
-7. **Commit and Push**: Call `/development:git` for all repos/branches
+8. **Commit and Push Fixes**: Call `/development:git` for all repos/branches
 
-   - Commit test implementations with meaningful messages
+   - Commit fix implementations with meaningful messages referencing work item
    - Push to working branches in all repositories
 
-8. **AppHost Setup and Test Execution**:
+9. **AppHost Setup and Test Execution**:
 
    - Call `/workspace:setup-apphost` with all involved working branches
    - Configure integrated environment with all applications
@@ -84,14 +89,14 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
    - Generate testing report with pass/fail results, coverage metrics, and issues found
    - Request user approval via **AskUserQuestion** before proceeding to bug creation
 
-9. **Create Bug Work Items**: For each issue found in test execution
+10. **Create Bug Work Items**: For each issue found in test execution
 
-   - Call `/devops:work-item` (create mode) for each bug
-   - Include: title, detailed description, steps to reproduce, expected vs actual behavior, affected repo/application, severity
-   - Link bugs to original work item
-   - Provide summary of all created bug work items
+    - Call `/devops:work-item` (create mode) for each bug
+    - Include: title, detailed description, steps to reproduce, expected vs actual behavior, affected repo/application, severity
+    - Link bugs to original work item
+    - Provide summary of all created bug work items
 
-10. **Create Pull Requests**: Open pull requests for all repositories
+11. **Create Pull Requests**: Open pull requests for all repositories
 
     - Call `/devops:pull-request` for each repo with source_branch, target_branch, and work-item parameters
     - Link each PR to the original work item
@@ -141,6 +146,9 @@ sequenceDiagram
     C->>DT: Implement tests (per branch)
     DT-->>C: Test implementation summary
 
+    C->>DG: Commit initial tests (all repos)
+    DG-->>C: Commit confirmation
+
     C->>DR: Review test implementations
     DR-->>C: Review feedback
 
@@ -151,7 +159,7 @@ sequenceDiagram
         DD-->>C: Fix summary
     end
 
-    C->>DG: Commit and push (all repos)
+    C->>DG: Commit and push fixes (all repos)
     DG-->>C: Commit confirmation
 
     C->>SA: Setup AppHost (all working branches)
