@@ -1,50 +1,48 @@
 ---
 name: /architect
-description: Explore architecture concepts and generate clarifying questions from context (docs, work items, workspace code)
+description: Analyze context and produce architectural design following SDD, Microservice, DDD, Clean Architecture, SOLID
 argument-hint: "[--work-description <text>] [--work-directory <path>]"
-category: development
-agents:
-  - name: zzaia-task-clarifier
-    description: Generate relevant and clarifying architectural questions based on context analysis
 parameters:
   - name: work-description
-    description: Optional description or context about the system or feature
+    description: Description or context about the system or feature to architect
     required: false
     type: string
   - name: work-directory
-    description: Workspace directory to explore for context
+    description: Workspace directory to explore for existing implementations and patterns
     required: false
     type: string
 ---
 
 ## PURPOSE
 
-Explore architecture concepts and surface clarifying questions using `zzaia-task-clarifier`. Analyzes available context — documentation, work items, and workspace implementations — to identify architectural gaps, decisions needed, and areas requiring deeper understanding. 
+Analyze available context and produce a structured architectural design following:
+
+0. **Specification Driven Design** — document behavior before implementation
+1. **Microservice Architecture** — autonomous, bounded services with independent deployability
+2. **Domain Driven Design** — ubiquitous language, bounded contexts, aggregates, domain events
+3. **Clean Architecture** — dependency inversion, layered separation, framework independence
+4. **SOLID Principles** — single responsibility, open/closed, Liskov, interface segregation, dependency inversion
 
 ## EXECUTION
 
-1. **Context Analysis**: Gather and analyze all available input
+1. **Context Gathering**: Collect all available input
    - Read provided description or work item context
-   - Explore workspace directory for existing implementations and patterns
-   - Scan available documentation and ADRs
-   - Identify technology stack, service boundaries, and integration points
+   - Explore workspace directory for existing implementations, patterns, and domain models
+   - Scan available documentation, ADRs, and event catalogs
 
-2. **Architectural Question Generation**: Use `zzaia-task-clarifier` to
-   - Surface architectural concerns and decision gaps
-   - Generate clarifying questions grouped by concern (scalability, integration, data, security, etc.)
-   - Identify missing context that affects architectural decisions
-   - Highlight conflicts or inconsistencies found in existing code or docs
+2. **Architectural Design**: Reason and produce
+   - Bounded context map with service boundaries and ownership
+   - Domain model: aggregates, entities, value objects, domain events
+   - Clean Architecture layer breakdown per service (Domain, Application, Infrastructure, Presentation)
+   - Service interaction patterns: sync (REST/gRPC) vs async (events/messages)
+   - Data ownership and consistency strategy (eventual vs strong)
+   - Test strategy per layer (unit, integration, contract, e2e)
+   - SDD specification outline: behavior descriptions per component before implementation
 
-3. **Presentation**: Deliver structured findings to the user
-   - Organize questions by architectural concern category
-   - Reference specific files, patterns, or work items where relevant
-   - Suggest areas for deeper investigation
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-task-clarifier` — Generate relevant and clarifying architectural questions based on context analysis
+3. **Presentation**: Deliver structured architectural output
+   - Organize by domain, then service, then layer
+   - Reference specific files or patterns found in workspace when applicable
+   - Flag architectural risks, violations, or trade-offs
 
 ## WORKFLOW
 
@@ -52,24 +50,23 @@ Explore architecture concepts and surface clarifying questions using `zzaia-task
 sequenceDiagram
     participant U as User
     participant C as /architect Command
-    participant TC as zzaia-task-clarifier
 
     U->>C: /architect [description] [directory]
-    C->>C: Analyze workspace context and docs
-    C->>TC: Delegate architectural question generation
-    TC->>TC: Identify gaps and decision points
-    TC-->>C: Return structured questions and insights
-    C-->>U: Present architectural findings
+    C->>C: Gather context from description and workspace
+    C->>C: Apply SDD, Microservice, DDD, Clean Arch, SOLID, TDD
+    C-->>U: Present structured architectural design
 ```
 
 ## ACCEPTANCE CRITERIA
 
-- Surfaces specific, contextual architectural questions
-- References workspace patterns and existing implementations
-- Groups questions by architectural concern
-- Identifies gaps and decision points clearly
-- Does NOT generate documentation artifacts
-- Does NOT delegate to template agents
+- Produces bounded context map with explicit service boundaries
+- Domain model covers aggregates, entities, value objects, and domain events
+- Clean Architecture layers defined per service
+- Service interactions specify sync vs async patterns
+- Test strategy defined per architectural layer
+- SDD specification outline provided per component
+- Does NOT generate clarifying questions — delegates to `/management:clarify` for that
+- Does NOT generate documentation artifacts — delegates to `/document:write` for that
 
 ## EXAMPLES
 
