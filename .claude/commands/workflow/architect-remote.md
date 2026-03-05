@@ -2,11 +2,6 @@
 name: /architect-remote
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
 argument-hint: "--selected-work-item <id> [--description <text>]"
-agents:
-  - name: zzaia-devops-specialist
-    description: Retrieve and manage work items in Azure DevOps, post discussions, and update descriptions
-  - name: zzaia-task-clarifier
-    description: Analyze and decompose requirements for architecture planning
 parameters:
   - name: selected-work-item
     description: Work item ID to architect (Epic, Feature, User Story, or Task)
@@ -30,7 +25,7 @@ parameters:
 Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design.
 
 
-## EXECUTION
+## WORKFLOW PHASES 
 
 1. **Retrieve Work Item Chain**
    - Call `/devops:work-item` with `selected-work-item` parameter to retrieve the full hierarchy
@@ -44,8 +39,8 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Enrich architectural context with retrieved repository structure and materials
 
 3. **Generate Selected Work Item Architecture**
-   - Call `/management:architect` with context and description parameters
-   - Call `/management:clarify` to generate clarification questions about the project 
+   - Call `/management:architect` with context and description parameters to produce the architectural design
+   - Call `/management:clarify --context` passing the architectural design output to generate critical clarification questions
    - Call `/devops:work-item` to post a discussion on the selected work item with all clarification questions as a numbered list
    - **MANDATORY** Do NOT create child work items or update descriptions with architectural documentation before user responds
 
@@ -56,7 +51,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/devops:work-item` to update selected work item related description with finalized SDD documentation 
 
 5. **Plan Child Work Item Hierarchy**
-   - Call `/management:plan` to decompose the finalized SDD into a parallelizable agile hierarchy:
+   - Call `/management:plan --work-description` passing the finalized SDD content to decompose it into a parallelizable agile hierarchy
    - Call `/devops:work-item` to post the full resumed plan (hierarchy, dependency graph, parallelization map) as a discussion on the selected work item
    - **MANDATORY** Do NOT create any child work items before the user approves the plan
 
@@ -70,17 +65,10 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/devops:work-item` to update all work items related description with finalized SDD documentation 
 
 8. **Validate Overall Architecture**
-   - Use **AskUserQuestion** to ask user to review the overall architecture in the Azure DevOps discussion and confirm to continue
+   - Use **AskUserQuestion** to ask user to review all work items in Azure DevOps, reply to each individual discussion if changes are needed, and confirm to continue
    - For each work item: call `/devops:work-item` to read answers from its individual discussion
    - Call `/document:write` to update the SDD with the answers for each respective work item
    - Call `/devops:work-item` to update each work item description with the revised SDD
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-work-item-manager` — Retrieve and manage work items in Azure DevOps, post discussions, and update descriptions
-- `zzaia-task-clarifier` — Analyze and decompose requirements for architecture planning
 
 ## WORKFLOW
 
@@ -88,12 +76,12 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as Work Item Manager
+    participant WM as DevOps Specialist
     participant AR as Architect
     participant DW as document:write
     participant D as DevOps
 
-    U->>C: /architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
+    U->>C: /architect-remote --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
     C->>C: Validate parameters
     C->>WM: Retrieve selected work item chain
     WM->>D: Query work items
@@ -141,7 +129,7 @@ sequenceDiagram
     DW-->>C: SDD markdown per work item
     C->>WM: Update all child work item descriptions with finalized SDD
     WM->>D: Batch update descriptions
-    C->>U: AskUserQuestion: review overall architecture in DevOps and confirm
+    C->>U: AskUserQuestion: review all work items in DevOps, reply to each discussion if changes needed, and confirm
     U-->>C: Confirmation
     loop For Each Work Item
         C->>WM: Read answers from work item discussion
@@ -166,26 +154,18 @@ sequenceDiagram
 - Plan validated via DevOps discussion before any child work items are created
 - Child work items created with SDD documentation embedded in descriptions from the start
 - Dependency links established between child work items per the validated plan
-- Overall architecture summary posted as discussion on selected work item
-- Overall architecture validated via DevOps discussion before completion
+- Overall architecture validated by user reviewing individual work item discussions before completion
+- All work item SDDs updated with answers from their individual Azure DevOps discussions
 - Leaf-level tasks designed as independent, parallelizable pull requests
-
-## KEY DESIGN PRINCIPLES
-
-- **SDD Granularity**: Epic (system-level), Feature (component), User Story (functional), Task (implementation)
-- **Discussion-First**: All architectural decisions validated via DevOps discussions before structural changes
-- **Parallelization**: Leaf tasks designed as independent pull requests where possible
-- **Dependency Tracking**: Work-item links establish explicit dependencies between tasks
-- **Human Collaboration**: Architectural decisions integrated through DevOps discussion threads, not CLI alone
 
 ## EXAMPLES
 
 ```
-/architect --selected-work-item 2001 --description "Multi-tenant notification service with email, SMS, and push channels"
+/architect-remote --selected-work-item 2001 --description "Multi-tenant notification service with email, SMS, and push channels"
 
-/architect --selected-work-item 1850 --doc ./docs/requirements.pdf
+/architect-remote --selected-work-item 1850 --doc ./docs/requirements.pdf
 
-/architect --selected-work-item 2200 --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
+/architect-remote --selected-work-item 2200 --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
 ```
 
 ## OUTPUT
@@ -197,3 +177,4 @@ sequenceDiagram
 - List of created child work items with IDs, types, and dependencies
 - Parallelization map indicating which tasks can run concurrently
 - Dependency graph showing consumes-from and related relationships
+- Revised SDD documents per work item incorporating discussion feedback from Phase 8
