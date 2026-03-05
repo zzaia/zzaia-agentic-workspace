@@ -1,5 +1,5 @@
 ---
-name: /architect
+name: /architect-remote
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
 argument-hint: "--main-work-item <id> [--description <text>]"
 agents:
@@ -27,7 +27,8 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate architectural documentation and work-item hierarchy creation for a given main work item using Specification Driven Design (SDD). Decomposes requirements into a parallelizable hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human team collaboration through Azure DevOps discussions before structural changes, supporting post-implementation orchestration with `/implement`.
+Orchestrate architectural documentation and work-item hierarchy creation for a given main work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design.
+
 
 ## EXECUTION
 
@@ -43,31 +44,43 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Enrich architectural context with retrieved repository structure and materials
 
 3. **Generate Main Work Item Architecture**
-   - Call `/development:architect` with main work item context and description parameter
+   - Call `/management:architect` with main work item context and description parameter
    - Call `/devops:work-item` to post a discussion on the main work item with all clarification questions as a numbered list
    - **MANDATORY** Do NOT create child work items or update descriptions with architectural documentation before user responds
 
-4. **Validate Main Work Item**
+4. **Validate Main Work Item Documentation**
    - Use the tool **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
    - Call `/devops:work-item` to read all discussion answers from the main work item
    - Call `/devops:work-item` and `/document:write` to update main work item related description with finalized SDD documentation in markdown following the templates
 
-5. **Create Child Work Items**
-   - Call `/devops:work-item` to create the full child hierarchy (Features, User Stories, Tasks) without the SDD documentation yet
+5. **Plan Child Work Item Hierarchy**
+   - Call `/management:plan` to decompose the finalized SDD into a parallelizable agile hierarchy:
+     - Break architectural design into Features, User Stories, and Tasks aligned to SDD components
+     - Identify parallelization opportunities: independent work items that can be developed concurrently
+     - Map sequential dependencies: items that must complete before others can start (`consumes-from`)
+     - Define collaboration boundaries: related items that share context or interfaces (`related`)
+     - Balance parallelization vs. collaboration: maximize concurrency while preserving team coordination points
+     - Output: ordered work-item plan with dependency graph and parallelization map
+   - Call `/devops:work-item` to post the full plan (hierarchy, dependency graph, parallelization map) as a discussion on the main work item
+   - **MANDATORY** Do NOT create any child work items before the user approves the plan
+
+6. **Validate Plan**
+   - Use **AskUserQuestion** to ask user to reply to the plan discussion in Azure DevOps and confirm to continue
+   - Call `/devops:work-item` to read all plan approval/feedback from the main work item discussion
+
+7. **Create Child Work Items**
+   - For each child work item in the approved plan:
+     - Call `/management:architect` to generate the SDD documentation at the appropriate granularity level
+     - Call `/document:write` to produce the finalized SDD markdown
+     - Call `/devops:work-item` to create the work item with the SDD documentation embedded in its description
    - Each level must have appropriate SDD granularity: Epic (system), Feature (component), User Story (functional), Task (implementation)
    - Leaf tasks must be designed as independent pull requests where possible
-   - Call `/devops:work-item` to establish dependency links (`related`, `consumes-from`) between dependent items
+   - Call `/devops:work-item` to establish dependency links (`related`, `consumes-from`) between dependent items per the plan
 
-6. **Generate Child Work Item Architecture**
-   - Call `/management:architect` to think about the architecture for each created child work-item 
-   - Call `/devops:work-item` to post a single discussion on **each** child work item with all clarification questions as a numbered list
-   - **MANDATORY** Do NOT update descriptions before user responds
-
-7. **Validate Child Work Items**
-   - Use the tool **AskUserQuestion** to ask user to reply to all Azure DevOps discussions and confirm to continue
-   - Call `/devops:work-item` to read discussion answers from each child work item
-   - Call `/document:write` to generate the SDD documentation for each created child work-item 
-   - Use `/devops:work-item` to update each child work item description with finalized SDD documentation 
+8. **Validate Overall Architecture**
+   - Call `/devops:work-item` to post a summary discussion on the main work item with the full created hierarchy, all child work item IDs, and any open architectural questions
+   - Use **AskUserQuestion** to ask user to review the overall architecture in the Azure DevOps discussion and confirm to continue
+   - Call `/devops:work-item` to read all answers from the main work item discussion
 
 ## DELEGATION
 
@@ -117,28 +130,36 @@ sequenceDiagram
     DW-->>C: SDD markdown
     C->>WM: Update main work item description with finalized SDD
     WM->>D: Update description
-    loop For Each Child Work Item
-        C->>WM: Create child work item
-        WM->>D: Create work item
-        D-->>WM: Child work item ID
-        C->>AR: /management:architect for child context
-        AR-->>C: Clarification questions
-        C->>WM: Post clarification discussion on child work item
-        WM->>D: Create discussion thread
-        D-->>C: Discussion link
-    end
-    C->>U: AskUserQuestion: reply to all child discussions and confirm
+    C->>C: /management:plan decompose SDD into agile hierarchy
+    C->>WM: Post plan (hierarchy, dependencies, parallelization map) as discussion on main work item
+    WM->>D: Create plan discussion thread
+    D-->>C: Discussion link
+    C->>U: AskUserQuestion: review and approve plan in DevOps discussion
     U-->>C: Confirmation
+    C->>WM: Read plan approval from main work item discussion
+    WM->>D: Fetch discussion replies
+    D-->>WM: Approval content
+    WM-->>C: Confirmed plan
     loop For Each Child Work Item
-        C->>WM: Read discussion answers
-        WM->>D: Fetch replies
-        D-->>WM: Answers
-        WM-->>C: Discussion content
+        C->>AR: /management:architect for child context
+        AR-->>C: SDD content
         C->>DW: /document:write generate child SDD
         DW-->>C: SDD markdown
-        C->>WM: Update child work item description with finalized SDD
-        WM->>D: Update description
+        C->>WM: Create child work item with SDD in description
+        WM->>D: Create work item
+        D-->>WM: Child work item ID
     end
+    C->>WM: Establish dependency links between work items
+    WM->>D: Update work item links
+    C->>WM: Post overall architecture summary discussion on main work item
+    WM->>D: Create summary discussion thread
+    D-->>C: Discussion link
+    C->>U: AskUserQuestion: review overall architecture in DevOps and confirm
+    U-->>C: Confirmation
+    C->>WM: Read overall architecture answers from main work item
+    WM->>D: Fetch discussion replies
+    D-->>WM: Answers
+    WM-->>C: Discussion content
     C-->>U: Complete - all work items architected with SDD
 ```
 
@@ -148,9 +169,12 @@ sequenceDiagram
 - Referenced documentation integrated into context
 - Main work item SDD discussion posted before any structural changes
 - Main work item description updated with finalized markdown SDD
-- Child work items created with correct hierarchy and dependency relationships
-- Each child work item includes discussion with clarification questions
-- Each child work item description updated with finalized markdown SDD
+- Work-item plan (hierarchy, dependency graph, parallelization map) posted as discussion on main work item
+- Plan validated via DevOps discussion before any child work items are created
+- Child work items created with SDD documentation embedded in descriptions from the start
+- Dependency links established between child work items per the validated plan
+- Overall architecture summary posted as discussion on main work item
+- Overall architecture validated via DevOps discussion before completion
 - Leaf-level tasks designed as independent, parallelizable pull requests
 
 ## KEY DESIGN PRINCIPLES
