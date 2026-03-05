@@ -15,6 +15,9 @@ parameters:
   - name: message
     description: Commit message for commit operations
     required: false
+agents:
+  - name: zzaia-repository-manager
+    description: Execute git operations, manage branches, resolve conflicts, and push changes
 ---
 
 ## PURPOSE
@@ -58,12 +61,17 @@ Branch naming must follow these strict conventions:
    - Report operation status
    - Display relevant output
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-repository-manager` — Execute git operations, manage branches, resolve conflicts, and push changes
+
 ## IMPLEMENTATION
 
-- **Direct Git Operations**: No agent dependencies
-  - Execute git commands directly in repository
-  - Enforce branch naming and commit standards
-  - Operate within current repository context
+- Execute git commands via `zzaia-repository-manager`
+- Enforce branch naming and commit standards
+- Operate within current repository context
 
 ## WORKFLOW
 
