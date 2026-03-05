@@ -1,76 +1,41 @@
 ---
 name: /plan
-description: Generate or update comprehensive action plans for user-requested work in a multi-repository workspace
+description: Generate an agile work-item plan (Epic → Feature → User Story → Task) with parallelization and dependency mapping
 argument-hint: "--work-description <text>"
-agents:
-  - name: zzaia-task-clarifier
-    description: Critical analysis, problem understanding, and improvement recommendations (analysis-only, no file creation)
-  - name: implementation-plan
-    description: Master implementation plan document generation
 parameters:
   - name: work-description
-    description: Detailed description of the work to be planned
+    description: Architectural design or SDD context to decompose into an agile work-item plan
     required: true
 ---
 
 ## PURPOSE
 
-Generate or update comprehensive, actionable plans for user-requested work by analyzing requirements, with detailed phase breakdown, risk assessment, and implementation strategy. Serves as a pre-development planning step before using `/develop` command.
+Decompose an architectural design or SDD context into a parallelizable agile work-item hierarchy (Epic → Feature → User Story → Task) for human or agent team execution. Produces a structured plan with dependency graph and parallelization map.
 
 ## EXECUTION
 
-1. **Initial Requirements Analysis**
+1. **Context Analysis**: Understand the input
+   - Parse the provided architectural design, SDD, or description
+   - Identify system components, bounded contexts, and service boundaries
+   - Map components to agile granularity levels (Epic → Feature → User Story → Task)
 
-   - Use zzaia-task-clarifier for rigorous problem analysis
-   - Identify involved projects, applications and architectural concerns
-   - Generate critical questions and risk assessments
-   - Receive suggestions for plan improvements
+2. **Hierarchy Decomposition**: Break down into work items
+   - **Epics**: System-level capabilities aligned to bounded contexts
+   - **Features**: Component-level deliverables per service or domain area
+   - **User Stories**: Functional behaviors from actor perspective
+   - **Tasks**: Implementation units designed as independent pull requests where possible
 
-2. **User Interaction & Clarification**
+3. **Parallelization and Dependency Mapping**
+   - Identify parallelization opportunities: independent work items that can be developed concurrently
+   - Map sequential dependencies: items that must complete before others can start (`consumes-from`)
+   - Define collaboration boundaries: related items that share context or interfaces (`related`)
+   - Balance parallelization vs. collaboration: maximize concurrency while preserving team coordination points
 
-   - Present task clarifier analysis and recommendations
-   - Ask clarifying questions based on agent feedback
-   - Gather additional requirements and constraints
-   - Refine scope and success criteria with user input
-
-3. **Technical Planning & Documentation**
-
-   - Review existing implementations and architecture
-   - Generate architecture plan through direct analysis
-     - Identify application layers that must be implemented
-     - Identify all patterns, tools, packages and SDKs that will be used
-     - Identify the communication interface between applications
-   - Generate step-by-step implementation plan
-     - Identify steps that can be executed in parallel
-     - Identify steps that must be executed sequentially
-     - Keep all steps related to one application ALWAYS as sequential
-     - Keep multi-application steps ALWAYS as parallel
-   - No need to write code in documentations
-
-4. **Plan Finalization**
-
-   - Delegate to `zzaia-implementation-plan` to generate the master plan document
-   - Generate comprehensive implementation plan with:
-     - Phase hierarchy with Gantt chart
-     - Parallel vs sequential execution strategy
-     - Team structure and resource allocation
-     - Success criteria and risk mitigation
-     - Timeline summary and next steps
-   - Create service-specific implementation plans for each application
-   - Display the overall information in prompt
-   - Estimate agentic developing effort, complexity, and resource requirements
-
-5. **User Interaction & Improvements**
-
-   - Ask if user has any improvements or rectifications
-   - Refine the plan and documents with user input
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-task-clarifier` — Critical analysis, problem understanding, and improvement recommendations (analysis-only, no file creation)
-- `implementation-plan` — Master implementation plan document generation
+4. **Plan Output**
+   - Ordered work-item hierarchy with Epic → Feature → User Story → Task breakdown
+   - Dependency graph showing `consumes-from` and `related` relationships
+   - Parallelization map indicating which items can run concurrently
+   - Sequence groups: waves of work that can be executed in parallel within each wave
 
 ## WORKFLOW
 
@@ -78,50 +43,34 @@ Generate or update comprehensive, actionable plans for user-requested work by an
 sequenceDiagram
     participant U as User
     participant C as /plan Command
-    participant TC as Task Clarifier
-    participant IP as Implementation Plan Agent
 
-    U->>C: /plan <work_description>
-
-    C->>TC: Analyze requirements and identify risks
-    TC-->>C: Critical analysis and improvement suggestions
-
-    C->>U: Present analysis and ask clarifying questions
-    U-->>C: Provide additional details and answers
-
-    C->>C: Technical planning with refined requirements
-    C->>IP: Generate implementation plan document
-    IP-->>C: implementation-plan.md created
-
-    C->>C: Create work item file in ./workspace/work-items/
-    C-->>U: Comprehensive action plan with file location
+    U->>C: /plan <architectural design or SDD context>
+    C->>C: Parse context and identify components
+    C->>C: Map components to Epic / Feature / User Story / Task
+    C->>C: Identify parallelization and dependencies
+    C-->>U: Ordered hierarchy + dependency graph + parallelization map
 ```
+
+## ACCEPTANCE CRITERIA
+
+- Full Epic → Feature → User Story → Task hierarchy produced
+- Each leaf Task scoped as an independent pull request where possible
+- All `consumes-from` dependencies explicitly identified
+- All `related` collaboration boundaries explicitly identified
+- Parallelization map groups tasks into concurrent execution waves
+- No clarifying questions — delegates to `/management:clarify` for that
+- No architectural decisions — delegates to `/management:architect` for that
 
 ## EXAMPLES
 
-```bash
-# Plan from user description
-/plan implement user authentication system
-
-# Plan infrastructure work
-/plan migrate database to new server
-
-# Plan documentation project
-/plan create API documentation for microservices
 ```
-
-## DOCUMENTATION AGENTS
-
-**MANDATORY**: Use these template agents to generate each document:
-
-- `zzaia-implementation-plan` → `./workspace/work-items/<WorkItemName>/implementation-plan.md`
+/plan "Payment service with checkout, refund, and webhook handling aligned to DDD bounded contexts"
+/plan "Notification microservice: email, SMS, push — event-driven, multi-tenant"
+```
 
 ## OUTPUT
 
-- Interactive clarification session with user
-- Critical analysis and risk assessment from task clarifier
-- Comprehensive implementation plan with phase breakdown
-- Implementation strategy with parallel/sequential execution
-- Resource requirements and time estimates
-- Service-specific implementation plans
-- All documentation generated via template agents
+- Work-item hierarchy: Epic → Feature → User Story → Task
+- Dependency graph (`consumes-from`, `related`)
+- Parallelization map with concurrent execution waves
+- Estimated team/agent parallelism capacity per wave
