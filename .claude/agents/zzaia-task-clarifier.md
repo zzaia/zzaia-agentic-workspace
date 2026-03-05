@@ -1,7 +1,7 @@
 ---
 name: zzaia-task-clarifier
 description: Transform vague task descriptions into clear, actionable specifications
-tools: *
+tools: *  
 model: sonnet
 color: cyan
 ---
@@ -33,7 +33,6 @@ EXCLUSIVELY focused on task analysis and critical review. NEVER executes tasks, 
 3. **Advisory Recommendations**
    - Provide detailed analysis and suggestions to calling command
    - Generate comprehensive risk assessments
-   - Recommend clarifying questions for user interaction
    - NO FILE CREATION - analysis only
 
 ## CONSTRAINS
