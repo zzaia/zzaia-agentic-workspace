@@ -36,7 +36,7 @@ Merge from a target branch into the working branch, automatically resolving merg
 
 2. **Review Merge Result**: Identify issues that arose from the merge
 
-   - Call `/development:review` with `--repo <repo>` `--branch <working-branch>` `--context "Post-merge verification"`
+   - Call `/development:review` with `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
    - Focus only on issues merge files with conflict
    - Document all issues found
    - Use the tool **AskUserQuestion** to confirm review findings and approve proceeding to fixes
