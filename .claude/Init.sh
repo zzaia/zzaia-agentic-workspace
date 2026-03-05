@@ -22,8 +22,8 @@ export VAULT_NAME
 # Sign in to 1Password to enable secret injection
 eval $(op signin)
 
-# Laungh claude code terminal with disabled permission checks
-claude --dangerously-skip-permissions
+# Launch Claude Code terminal with auto mode enabled
+claude --enable-auto-mode
 
 # Sign out of 1Password to clean up session
 eval $(op signout)
