@@ -1,5 +1,5 @@
 ---
-name: /devops:run-pipeline
+name: /run-pipeline
 description: Run new or existing Azure DevOps pipelines with automatic workspace context inference
 argument-hint: "--portal <azure> [--project <name>] [--pipeline <id-or-name>] [--file-name <yaml>] [--branch <branch>] [--file <path>]"
 agents:

@@ -1,5 +1,5 @@
 ---
-name: document:write
+name: /write
 description: Write markdown documentation using specialized agent templates for architecture, services, data models, and event catalogs. Output to local files and remote Wiki page.
 argument-hint: "[document-type] [title] [--output <path>] [--wiki] [--repo <name>]"
 agents:
