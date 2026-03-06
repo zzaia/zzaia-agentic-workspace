@@ -28,6 +28,13 @@
     "aspire": {
       "command": "aspire",
       "args": ["mcp", "start"]
+    },
+    "new-relic": {
+      "type": "http",
+      "url": "https://mcp.newrelic.com/mcp/",
+      "headers": {
+        "Api-Key": "op://${VAULT_NAME}/new-relic/api-key"
+      }
     }
   }
 }
