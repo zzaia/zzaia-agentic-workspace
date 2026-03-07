@@ -1,10 +1,16 @@
 ---
 name: /architect-remote
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
-argument-hint: "--selected-work-item <id> [--description <text>]"
+argument-hint: "--selected-work-item <id> --devops-portal <url> --project <name> [--description <text>]"
 parameters:
   - name: selected-work-item
     description: Work item ID to architect (Epic, Feature, User Story, or Task)
+    required: true
+  - name: devops-portal
+    description: Azure DevOps organization portal URL (e.g. https://dev.azure.com/my-org)
+    required: true
+  - name: project
+    description: Azure DevOps project name
     required: true
   - name: description
     description: Additional user context, goals, or constraints to guide SDD generation
@@ -161,11 +167,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/architect-remote --selected-work-item 2001 --description "Multi-tenant notification service with email, SMS, and push channels"
+/architect-remote --selected-work-item 2001 --devops-portal https://dev.azure.com/my-org --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
 
-/architect-remote --selected-work-item 1850 --doc ./docs/requirements.pdf
+/architect-remote --selected-work-item 1850 --devops-portal https://dev.azure.com/my-org --project MyProject --doc ./docs/requirements.pdf
 
-/architect-remote --selected-work-item 2200 --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
+/architect-remote --selected-work-item 2200 --devops-portal https://dev.azure.com/my-org --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
 ```
 
 ## OUTPUT
