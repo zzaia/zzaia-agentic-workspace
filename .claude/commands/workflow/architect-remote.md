@@ -6,9 +6,6 @@ parameters:
   - name: selected-work-item
     description: Work item ID to architect (Epic, Feature, User Story, or Task)
     required: true
-  - name: portal
-    description: Azure DevOps or GitHub organization portal (e.g. azure or github)
-    required: true
   - name: project
     description: Azure DevOps project name
     required: true
@@ -28,7 +25,7 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design.
+Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design. The 
 
 
 ## WORKFLOW PHASES 
@@ -53,8 +50,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 4. **Validate Selected Work Item Documentation**
    - Use the tool **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
    - Call `/devops:work-item` to read all discussion answers from the selected work item
-   - Call `/document:write` generate the finalized SDD documentation in markdown following the templates
-   - Call `/devops:work-item` to update selected work item related description with finalized SDD documentation 
+   - Call `/document:write` generate the finalized SDD documentation in markdown following the templates into selected work item
 
 5. **Plan Child Work Item Hierarchy**
    - Call `/management:plan --work-description` passing the finalized SDD content to decompose it into a parallelizable agile hierarchy
@@ -67,14 +63,12 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 
 7. **Create Child Work Items**
    - Call `/devops:work-item` to create all work items with all establish dependency links (`related`, `consumes-from`) between dependent items per the plan 
-   - Call `/document:write` to produce the finalized SDD markdown for all work items
-   - Call `/devops:work-item` to update all work items related description with finalized SDD documentation 
+   - Call `/document:write` to produce and update the finalized SDD documentation for all work items
 
 8. **Validate Overall Architecture**
    - Use **AskUserQuestion** to ask user to review all work items in Azure DevOps, reply to each individual discussion if changes are needed, and confirm to continue
    - For each work item: call `/devops:work-item` to read answers from its individual discussion
    - Call `/document:write` to update the SDD with the answers for each respective work item
-   - Call `/devops:work-item` to update each work item description with the revised SDD
 
 ## WORKFLOW
 
@@ -167,9 +161,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/architect-remote --selected-work-item 2001 --portal azure --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
+/architect-remote --selected-work-item 2001 --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
 
-/architect-remote --selected-work-item 1850 --portal azure --project MyProject --doc ./docs/requirements.pdf
+/architect-remote --selected-work-item 1850 --project MyProject --doc ./docs/requirements.pdf
 
 /architect-remote --selected-work-item 2200 --portal azure --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
 ```
