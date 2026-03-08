@@ -1,67 +1,56 @@
 ---
 name: /write
-description: Write markdown documentation using specialized agent templates for architecture, services, data models, and event catalogs. Output to local files and remote Wiki page.
-argument-hint: "[document-type] [title] [--output <path>] [--wiki] [--repo <name>]"
+description: Write markdown documentation by selecting a template from .claude/templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
+argument-hint: "[template] [title] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>]"
 agents:
   - name: zzaia-document-specialist
-    description: Orchestrate document writing, route to template agents, write output files and Wiki pages
-  - name: template-architecture-overview
-    description: Architecture overview with ADRs and C4 diagrams
-  - name: template-service-architecture
-    description: Individual service architecture documentation
-  - name: template-service-data-model
-    description: Entity, value objects, and data modeling documentation
-  - name: template-event-notification
-    description: Event catalog, topics, and pub/sub configuration
+    description: Generate documentation from conversation context following the selected template and deliver to the specified output
 parameters:
-  - name: document-type
-    description: Type of document to write (template-architecture-overview, template-service-architecture, template-service-data-model, template-event-notification)
-    required: false
+  - name: template
+    description: Template to use (architecture-overview, service-architecture, service-data-model, event-notification)
+    required: true
   - name: title
     description: Document title or subject
     required: false
   - name: output
-    description: Output file path for local markdown file
+    description: Local output file path for the markdown file
     required: false
   - name: wiki
-    description: Push documentation to a remote Wiki page
+    description: Push documentation to Azure DevOps Wiki page
     required: false
-  - name: repo
-    description: Target repository name for wiki integration
+  - name: pr
+    description: Pull request ID to post documentation as description or comment
+    required: false
+  - name: work-item
+    description: Work item ID to post documentation as description or comment
     required: false
 ---
 
 ## PURPOSE
 
-Write markdown documentation with specialized agent templates ensuring consistency in formatting, structure, and compliance with ZZAIA conventions. Route to appropriate agent based on document type and support writing to both local files and remote Wiki page.
+Select a documentation template from `.claude/templates/`, generate content from conversation context following the template structure, and deliver to the requested output target.
 
 ## EXECUTION
 
-1. **Clarify Document Type**: Identify or ask which documentation type to write
-   - template-architecture-overview: Architecture overview with ADRs and C4 diagrams
-   - template-service-architecture: Individual service architecture
-   - template-service-data-model: Service data models and entities
-   - template-event-notification: Event notifications and pub/sub catalog
+1. **Select Template**: Identify or ask which template to use
+   - `architecture-overview` → `.claude/templates/architecture-overview.md`
+   - `service-architecture` → `.claude/templates/service-architecture.md`
+   - `service-data-model` → `.claude/templates/service-data-model.md`
+   - `event-notification` → `.claude/templates/event-notification.md`
 
-2. **Route to Specialized Agent**: Dispatch to appropriate agent based on document type
-   - Agent handles template structure, formatting, and conventions
-   - Agent generates comprehensive documentation content
-   - Ensure output follows ZZAIA conciseness standards
+2. **Select Output Target**: Identify from flags or ask
+   - `--output <path>` — write local markdown file
+   - `--wiki` — push to Azure DevOps Wiki page
+   - `--pr <id>` — post as pull request description or comment
+   - `--work-item <id>` — post as work item description or comment
 
-3. **Write Output**: Generate markdown file at specified location
-   - Write local .md file if output path provided
-   - Push to remote Wiki pages if --wiki flag set
-   - Maintain consistent formatting across all outputs
+3. **Invoke Agent**: Call `zzaia-document-specialist` with template path and output target
 
 ## DELEGATION
 
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter. Never skip or simulate their behavior.
 
-- `zzaia-document-specialist` — Orchestrate document writing, route to template agents, write output files and Wiki pages
-- `template-architecture-overview` — Architecture overview with ADRs and C4 diagrams
-- `template-service-architecture` — Individual service architecture documentation
-- `template-service-data-model` — Entity, value objects, and data modeling documentation
-- `template-event-notification` — Event catalog, topics, and pub/sub configuration
+- `zzaia-document-specialist` — reads template, generates content from conversation context, delivers to output
 
 ## WORKFLOW
 
@@ -69,39 +58,28 @@ Write markdown documentation with specialized agent templates ensuring consisten
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant A as Agent
-    participant F as File System
-    participant W as Azure Wiki
+    participant A as zzaia-document-specialist
 
-    U->>C: /document:write [type] [title]
-    C->>C: Validate document type
-    C->>A: Route to specialized agent
-    A->>A: Generate documentation
-    A->>C: Return markdown content
-    C->>F: Write local .md file
-    C->>W: Optionally push to Wiki
+    U->>C: /document:write [template] [title] [--output/--wiki/--pr/--work-item]
+    C->>C: Resolve template path from .claude/templates/
+    C->>C: Identify output target
+    C->>A: template path + output target + context
+    A->>A: Read template, generate content from context
+    A->>A: Deliver to output target
+    A-->>C: Done
     C-->>U: Document ready
 ```
-
-## ACCEPTANCE CRITERIA
-
-- Document type correctly identified or prompted from user
-- Specialized agent template applied to output
-- Local markdown file written to specified path
-- Remote Wiki page integration available via --wiki flag
-- Documentation follows ZZAIA conventions
-- Consistent formatting across all document types
 
 ## EXAMPLES
 
 ```
-/document:write template-architecture-overview "System Architecture"
-/document:write template-service-architecture "User Service" --output docs/user-service.md
-/document:write template-service-data-model "Order Entity" --output docs/order-models.md --wiki
-/document:write template-event-notification "Payment Events" --repo payments --wiki
+/document:write architecture-overview "System Architecture" --output docs/architecture.md
+/document:write service-architecture "Payment Service" --wiki
+/document:write service-data-model "Order Entity" --output docs/data-model.md --wiki
+/document:write event-notification "Payment Events" --pr 42
+/document:write service-architecture "User Service" --work-item 1234
 ```
 
 ## OUTPUT
 
-- Local markdown file at specified path
-- Optional remote Wiki page with formatted content
+- Local markdown file, Wiki page, PR description/comment, or work item description/comment
