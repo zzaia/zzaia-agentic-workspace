@@ -81,7 +81,7 @@ sequenceDiagram
     participant DW as document:write
     participant D as DevOps
 
-    U->>C: /remote/architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
+    U->>C: /workflow:remote:architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
     C->>C: Validate parameters
     C->>WM: Retrieve selected work item chain
     WM->>D: Query work items

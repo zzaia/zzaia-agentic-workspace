@@ -79,8 +79,8 @@ All individual commands can be called to by users to make individual operations,
 
 Machine learning dataset discovery and analysis workflows.
 
-- [**`/analytics:explorate`**](.claude/commands/analytics/workflow/explorate.md) - Domain and dataset exploration
-- [**`/analytics:analyze`**](.claude/commands/analytics/workflow/analyze.md) - Dataset analysis and visualization
+- [**`/analytics:workflow:explorate`**](.claude/commands/analytics/workflow/explorate.md) - Domain and dataset exploration
+- [**`/analytics:workflow:analyze`**](.claude/commands/analytics/workflow/analyze.md) - Dataset analysis and visualization
 
 ### Development
 
@@ -98,8 +98,10 @@ Software development lifecycle operations.
 
 Project management and architecture coordination.
 
+- [**`/management:business`**](.claude/commands/management/business.md) - Business and BDD analysis
 - [**`/management:plan`**](.claude/commands/management/plan.md) - Project planning
 - [**`/management:architect`**](.claude/commands/management/architect.md) - Architecture specifications
+- [**`/management:clarify`**](.claude/commands/management/clarify.md) - Requirements clarification
 
 ### DevOps
 
@@ -108,6 +110,7 @@ DevOps platform operations across Azure DevOps and GitHub.
 - [**`/devops:work-item`**](.claude/commands/devops/work-item.md) - Work item retrieval and management
 - [**`/devops:pull-request`**](.claude/commands/devops/pull-request.md) - Pull request management
 - [**`/devops:debug-pipeline`**](.claude/commands/devops/debug-pipeline.md) - Pipeline log diagnostics
+- [**`/devops:debug-new-relic`**](.claude/commands/devops/debug-new-relic.md) - New Relic log diagnostics
 - [**`/devops:run-pipeline`**](.claude/commands/devops/run-pipeline.md) - Run new or existing pipelines
 
 ### Workspace
@@ -124,16 +127,19 @@ Multi-repository workspace configuration.
 Document content extraction and retrieval.
 
 - [**`/document:read`**](.claude/commands/document/read.md) - Extract PDF and Word document content
+- [**`/document:write`**](.claude/commands/document/write.md) - Write markdown documentation to targets
 - [**`/document:scraping`**](.claude/commands/document/scraping.md) - Search and download documents from web
 
 ### Workflow
 
 End-to-end orchestration workflows, that are a combination of sequential minor commands, that aims to a major task automation.
 
-- [**`/workflow:architect`**](.claude/commands/workflow/architect.md) - Specification Driven Design orchestration
 - [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
 - [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
+- [**`/workflow:fix-merge`**](.claude/commands/workflow/fix-merge.md) - Merge conflict resolution
 - [**`/workflow:fix-pipeline`**](.claude/commands/workflow/fix-pipeline.md) - Iterative pipeline repair loop
+- [**`/workflow:remote:architect`**](.claude/commands/workflow/remote/architect.md) - Specification Driven Design orchestration with AGILE Azure DevOps integration
+- [**`/workflow:remote:implement`**](.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
 
 ### Meta
 
@@ -204,6 +210,7 @@ sequenceDiagram
 │   ├── management/
 │   ├── workspace/
 │   └── workflow/
+│       └── remote/
 ├── hooks/               # Lifecycle hooks and scripts
 │   └── extract-document.py
 ├── plugins/

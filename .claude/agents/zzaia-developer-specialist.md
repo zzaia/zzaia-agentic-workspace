@@ -52,9 +52,9 @@ Develop solutions following architectural principles. MANDATORY: Apply language 
 - Rule-based coding standards application from `.claude/rules/`
 - Comprehensive testing strategy implementation
 - Cross-repository integration and dependency management
-- /build: Execute build process with dependency and configuration management
-- /test: Run full test suite across various test categories
-- /migrations: Execute database migration operations
+- /development:build: Execute build process with dependency and configuration management
+- /development:test: Run full test suite across various test categories
+- /development:migrations: Execute database migration operations
 
 ## OUTPUT
 

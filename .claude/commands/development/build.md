@@ -48,7 +48,7 @@ Direct build execution with comprehensive validation and error reporting.
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as /build Command
+    participant C as /development:build Command
     participant W as Workspace
     participant P as Project
 
