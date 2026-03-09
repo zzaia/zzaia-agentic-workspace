@@ -64,7 +64,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 6. **Create Draft Pull Request**: Open draft pull request
 
-   - Call `/devops:pull-request --action create --portal azure --project <project> --repo <repo> --from-branch <working-branch> --to-branch <target-branch> --work-item <work-item>`
+   - Call `/devops:pull-request --action create --portal azure --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
    - Link PR to original work item
 
 7. **Review Changes**: Review all developed changes
