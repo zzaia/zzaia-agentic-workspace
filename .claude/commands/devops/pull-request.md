@@ -1,7 +1,7 @@
 ---
 name: /devops:pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
-argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch|--source-branch <branch>] [--to-branch|--target-branch <branch>] [--draft] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
+argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--source-branch <branch>] [--target-branch <branch>] [--draft] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
 agents:
   - name: zzaia-devops-specialist
     description: Execute all Azure DevOps and GitHub pull request operations including creation, retrieval, updates, and code review publishing
@@ -18,11 +18,11 @@ parameters:
   - name: repo
     description: Repository name
     required: true
-  - name: from-branch
-    description: Source branch (required for create) — alias: --source-branch
+  - name: source-branch
+    description: Source branch (required for create)
     required: false
-  - name: to-branch
-    description: Target branch (defaults to main/master) — alias: --target-branch
+  - name: target-branch
+    description: Target branch (defaults to main/master)
     required: false
   - name: draft
     description: Create pull request as draft
@@ -129,7 +129,7 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/devops:pull-request --action create --portal azure --project MyProject --repo MyRepo --from-branch feature/new-feature --to-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
+/devops:pull-request --action create --portal azure --project MyProject --repo MyRepo --source-branch feature/new-feature --target-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
 
 /devops:pull-request --action read --portal github --project MyOrg --repo my-repo --pr-id 45
 
@@ -137,7 +137,7 @@ sequenceDiagram
 
 /devops:pull-request --action update --portal github --project MyOrg --repo my-repo --pr-id 12 --title "Updated title" --template true
 
-/devops:pull-request --action create --portal github --project MyOrg --repo my-repo --from-branch bugfix/issue-123 --to-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
+/devops:pull-request --action create --portal github --project MyOrg --repo my-repo --source-branch bugfix/issue-123 --target-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
 ```
 
 ## TEMPLATE
