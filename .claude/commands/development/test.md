@@ -71,7 +71,7 @@ Develop and run all existing tests within a specific project using framework det
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as /test Command
+    participant C as /development:test Command
     participant TS as Tester Specialist
     participant P as Project
 

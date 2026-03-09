@@ -19,7 +19,7 @@ parameters:
 
 ## PURPOSE
 
-Execute focused implementation tasks for development work. Uses task specification from `/plan` command or assumes requirements are already clarified.
+Execute focused implementation tasks for development work. Uses task specification from `/management:plan` command or assumes requirements are already clarified.
 
 ## EXECUTION
 
@@ -54,7 +54,7 @@ Execute focused implementation tasks for development work. Uses task specificati
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as /develop Command
+    participant C as /development:develop Command
     participant DS as Developer Specialist
     participant P as Project
 
@@ -78,14 +78,12 @@ sequenceDiagram
 
 ```bash
 # Plan first (recommended)
-/plan implement user authentication system
-/develop Add user authentication with JWT tokens repo=auth-service branch=feature/jwt-auth
+/management:plan implement user authentication system
+/development:develop Add user authentication with JWT tokens repo=auth-service branch=feature/jwt-auth
 
 # Develop in specific repository and branch
-/develop payment processing repo=compliance-hub branch=feature/payments
+/development:develop payment processing repo=compliance-hub branch=feature/payments
 
-# Direct development (assumes requirements are clear)
-/develop Create microservice architecture for order management repo=core-api branch=feature/microservices
 ```
 
 ## Acceptance Criteria

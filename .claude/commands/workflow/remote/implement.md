@@ -103,7 +103,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant P as /remote/implement
+    participant P as /workflow:remote:implement
     participant WI as /devops:work-item
     participant WN as /workspace:new
     participant DW as /document:write

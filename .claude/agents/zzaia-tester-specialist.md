@@ -60,8 +60,8 @@ Validate application quality through A-to-B endpoint testing, API contract verif
 - API contract validation and monitoring
 - Performance metrics analysis and reporting
 - Cross-endpoint dependency testing
-- /build: Execute build process with dependency and configuration management
-- /test: Run full test suite across various test categories
+- /development:build: Execute build process with dependency and configuration management
+- /development:test: Run full test suite across various test categories
 
 ## OUTPUT
 

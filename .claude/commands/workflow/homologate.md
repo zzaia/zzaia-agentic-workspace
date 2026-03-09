@@ -116,7 +116,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant C as /homologate
+    participant C as /workflow:homologate
     participant WI as /devops:work-item
     participant WS as /workspace:new
     participant AR as /management:architect
