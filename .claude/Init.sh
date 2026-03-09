@@ -22,6 +22,9 @@ export VAULT_NAME
 # Sign in to 1Password to enable secret injection
 eval $(op signin)
 
+# Export global secret variables in claude's environment
+export NEW_RELIC_API_KEY=$(op read "op://${VAULT_NAME}/new-relic/api-key")
+
 # Launch Claude Code terminal with auto mode enabled
 claude --enable-auto-mode
 
