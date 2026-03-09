@@ -77,6 +77,7 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
 
 5. **Execute Tests**: Run tests against the target URL following validated BDD scenarios
 
+   - If authentication is required (login, token, credential): Use **AskUserQuestion** to ask the user to provide the credential or perform the manual login in the Playwright session before proceeding
    - Call `/development:test --action run --type <type> --environment <url> --repo <application>`
    - For `ui` type: Playwright browser automation drives UI interactions
    - For `e2e` type: API client validates endpoint contracts and service flows
@@ -176,6 +177,7 @@ sequenceDiagram
 ## ACCEPTANCE CRITERIA
 
 - Work item and all child work items retrieved with non-empty description
+- Authentication credentials or manual login requested via AskUserQuestion before test execution if required
 - BDD scenarios generated appropriate to the test type and posted as work item discussion
 - Tests executed against target URL with full pass/fail capture per scenario
 - Test failures correlated with New Relic, browser, and local diagnostics
