@@ -2,7 +2,6 @@
 name: zzaia-code-reviewer
 description: Comprehensive code quality review and static analysis
 tools: Read, WebSearch, Glob, Bash, Grep
-mcp: []
 model: sonnet
 color: blue
 ---
