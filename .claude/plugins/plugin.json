@@ -36,7 +36,8 @@
     "/workflow:fix-merge",
     "/workflow:fix-pipeline",
     "/workflow:remote:architect",
-    "/workflow:remote:implement"
+    "/workflow:remote:implement",
+    "/workflow:remote:homologate"
   ],
   "agents": [
     "zzaia-domain-exploration",
