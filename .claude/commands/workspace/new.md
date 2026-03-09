@@ -1,5 +1,5 @@
 ---
-name: /new
+name: /workspace:new
 description: Add new remote project repository worktrees to workspace at master/main branch or a specific one branch
 argument-hint: "[--repo: repoName | repoUrl] [--brach: branchName] "
 agents:

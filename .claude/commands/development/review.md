@@ -1,5 +1,5 @@
 ---
-name: /review
+name: /development:review
 description: Comprehensive code review across git changes, repositories, and pull requests
 argument-hint: "--target changes|repo|pr [--path <path>] [--pr <url>] [--depth light|standard|deep]"
 agents:

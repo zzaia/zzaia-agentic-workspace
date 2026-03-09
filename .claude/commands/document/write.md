@@ -1,5 +1,5 @@
 ---
-name: /write
+name: /document:write
 description: Write markdown documentation by selecting a template from .claude/templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
 argument-hint: "[template] [title] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>]"
 agents:

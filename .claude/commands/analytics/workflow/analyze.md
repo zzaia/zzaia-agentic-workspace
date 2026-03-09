@@ -1,5 +1,5 @@
 ---
-name: /analyze
+name: /analytics:workflow:analyze
 description: Comprehensive dataset download, visualization, and exploration workflow
 argument-hint: "[--dataset <url|description>]"
 version: 1.0

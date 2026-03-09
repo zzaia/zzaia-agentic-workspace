@@ -1,5 +1,5 @@
 ---
-name: /setup-apphost
+name: /workspace:setup-apphost
 description: Configure the ZZAIA Aspire AppHost with workspace applications and shared infrastructure
 argument-hint: "--applications \"<name[:branch]> [name[:branch] ...]\""
 tools: Aspire

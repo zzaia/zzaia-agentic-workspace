@@ -1,5 +1,5 @@
 ---
-name: /debug-new-relic
+name: /devops:debug-new-relic
 description: Query New Relic for application logs, errors, warnings, and anomalies to generate a diagnostic report
 argument-hint: "--application-name <name>"
 agents:

@@ -1,5 +1,5 @@
 ---
-name: /migrations
+name: /development:migrations
 description: Entity Framework Core migrations management across repositories
 argument-hint: "--repository <name> --branch <name> --action add|remove|list|update|script|drop [--migration <name>]"
 parameters:

@@ -1,5 +1,5 @@
 ---
-name: /plan
+name: /management:plan
 description: Generate an agile work-item plan (Epic → Feature → User Story → Task) with parallelization and dependency mapping
 argument-hint: "--work-description <text>"
 parameters:

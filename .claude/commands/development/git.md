@@ -1,5 +1,5 @@
 ---
-name: /git
+name: /development:git
 description: Execute comprehensive Git version control operations with standardized branch management
 argument-hint: "--action init|branch|commit|merge|status [--repository <name>] [--branch <name>] [--message <text>]"
 parameters:

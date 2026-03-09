@@ -1,5 +1,5 @@
 ---
-name: /clarify
+name: /management:clarify
 description: Critical analysis of tasks and requirements, identifying inconsistencies, gaps, and missing concepts through structured questioning
 argument-hint: "[--context <text>] [--work-item <id>] [--doc <path>] [--url <url>]"
 agents:

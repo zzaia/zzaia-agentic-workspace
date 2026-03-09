@@ -1,5 +1,5 @@
 ---
-name: /fix-merge
+name: /workflow:fix-merge
 description: Merge from target branch, resolve conflicts, fix issues, and push changes
 argument-hint: "--repo <name> --working-branch <branch> --target-branch <branch> --description <context>"
 parameters:

@@ -1,5 +1,5 @@
 ---
-name: /implement
+name: /workflow:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
 argument-hint: "--work-item <id> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:

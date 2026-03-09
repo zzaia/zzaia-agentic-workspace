@@ -1,5 +1,5 @@
 ---
-name: /setup-vscode
+name: /workspace:setup-vscode
 description: Generate and manage VSCode launch and task configurations for development environments
 argument-hint: "[--mode all|project|validate|update] [--repo <name>] [--branch <name>]"
 parameters:

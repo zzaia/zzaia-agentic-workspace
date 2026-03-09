@@ -1,5 +1,5 @@
 ---
-name: /architect
+name: /management:architect
 description: Analyze context and produce architectural design following SDD, Microservice, DDD, Clean Architecture, SOLID
 argument-hint: "[--work-description <text>] [--work-directory <path>]"
 parameters:
