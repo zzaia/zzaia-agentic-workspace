@@ -1,7 +1,7 @@
 ---
 name: /document:write
 description: Write markdown documentation by selecting a template from .claude/templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
-argument-hint: "[template] [title] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>]"
+argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>]"
 agents:
   - name: zzaia-document-specialist
     description: Generate documentation from conversation context following the selected template and deliver to the specified output
@@ -11,6 +11,9 @@ parameters:
     required: true
   - name: title
     description: Document title or subject
+    required: false
+  - name: context
+    description: Inline content or architectural output to use as source for documentation generation
     required: false
   - name: output
     description: Local output file path for the markdown file

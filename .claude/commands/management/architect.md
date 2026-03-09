@@ -1,7 +1,7 @@
 ---
 name: /management:architect
 description: Analyze context and produce architectural design following SDD, Microservice, DDD, Clean Architecture, SOLID
-argument-hint: "[--work-description <text>] [--work-directory <path>]"
+argument-hint: "[--work-description <text>] [--work-directory <path>] [--context <text>] [--focus <area>]"
 parameters:
   - name: work-description
     description: Description or context about the system or feature to architect
@@ -9,6 +9,14 @@ parameters:
     type: string
   - name: work-directory
     description: Workspace directory to explore for existing implementations and patterns
+    required: false
+    type: string
+  - name: context
+    description: Additional architectural context, constraints, or work item details to enrich the design
+    required: false
+    type: string
+  - name: focus
+    description: Focus area to narrow the architectural output (e.g., test-plan, data-model, service-architecture, event-design)
     required: false
     type: string
 ---

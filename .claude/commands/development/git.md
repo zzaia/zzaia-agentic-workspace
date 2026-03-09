@@ -1,10 +1,10 @@
 ---
 name: /development:git
 description: Execute comprehensive Git version control operations with standardized branch management
-argument-hint: "--action init|branch|commit|merge|status [--repository <name>] [--branch <name>] [--message <text>]"
+argument-hint: "--action init|branch|commit|push|commit-push|merge|status [--repository <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
 parameters:
   - name: action
-    description: The git operation to perform (init, branch, commit, merge, status)
+    description: The git operation to perform (init, branch, commit, push, commit-push, merge, status)
     required: true
   - name: repository
     description: Target repository name for the operation
@@ -14,6 +14,9 @@ parameters:
     required: false
   - name: message
     description: Commit message for commit operations
+    required: false
+  - name: source-branch
+    description: Source branch for merge operations (branch to merge from)
     required: false
 agents:
   - name: zzaia-repository-manager

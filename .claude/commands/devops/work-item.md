@@ -1,29 +1,50 @@
 ---
 name: /devops:work-item
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
-argument-hint: "[--project <name>] [--title <text>] [--id <id>] [--assignee <user>] [--status <state>] [--since <date>] [--until <date>] [--platform azure|github|git-lab] [--limit <n>]"
+argument-hint: "[--action read|create|update|post-discussion|read-discussion] [--id <id>] [--project <name>] [--type Bug|Task|Feature|UserStory|Epic] [--title <text>] [--description <text>] [--status <state>] [--parent <id>] [--severity Low|Medium|High|Critical] [--platform azure|github|git-lab]"
 agents:
   - name: zzaia-devops-specialist
     description: Retrieve, query, and manage work items across Azure DevOps and GitHub
 parameters:
+  - name: --action
+    description: Operation to perform (read, create, update, post-discussion, read-discussion) — defaults to read
+    required: false
+    type: string
+    default: read
+  - name: --id
+    description: Retrieve or act on specific work item by ID
+    required: false
+    type: string
   - name: --project
-    description: Filter work items by project name
+    description: Filter or scope work items by project name
+    required: false
+    type: string
+  - name: --type
+    description: Work item type for create operations (Bug, Task, Feature, UserStory, Epic)
     required: false
     type: string
   - name: --title
-    description: Filter by work item title (partial match)
+    description: Work item title for create/update or filter by partial match on read
     required: false
     type: string
-  - name: --id
-    description: Retrieve specific work item by ID
-    required: false
-    type: string
-  - name: --assignee
-    description: Filter work items by assignee
+  - name: --description
+    description: Work item description body for create/update operations
     required: false
     type: string
   - name: --status
     description: Filter work items by status/state
+    required: false
+    type: string
+  - name: --parent
+    description: Parent work item ID to link child work items during create
+    required: false
+    type: string
+  - name: --severity
+    description: Bug severity for create operations (Low, Medium, High, Critical)
+    required: false
+    type: string
+  - name: --assignee
+    description: Filter work items by assignee
     required: false
     type: string
   - name: --since

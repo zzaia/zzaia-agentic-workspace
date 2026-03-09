@@ -35,71 +35,63 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 ## EXECUTION
 
-1. **Retrieve Work Item**: Call `/devops:work-item` to fetch work item details
+1. **Retrieve Work Item**: Fetch work item details and acceptance criteria
 
+   - Call `/devops:work-item --work-item <work-item>`
    - Extract title, description, acceptance criteria
-   - Validate work item description is not empty
-   - Confirm work item is in proper state for homologation
+   - **MANDATORY** Validate work item description is not empty
 
-2. **Create Homologation Branches**: Call `/workspace:new` for each repo/branch pair
+2. **Create Homologation Branches**: Setup branches in all specified repositories
 
-   - Create homologation branches in ALL specified repositories
-   - Support concurrent branch creation across multiple repos
+   - Call `/workspace:new --repo <repo[i]> --target-branch <target-branch[i]> --branch <working-branch[i]>` for each repo/branch pair
    - Confirm branch creation in each repository
 
-3. **Generate Test Plan**: Call `/management:architect` focused on test cases only
+3. **Generate Test Plan**: Design test coverage from acceptance criteria
 
+   - Call `/management:architect --description "<description>" --context "<acceptance-criteria>" --focus test-plan`
    - Document all test scenarios derived from acceptance criteria
-   - Define expected behaviors and validation criteria
    - Clarify testing scope with user via **AskUserQuestion**
    - Create concise Test Plan document covering test scope only
 
-4. **User Approval**: Wait for Test Plan approval via **AskUserQuestion**
+4. **User Approval**: Wait for Test Plan approval
 
-   - Request user confirmation of test coverage completeness
-   - Address any clarifications needed before proceeding
+   - Use **AskUserQuestion** to confirm test coverage completeness before proceeding
 
-5. **Implement Tests**: Call `/development:test` in each working branch
+5. **Implement Tests**: Write and run tests in each working branch
 
+   - Call `/development:test --repo <repo[i]> --branch <working-branch[i]> --action implement` for each repo
    - Implement test cases covering all acceptance criteria
-   - Execute tests to verify they detect both passing and failing scenarios
    - Ensure test coverage across all specified repositories
 
-6. **Commit Initial Tests**: Call `/development:git` for all repos/branches
+6. **Commit Initial Tests**: Persist test implementations
 
-   - Commit test implementations with meaningful messages referencing work item
-   - Push to working branches in all repositories
+   - Call `/development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "test: <description> [#<work-item>]"` for each repo
 
-7. **Review and Fix**: Call `/development:review` and `/development:develop` as needed
+7. **Review and Fix**: Validate test quality
 
-   - Review test implementations for quality and completeness
-   - Request fixes via **AskUserQuestion** if improvements needed
-   - Re-run tests after fixes
+   - Call `/development:review --repo <repo[i]> --branch <working-branch[i]>` for each repo
+   - Use **AskUserQuestion** if improvements are needed
+   - Call `/development:develop --repo <repo[i]> --branch <working-branch[i]> --task "Fix test review issues"` as needed
 
-8. **Commit and Push Fixes**: Call `/development:git` for all repos/branches
+8. **Commit and Push Fixes**: Persist fixes
 
-   - Commit fix implementations with meaningful messages referencing work item
-   - Push to working branches in all repositories
+   - Call `/development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "fix: <description> [#<work-item>]"` for each repo
 
-9. **AppHost Setup and Test Execution**:
+9. **AppHost Setup and Test Execution**: Run integrated tests
 
-   - Call `/workspace:setup-apphost` with all involved working branches
-   - Configure integrated environment with all applications
-   - Call `/development:test` to run implemented tests against AppHost
+   - Call `/workspace:setup-apphost --repos <repos> --branches <working-branches>`
+   - Call `/development:test --repos <repos> --branches <working-branches> --environment apphost`
    - Generate testing report with pass/fail results, coverage metrics, and issues found
-   - Request user approval via **AskUserQuestion** before proceeding to bug creation
+   - Use **AskUserQuestion** to confirm before proceeding to bug creation
 
-10. **Create Bug Work Items**: For each issue found in test execution
+10. **Create Bug Work Items**: File issues found in test execution
 
-    - Call `/devops:work-item` (create mode) for each bug
-    - Include: title, detailed description, steps to reproduce, expected vs actual behavior, affected repo/application, severity
-    - Link bugs to original work item
-    - Provide summary of all created bug work items
+    - Call `/devops:work-item --create --type Bug --title "<issue>" --description "<steps-to-reproduce>" --severity <severity> --parent <work-item>` for each bug
+    - Provide summary of all created bug work items with IDs and links
 
-11. **Create Pull Requests**: Open pull requests for all repositories
+11. **Create Pull Requests**: Open PRs for all repositories
 
-    - Call `/devops:pull-request` for each repo with source_branch, target_branch, and work-item parameters
-    - Link each PR to the original work item
+    - Call `/devops:pull-request --repo <repo[i]> --source-branch <working-branch[i]> --target-branch <target-branch[i]> --work-item <work-item> --draft` for each repo
     - Provide all PR URLs in final summary
 
 ## DELEGATION
@@ -201,9 +193,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/homologate work-item=2001 repos=auth-service target-branches=develop working-branches=homolog/sprint-10 description="Homologate authentication flow for sprint 10"
+/workflow:homologate --work-item 2001 --repos auth-service --target-branches develop --working-branches homolog/sprint-10 --description "Homologate authentication flow for sprint 10"
 
-/homologate work-item=2002 repos=auth-service,payment-service target-branches=develop,develop working-branches=homolog/sprint-10,homolog/sprint-10 description="Homologate integrated checkout flow across auth and payment services"
+/workflow:homologate --work-item 2002 --repos auth-service,payment-service --target-branches develop,develop --working-branches homolog/sprint-10,homolog/sprint-10 --description "Homologate integrated checkout flow across auth and payment services"
 ```
 
 ## OUTPUT

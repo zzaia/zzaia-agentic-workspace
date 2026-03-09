@@ -65,13 +65,13 @@ Merge from a target branch into the working branch, automatically resolving merg
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant W as /fix-merge Workflow
+    participant W as /workflow:fix-merge
     participant C1 as /development:git
     participant C2 as /development:review
     participant C3 as /development:develop
     participant C4 as /development:git
 
-    U->>W: /fix-merge --repo --working-branch --target-branch
+    U->>W: /workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>
     W->>C1: Merge target-branch into working-branch
     C1-->>W: Merge complete, conflicts resolved
     W->>C2: Review post-merge state
@@ -96,8 +96,8 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop
-/fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop --description "Expect conflicts in schema definitions"
+/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop
+/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop --description "Expect conflicts in schema definitions"
 ```
 
 ## OUTPUT

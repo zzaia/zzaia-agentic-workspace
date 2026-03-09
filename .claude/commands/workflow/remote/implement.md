@@ -37,56 +37,50 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/devops:work-item` with workitem parameter
+   - Call `/devops:work-item --id <work-item> --project <project>`
    - Obtain title, description, and acceptance criteria
-   - Pass retrieved context to implementation phase
-   - **MANDATORY** Must use the work item descriptions and it must not be empty and must have the SDD documentation with all ADRs
+   - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:new` with repository_name, target_branch, new_branch_name parameters
-   - Prepare worktree for development
-   - Verify branch is ready for code changes
-   - Verify that the target branch is updated
+   - Call `/workspace:new --repo <repo> --branch <working-branch>`
+   - Verify branch is ready for code changes and target branch is up to date
 
-3. **Write Documentation Locally**: Produce the SDD documentation from the architecture design coming from the work-items descriptions
+3. **Write Documentation Locally**: Produce the SDD documentation from the work item architecture design
 
-   - Call `/document:write` to produce the documentation in local /doc folder
-   - Organize following the folder and name conventions that already exist
-   - Generate concise Specification Driven Design (SDD) documentation for the feature
+   - Call `/document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
+   - Organize following folder and name conventions that already exist
 
 4. **Implement Feature**: Execute development based on SDD documentation
 
-   - Call `/development:develop` in created workspace branch_name
+   - Call `/development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>`
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
 5. **Commit and Push**: Stage, commit, and push implementation changes
 
-   - Call `/development:git` with branch parameter
-   - Create conventional commit message referencing work item
+   - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
 
 6. **Create Draft Pull Request**: Open draft pull request
 
-   - Call `/devops:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
+   - Call `/devops:pull-request --action create --portal azure --project <project> --repo <repo> --from-branch <working-branch> --to-branch <target-branch> --work-item <work-item>`
    - Link PR to original work item
 
 7. **Review Changes**: Review all developed changes
 
-   - Call `/development:review` for all developed changes
-   - Call `/devops:pull-request` post all reviewed results
-   - Use the tool **AskUserQuestion** to ask user to reply to all Azure DevOps discussions and confirm to continue
+   - Call `/development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
+   - Call `/devops:pull-request --action update --portal azure --project <project> --repo <repo> --pr <pr-id>` to post review results
+   - Use **AskUserQuestion** to ask user to reply to all PR discussions and confirm to continue
 
-8. **Implement Accepted Reviews**: Execute development accepted reviews in pull request discussions
+8. **Implement Accepted Reviews**: Apply accepted review feedback
 
-   - Call `/devops:pull-request` retrieve all accepted and user created reviews to be implemented
-   - Call `/development:develop` to fix or improve the code
+   - Call `/devops:pull-request --action read --portal azure --project <project> --repo <repo> --pr <pr-id>` to retrieve accepted reviews
+   - Call `/development:develop --task "Fix accepted review issues" --repo <repo> --branch <working-branch>`
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
-   - Call `/development:git` with branch parameter
-   - Create conventional commit message referencing work item
+   - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
    - Push changes to remote origin
 
 ## DELEGATION
@@ -112,7 +106,7 @@ sequenceDiagram
     participant DG as /development:git
     participant PR as /devops:pull-request
 
-    U->>P: /remote/implement <params>
+    U->>P: /workflow:remote:implement <params>
 
     P->>WI: Retrieve work item
     WI-->>P: Work item details
@@ -164,11 +158,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/remote/implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+/workflow:remote:implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/remote/implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+/workflow:remote:implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
 
-/remote/implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
+/workflow:remote:implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
 ## OUTPUT
