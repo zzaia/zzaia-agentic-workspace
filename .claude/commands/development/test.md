@@ -1,7 +1,7 @@
 ---
 name: /development:test
 description: Develop and run tests using framework detection and comprehensive test execution
-argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--type unit|integration|load|ab|all] [--environment local|apphost] [--framework k6|locust|NBomber]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--type unit|integration|e2e|load|ab|all] [--environment local|apphost|<url>] [--framework k6|locust|NBomber|playwright]"
 agents:
   - name: zzaia-tester-specialist
     description: Framework detection and comprehensive test execution in readonly mode
@@ -22,14 +22,14 @@ parameters:
     required: false
     default: run
   - name: type
-    description: Optional test type filter (unit, integration, load, ab, all)
+    description: Optional test type filter (unit, integration, e2e, load, ab, all)
     required: false
   - name: environment
-    description: Execution environment (local — default; apphost — integrated Aspire AppHost)
+    description: Execution environment (local — default; apphost — integrated Aspire AppHost; <url> — live URL for e2e tests)
     required: false
     default: local
   - name: framework
-    description: Optional test framework selection (k6, locust, NBomber)
+    description: Optional test framework selection (k6, locust, NBomber, playwright)
     required: false
 ---
 
