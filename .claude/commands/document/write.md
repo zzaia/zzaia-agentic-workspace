@@ -1,7 +1,7 @@
 ---
 name: /document:write
 description: Write markdown documentation by selecting a template from .claude/templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
-argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>]"
+argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>] [--target-field description|acceptance-criteria|discussion|comment]"
 agents:
   - name: zzaia-document-specialist
     description: Generate documentation from conversation context following the selected template and deliver to the specified output
@@ -22,11 +22,15 @@ parameters:
     description: Push documentation to Azure DevOps Wiki page
     required: false
   - name: pr
-    description: Pull request ID to post documentation as description or comment
+    description: Pull request ID to deliver documentation to
     required: false
   - name: work-item
-    description: Work item ID to post documentation as description or comment
+    description: Work item ID to deliver documentation to
     required: false
+  - name: target-field
+    description: "Where to write within --pr or --work-item: description (default for pr), acceptance-criteria, discussion, comment"
+    required: false
+    default: discussion
 ---
 
 ## PURPOSE
@@ -47,21 +51,27 @@ Select a documentation template from `.claude/templates/`, generate content from
    | `implementation-plan` | Documenting a step-by-step implementation plan for a feature or task |
    | `e2e-test-failure-report` | Documenting E2E test results with failures, New Relic diagnostics, and bug summary |
 
-2. **Select Output Target**: Identify from flags or ask
+2. **Select Output Target and Field**: Identify from flags or ask
 
-   | Flag | Target | Markdown Support |
-   |------|--------|-----------------|
-   | `--output <path>` | Local markdown file | Full |
-   | `--wiki` | Azure DevOps Wiki page | Full |
-   | `--pr <id>` | Pull request description or comment | Full |
-   | `--work-item <id>` | Work item description or comment | Partial — no mermaid |
+   | Flag | Target | `--target-field` options | Default field |
+   |------|--------|--------------------------|---------------|
+   | `--output <path>` | Local markdown file | — | — |
+   | `--wiki` | Azure DevOps Wiki page | — | — |
+   | `--pr <id>` | Pull request | `description`, `comment` | `description` |
+   | `--work-item <id>` | Work item | `description`, `acceptance-criteria`, `discussion`, `comment` | `discussion` |
 
-3. **Adapt Format to Target**: Keep the same template structure and sections for all targets. When the target has partial markdown support:
+3. **Apply Target Field Rule**:
+   - `description` — sets the main description field (use only when creating new work items or setting a PR description)
+   - `acceptance-criteria` — sets the acceptance criteria field of a work item
+   - `discussion` — posts as a new discussion thread (default for `--work-item`)
+   - `comment` — posts as a comment on an existing thread
+
+4. **Adapt Format to Target**: Keep the same template structure and sections for all targets. When the target has partial markdown support (`--work-item`):
    - Preserve all headings, tables, bullet points, and code blocks
-   - Skip mermaid diagrams — replace with a plain-text summary of the diagram intent if relevant
+   - Skip mermaid diagrams — replace with a plain-text summary if relevant
    - Do not alter section order or omit content
 
-4. **Invoke Agent**: Call `zzaia-document-specialist` with template path, output target, and format constraints
+5. **Invoke Agent**: Call `zzaia-document-specialist` with template path, output target, target field, and format constraints
 
 ## DELEGATION
 
@@ -77,12 +87,12 @@ sequenceDiagram
     participant C as Command
     participant A as zzaia-document-specialist
 
-    U->>C: /document:write [template] [title] [--output/--wiki/--pr/--work-item]
+    U->>C: /document:write [template] [title] [--output/--wiki/--pr/--work-item] [--target-field]
     C->>C: Resolve template path from .claude/templates/
-    C->>C: Identify output target
-    C->>A: template path + output target + context
+    C->>C: Identify output target and target-field
+    C->>A: template path + output target + target field + context
     A->>A: Read template, generate content from context
-    A->>A: Deliver to output target
+    A->>A: Deliver to output target at specified field
     A-->>C: Done
     C-->>U: Document ready
 ```
@@ -93,12 +103,13 @@ sequenceDiagram
 /document:write architecture-overview "System Architecture" --output docs/architecture.md
 /document:write service-architecture "Payment Service" --wiki
 /document:write service-data-model "Order Entity" --output docs/data-model.md
-/document:write event-notification "Payment Events" --pr 42
-/document:write integration-tests-plan "Checkout Flow Tests" --output docs/tests/checkout.md
-/document:write implementation-plan "Add Order Status Endpoint" --work-item 1234
-/document:write e2e-test-failure-report "Sprint 12 E2E Results" --work-item 2001
+/document:write event-notification "Payment Events" --pr 42 --target-field description
+/document:write service-architecture "User Service SDD" --work-item 1234 --target-field discussion
+/document:write integration-tests-plan "Checkout Flow Tests" --work-item 1234 --target-field acceptance-criteria
+/document:write implementation-plan "Add Order Status Endpoint" --work-item 1234 --target-field discussion
+/document:write e2e-test-failure-report "Sprint 12 E2E Results" --work-item 2001 --target-field discussion
 ```
 
 ## OUTPUT
 
-- Local markdown file, Wiki page, PR description/comment, or work item description/comment
+- Local markdown file, Wiki page, PR field, or work item field (discussion, description, acceptance-criteria, or comment)

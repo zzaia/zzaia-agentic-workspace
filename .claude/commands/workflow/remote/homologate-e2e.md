@@ -55,7 +55,7 @@ Orchestrate end-to-end homologation testing by retrieving work item details, gen
 
    - Call `/management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios covering all acceptance criteria and child items
-   - Call `/document:write --template e2e-test-failure-report --title "BDD Scenarios: <work-item-title>" --work-item <work-item>` to post BDD as work item description
+   - Call `/document:write --template e2e-test-failure-report --title "BDD Scenarios: <work-item-title>" --work-item <work-item> --target-field discussion` to post BDD as work item description
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
@@ -80,7 +80,7 @@ Orchestrate end-to-end homologation testing by retrieving work item details, gen
 
 7. **Generate Test Result Report**: Document all test outcomes and diagnostics
 
-   - Call `/document:write --template e2e-test-failure-report --title "E2E Test Results: <work-item-title>" --context "<test-results + new-relic-logs>" --work-item <work-item>`
+   - Call `/document:write --template e2e-test-failure-report --title "E2E Test Results: <work-item-title>" --context "<test-results + new-relic-logs>" --work-item <work-item> --target-field discussion`
    - **MANDATORY**: Report must be posted before user validation
 
 8. **Validate Report and Define Bugs**: Review failures and decide which bugs to create

@@ -50,7 +50,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 4. **Validate Selected Work Item Documentation**
    - Use **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
    - Call `/devops:work-item --id <selected-work-item> --project <project>` to read all discussion answers
-   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item>` to generate the finalized SDD
+   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item> --target-field discussion` to generate the finalized SDD
 
 5. **Plan Child Work Item Hierarchy**
    - Call `/management:plan --work-description "<finalized-sdd-content>"` to decompose into a parallelizable agile hierarchy
@@ -63,12 +63,12 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 
 7. **Create Child Work Items**
    - Call `/devops:work-item --project <project>` to create all work items with dependency links (`related`, `consumes-from`) per the plan
-   - Call `/document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id>` for each child work item
+   - Call `/document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id> --target-field discussion` for each child work item
 
 8. **Validate Overall Architecture**
    - Use **AskUserQuestion** to ask user to review all work items in Azure DevOps, reply to each individual discussion if changes are needed, and confirm to continue
    - For each work item: call `/devops:work-item --id <child-work-item-id> --project <project>` to read answers from its individual discussion
-   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id>` to update the SDD with the answers
+   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to update the SDD with the answers
 
 ## WORKFLOW
 
