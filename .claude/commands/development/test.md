@@ -1,7 +1,7 @@
 ---
 name: /development:test
 description: Develop and run tests using framework detection and comprehensive test execution
-argument-hint: "--repo <name> --branch <name> --project <name> [--type unit|integration|load|ab|all] [--framework k6|locust|NBomber]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--type unit|integration|load|ab|all] [--environment local|apphost] [--framework k6|locust|NBomber]"
 agents:
   - name: zzaia-tester-specialist
     description: Framework detection and comprehensive test execution in readonly mode
@@ -9,19 +9,27 @@ agents:
     description: Developer agent when a test needs to be implemented or changed
 parameters:
   - name: repo
-    description: Repository name in workspace
+    description: Repository name in workspace (or comma-separated list for batch)
     required: true
   - name: branch
-    description: Branch name (must exist as worktree)
+    description: Branch name (must exist as worktree, or comma-separated list for batch)
     required: true
   - name: project
     description: Project name to test within the repository
-    required: true
-  - name: type 
+    required: false
+  - name: action
+    description: Execution mode (implement — write test cases; run — execute existing tests)
+    required: false
+    default: run
+  - name: type
     description: Optional test type filter (unit, integration, load, ab, all)
     required: false
+  - name: environment
+    description: Execution environment (local — default; apphost — integrated Aspire AppHost)
+    required: false
+    default: local
   - name: framework
-    description: Optional test framework selection (k6, locust)
+    description: Optional test framework selection (k6, locust, NBomber)
     required: false
 ---
 

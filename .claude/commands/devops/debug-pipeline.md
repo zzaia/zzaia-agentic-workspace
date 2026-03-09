@@ -1,7 +1,7 @@
 ---
 name: /devops:debug-pipeline
 description: Read CI/CD pipeline logs and metrics, generate structured issue report
-argument-hint: "--portal <platform> --project <name> --pipeline <id|name> [--run <id>] [--limit <count>]"
+argument-hint: "--portal <platform> --project <name> --pipeline <id|name> [--branch <branch>] [--run <id>] [--limit <count>]"
 agents:
   - name: zzaia-devops-specialist
     description: Execute Azure DevOps MCP pipeline queries and collect build logs, status, and artifact information
@@ -15,6 +15,9 @@ parameters:
   - name: pipeline
     description: Pipeline ID or name to inspect
     required: true
+  - name: branch
+    description: Branch to scope pipeline inspection (filters runs by branch)
+    required: false
   - name: run
     description: Specific run/build ID to inspect, defaults to latest run
     required: false

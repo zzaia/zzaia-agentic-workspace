@@ -1,7 +1,7 @@
 ---
 name: /development:review
 description: Comprehensive code review across git changes, repositories, and pull requests
-argument-hint: "--target changes|repo|pr [--path <path>] [--pr <url>] [--depth light|standard|deep]"
+argument-hint: "--target changes|repo|pr [--repo <name>] [--branch <name>] [--path <path>] [--pr <url>] [--context <focus>] [--depth light|standard|deep]"
 agents:
   - name: zzaia-code-reviewer
     description: Comprehensive code quality review and static analysis
@@ -9,11 +9,20 @@ parameters:
   - name: target
     description: The review target (changes/repo/pr)
     required: true
+  - name: repo
+    description: Repository name shorthand (resolves to workspace path)
+    required: false
+  - name: branch
+    description: Branch name to review (used with --repo)
+    required: false
   - name: path
-    description: Path to the repository or specific changes
+    description: Explicit path to the repository or specific changes
     required: false
   - name: pr
     description: Pull request URL for review
+    required: false
+  - name: context
+    description: Focus area or constraints for the review (e.g., "merged conflict files only")
     required: false
   - name: depth
     description: Depth of review analysis (light/standard/deep)

@@ -1,7 +1,7 @@
 ---
 name: /devops:pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
-argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch <branch>] [--to-branch <branch>] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
+argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--from-branch|--source-branch <branch>] [--to-branch|--target-branch <branch>] [--draft] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
 agents:
   - name: zzaia-devops-specialist
     description: Execute all Azure DevOps and GitHub pull request operations including creation, retrieval, updates, and code review publishing
@@ -19,10 +19,13 @@ parameters:
     description: Repository name
     required: true
   - name: from-branch
-    description: Source branch (required for create)
+    description: Source branch (required for create) — alias: --source-branch
     required: false
   - name: to-branch
-    description: Target branch (defaults to main/master)
+    description: Target branch (defaults to main/master) — alias: --target-branch
+    required: false
+  - name: draft
+    description: Create pull request as draft
     required: false
   - name: work-item
     description: Associated work item ID (Azure DevOps)

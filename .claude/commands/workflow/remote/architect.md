@@ -31,44 +31,44 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 ## WORKFLOW PHASES
 
 1. **Retrieve Work Item Chain**
-   - Call `/devops:work-item` with `selected-work-item` parameter to retrieve the full hierarchy
+   - Call `/devops:work-item --id <selected-work-item> --project <project>`
    - Collect Title, Description, Acceptance Criteria from each level (Epic → Feature → User Story → Task)
    - **MANDATORY** Selected work item description must not be empty
 
 2. **Gather Repository and Referenced Documentation**
-   - Inspect local workspace repositories using the `Read` tool for file path references (source code, configs, existing docs)
-   - Call `/document:read` for any local document file references (PDF, Word) found in work items or workspace
-   - Call `/websearch` for any URL references found in work items
+   - Inspect local workspace path `<workspace>` using the `Read` tool for source code, configs, and existing docs
+   - Call `/document:read --doc <doc>` if a local document path is provided
+   - Call `/websearch --url <url>` if a URL reference is provided
    - Enrich architectural context with retrieved repository structure and materials
 
 3. **Generate Selected Work Item Architecture**
-   - Call `/management:architect` with context and description parameters to produce the architectural design
-   - Call `/management:clarify --context` passing the architectural design output to generate critical clarification questions
-   - Call `/devops:work-item` to post a discussion on the selected work item with all clarification questions as a numbered list
-   - **MANDATORY** Do NOT create child work items or update descriptions with architectural documentation before user responds
+   - Call `/management:architect --work-description "<description>" --work-directory <workspace>`
+   - Call `/management:clarify --context "<architectural-design-output>"` to generate critical clarification questions
+   - Call `/devops:work-item --id <selected-work-item> --project <project>` to post a discussion with all clarification questions as a numbered list
+   - **MANDATORY** Do NOT create child work items or update descriptions before user responds
 
 4. **Validate Selected Work Item Documentation**
-   - Use the tool **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
-   - Call `/devops:work-item` to read all discussion answers from the selected work item
-   - Call `/document:write` generate the finalized SDD documentation in markdown following the templates into selected work item
+   - Use **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
+   - Call `/devops:work-item --id <selected-work-item> --project <project>` to read all discussion answers
+   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item>` to generate the finalized SDD
 
 5. **Plan Child Work Item Hierarchy**
-   - Call `/management:plan --work-description` passing the finalized SDD content to decompose it into a parallelizable agile hierarchy
-   - Call `/devops:work-item` to post the full resumed plan (hierarchy, dependency graph, parallelization map) as a discussion on the selected work item
+   - Call `/management:plan --work-description "<finalized-sdd-content>"` to decompose into a parallelizable agile hierarchy
+   - Call `/devops:work-item --id <selected-work-item> --project <project>` to post the full plan (hierarchy, dependency graph, parallelization map) as a discussion
    - **MANDATORY** Do NOT create any child work items before the user approves the plan
 
 6. **Validate Plan**
    - Use **AskUserQuestion** to ask user to reply to the plan discussion in Azure DevOps and confirm to continue
-   - Call `/devops:work-item` to read all plan approval/feedback from the selected work item discussion
+   - Call `/devops:work-item --id <selected-work-item> --project <project>` to read all plan approval/feedback from the discussion
 
 7. **Create Child Work Items**
-   - Call `/devops:work-item` to create all work items with all establish dependency links (`related`, `consumes-from`) between dependent items per the plan
-   - Call `/document:write` to produce and update the finalized SDD documentation for all work items
+   - Call `/devops:work-item --project <project>` to create all work items with dependency links (`related`, `consumes-from`) per the plan
+   - Call `/document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id>` for each child work item
 
 8. **Validate Overall Architecture**
    - Use **AskUserQuestion** to ask user to review all work items in Azure DevOps, reply to each individual discussion if changes are needed, and confirm to continue
-   - For each work item: call `/devops:work-item` to read answers from its individual discussion
-   - Call `/document:write` to update the SDD with the answers for each respective work item
+   - For each work item: call `/devops:work-item --id <child-work-item-id> --project <project>` to read answers from its individual discussion
+   - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id>` to update the SDD with the answers
 
 ## WORKFLOW
 
@@ -161,11 +161,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/remote/architect --selected-work-item 2001 --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
+/workflow:remote:architect --selected-work-item 2001 --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
 
-/remote/architect --selected-work-item 1850 --project MyProject --doc ./docs/requirements.pdf
+/workflow:remote:architect --selected-work-item 1850 --project MyProject --doc ./docs/requirements.pdf
 
-/remote/architect --selected-work-item 2200 --portal azure --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
+/workflow:remote:architect --selected-work-item 2200 --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
 ```
 
 ## OUTPUT

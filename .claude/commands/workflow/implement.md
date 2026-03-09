@@ -33,62 +33,58 @@ agents:
 
 Execute a complete implementation workflow that orchestrates multiple development commands in sequence. This generic, reusable workflow enables developers to implement work items following consistent patterns from requirements retrieval through pull request creation.
 
-## WORKFLOW PHASES 
+## WORKFLOW PHASES
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/devops:work-item` with workitem parameter
+   - Call `/devops:work-item --work-item <work-item>`
    - Obtain title, description, and acceptance criteria
    - Pass retrieved context to implementation phase
-   - **MANDATORY**  Must use the work item descriptions and it must not be empty 
+   - **MANDATORY** Work item description must not be empty
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:new` with repository_name, target_branch, new_branch_name parameters
-   - Prepare worktree for development
-   - Verify branch is ready for code changes
-   - Verify that the target branch is updated
+   - Call `/workspace:new --repo <repo> --target-branch <target-branch> --branch <working-branch>`
+   - Verify branch is ready for code changes and target branch is up to date
 
 3. **Think & Architect**: Analyze requirements and design the solution
 
-   - Call `/management:architect` with branch, work directory, and description parameters
-   - Clarify all requirements with the user before going to next phase
-   - Use the tool **AskUserQuestion** to inquiry the user for clarifying questions
+   - Call `/management:architect --description "<description>" --context "<work-item-details>"`
+   - Clarify all requirements with the user before proceeding
+   - Use **AskUserQuestion** for any open clarifying questions
    - Produce a concise architecture design covering only what is relevant to the feature
    - **MANDATORY** All open questions must be resolved before proceeding to documentation
 
 4. **Write Documentation**: Produce the SDD documentation from the architecture design
 
-   - Call `/document:write` with the architecture output from phase 3 as input
+   - Call `/document:write --context "<architecture-output>" --output local`
    - Generate one concise Specification Driven Design (SDD) document for the feature
    - **MANDATORY** Documentation must be written to file before user approval phase
 
 5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation
 
-   - User should make changes to SDD before next phase
-   - Use the tool **AskUserQuestion** to inquiry the user answers
+   - Use **AskUserQuestion** to ask user to review the SDD and confirm or request changes
 
-6. **Implement Feature**: Execute development based on SDD documentation
+6. **Implement Feature**: Execute development based on approved SDD documentation
 
-   - Call `/development:develop` in branch_name with approved SDD documentation
+   - Call `/development:develop --repo <repo> --branch <working-branch> --task "<description>"`
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
 7. **Review Changes**: Review all developed changes
 
-   - Call `/development:review` for all developed changes
-   - Use the tool **AskUserQuestion** to inquiry the user answers about what to fix or improve
-   - Call `/development:develop` to fix or improve the code
+   - Call `/development:review --repo <repo> --branch <working-branch>`
+   - Use **AskUserQuestion** to ask user what to fix or improve
+   - Call `/development:develop --repo <repo> --branch <working-branch> --task "Fix review issues"`
 
 8. **Commit and Push**: Stage, commit, and push all changes
 
-   - Call `/development:git` with branch parameter
-   - Create conventional commit message referencing work item
+   - Call `/development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
 
 9. **Create Draft Pull Request**: Open pull request
 
-   - Call `/devops:pull-request` with source_branch, target_branch, work-item parameters to create a draft pull request
+   - Call `/devops:pull-request --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
    - Link PR to original work item
 
 ## DELEGATION
@@ -163,11 +159,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/implement workitem=1605 target_branch=develop branch_name=feature/implement-providers-entities description="Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+/workflow:implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/implement workitem=1606 target_branch=develop branch_name=feature/add-provider-api description="Add provider API endpoints with CRUD operations, validation, and integration tests"
+/workflow:implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
 
-/implement workitem=1607 target_branch=main branch_name=feature/fix-authentication-bug description="Fix authentication token refresh issue and add regression tests"
+/workflow:implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
 ## OUTPUT
