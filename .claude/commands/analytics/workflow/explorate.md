@@ -1,5 +1,5 @@
 ---
-name: /explorate
+name: /analytics:workflow:explorate
 description: Comprehensive research workflow for domain, problem, and dataset exploration
 argument-hint: "[--domain <context>]"
 version: 1.0

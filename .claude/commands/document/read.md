@@ -1,5 +1,5 @@
 ---
-name: /read
+name: /document:read
 description: Extract text from PDF and Word documents and inject content into conversation context
 argument-hint: "--file <path> [--summary]"
 agents:

@@ -1,5 +1,5 @@
 ---
-name: /debug-pipeline
+name: /devops:debug-pipeline
 description: Read CI/CD pipeline logs and metrics, generate structured issue report
 argument-hint: "--portal <platform> --project <name> --pipeline <id|name> [--run <id>] [--limit <count>]"
 agents:

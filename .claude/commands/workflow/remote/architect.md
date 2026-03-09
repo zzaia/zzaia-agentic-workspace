@@ -1,5 +1,5 @@
 ---
-name: /architect-remote
+name: /workflow:remote:architect
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
 argument-hint: "--selected-work-item <id> --portal <url> --project <name> [--description <text>]"
 parameters:
@@ -25,10 +25,10 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design. The 
+Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design. The
 
 
-## WORKFLOW PHASES 
+## WORKFLOW PHASES
 
 1. **Retrieve Work Item Chain**
    - Call `/devops:work-item` with `selected-work-item` parameter to retrieve the full hierarchy
@@ -62,7 +62,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/devops:work-item` to read all plan approval/feedback from the selected work item discussion
 
 7. **Create Child Work Items**
-   - Call `/devops:work-item` to create all work items with all establish dependency links (`related`, `consumes-from`) between dependent items per the plan 
+   - Call `/devops:work-item` to create all work items with all establish dependency links (`related`, `consumes-from`) between dependent items per the plan
    - Call `/document:write` to produce and update the finalized SDD documentation for all work items
 
 8. **Validate Overall Architecture**
@@ -81,7 +81,7 @@ sequenceDiagram
     participant DW as document:write
     participant D as DevOps
 
-    U->>C: /architect-remote --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
+    U->>C: /remote/architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
     C->>C: Validate parameters
     C->>WM: Retrieve selected work item chain
     WM->>D: Query work items
@@ -161,11 +161,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/architect-remote --selected-work-item 2001 --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
+/remote/architect --selected-work-item 2001 --project MyProject --description "Multi-tenant notification service with email, SMS, and push channels"
 
-/architect-remote --selected-work-item 1850 --project MyProject --doc ./docs/requirements.pdf
+/remote/architect --selected-work-item 1850 --project MyProject --doc ./docs/requirements.pdf
 
-/architect-remote --selected-work-item 2200 --portal azure --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
+/remote/architect --selected-work-item 2200 --portal azure --project MyProject --description "Refactor payment gateway integration" --url https://docs.stripe.com/api --workspace ./workspace/payments.worktrees/master
 ```
 
 ## OUTPUT

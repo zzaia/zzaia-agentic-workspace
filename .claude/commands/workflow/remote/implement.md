@@ -1,13 +1,13 @@
 ---
-name: /implement-remote
+name: /workflow:remote:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
 argument-hint: "--work-item <id> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:
   - name: work-item
     description: Work item ID to implement (e.g., 1605)
     required: true
-  - name: repo 
-    description: Repository name to work on 
+  - name: repo
+    description: Repository name to work on
     required: true
   - name: target-branch
     description: Base branch to create feature branch from, usually remote (e.g., develop, main), it is the target branch during the pull request creation
@@ -33,14 +33,14 @@ agents:
 
 Execute a complete implementation workflow that orchestrates multiple development commands in sequence. This generic, reusable workflow enables developers to implement work items following consistent patterns from requirements retrieval through pull request creation.
 
-## WORKFLOW PHASES 
+## WORKFLOW PHASES
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
    - Call `/devops:work-item` with workitem parameter
    - Obtain title, description, and acceptance criteria
    - Pass retrieved context to implementation phase
-   - **MANDATORY**  Must use the work item descriptions and it must not be empty and must have the SDD documentation with all ADRs 
+   - **MANDATORY** Must use the work item descriptions and it must not be empty and must have the SDD documentation with all ADRs
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -57,7 +57,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 4. **Implement Feature**: Execute development based on SDD documentation
 
-   - Call `/development:develop` in created workspace branch_name 
+   - Call `/development:develop` in created workspace branch_name
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
@@ -75,13 +75,13 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 7. **Review Changes**: Review all developed changes
 
    - Call `/development:review` for all developed changes
-   - Call `/devops:pull-request` post all reviewed results  
+   - Call `/devops:pull-request` post all reviewed results
    - Use the tool **AskUserQuestion** to ask user to reply to all Azure DevOps discussions and confirm to continue
-   
-8. **Implement Accepted Reviews**: Execute development accepted reviews in pull request discussions 
-   
-   - Call `/devops:pull-request` retrieve all accepted and user created reviews to be implemented  
-   - Call `/development:develop` to fix or improve the code  
+
+8. **Implement Accepted Reviews**: Execute development accepted reviews in pull request discussions
+
+   - Call `/devops:pull-request` retrieve all accepted and user created reviews to be implemented
+   - Call `/development:develop` to fix or improve the code
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
@@ -103,7 +103,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant P as /workflow:implement-remote
+    participant P as /remote/implement
     participant WI as /devops:work-item
     participant WN as /workspace:new
     participant DW as /document:write
@@ -112,7 +112,7 @@ sequenceDiagram
     participant DG as /development:git
     participant PR as /devops:pull-request
 
-    U->>P: /workflow:implement-remote <params>
+    U->>P: /remote/implement <params>
 
     P->>WI: Retrieve work item
     WI-->>P: Work item details
@@ -164,11 +164,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/implement-remote --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+/remote/implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/implement-remote --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+/remote/implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
 
-/implement-remote --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
+/remote/implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
 ## OUTPUT

@@ -1,5 +1,5 @@
 ---
-name: workspace:debug-apphost
+name: /workspace:debug-apphost
 description: Read-only command that collects logs, traces, and metrics from Aspire AppHost via MCP tools and generates a structured issue report
 argument-hint: "[--application <name>]"
 agents:

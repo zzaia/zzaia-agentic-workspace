@@ -1,5 +1,5 @@
 ---
-name: /work-item
+name: /devops:work-item
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
 argument-hint: "[--project <name>] [--title <text>] [--id <id>] [--assignee <user>] [--status <state>] [--since <date>] [--until <date>] [--platform azure|github|git-lab] [--limit <n>]"
 agents:

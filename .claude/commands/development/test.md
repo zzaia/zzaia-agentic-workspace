@@ -1,5 +1,5 @@
 ---
-name: /test
+name: /development:test
 description: Develop and run tests using framework detection and comprehensive test execution
 argument-hint: "--repo <name> --branch <name> --project <name> [--type unit|integration|load|ab|all] [--framework k6|locust|NBomber]"
 agents:
