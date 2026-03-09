@@ -140,6 +140,7 @@ End-to-end orchestration workflows, that are a combination of sequential minor c
 - [**`/workflow:fix-pipeline`**](.claude/commands/workflow/fix-pipeline.md) - Iterative pipeline repair loop
 - [**`/workflow:remote:architect`**](.claude/commands/workflow/remote/architect.md) - Specification Driven Design orchestration with AGILE Azure DevOps integration
 - [**`/workflow:remote:implement`**](.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
+- [**`/workflow:remote:homologate`**](.claude/commands/workflow/remote/homologate.md) - Homologation testing workflow with BDD, live URL testing, diagnostics, and bug reporting
 
 ### Meta
 
