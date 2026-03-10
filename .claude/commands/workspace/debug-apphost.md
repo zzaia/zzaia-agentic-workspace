@@ -3,7 +3,7 @@ name: /workspace:debug-apphost
 description: Read-only command that collects logs, traces, and metrics from Aspire AppHost via MCP tools and generates a structured issue report
 argument-hint: "[--application <name>]"
 agents:
-  - name: general-purpose
+  - name: zzaia-workspace-manager
     description: Reads Aspire MCP tools to collect logs, structured logs, traces, and metrics; produces consolidated issue report
 parameters:
   - name: application

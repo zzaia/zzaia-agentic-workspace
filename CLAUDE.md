@@ -21,7 +21,7 @@ Specialized agents in `.claude/agents/`:
 
 - **zzaia-task-clarifier** - Requirements analysis
 - **zzaia-developer-specialist** - Multi-language implementation
-- **zzaia-repository-manager** - Multi-repository worktree coordination
+- **zzaia-workspace-manager** - Workspace operations: repository cloning, worktree management, browser diagnostics, AppHost telemetry
 - **zzaia-tester-specialist** - Build validation and quality assurance
 - **zzaia-code-reviewer** - Code quality and static analysis
 - **zzaia-devops-specialist** - Azure DevOps and GitHub DevOps operations

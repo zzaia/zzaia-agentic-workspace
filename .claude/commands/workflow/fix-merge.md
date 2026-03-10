@@ -18,7 +18,7 @@ parameters:
 agents:
   - name: zzaia-developer-specialist
     description: Resolve merge conflicts and fix post-merge issues
-  - name: zzaia-repository-manager
+  - name: zzaia-workspace-manager
     description: Manage git operations across worktrees
 ---
 
@@ -59,7 +59,7 @@ Merge from a target branch into the working branch, automatically resolving merg
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-developer-specialist` — Resolve merge conflicts, fix post-merge issues, verify compatibility
-- `zzaia-repository-manager` — Execute git merge, review, and push operations across worktrees
+- `zzaia-workspace-manager` — Execute git merge, review, and push operations across worktrees
 
 ## WORKFLOW DIAGRAM
 

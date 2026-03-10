@@ -19,7 +19,7 @@ parameters:
     description: Source branch for merge operations (branch to merge from)
     required: false
 agents:
-  - name: zzaia-repository-manager
+  - name: zzaia-workspace-manager
     description: Execute git operations, manage branches, resolve conflicts, and push changes
 ---
 
@@ -68,11 +68,11 @@ Branch naming must follow these strict conventions:
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-repository-manager` — Execute git operations, manage branches, resolve conflicts, and push changes
+- `zzaia-workspace-manager` — Execute git operations, manage branches, resolve conflicts, and push changes
 
 ## IMPLEMENTATION
 
-- Execute git commands via `zzaia-repository-manager`
+- Execute git commands via `zzaia-workspace-manager`
 - Enforce branch naming and commit standards
 - Operate within current repository context
 
