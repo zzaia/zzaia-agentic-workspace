@@ -27,7 +27,7 @@ parameters:
 agents:
   - name: zzaia-devops-specialist
     description: Queries pipeline logs, triggers runs, tracks run IDs and completion status
-  - name: zzaia-repository-manager
+  - name: zzaia-workspace-manager
     description: Adds branch worktree to workspace if not already present
   - name: zzaia-developer-specialist
     description: Implements fixes to pipeline YAML and related source files based on issue reports
@@ -89,7 +89,7 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-devops-specialist` — Debug pipeline logs, trigger runs, track run IDs, and confirm completion status
-- `zzaia-repository-manager` — Add branch worktree to workspace if not already present
+- `zzaia-workspace-manager` — Add branch worktree to workspace if not already present
 - `zzaia-developer-specialist` — Analyze issue reports and implement fixes to pipeline files and source code
 
 ## WORKFLOW DIAGRAM
@@ -104,7 +104,7 @@ sequenceDiagram
     participant GIT as /development:git
     participant RUN as /devops:run-pipeline
     participant A1 as zzaia-devops-specialist
-    participant A2 as zzaia-repository-manager
+    participant A2 as zzaia-workspace-manager
     participant A3 as zzaia-developer-specialist
 
     U->>W: /workflow:fix-pipeline <params>

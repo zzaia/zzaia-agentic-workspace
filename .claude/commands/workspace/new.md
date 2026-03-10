@@ -3,7 +3,7 @@ name: /workspace:new
 description: Add new remote project repository worktrees to workspace at master/main branch or a specific one branch
 argument-hint: "--repo <repoName|repoUrl> [--branch <branchName>] [--target-branch <baseBranch>]"
 agents:
-  - name: zzaia-repository-manager
+  - name: zzaia-workspace-manager
     description: Handles repository cloning, worktree management, and workspace integration
 parameters:
   - name: repo
@@ -31,7 +31,7 @@ Handle two primary operations:
    - Validate URL formats
 
 2. **Parallel Agent Dispatch**
-   - Call zzaia-repository-manager for each repository URL
+   - Call zzaia-workspace-manager for each repository URL
    - Execute repository cloning operations in parallel
 
 3. **Result Aggregation**
@@ -46,7 +46,7 @@ Handle two primary operations:
    - If branch is specified check in remote for it before creating new local one 
 
 2. **Agent Dispatch**
-   - Call zzaia-repository-manager for branch creation
+   - Call zzaia-workspace-manager for branch creation
    - Create new worktree branch in existing repository
 
 3. **Branch Setup**
@@ -58,7 +58,7 @@ Handle two primary operations:
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-repository-manager` — Handles repository cloning, worktree management, and workspace integration
+- `zzaia-workspace-manager` — Handles repository cloning, worktree management, and workspace integration
 
 ## WORKFLOW
 
@@ -66,7 +66,7 @@ Handle two primary operations:
 sequenceDiagram
     participant U as User
     participant C as /new Command
-    participant RM as zzaia-repository-manager
+    participant RM as zzaia-workspace-manager
 
     U->>C: /new <repository_urls>
     C->>C: Parse URLs

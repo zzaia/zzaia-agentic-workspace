@@ -5,7 +5,7 @@ argument-hint: "work-item=<id> repos=<name[,name]> target-branches=<branch[,bran
 agents:
   - name: zzaia-task-clarifier
     description: Analyze work item requirements and validate acceptance criteria
-  - name: zzaia-repository-manager
+  - name: zzaia-workspace-manager
     description: Manage homologation branch creation across multiple repositories
   - name: zzaia-tester-specialist
     description: Implement tests, execute test suites, and generate testing reports
@@ -99,7 +99,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-task-clarifier` — Analyze work item requirements and validate acceptance criteria
-- `zzaia-repository-manager` — Manage homologation branch creation across multiple repositories
+- `zzaia-workspace-manager` — Manage homologation branch creation across multiple repositories
 - `zzaia-tester-specialist` — Implement tests, execute test suites, and generate testing reports
 - `zzaia-developer-specialist` — Review test implementations and fix issues discovered during homologation
 

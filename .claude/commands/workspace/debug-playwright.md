@@ -3,8 +3,8 @@ name: /workspace:debug-playwright
 description: Read-only command that collects browser console logs, network errors, and page snapshots from active Playwright MCP session and generates structured issue report
 argument-hint: "[--url <page-url>]"
 agents:
-  - name: general-purpose
-    description: Invoke MCP Playwright tools to collect session data
+  - name: zzaia-workspace-manager
+    description: Invoke MCP Playwright tools to collect session data and generate diagnostic report
 parameters:
   - name: url
     description: Filter report to specific page URL. If omitted, covers all pages.
@@ -51,7 +51,7 @@ Diagnose browser-based issues by collecting console output, network errors, and 
 
 **MANDATORY**: Invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `general-purpose` — Directly call MCP Playwright tools to collect session data and generate diagnostic report
+- `zzaia-workspace-manager` — Directly call MCP Playwright tools to collect session data and generate diagnostic report
 
 ## WORKFLOW
 
