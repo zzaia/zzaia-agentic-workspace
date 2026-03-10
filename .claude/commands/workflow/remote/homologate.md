@@ -77,13 +77,13 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
 
-   - Use **AskUserQuestion** to ask user to review the BDD in the Test Case and confirm to continue
+   - Call `/workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
    - Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve user replies and any BDD changes requested
    - Apply any corrections from discussion replies before proceeding to testing
 
 5. **Execute Tests**: Run tests against the target URL following validated BDD scenarios
 
-   - If authentication is required (login, token, credential): Use **AskUserQuestion** to ask the user to provide the credential or perform the manual login in the Playwright session before proceeding
+   - If authentication is required (login, token, credential): Call `/workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
    - Call `/development:test --action run --type <type> --environment <url> --repo <application>`
    - For `ui` type: Playwright browser automation drives UI interactions
    - For `e2e` type: API client validates endpoint contracts and service flows
@@ -104,7 +104,7 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
 
 8. **Validate Report and Define Bugs**: Review failures and decide which bugs to create
 
-   - Use **AskUserQuestion** to ask user to reply to the report in the Test Case discussion with the approved bug list
+   - Call `/workspace:ask-user-question --question "Reply to the test result report in the Test Case discussion with the approved bug list, then confirm to continue"`
    - Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve user replies with approved failures, severity adjustments, and dismissals
    - Compile the final approved bug list from discussion replies before proceeding
    - **MANDATORY**: Do NOT create any bug work items before user explicitly approves the final list
@@ -159,7 +159,7 @@ sequenceDiagram
     BDD-->>W: BDD scenarios (Given/When/Then)
     W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field description
     DW-->>W: BDD written to Test Case description
-    W->>U: AskUserQuestion (review Test Case BDD & confirm)
+    W->>U: /workspace:ask-user-question (review Test Case BDD & confirm)
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
@@ -176,7 +176,7 @@ sequenceDiagram
     end
     W->>DW: --template e2e-test-failure-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
     DW-->>W: Report posted to Test Case discussion
-    W->>U: AskUserQuestion (reply to Test Case discussion with approved bug list)
+    W->>U: /workspace:ask-user-question (reply to Test Case discussion with approved bug list)
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: Approved failures, severities, dismissals

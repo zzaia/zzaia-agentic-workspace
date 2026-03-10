@@ -59,7 +59,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - **SKIP this phase if work item type is Bug**
    - Call `/management:architect --description "<description>" --context "<work-item-details>"`
    - Clarify all requirements with the user before proceeding
-   - Use **AskUserQuestion** for any open clarifying questions
+   - Call `/workspace:ask-user-question --question "<clarifying question about requirements>"`
    - Produce a concise architecture design covering only what is relevant to the feature
    - **MANDATORY** All open questions must be resolved before proceeding to documentation
 
@@ -73,7 +73,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation
 
    - **SKIP this phase if work item type is Bug**
-   - Use **AskUserQuestion** to ask user to review the SDD and confirm or request changes
+   - Call `/workspace:ask-user-question --question "Please review the SDD documentation and confirm to proceed or describe changes needed"`
 
 6. **Implement Feature**: Execute development based on approved SDD documentation or description
 
@@ -84,7 +84,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 7. **Review Changes**: Review all developed changes
 
    - Call `/development:review --repo <repo> --branch <working-branch>`
-   - Use **AskUserQuestion** to ask user what to fix or improve
+   - Call `/workspace:ask-user-question --question "What would you like to fix or improve?" --options "Continue as-is; Describe fixes needed"`
    - Call `/development:develop --repo <repo> --branch <working-branch> --task "Fix review issues"`
 
 8. **Commit and Push**: Stage, commit, and push all changes
@@ -139,7 +139,7 @@ sequenceDiagram
         P->>DW: Write SDD documentation
         DW-->>P: SDD file written
 
-        P->>U: AskUserQuestion (review SDD)
+        P->>U: /workspace:ask-user-question (review SDD)
         U-->>P: Approved / changes requested
     end
 
@@ -148,7 +148,7 @@ sequenceDiagram
 
     P->>DR: Review changes
     DR-->>P: Review report
-    P->>U: AskUserQuestion (fix/improve?)
+    P->>U: /workspace:ask-user-question (fix/improve?)
     U-->>P: Feedback
     P->>DD: Apply fixes
     DD-->>P: Fixes applied

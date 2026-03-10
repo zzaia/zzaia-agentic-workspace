@@ -74,7 +74,7 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 
 6. **Evaluate Result** — Check pipeline run status
 
-   - Use **AskUserQuestion** tool to query user for pipeline outcome confirmation or inspection
+   - Call `/workspace:ask-user-question --question "Pipeline run complete. Confirm to continue or describe what to inspect" --options "Continue; Inspect pipeline logs; Stop"`
    - Parse run result: **Success** or **Failure**
    - Increment iteration counter
 
@@ -136,7 +136,7 @@ sequenceDiagram
         RUN-->>A1: New run ID
         A1-->>W: Run ID + completion status
 
-        W->>U: AskUserQuestion (pipeline outcome?)
+        W->>U: /workspace:ask-user-question (pipeline outcome?)
         U-->>W: Success or Failure
         W->>W: Increment iteration counter
 
