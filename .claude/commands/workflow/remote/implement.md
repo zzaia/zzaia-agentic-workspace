@@ -75,22 +75,29 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Call `/devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
    - Link PR to original work item
 
-7. **Review Changes**: Review all developed changes
+7. **Review Changes**: Review all developed changes and post findings to PR
 
    - Call `/development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
-   - Call `/devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to post review results
-   - Use **AskUserQuestion** to ask user to reply to all PR discussions and confirm to continue
+   - Generate numbered issue list from review output
+   - Call `/document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
+   - Call `/workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Continue — read selected issues from pull-request; Continue without fixing any issue; <Any user input>"`
 
-8. **Implement Accepted Reviews**: Apply accepted review feedback
+8. **Implement Accepted Reviews**: Apply review feedback based on user selection
 
-   - Call `/devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve accepted reviews
-   - Call `/development:develop --task "Fix accepted review issues" --repo <repo> --branch <working-branch>`
+   - Call `/devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve all selected reviewed issues from PR
+   - Call `/development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>`
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
    - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
+   - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --branch <working-branch> --target-branch <target-branch>` before pushing
    - Push changes to remote origin
    - Change work item state to **Resolved** via `/devops:work-item --id <work-item> --project <project> --action update --state Resolved`
+
+10. **Publish Pull Request**: Mark pull request as ready for review
+
+    - Call `/devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id> --draft false`
+    - Confirm PR is published and share PR link with user
 
 ## DELEGATION
 
@@ -140,20 +147,25 @@ sequenceDiagram
     PR-->>P: PR created
 
     P->>DR: Review changes
-    DR-->>P: Review report posted to PR
-    P->>U: AskUserQuestion (reply to discussions & confirm)
+    DR-->>P: Numbered issue list
+    P->>DW: Write pull-request-review to PR comment
+    DW-->>P: Review posted
+    P->>U: AskUserQuestion (confirm to continue)
     U-->>P: Confirmed
 
-    P->>PR: Retrieve accepted reviews
-    PR-->>P: Reviews to implement
+    P->>PR: Read review issues from PR
+    PR-->>P: Issue list
 
-    P->>DD: Apply accepted reviews
+    P->>DD: Fix all review issues
     DD-->>P: Fixes applied
 
     P->>DG: Commit and push fixes
-    DG-->>P: Changes pushed
+    DG-->>P: Changes pushed (fix-merge if conflicts)
     P->>WI: Update state to Resolved
     WI-->>P: State updated
+
+    P->>PR: Publish PR (draft false)
+    PR-->>P: PR published
 
     P-->>U: Workflow complete — PR link & summary
 ```
@@ -167,9 +179,12 @@ sequenceDiagram
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
-- Review results posted to PR discussions; user confirms before proceeding
-- Accepted reviews implemented and committed with conventional format referencing work item
+- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/document:write`
+- User asked only to confirm to continue — no issue selection required
+- All review issues implemented and committed with conventional format referencing work item
+- Merge conflicts resolved via `/workflow:fix-merge` before final push
 - Work item state changed to Resolved after final commit and push
+- Pull request published (draft removed) after fixes are pushed
 - Workflow execution provides clear output at each phase with status and results
 
 ## EXAMPLES
