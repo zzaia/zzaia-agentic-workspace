@@ -48,7 +48,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - **MANDATORY** Do NOT create child work items or update descriptions before user responds
 
 4. **Validate Selected Work Item Documentation**
-   - Use **AskUserQuestion** to ask user to reply to the Azure DevOps discussion and confirm to continue
+   - Call `/workspace:ask-user-question --question "Reply to the Azure DevOps discussion with your answers, then confirm to continue"`
    - Call `/devops:work-item --id <selected-work-item> --project <project>` to read all discussion answers
    - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item> --target-field discussion` to generate the finalized SDD
 
@@ -58,7 +58,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - **MANDATORY** Do NOT create any child work items before the user approves the plan
 
 6. **Validate Plan**
-   - Use **AskUserQuestion** to ask user to reply to the plan discussion in Azure DevOps and confirm to continue
+   - Call `/workspace:ask-user-question --question "Reply to the plan discussion in Azure DevOps with your feedback, then confirm to continue"`
    - Call `/devops:work-item --id <selected-work-item> --project <project>` to read all plan approval/feedback from the discussion
 
 7. **Create Child Work Items**
@@ -66,7 +66,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id> --target-field discussion` for each child work item
 
 8. **Validate Overall Architecture**
-   - Use **AskUserQuestion** to ask user to review all work items in Azure DevOps, reply to each individual discussion if changes are needed, and confirm to continue
+   - Call `/workspace:ask-user-question --question "Review all work items in Azure DevOps and reply to each individual discussion if changes are needed, then confirm to continue"`
    - For each work item: call `/devops:work-item --id <child-work-item-id> --project <project>` to read answers from its individual discussion
    - Call `/document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to update the SDD with the answers
 
@@ -102,7 +102,7 @@ sequenceDiagram
     C->>WM: Post clarification questions as discussion on selected work item
     WM->>D: Create discussion thread
     D-->>C: Discussion link
-    C->>U: AskUserQuestion: reply in DevOps and confirm
+    C->>U: /workspace:ask-user-question: reply in DevOps and confirm
     U-->>C: Confirmation
     C->>WM: Read discussion answers
     WM->>D: Fetch discussion replies
@@ -116,7 +116,7 @@ sequenceDiagram
     C->>WM: Post plan (hierarchy, dependencies, parallelization map) as discussion on selected work item
     WM->>D: Create plan discussion thread
     D-->>C: Discussion link
-    C->>U: AskUserQuestion: review and approve plan in DevOps discussion
+    C->>U: /workspace:ask-user-question: review and approve plan in DevOps discussion
     U-->>C: Confirmation
     C->>WM: Read plan approval from selected work item discussion
     WM->>D: Fetch discussion replies
@@ -129,7 +129,7 @@ sequenceDiagram
     DW-->>C: SDD markdown per work item
     C->>WM: Update all child work item descriptions with finalized SDD
     WM->>D: Batch update descriptions
-    C->>U: AskUserQuestion: review all work items in DevOps, reply to each discussion if changes needed, and confirm
+    C->>U: /workspace:ask-user-question: review all work items in DevOps, reply to each discussion if changes needed, and confirm
     U-->>C: Confirmation
     loop For Each Work Item
         C->>WM: Read answers from work item discussion

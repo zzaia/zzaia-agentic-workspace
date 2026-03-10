@@ -40,7 +40,7 @@ Merge from a target branch into the working branch, automatically resolving merg
    - Call `/development:review` with `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
    - Focus only on issues merge files with conflict
    - Document all issues found
-   - Use the tool **AskUserQuestion** to confirm review findings and approve proceeding to fixes
+   - Call `/workspace:ask-user-question --question "Review findings confirmed. Approve proceeding to fixes?" --options "Proceed with fixes; Describe additional context"`
 
 3. **Fix Issues**: Address all issues identified in the review
 
@@ -79,7 +79,7 @@ sequenceDiagram
     C1-->>W: Merge complete, conflicts resolved
     W->>C2: Review post-merge state
     C2-->>W: Issues identified
-    W->>U: AskUserQuestion (confirm review & proceed)
+    W->>U: /workspace:ask-user-question (confirm review & proceed)
     U-->>W: Approval
     W->>C3: Fix all identified issues
     C3-->>W: Issues fixed, verified

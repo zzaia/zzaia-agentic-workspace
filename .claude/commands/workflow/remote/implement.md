@@ -150,7 +150,7 @@ sequenceDiagram
     DR-->>P: Numbered issue list
     P->>DW: Write pull-request-review to PR comment
     DW-->>P: Review posted
-    P->>U: AskUserQuestion (confirm to continue)
+    P->>U: /workspace:ask-user-question (confirm to continue)
     U-->>P: Confirmed
 
     P->>PR: Read review issues from PR

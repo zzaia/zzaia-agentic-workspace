@@ -50,12 +50,12 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
    - Call `/management:architect --description "<description>" --context "<acceptance-criteria>" --focus test-plan`
    - Document all test scenarios derived from acceptance criteria
-   - Clarify testing scope with user via **AskUserQuestion**
+   - Call `/workspace:ask-user-question --question "Please clarify the testing scope or confirm it is correct to proceed"`
    - Create concise Test Plan document covering test scope only
 
 4. **User Approval**: Wait for Test Plan approval
 
-   - Use **AskUserQuestion** to confirm test coverage completeness before proceeding
+   - Call `/workspace:ask-user-question --question "Is the test coverage complete? Confirm to proceed or describe what is missing"`
 
 5. **Implement Tests**: Write and run tests in each working branch
 
@@ -70,7 +70,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 7. **Review and Fix**: Validate test quality
 
    - Call `/development:review --repo <repo[i]> --branch <working-branch[i]>` for each repo
-   - Use **AskUserQuestion** if improvements are needed
+   - Call `/workspace:ask-user-question --question "Are any test improvements needed?" --options "Continue; Describe improvements needed"`
    - Call `/development:develop --repo <repo[i]> --branch <working-branch[i]> --task "Fix test review issues"` as needed
 
 8. **Commit and Push Fixes**: Persist fixes
@@ -82,7 +82,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
    - Call `/workspace:setup-apphost --repos <repos> --branches <working-branches>`
    - Call `/development:test --repos <repos> --branches <working-branches> --environment apphost`
    - Generate testing report with pass/fail results, coverage metrics, and issues found
-   - Use **AskUserQuestion** to confirm before proceeding to bug creation
+   - Call `/workspace:ask-user-question --question "Confirm to proceed with bug creation for the identified failures" --options "Proceed with bug creation; Skip bug creation; Describe changes"`
 
 10. **Create Bug Work Items**: File issues found in test execution
 
@@ -132,7 +132,7 @@ sequenceDiagram
     C->>AR: Generate Test Plan (test cases focus)
     AR-->>C: Test Plan document
 
-    C->>U: AskUserQuestion (approve Test Plan)
+    C->>U: /workspace:ask-user-question (approve Test Plan)
     U-->>C: Approval or clarifications
 
     C->>DT: Implement tests (per branch)
@@ -145,7 +145,7 @@ sequenceDiagram
     DR-->>C: Review feedback
 
     opt Fixes needed
-        C->>U: AskUserQuestion (address fixes)
+        C->>U: /workspace:ask-user-question (address fixes)
         U-->>C: Approval for fixes
         C->>DD: Implement fixes
         DD-->>C: Fix summary
@@ -160,7 +160,7 @@ sequenceDiagram
     C->>DT: Execute tests (AppHost environment)
     DT-->>C: Testing report (pass/fail, coverage, issues)
 
-    C->>U: AskUserQuestion (approve bug creation)
+    C->>U: /workspace:ask-user-question (approve bug creation)
     U-->>C: Approval or modifications
 
     loop For each issue found
