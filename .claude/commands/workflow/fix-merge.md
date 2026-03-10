@@ -28,8 +28,9 @@ Merge from a target branch into the working branch, automatically resolving merg
 
 ## WORKFLOW PHASES
 
-1. **Merge from Target Branch**: Perform merge operation and resolve all merge conflicts
+1. **Merge from Target Branch**: Pull target branch then perform merge operation and resolve all merge conflicts
 
+   - Call `/development:git` with `--repo <repo>` `--branch <target-branch>` `--action pull` to ensure target branch is up to date
    - Call `/development:git` with `--repo <repo>` `--working-branch <working-branch>` `--target-branch <target-branch>` `--action merge`
    - Resolve merge conflicts with context from `--description`
    - **MANDATORY** Verify no unresolved conflicts remain
@@ -72,6 +73,8 @@ sequenceDiagram
     participant C4 as /development:git
 
     U->>W: /workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>
+    W->>C1: Pull target-branch (ensure up to date)
+    C1-->>W: Target branch updated
     W->>C1: Merge target-branch into working-branch
     C1-->>W: Merge complete, conflicts resolved
     W->>C2: Review post-merge state
