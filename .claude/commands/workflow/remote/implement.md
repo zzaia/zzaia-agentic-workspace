@@ -38,8 +38,9 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
    - Call `/devops:work-item --id <work-item> --project <project>`
-   - Obtain title, description, and acceptance criteria
-   - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs
+   - Obtain title, description, type (Bug or other), and acceptance criteria
+   - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs (skip for Bug type)
+   - Change work item state to **Active** via `/devops:work-item --id <work-item> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -48,10 +49,11 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 3. **Write Documentation Locally**: Produce the SDD documentation from the work item architecture design
 
+   - **SKIP this phase if work item type is Bug**
    - Call `/document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
    - Organize following folder and name conventions that already exist
 
-4. **Implement Feature**: Execute development based on SDD documentation
+4. **Implement Feature**: Execute development based on SDD documentation or description
 
    - Call `/development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>`
    - Implement functionality with comprehensive testing
@@ -82,6 +84,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
    - Push changes to remote origin
+   - Change work item state to **Resolved** via `/devops:work-item --id <work-item> --project <project> --action update --state Resolved`
 
 ## DELEGATION
 
@@ -109,13 +112,17 @@ sequenceDiagram
     U->>P: /workflow:remote:implement <params>
 
     P->>WI: Retrieve work item
-    WI-->>P: Work item details
+    WI-->>P: Work item details (title, type, SDD)
+    P->>WI: Update state to Active
+    WI-->>P: State updated
 
     P->>WN: Create feature branch
     WN-->>P: Branch ready
 
-    P->>DW: Write SDD documentation locally
-    DW-->>P: SDD file written
+    alt work item type is NOT Bug
+        P->>DW: Write SDD documentation locally
+        DW-->>P: SDD file written
+    end
 
     P->>DD: Implement from SDD
     DD-->>P: Implementation complete
@@ -139,20 +146,24 @@ sequenceDiagram
 
     P->>DG: Commit and push fixes
     DG-->>P: Changes pushed
+    P->>WI: Update state to Resolved
+    WI-->>P: State updated
 
     P-->>U: Workflow complete — PR link & summary
 ```
 
 ## ACCEPTANCE CRITERIA
 
-- Work item details retrieved with non-empty SDD documentation and ADRs
+- Work item details retrieved with non-empty SDD documentation and ADRs (except Bug type)
+- Work item state changed to Active at start of workflow
 - Feature branch created from target branch with correct naming
-- SDD documentation written to local /doc folder following existing conventions
+- SDD documentation written to local /doc folder following existing conventions (skipped for Bug type)
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
 - Review results posted to PR discussions; user confirms before proceeding
 - Accepted reviews implemented and committed with conventional format referencing work item
+- Work item state changed to Resolved after final commit and push
 - Workflow execution provides clear output at each phase with status and results
 
 ## EXAMPLES

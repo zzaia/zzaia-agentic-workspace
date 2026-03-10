@@ -38,9 +38,10 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
    - Call `/devops:work-item --work-item <work-item>`
-   - Obtain title, description, and acceptance criteria
+   - Obtain title, description, type (Bug or other), and acceptance criteria
    - Pass retrieved context to implementation phase
    - **MANDATORY** Work item description must not be empty
+   - Change work item state to **Active** via `/devops:work-item --work-item <work-item> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -49,6 +50,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 3. **Think & Architect**: Analyze requirements and design the solution
 
+   - **SKIP this phase if work item type is Bug**
    - Call `/management:architect --description "<description>" --context "<work-item-details>"`
    - Clarify all requirements with the user before proceeding
    - Use **AskUserQuestion** for any open clarifying questions
@@ -57,15 +59,17 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 4. **Write Documentation**: Produce the SDD documentation from the architecture design
 
+   - **SKIP this phase if work item type is Bug**
    - Call `/document:write --context "<architecture-output>" --output local`
    - Generate one concise Specification Driven Design (SDD) document for the feature
    - **MANDATORY** Documentation must be written to file before user approval phase
 
 5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation
 
+   - **SKIP this phase if work item type is Bug**
    - Use **AskUserQuestion** to ask user to review the SDD and confirm or request changes
 
-6. **Implement Feature**: Execute development based on approved SDD documentation
+6. **Implement Feature**: Execute development based on approved SDD documentation or description
 
    - Call `/development:develop --repo <repo> --branch <working-branch> --task "<description>"`
    - Implement functionality with comprehensive testing
@@ -81,6 +85,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
+   - Change work item state to **Resolved** via `/devops:work-item --work-item <work-item> --action update --state Resolved`
 
 9. **Create Draft Pull Request**: Open pull request
 
@@ -114,19 +119,23 @@ sequenceDiagram
     U->>P: /workflow:implement <params>
 
     P->>WI: Retrieve work item
-    WI-->>P: Work item details
+    WI-->>P: Work item details (title, type)
+    P->>WI: Update state to Active
+    WI-->>P: State updated
 
     P->>WN: Create feature branch
     WN-->>P: Branch ready
 
-    P->>MA: Think & architect
-    MA-->>P: Architecture design
+    alt work item type is NOT Bug
+        P->>MA: Think & architect
+        MA-->>P: Architecture design
 
-    P->>DW: Write SDD documentation
-    DW-->>P: SDD file written
+        P->>DW: Write SDD documentation
+        DW-->>P: SDD file written
 
-    P->>U: AskUserQuestion (review SDD)
-    U-->>P: Approved / changes requested
+        P->>U: AskUserQuestion (review SDD)
+        U-->>P: Approved / changes requested
+    end
 
     P->>DD: Implement from approved SDD
     DD-->>P: Implementation complete
@@ -140,6 +149,8 @@ sequenceDiagram
 
     P->>DG: Commit and push
     DG-->>P: Changes pushed
+    P->>WI: Update state to Resolved
+    WI-->>P: State updated
 
     P->>PR: Create draft pull request
     PR-->>P: PR created
@@ -150,11 +161,14 @@ sequenceDiagram
 ## ACCEPTANCE CRITERIA
 
 - Work item details successfully retrieved and passed to implementation phase
+- Work item state changed to Active at start of workflow
 - Feature branch created from target branch with correct naming
+- Think & Architect, Write Documentation, and Wait User Approval phases skipped for Bug type work items
 - Implementation executes with full work item context and description
 - All code changes committed with conventional format referencing work item
+- Work item state changed to Resolved after final commit and push
 - Pull request created linking feature branch to target branch with work item reference
-- workflow execution provides clear output at each phase with status and results
+- Workflow execution provides clear output at each phase with status and results
 
 ## EXAMPLES
 
