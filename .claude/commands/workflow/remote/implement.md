@@ -1,10 +1,16 @@
 ---
 name: /workflow:remote:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
-argument-hint: "--work-item <id> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
+argument-hint: "--work-item <id> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:
   - name: work-item
     description: Work item ID to implement (e.g., 1605)
+    required: true
+  - name: portal
+    description: DevOps portal to use (azure or github)
+    required: true
+  - name: project
+    description: Project name in the DevOps portal (e.g., my-project)
     required: true
   - name: repo
     description: Repository name to work on
@@ -66,18 +72,18 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 6. **Create Draft Pull Request**: Open draft pull request
 
-   - Call `/devops:pull-request --action create --portal azure --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
+   - Call `/devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
    - Link PR to original work item
 
 7. **Review Changes**: Review all developed changes
 
    - Call `/development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
-   - Call `/devops:pull-request --action update --portal azure --project <project> --repo <repo> --pr <pr-id>` to post review results
+   - Call `/devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to post review results
    - Use **AskUserQuestion** to ask user to reply to all PR discussions and confirm to continue
 
 8. **Implement Accepted Reviews**: Apply accepted review feedback
 
-   - Call `/devops:pull-request --action read --portal azure --project <project> --repo <repo> --pr <pr-id>` to retrieve accepted reviews
+   - Call `/devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve accepted reviews
    - Call `/development:develop --task "Fix accepted review issues" --repo <repo> --branch <working-branch>`
 
 9. **Commit and Push**: Stage, commit, and push all changes
@@ -169,11 +175,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/workflow:remote:implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+/workflow:remote:implement --work-item 1605 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/workflow:remote:implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+/workflow:remote:implement --work-item 1606 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
 
-/workflow:remote:implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
+/workflow:remote:implement --work-item 1607 --portal github --project my-org/my-project --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
 ## OUTPUT

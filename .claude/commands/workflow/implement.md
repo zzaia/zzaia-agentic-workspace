@@ -1,13 +1,19 @@
 ---
 name: /workflow:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
-argument-hint: "--work-item <id> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
+argument-hint: "--work-item <id> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:
   - name: work-item
     description: Work item ID to implement (e.g., 1605)
     required: true
-  - name: repo 
-    description: Repository name to work on 
+  - name: portal
+    description: DevOps portal to use (azure or github)
+    required: true
+  - name: project
+    description: Project name in the DevOps portal (e.g., my-project)
+    required: true
+  - name: repo
+    description: Repository name to work on
     required: true
   - name: target-branch
     description: Base branch to create feature branch from, usually remote (e.g., develop, main), it is the target branch during the pull request creation
@@ -37,11 +43,11 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/devops:work-item --work-item <work-item>`
+   - Call `/devops:work-item --work-item <work-item> --portal <portal> --project <project>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - Pass retrieved context to implementation phase
    - **MANDATORY** Work item description must not be empty
-   - Change work item state to **Active** via `/devops:work-item --work-item <work-item> --action update --state Active`
+   - Change work item state to **Active** via `/devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -85,11 +91,11 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
-   - Change work item state to **Resolved** via `/devops:work-item --work-item <work-item> --action update --state Resolved`
+   - Change work item state to **Resolved** via `/devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Resolved`
 
 9. **Create Draft Pull Request**: Open pull request
 
-   - Call `/devops:pull-request --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
+   - Call `/devops:pull-request --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
    - Link PR to original work item
 
 ## DELEGATION
@@ -173,11 +179,11 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/workflow:implement --work-item 1605 --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+/workflow:implement --work-item 1605 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/workflow:implement --work-item 1606 --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+/workflow:implement --work-item 1606 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
 
-/workflow:implement --work-item 1607 --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
+/workflow:implement --work-item 1607 --portal github --project my-org/my-project --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
 ## OUTPUT
