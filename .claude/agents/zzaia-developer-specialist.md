@@ -44,6 +44,7 @@ Develop solutions following architectural principles. MANDATORY: Apply language 
 
 **C#/.NET**: @rules/dotnet-coding-rules.md
 **Python**: @rules/python-coding-rules.md
+**Jupyter/Python Notebook**: @rules/python-notebook-rules.md
 **JavaScript/TypeScript**: @rules/javascript-coding-rules.md
 
 ## CAPABILITIES
