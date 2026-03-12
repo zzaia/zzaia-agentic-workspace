@@ -7,7 +7,7 @@ agents:
     description: Generate documentation from conversation context following the selected template and deliver to the specified output
 parameters:
   - name: template
-    description: "Template to use: architecture-overview, service-architecture, service-data-model, event-notification, integration-tests-plan, implementation-plan, e2e-test-failure-report, pull-request-review, bdd-scenarios"
+    description: "Template to use: architecture-overview, service-architecture, service-data-model, event-notification, integration-tests-plan, implementation-plan, test-result-report, pull-request-review, bdd-scenarios"
     required: true
   - name: title
     description: Document title or subject
@@ -49,7 +49,7 @@ Select a documentation template from `.claude/templates/`, generate content from
    | `event-notification` | Documenting domain events, message contracts, and event-driven integration patterns |
    | `integration-tests-plan` | Documenting test scenarios for API/service integration testing with Given/When/Then |
    | `implementation-plan` | Documenting a step-by-step implementation plan for a feature or task |
-   | `e2e-test-failure-report` | Documenting E2E test results with failures, New Relic diagnostics, and bug summary |
+   | `test-result-report` | Documenting test results per step with status, evidence, findings, and bug summary |
    | `pull-request-review` | Documenting pull request review findings as a numbered list of issues with severity, location, and suggested fix |
    | `bdd-scenarios` | Documenting Behavior Driven Design scenarios with Feature, Background, and Given/When/Then steps |
 
@@ -109,7 +109,7 @@ sequenceDiagram
 /document:write service-architecture "User Service SDD" --work-item 1234 --target-field discussion
 /document:write integration-tests-plan "Checkout Flow Tests" --work-item 1234 --target-field acceptance-criteria
 /document:write implementation-plan "Add Order Status Endpoint" --work-item 1234 --target-field discussion
-/document:write e2e-test-failure-report "Sprint 12 E2E Results" --work-item 2001 --target-field discussion
+/document:write test-result-report "Sprint 12 E2E Results" --work-item 2001 --target-field discussion
 /document:write pull-request-review "PR #42 Review" --pr 42 --target-field comment
 /document:write bdd-scenarios "Order Checkout Scenarios" --work-item 1234 --target-field acceptance-criteria
 ```
