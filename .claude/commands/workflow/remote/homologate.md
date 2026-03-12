@@ -43,7 +43,7 @@ agents:
 
 Orchestrate homologation testing by retrieving work item details, generating BDD scenarios from acceptance criteria, executing tests against a live URL, correlating failures with diagnostics, and creating bug work items for each approved failure.
 
-The objective of this workflow is to check for inconsistencies, quality issues, unexpected errors, accordance with the BDD flows, and possible improvements to implementations.
+The objective of this workflow is to check for inconsistencies, quality issues, unexpected errors, accordance with the BDD flows, and possible improvements to implementations, no need to understand what was fixed or not, this workflow is meant to report the current status of the system.
 
 ## TEST TYPES
 
@@ -82,22 +82,21 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
    - Call `/workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
    - If user indicates changes: Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
 
-5. **Execute Tests**: Run tests against the target URL following validated BDD scenarios
+5. **Execute Tests**: Iterate through each BDD step in the Test Case Steps section in sequence
 
    - If authentication is required (login, token, credential): Call `/workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
-   - Call `/development:test --action run --type <type> --environment <url> --repo <application>`
-   - For `ui` type: Playwright browser automation drives UI interactions
-   - For `e2e` type: API client validates endpoint contracts and service flows
-   - Capture all pass/fail results, response times, error details per scenario
-   - **If all tests pass**: skip Phase 6 and proceed directly to Phase 7 with a passing report; skip Phases 8–9
+   - For each step in Test Case Steps (in order):
+     1. Execute the step appropriate to `--type`:
+     2. Collect diagnostics immediately after execution regardless of pass/fail:
+        - Call `/devops:debug-new-relic --application <application>` to capture server-side logs
+        - If `--type ui`: Call `/workspace:debug-playwright --url <url>` to capture browser console logs
+     3. Display concise step report in prompt: step name, result (pass/fail), response time, anomalies or warnings found
 
-6. **Retrieve Diagnostic Logs**: Collect all available diagnostics if failures occurred
+6. **Correlate Step Findings**: Consolidate all per-step diagnostic data into a unified findings list
 
-   - If failures detected:
-     - Call `/devops:debug-new-relic --application <application[i]>` for each involved application
-     - If `--type ui`: Call `/workspace:debug-playwright --url <url>` to retrieve browser console logs
-     - Call `/development:review --target repo --context "failures related to <failed-scenarios>" --repo <application[i]>`
-   - Correlate all findings with failed test scenarios
+   - Aggregate all per-step results, New Relic logs, and Playwright logs collected in Phase 5
+   - Classify each anomaly or failure by severity and affected BDD scenario
+   - Prepare correlated evidence for the Phase 7 report
 
 7. **Generate Test Result Report**: Document all test outcomes and diagnostics
 
@@ -166,24 +165,18 @@ sequenceDiagram
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
-    W->>TST: --action run --type <type> --environment <url> --repo <app>
-    TST-->>W: Test results (pass/fail per scenario)
-    alt all tests pass
-        W->>DW: --template test-result-report --title "Results: <title>" --context <results> --work-item <test-case> --target-field discussion
-        DW-->>W: Passing report posted
-        W-->>U: Workflow complete — all tests passed
-    else failures detected
-        loop for each involved application
-            W->>NR: --application <app[i]>
-            NR-->>W: Server-side error logs
-        end
+    loop for each BDD step in Test Case Steps
+        W->>TST: execute step --type <type> --environment <url>
+        TST-->>W: Step result (pass/fail, timing, errors)
+        W->>NR: --application <application>
+        NR-->>W: Server-side logs
         alt --type is ui
             W->>PW: --url <url>
-            PW-->>W: Browser console errors and network failures
+            PW-->>W: Browser console logs
         end
-        W->>RV: --target repo --context <failed-scenarios> --repo <app>
-        RV-->>W: Code review findings
+        W-->>U: Step report (concise inline)
     end
+    W->>W: Correlate all step findings by severity
     W->>DW: --template test-result-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
     DW-->>W: Report posted to Test Case discussion
     W->>U: /workspace:ask-user-question (reply to Test Case discussion with approved bug list)
@@ -201,9 +194,10 @@ sequenceDiagram
 
 - Work item and all child work items retrieved with non-empty description
 - Test Case resolved: existing one loaded if `--test-case` provided, otherwise a new Test Case created as child of the work item
-- BDD scenarios generated appropriate to the test type and written to Test Case description
-- Tests executed against target URL with full pass/fail capture per scenario
-- Test failures correlated with New Relic, browser, and local diagnostics
+- BDD scenarios generated appropriate to the test type and written to Test Case steps
+- Each BDD step executed in sequence with diagnostics collected per step regardless of pass/fail
+- Concise step report displayed in prompt after each step execution
+- All step findings correlated and classified by severity
 - Test result report generated and posted as work item discussion before user validation
 - User explicitly reviews report and approves the final bug list with severities before any creation
 - Bug work items created only for user-approved failures with full evidence and parent link
@@ -225,7 +219,7 @@ sequenceDiagram
 
 - Phase 1: Work item details with acceptance criteria and child items
 - Phase 3: BDD scenarios written to Test Case steps field
-- Phase 5: Test execution results with pass/fail counts and timing per scenario
-- Phase 6: Diagnostic report (New Relic, browser, local) correlated to failures
+- Phase 5: Concise per-step report displayed in prompt after each BDD step (result, timing, anomalies)
+- Phase 6: Correlated findings list classified by severity across all steps
 - Phase 7: Comprehensive test result report posted as work item discussion
 - Phase 9: Summary list of created bug work item IDs with Azure DevOps links

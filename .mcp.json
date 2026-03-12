@@ -25,6 +25,17 @@
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
+    "postman": {
+      "command": "npx",
+      "args": [
+        "@postman/postman-mcp-server",
+        "--minimal",
+        "--region us"
+      ],
+      "env": {
+        "POSTMAN_API_KEY": "op://${VAULT_NAME}/postman/credential"
+      }
+    },
     "aspire": {
       "command": "aspire",
       "args": ["mcp", "start"]
