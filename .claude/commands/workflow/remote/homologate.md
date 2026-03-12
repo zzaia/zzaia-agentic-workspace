@@ -43,11 +43,13 @@ agents:
 
 Orchestrate homologation testing by retrieving work item details, generating BDD scenarios from acceptance criteria, executing tests against a live URL, correlating failures with diagnostics, and creating bug work items for each approved failure.
 
+The objective of this workflow is to check for inconsistencies, quality issues, unexpected errors, accordance with the BDD flows, and possible improvements to implementations.
+
 ## TEST TYPES
 
 | `--type` | Scope | Tool |
 |----------|-------|------|
-| `e2e` | API end-to-end interaction — validates backend contracts and service flows | API client / k6 |
+| `e2e` | API end-to-end interaction — validates backend contracts and service flows | Direct API Calls|
 | `ui` | Browser/UI interaction — validates user-facing flows via browser automation | Playwright |
 | `integration` | Service integration — validates inter-service communication and contracts | k6 / NBomber |
 
@@ -65,21 +67,20 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
 2. **Gather Referenced Documentation**: Enrich testing context with external materials if provided
 
    - If `--doc` provided: Call `/document:read --doc <doc>`
-   - If `--ref-url` provided: Call `/websearch --url <ref-url>`
+   - If `--ref-url` provided: Call `/websearch --query <ref-url>`
    - Compile retrieved content into testing context
 
 3. **Generate BDD Documentation**: Translate acceptance criteria and child work items into BDD scenarios
 
    - Call `/management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios appropriate for `--type` (API flows for e2e, UI flows for ui, contract flows for integration)
-   - Call `/document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field description` to write BDD as the Test Case description
+   - Call `/document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
 
    - Call `/workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
-   - Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve user replies and any BDD changes requested
-   - Apply any corrections from discussion replies before proceeding to testing
+   - If user indicates changes: Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
 
 5. **Execute Tests**: Run tests against the target URL following validated BDD scenarios
 
@@ -88,18 +89,19 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
    - For `ui` type: Playwright browser automation drives UI interactions
    - For `e2e` type: API client validates endpoint contracts and service flows
    - Capture all pass/fail results, response times, error details per scenario
+   - **If all tests pass**: skip Phase 6 and proceed directly to Phase 7 with a passing report; skip Phases 8–9
 
 6. **Retrieve Diagnostic Logs**: Collect all available diagnostics if failures occurred
 
    - If failures detected:
      - Call `/devops:debug-new-relic --application <application[i]>` for each involved application
-     - Call `/workspace:debug-playwright --url <url>` to retrieve browser logs (always for `ui` type; conditional for others)
+     - If `--type ui`: Call `/workspace:debug-playwright --url <url>` to retrieve browser console logs
      - Call `/development:review --target repo --context "failures related to <failed-scenarios>" --repo <application[i]>`
-   - Correlate all findings (New Relic, browser, local) with failed test scenarios
+   - Correlate all findings with failed test scenarios
 
 7. **Generate Test Result Report**: Document all test outcomes and diagnostics
 
-   - Call `/document:write --template e2e-test-failure-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
+   - Call `/document:write --template test-result-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
    - **MANDATORY**: Report must be posted before user validation
 
 8. **Validate Report and Define Bugs**: Review failures and decide which bugs to create
@@ -135,6 +137,7 @@ sequenceDiagram
     participant TST as /development:test
     participant NR as /devops:debug-new-relic
     participant PW as /workspace:debug-playwright
+    participant RV as /development:review
     participant DW as /document:write
 
     U->>W: /workflow:remote:homologate --type <e2e|ui|integration> <params>
@@ -152,29 +155,36 @@ sequenceDiagram
         DR-->>W: Document content
     end
     opt --ref-url provided
-        W->>WS: --url <ref-url>
+        W->>WS: --query <ref-url>
         WS-->>W: Reference content
     end
     W->>BDD: --context <details+children> --description <ctx>
     BDD-->>W: BDD scenarios (Given/When/Then)
-    W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field description
-    DW-->>W: BDD written to Test Case description
+    W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field steps
+    DW-->>W: BDD written to Test Case steps
     W->>U: /workspace:ask-user-question (review Test Case BDD & confirm)
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
     W->>TST: --action run --type <type> --environment <url> --repo <app>
     TST-->>W: Test results (pass/fail per scenario)
-    alt failures detected
+    alt all tests pass
+        W->>DW: --template test-result-report --title "Results: <title>" --context <results> --work-item <test-case> --target-field discussion
+        DW-->>W: Passing report posted
+        W-->>U: Workflow complete — all tests passed
+    else failures detected
         loop for each involved application
             W->>NR: --application <app[i]>
             NR-->>W: Server-side error logs
         end
-        W->>PW: --url <url>
-        PW-->>W: Browser console errors and network failures
-        W->>W: /development:review --target repo --context <failed-scenarios> --repo <app>
+        alt --type is ui
+            W->>PW: --url <url>
+            PW-->>W: Browser console errors and network failures
+        end
+        W->>RV: --target repo --context <failed-scenarios> --repo <app>
+        RV-->>W: Code review findings
     end
-    W->>DW: --template e2e-test-failure-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
+    W->>DW: --template test-result-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
     DW-->>W: Report posted to Test Case discussion
     W->>U: /workspace:ask-user-question (reply to Test Case discussion with approved bug list)
     U-->>W: Confirmed
@@ -214,7 +224,7 @@ sequenceDiagram
 ## OUTPUT
 
 - Phase 1: Work item details with acceptance criteria and child items
-- Phase 3: BDD scenarios posted as work item discussion
+- Phase 3: BDD scenarios written to Test Case steps field
 - Phase 5: Test execution results with pass/fail counts and timing per scenario
 - Phase 6: Diagnostic report (New Relic, browser, local) correlated to failures
 - Phase 7: Comprehensive test result report posted as work item discussion
