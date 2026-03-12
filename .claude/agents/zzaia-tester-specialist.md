@@ -2,7 +2,7 @@
 name: zzaia-tester-specialist
 description: Specialized agent for validating application quality through build and test processes
 tools: *
-mcpServers: playwright 
+mcpServers: playwright, postman, aspire, new-relic
 model: sonnet 
 color: yellow
 ---
