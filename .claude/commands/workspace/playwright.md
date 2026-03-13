@@ -28,10 +28,10 @@ Single interface for Playwright browser session management. Routes to diagnostic
 
 ### action=debug
 
-1. **Discover Pages** — `mcp__playwright__browser_tabs`; filter by `--url` if set
-2. **Collect Console Logs** — `mcp__playwright__browser_console_messages`; separate errors, warnings, info
-3. **Collect Network Requests** — `mcp__playwright__browser_network_requests`; flag 4xx/5xx and blocked
-4. **Capture Page State** — `mcp__playwright__browser_snapshot` + `mcp__playwright__browser_take_screenshot`
+1. **Discover Pages** — List open browser tabs; filter by `--url` if set
+2. **Collect Console Logs** — Retrieve console messages; separate errors, warnings, info
+3. **Collect Network Requests** — Retrieve all requests; flag 4xx/5xx and blocked
+4. **Capture Page State** — DOM/accessibility snapshot + screenshot
 5. **Report** — Categorize by severity ❌ ⚠️ 🔴 🚫; group by page URL; output markdown report
 
 ## DELEGATION
@@ -67,7 +67,6 @@ sequenceDiagram
 ## ACCEPTANCE CRITERIA
 
 - Read-only — no writes, no state changes
-- Uses `mcp__playwright__` tools only; does not simulate
 - Handles optional `--url` filter
 - Report grouped by page URL with severity indicators
 

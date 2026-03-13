@@ -42,35 +42,31 @@ Create new branch in existing repository in this main repository root:
 
 ### Flow 3: Browser Diagnostics (Playwright)
 
-Collect browser session data via MCP Playwright tools:
+Collect browser session data via Playwright MCP:
 
-- List open tabs via `mcp__playwright__browser_tabs`
-- Collect console messages via `mcp__playwright__browser_console_messages`
-- Collect network requests via `mcp__playwright__browser_network_requests`
-- Capture DOM snapshot via `mcp__playwright__browser_snapshot`
-- Capture screenshot via `mcp__playwright__browser_take_screenshot`
+- List open tabs
+- Collect console messages (errors, warnings, info)
+- Collect network requests; flag 4xx/5xx and blocked
+- Capture DOM snapshot and screenshot
 - Generate severity-grouped markdown report (Errors, Warnings, Failed Requests, Blocked Requests)
 
 ### Flow 4: AppHost Telemetry (Aspire)
 
-Collect telemetry from Aspire AppHost via MCP tools:
+Collect telemetry from Aspire AppHost via Aspire MCP:
 
-- Enumerate resources via `mcp__aspire__list_resources`
-- Collect console logs via `mcp__aspire__list_console_logs`
-- Collect structured logs via `mcp__aspire__list_structured_logs`
-- Collect traces via `mcp__aspire__list_traces`
-- Collect trace logs via `mcp__aspire__list_trace_structured_logs`
+- Enumerate running resources
+- Collect console logs, structured logs, traces, and trace logs
 - Generate consolidated report grouped by application with severity indicators
 
-### Flow 5: Postman MCP Operations
+### Flow 5: Postman Operations
 
-Manage Postman workspace resources via MCP tools using the `mcp__postman__*` server:
+Manage Postman workspace resources via Postman MCP:
 
-- **request** — Execute HTTP calls via `mcp__postman__runCollection`
-- **create** — Create resources via `mcp__postman__createCollection`, `mcp__postman__createCollectionRequest`, `mcp__postman__createEnvironment`, `mcp__postman__createMock`
-- **read** — List or get resources via `mcp__postman__getCollections`, `mcp__postman__getCollection`, `mcp__postman__getEnvironments`, `mcp__postman__getEnvironment`, `mcp__postman__getMocks`, `mcp__postman__getMock`
-- **update** — Update resources via `mcp__postman__putCollection`, `mcp__postman__putEnvironment`, `mcp__postman__updateCollectionRequest`, `mcp__postman__updateMock`
-- **delete** — No direct delete tool; flag unsupported operations to the user
+- **request** — Execute HTTP calls via runner
+- **create** — Create collections, requests, environments, mocks
+- **read** — List or get collections, environments, mocks
+- **update** — Update collections, environments, requests, mocks
+- **delete** — Flag unsupported operations to the user
 
 Route based on `--action` and `--target` parameters. Return structured output with operation status and affected resource details.
 

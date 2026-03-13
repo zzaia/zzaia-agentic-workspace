@@ -31,9 +31,9 @@ Extract content from PDF and Word files, generate structured markdown documentat
 2. Generate documentation content from conversation context following the template structure exactly — populate every placeholder with real information from the conversation, codebase, or provided context
 3. Deliver to the requested output target:
    - **Local file**: Write markdown to the specified path using Write tool
-   - **Wiki**: Push to Azure DevOps Wiki via `mcp__azure-devops__wiki_create_or_update_page`
-   - **Pull Request**: Post as PR description or comment via `mcp__azure-devops__repo_update_pull_request` or `mcp__azure-devops__repo_create_pull_request_thread`
-   - **Work Item**: Post as work item description or comment via `mcp__azure-devops__wit_update_work_item` or `mcp__azure-devops__wit_add_work_item_comment`
+   - **Wiki**: Push to Azure DevOps Wiki via Azure DevOps MCP
+   - **Pull Request**: Post as PR description or comment via Azure DevOps MCP
+   - **Work Item**: Post as work item description or comment via Azure DevOps MCP
 4. Multiple output targets may be specified — deliver to all
 
 ### Scraping
@@ -56,11 +56,9 @@ Extract content from PDF and Word files, generate structured markdown documentat
 
 - Read/Write/Edit for local file operations and template reading
 - WebFetch and WebSearch for static web content
-- `mcp__playwright__browser_*` — browser automation for interactive sites
-- `mcp__tavily__tavily_search`, `mcp__tavily__tavily_extract` — web search and URL extraction
-- `mcp__azure-devops__wiki_create_or_update_page`, `mcp__azure-devops__wiki_get_page` — Wiki integration
-- `mcp__azure-devops__repo_update_pull_request`, `mcp__azure-devops__repo_create_pull_request_thread` — PR integration
-- `mcp__azure-devops__wit_update_work_item`, `mcp__azure-devops__wit_add_work_item_comment` — Work item integration
+- Playwright MCP — browser automation for interactive sites
+- Tavily MCP — web search and URL extraction
+- Azure DevOps MCP — Wiki, PR, and work item integration
 
 ## OUTPUT
 
