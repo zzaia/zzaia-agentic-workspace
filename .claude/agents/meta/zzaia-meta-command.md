@@ -1,7 +1,10 @@
 ---
 name: zzaia-meta-command
 description: Generates a new, complete Claude Code command configuration from a user's description. Use this to create new commands. Use this Proactively when the user asks you to create a new command.
-tools: Write, WebFetch, MultiEdit
+tools: 
+   - Write
+   - WebFetch
+   - MultiEdit
 model: haiku
 color: purple
 ---

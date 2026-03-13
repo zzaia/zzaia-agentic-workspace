@@ -1,7 +1,10 @@
 ---
 name: zzaia-dataset-exploration
 description: Discover and evaluate optimal machine learning datasets from four authoritative repositories
-tools: "WebSearch", "WebFetch", "Write"
+tools: 
+   - WebSearch
+   - WebFetch
+   - Write
 model: sonnet
 color: green
 ---
