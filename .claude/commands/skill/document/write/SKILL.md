@@ -1,41 +1,40 @@
 ---
-name: /skill:document:write
-description: Write markdown documentation by selecting a template from .claude/templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
+name: write
+description: Write markdown documentation by selecting a template from ./templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
 argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>] [--target-field description|acceptance-criteria|discussion|comment]"
-agents:
-  - name: zzaia-document-specialist
-    description: Generate documentation from conversation context following the selected template and deliver to the specified output
-parameters:
-  - name: template
-    description: "Template to use: architecture-overview, service-architecture, service-data-model, event-notification, integration-tests-plan, implementation-plan, test-result-report, pull-request-review, bdd-scenarios"
-    required: true
-  - name: title
-    description: Document title or subject
-    required: false
-  - name: context
-    description: Inline content or architectural output to use as source for documentation generation
-    required: false
-  - name: output
-    description: Local output file path for the markdown file
-    required: false
-  - name: wiki
-    description: Push documentation to Azure DevOps Wiki page
-    required: false
-  - name: pr
-    description: Pull request ID to deliver documentation to
-    required: false
-  - name: work-item
-    description: Work item ID to deliver documentation to
-    required: false
-  - name: target-field
-    description: "Where to write within --pr or --work-item: description (default for pr), acceptance-criteria, discussion, comment"
-    required: false
-    default: discussion
+agent: zzaia-document-specialist
+metadata:
+  parameters:
+    - name: template
+      description: "Template to use: architecture-overview, service-architecture, service-data-model, event-notification, integration-tests-plan, implementation-plan, test-result-report, pull-request-review, bdd-scenarios"
+      required: true
+    - name: title
+      description: Document title or subject
+      required: false
+    - name: context
+      description: Inline content or architectural output to use as source for documentation generation
+      required: false
+    - name: output
+      description: Local output file path for the markdown file
+      required: false
+    - name: wiki
+      description: Push documentation to Azure DevOps Wiki page
+      required: false
+    - name: pr
+      description: Pull request ID to deliver documentation to
+      required: false
+    - name: work-item
+      description: Work item ID to deliver documentation to
+      required: false
+    - name: target-field
+      description: "Where to write within --pr or --work-item: description (default for pr), acceptance-criteria, discussion, comment"
+      required: false
+      default: discussion
 ---
 
 ## PURPOSE
 
-Select a documentation template from `.claude/templates/`, generate content from conversation context following the template structure, and deliver to the requested output target.
+Select a documentation template from `./templates/`, generate content from conversation context following the template structure, and deliver to the requested output target.
 
 ## EXECUTION
 
@@ -90,7 +89,7 @@ sequenceDiagram
     participant A as zzaia-document-specialist
 
     U->>C: /skill:document:write [template] [title] [--output/--wiki/--pr/--work-item] [--target-field]
-    C->>C: Resolve template path from .claude/templates/
+    C->>C: Resolve template path from ./templates/
     C->>C: Identify output target and target-field
     C->>A: template path + output target + target field + context
     A->>A: Read template, generate content from context

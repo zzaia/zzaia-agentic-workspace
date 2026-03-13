@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:implementation-plan
+description: Template for master implementation plans with phased delivery, milestones, and task breakdown
+user-invocable: false
+---
+
 # [Project Name] - Master Implementation Plan
 
 ## Overview

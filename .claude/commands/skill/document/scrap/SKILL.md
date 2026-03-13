@@ -1,26 +1,25 @@
 ---
-name: /skill:document:scraping
+name: scrap
 description: Search, extract, and download PDF and Word documents from URLs or web searches with filtering capabilities and user confirmation checkpoints
 argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>]"
-agents:
-  - name: zzaia-document-specialist
-    description: Discovers and downloads PDF/Word documents using Playwright and Tavily MCP tools
-parameters:
-  - name: url
-    description: Direct URL to scrape documents from (mutually exclusive with search)
-    required: false
-  - name: search
-    description: Description or keywords to find documents via web search (mutually exclusive with url)
-    required: false
-  - name: filters
-    description: JSON object with filter specifications for refining document search on target page
-    required: false
-  - name: download
-    description: Enable local download of discovered documents (always requires user confirmation)
-    required: false
-  - name: output-path
-    description: Local path for downloaded documents (default workspace/downloads/)
-    required: false
+agent: zzaia-document-specialist
+metadata:
+  parameters:
+    - name: url
+      description: Direct URL to scrape documents from (mutually exclusive with search)
+      required: false
+    - name: search
+      description: Description or keywords to find documents via web search (mutually exclusive with url)
+      required: false
+    - name: filters
+      description: JSON object with filter specifications for refining document search on target page
+      required: false
+    - name: download
+      description: Enable local download of discovered documents (always requires user confirmation)
+      required: false
+    - name: output-path
+      description: Local path for downloaded documents (default workspace/downloads/)
+      required: false
 ---
 
 ## PURPOSE

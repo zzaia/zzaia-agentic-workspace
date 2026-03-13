@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:test-result-report
+description: Template for test execution result reports with pass/fail summary, diagnostics, and failure evidence
+user-invocable: false
+---
+
 # Test Result Report — [WorkItemTitle]
 
 ## Summary

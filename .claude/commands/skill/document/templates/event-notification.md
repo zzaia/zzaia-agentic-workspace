@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:event-notification
+description: Template for documenting event-driven notification systems including producers, consumers, and message contracts
+user-invocable: false
+---
+
 # [projectName] - Event Notification System
 
 ## Overview

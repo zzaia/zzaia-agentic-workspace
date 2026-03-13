@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:service-architecture
+description: Template for individual microservice architecture documentation covering responsibilities, APIs, and dependencies
+user-invocable: false
+---
+
 # [Service Name] Architecture
 
 [Brief service description and purpose]
