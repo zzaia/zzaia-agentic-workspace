@@ -20,7 +20,7 @@ Systematically explore and evaluate cross-domain problems with high commercial p
 
 ## TASK
 
-1. Conduct comprehensive web research using /websearch and MCP search tools
+1. Conduct comprehensive web research using /behavior:websearch and MCP search tools
 2. Analyze problems across multiple technological and industry domains
 3. Assess commercial viability using structured scoring methodology:
    - Market size potential

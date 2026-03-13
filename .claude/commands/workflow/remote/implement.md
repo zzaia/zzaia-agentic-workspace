@@ -43,60 +43,60 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/devops:work-item --id <work-item> --project <project>`
+   - Call `/behavior:devops:work-item --id <work-item> --project <project>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs (skip for Bug type)
-   - Change work item state to **Active** via `/devops:work-item --id <work-item> --project <project> --action update --state Active`
+   - Change work item state to **Active** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:repo --action new --repo <repo> --branch <working-branch>`
+   - Call `/behavior:workspace:repo --action new --repo <repo> --branch <working-branch>`
    - Verify branch is ready for code changes and target branch is up to date
 
 3. **Write Documentation Locally**: Produce the SDD documentation from the work item architecture design
 
    - **SKIP this phase if work item type is Bug**
-   - Call `/document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
+   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
    - Organize following folder and name conventions that already exist
 
 4. **Implement Feature**: Execute development based on SDD documentation or description
 
-   - Call `/development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>`
+   - Call `/behavior:development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>`
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
 5. **Commit and Push**: Stage, commit, and push implementation changes
 
-   - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "feat: <description> [#<work-item>]"`
+   - Call `/behavior:development:git --action commit --repository <repo> --branch <working-branch> --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
 
 6. **Create Draft Pull Request**: Open draft pull request
 
-   - Call `/devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
+   - Call `/behavior:devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
    - Link PR to original work item
 
 7. **Review Changes**: Review all developed changes and post findings to PR
 
-   - Call `/development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
+   - Call `/behavior:development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
    - Generate numbered issue list from review output
-   - Call `/document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
-   - Call `/workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Continue — read selected issues from pull-request; Continue without fixing any issue; <Any user input>"`
+   - Call `/skill:document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
+   - Call `/behavior:workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Continue — read selected issues from pull-request; Continue without fixing any issue; <Any user input>"`
 
 8. **Implement Accepted Reviews**: Apply review feedback based on user selection
 
-   - Call `/devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve all selected reviewed issues from PR
-   - Call `/development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>`
+   - Call `/behavior:devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve all selected reviewed issues from PR
+   - Call `/behavior:development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>`
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
-   - Call `/development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
+   - Call `/behavior:development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
    - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --branch <working-branch> --target-branch <target-branch>` before pushing
    - Push changes to remote origin
-   - Change work item state to **Resolved** via `/devops:work-item --id <work-item> --project <project> --action update --state Resolved`
+   - Change work item state to **Resolved** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Resolved`
 
 10. **Publish Pull Request**: Mark pull request as ready for review
 
-    - Call `/devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id> --draft false`
+    - Call `/behavior:devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id> --draft false`
     - Confirm PR is published and share PR link with user
 
 ## DELEGATION
@@ -114,13 +114,13 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 sequenceDiagram
     participant U as User
     participant P as /workflow:remote:implement
-    participant WI as /devops:work-item
-    participant WN as /workspace:repo --action new
-    participant DW as /document:write
-    participant DD as /development:develop
-    participant DR as /development:review
-    participant DG as /development:git
-    participant PR as /devops:pull-request
+    participant WI as /behavior:devops:work-item
+    participant WN as /behavior:workspace:repo --action new
+    participant DW as /skill:document:write
+    participant DD as /behavior:development:develop
+    participant DR as /behavior:development:review
+    participant DG as /behavior:development:git
+    participant PR as /behavior:devops:pull-request
 
     U->>P: /workflow:remote:implement <params>
 
@@ -150,7 +150,7 @@ sequenceDiagram
     DR-->>P: Numbered issue list
     P->>DW: Write pull-request-review to PR comment
     DW-->>P: Review posted
-    P->>U: /workspace:ask-user-question (confirm to continue)
+    P->>U: /behavior:workspace:ask-user-question (confirm to continue)
     U-->>P: Confirmed
 
     P->>PR: Read review issues from PR
@@ -179,7 +179,7 @@ sequenceDiagram
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
-- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/document:write`
+- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/skill:document:write`
 - User asked only to confirm to continue — no issue selection required
 - All review issues implemented and committed with conventional format referencing work item
 - Merge conflicts resolved via `/workflow:fix-merge` before final push

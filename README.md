@@ -71,6 +71,38 @@ Add to your `.claude/plugins.json`:
 }
 ```
 
+## 🏗️ Command Hierarchy
+
+Commands are organized in a four-layer hierarchy. Each layer calls into the next, enabling complex automation through composition:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  workflow    Orchestrates end-to-end tasks by            │
+│  /workflow:* sequencing multiple behaviors in order      │
+│                              │                           │
+│                              ▼                           │
+│  behavior    Executes a single domain operation,         │
+│  /behavior:* optionally invoking skills                  │
+│                              │                           │
+│                              ▼                           │
+│  skill       Reusable capability with its own            │
+│  /skill:*    instructions, template, examples, scripts   │
+│                              │                           │
+│                              ▼                           │
+│  template    Static markdown templates that skills       │
+│  templates/  populate with real content                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+| Layer | Prefix | Responsibility |
+|-------|--------|----------------|
+| **Workflow** | `/workflow:*` | Sequence of behaviors for a complete task (e.g. implement a work item end-to-end) |
+| **Behavior** | `/behavior:*` | Single domain operation with agent delegation (e.g. run a pipeline, create a PR) |
+| **Skill** | `/skill:*` | Self-contained capability with `SKILL.md`, `template.md`, `examples/`, `scripts/` |
+| **Template** | `templates/` | Markdown blueprints filled in by skills with real conversation context |
+
+This layering keeps each command focused on one responsibility and makes the system extensible without coupling between layers.
+
 ## 📋 Available Commands
 
 All individual commands can be called to by users to make individual operations, workflows are a combination of multiple commands.
@@ -79,56 +111,56 @@ All individual commands can be called to by users to make individual operations,
 
 Machine learning dataset discovery and analysis workflows.
 
-- [**`/analytics:workflow:explorate`**](.claude/commands/analytics/workflow/explorate.md) - Domain and dataset exploration
-- [**`/analytics:workflow:analyze`**](.claude/commands/analytics/workflow/analyze.md) - Dataset analysis and visualization
+- [**`/workflow:analytics:explorate`**](.claude/commands/workflow/analytics/explorate.md) - Domain and dataset exploration
+- [**`/workflow:analytics:analyze`**](.claude/commands/workflow/analytics/analyze.md) - Dataset analysis and visualization
 
 ### Development
 
 Software development lifecycle operations.
 
-- [**`/development:develop`**](.claude/commands/development/develop.md) - Full development workflow
-- [**`/development:build`**](.claude/commands/development/build.md) - Multi-framework builds
-- [**`/development:test`**](.claude/commands/development/test.md) - Comprehensive testing
-- [**`/development:review`**](.claude/commands/development/review.md) - Code quality review
-- [**`/development:migrations`**](.claude/commands/development/migrations.md) - Database migrations
-- [**`/development:git`**](.claude/commands/development/git.md) - Git operations
-- [**`/development:update-dotnet-packages`**](.claude/commands/development/update-dotnet-packages.md) - Package management
+- [**`/behavior:development:develop`**](.claude/commands/behavior/development/develop.md) - Full development workflow
+- [**`/behavior:development:build`**](.claude/commands/behavior/development/build.md) - Multi-framework builds
+- [**`/behavior:development:test`**](.claude/commands/behavior/development/test.md) - Comprehensive testing
+- [**`/behavior:development:review`**](.claude/commands/behavior/development/review.md) - Code quality review
+- [**`/behavior:development:migrations`**](.claude/commands/behavior/development/migrations.md) - Database migrations
+- [**`/behavior:development:git`**](.claude/commands/behavior/development/git.md) - Git operations
+- [**`/behavior:development:update-dotnet-packages`**](.claude/commands/behavior/development/update-dotnet-packages.md) - Package management
 
 ### Management
 
 Project management and architecture coordination.
 
-- [**`/management:business`**](.claude/commands/management/business.md) - Business and BDD analysis
-- [**`/management:plan`**](.claude/commands/management/plan.md) - Project planning
-- [**`/management:architect`**](.claude/commands/management/architect.md) - Architecture specifications
-- [**`/management:clarify`**](.claude/commands/management/clarify.md) - Requirements clarification
+- [**`/behavior:management:business`**](.claude/commands/behavior/management/business.md) - Business and BDD analysis
+- [**`/behavior:management:plan`**](.claude/commands/behavior/management/plan.md) - Project planning
+- [**`/behavior:management:architect`**](.claude/commands/behavior/management/architect.md) - Architecture specifications
+- [**`/behavior:management:clarify`**](.claude/commands/behavior/management/clarify.md) - Requirements clarification
 
 ### DevOps
 
 DevOps platform operations across Azure DevOps and GitHub.
 
-- [**`/devops:work-item`**](.claude/commands/devops/work-item.md) - Work item retrieval and management
-- [**`/devops:pull-request`**](.claude/commands/devops/pull-request.md) - Pull request management
-- [**`/devops:pipeline`**](.claude/commands/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
-- [**`/devops:new-relic`**](.claude/commands/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
+- [**`/behavior:devops:work-item`**](.claude/commands/behavior/devops/work-item.md) - Work item retrieval and management
+- [**`/behavior:devops:pull-request`**](.claude/commands/behavior/devops/pull-request.md) - Pull request management
+- [**`/behavior:devops:pipeline`**](.claude/commands/behavior/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
+- [**`/behavior:devops:new-relic`**](.claude/commands/behavior/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
 
 ### Workspace
 
 Multi-repository workspace configuration.
 
-- [**`/workspace:repo`**](.claude/commands/workspace/repo.md) - Clone repos or create branches (`--action new`)
-- [**`/workspace:apphost`**](.claude/commands/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
-- [**`/workspace:playwright`**](.claude/commands/workspace/playwright.md) - Playwright browser diagnostics (`--action debug`)
-- [**`/workspace:vscode`**](.claude/commands/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
-- [**`/workspace:postman`**](.claude/commands/workspace/postman.md) - Postman workspace operations (`--action request|create|read|update|delete`)
+- [**`/behavior:workspace:repo`**](.claude/commands/behavior/workspace/repo.md) - Clone repos or create branches (`--action new`)
+- [**`/behavior:workspace:apphost`**](.claude/commands/behavior/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
+- [**`/behavior:workspace:playwright`**](.claude/commands/behavior/workspace/playwright.md) - Playwright browser diagnostics (`--action debug`)
+- [**`/behavior:workspace:vscode`**](.claude/commands/behavior/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
+- [**`/behavior:workspace:postman`**](.claude/commands/behavior/workspace/postman.md) - Postman workspace operations (`--action request|create|read|update|delete`)
 
 ### Document
 
 Document content extraction and retrieval.
 
-- [**`/document:read`**](.claude/commands/document/read.md) - Extract PDF and Word document content
-- [**`/document:write`**](.claude/commands/document/write.md) - Write markdown documentation to targets
-- [**`/document:scraping`**](.claude/commands/document/scraping.md) - Search and download documents from web
+- [**`/skill:document:read`**](.claude/commands/skill/document/read.md) - Extract PDF and Word document content
+- [**`/skill:document:write`**](.claude/commands/skill/document/write.md) - Write markdown documentation to targets
+- [**`/skill:document:scraping`**](.claude/commands/skill/document/scraping.md) - Search and download documents from web
 
 ### Workflow
 
@@ -146,9 +178,9 @@ End-to-end orchestration workflows, that are a combination of sequential minor c
 
 System utilities and information.
 
-- [**`/warmup`**](.claude/commands/warmup.md) - Context-aware focus
-- [**`/ask`**](.claude/commands/ask.md) - Context-aware Q&A
-- [**`/websearch`**](.claude/commands/websearch.md) - Web search integration
+- [**`/behavior:warmup`**](.claude/commands/behavior/warmup.md) - Context-aware focus
+- [**`/behavior:ask`**](.claude/commands/behavior/ask.md) - Context-aware Q&A
+- [**`/behavior:websearch`**](.claude/commands/behavior/websearch.md) - Web search integration
 
 ## 🖥️ AppHost Template
 
@@ -205,12 +237,10 @@ sequenceDiagram
 .claude/
 ├── agents/              # AI agent definitions
 ├── commands/            # Command configurations
-│   ├── analytics/
-│   ├── development/
-│   ├── document/
-│   ├── management/
-│   ├── workspace/
+│   ├── behavior/
+│   ├── skill/
 │   └── workflow/
+│       ├── analytics/
 │       └── remote/
 ├── hooks/               # Lifecycle hooks and scripts
 │   └── extract-document.py

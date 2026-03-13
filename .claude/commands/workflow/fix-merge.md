@@ -30,27 +30,27 @@ Merge from a target branch into the working branch, automatically resolving merg
 
 1. **Merge from Target Branch**: Pull target branch then perform merge operation and resolve all merge conflicts
 
-   - Call `/development:git` with `--repo <repo>` `--branch <target-branch>` `--action pull` to ensure target branch is up to date
-   - Call `/development:git` with `--repo <repo>` `--working-branch <working-branch>` `--target-branch <target-branch>` `--action merge`
+   - Call `/behavior:development:git` with `--repo <repo>` `--branch <target-branch>` `--action pull` to ensure target branch is up to date
+   - Call `/behavior:development:git` with `--repo <repo>` `--working-branch <working-branch>` `--target-branch <target-branch>` `--action merge`
    - Resolve merge conflicts with context from `--description`
    - **MANDATORY** Verify no unresolved conflicts remain
 
 2. **Review Merge Result**: Identify issues that arose from the merge
 
-   - Call `/development:review` with `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
+   - Call `/behavior:development:review` with `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
    - Focus only on issues merge files with conflict
    - Document all issues found
-   - Call `/workspace:ask-user-question --question "Review findings confirmed. Approve proceeding to fixes?" --options "Proceed with fixes; Describe additional context"`
+   - Call `/behavior:workspace:ask-user-question --question "Review findings confirmed. Approve proceeding to fixes?" --options "Proceed with fixes; Describe additional context"`
 
 3. **Fix Issues**: Address all issues identified in the review
 
-   - Call `/development:develop` with `--repo <repo>` `--branch <working-branch>` `--task "Fix post-merge issues"`
+   - Call `/behavior:development:develop` with `--repo <repo>` `--branch <working-branch>` `--task "Fix post-merge issues"`
    - Fix all identified issues systematically
-   - Re-run `/development:review` to verify fixes
+   - Re-run `/behavior:development:review` to verify fixes
 
 4. **Push Changes**: Commit and push all changes to remote
 
-   - Call `/development:git` with `--repo <repo>` `--branch <working-branch>` `--action push`
+   - Call `/behavior:development:git` with `--repo <repo>` `--branch <working-branch>` `--action push`
    - Push all commits to remote
    - **MANDATORY** Verify remote branch is updated
 
@@ -67,10 +67,10 @@ Merge from a target branch into the working branch, automatically resolving merg
 sequenceDiagram
     participant U as User
     participant W as /workflow:fix-merge
-    participant C1 as /development:git
-    participant C2 as /development:review
-    participant C3 as /development:develop
-    participant C4 as /development:git
+    participant C1 as /behavior:development:git
+    participant C2 as /behavior:development:review
+    participant C3 as /behavior:development:develop
+    participant C4 as /behavior:development:git
 
     U->>W: /workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>
     W->>C1: Pull target-branch (ensure up to date)
@@ -79,7 +79,7 @@ sequenceDiagram
     C1-->>W: Merge complete, conflicts resolved
     W->>C2: Review post-merge state
     C2-->>W: Issues identified
-    W->>U: /workspace:ask-user-question (confirm review & proceed)
+    W->>U: /behavior:workspace:ask-user-question (confirm review & proceed)
     U-->>W: Approval
     W->>C3: Fix all identified issues
     C3-->>W: Issues fixed, verified

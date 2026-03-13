@@ -42,39 +42,39 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 1. **Initialize Loop** — Resolve parameters and set iteration counter to 0
 
    - If `--file` is provided, resolve git worktree context to infer `--project`, `--branch`, and `--pipeline` from remote URL, current branch, and YAML filename
-   - Call `/devops:pipeline --action debug` with `--portal <portal> --project <project> --pipeline <pipeline> --run <run> --branch <branch>`
+   - Call `/behavior:devops:pipeline --action debug` with `--portal <portal> --project <project> --pipeline <pipeline> --run <run> --branch <branch>`
    - Capture structured issue report with all failed steps, errors, and warnings
    - Track returned run ID for subsequent phases
    - **MANDATORY** Record iteration 1 start time and initial issue count
 
 2. **Setup Workspace** — Ensure target branch is available locally
 
-   - Call `/workspace:repo --action new` with `--repo <project> --branch <branch>`
+   - Call `/behavior:workspace:repo --action new` with `--repo <project> --branch <branch>`
    - Skip if branch worktree already exists in workspace
    - **MANDATORY** Branch must be checked out before fixes are applied
 
 3. **Fix Issues** — Implement targeted fixes from the issue report
 
-   - Call `/development:develop` with issue report as task context
+   - Call `/behavior:development:develop` with issue report as task context
    - Pass pipeline ID, branch, and list of failures to fix
    - **MANDATORY** Fixes must target pipeline YAML and source files identified in issue report
    - Await completion and capture fix summary
 
 4. **Commit & Push** — Persist fixes to remote branch
 
-   - Call `/development:git` with commit message summarizing fixes applied
+   - Call `/behavior:development:git` with commit message summarizing fixes applied
    - Push changes to `<branch>` on remote
    - **MANDATORY** Changes must be pushed before triggering re-run
 
 5. **Re-run Pipeline** — Trigger new pipeline run on target branch
 
-   - Call `/devops:pipeline --action run` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
+   - Call `/behavior:devops:pipeline --action run` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
    - Capture new run ID and wait for completion
    - **MANDATORY** Extract run ID from response for next debug phase
 
 6. **Evaluate Result** — Check pipeline run status
 
-   - Call `/workspace:ask-user-question --question "Pipeline run complete. Confirm to continue or describe what to inspect" --options "Continue; Inspect pipeline logs; Stop"`
+   - Call `/behavior:workspace:ask-user-question --question "Pipeline run complete. Confirm to continue or describe what to inspect" --options "Continue; Inspect pipeline logs; Stop"`
    - Parse run result: **Success** or **Failure**
    - Increment iteration counter
 
@@ -98,11 +98,11 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 sequenceDiagram
     participant U as User
     participant W as /workflow:fix-pipeline
-    participant DBG as /devops:pipeline(debug)
-    participant WN as /workspace:repo --action new
-    participant FIX as /development:develop
-    participant GIT as /development:git
-    participant RUN as /devops:pipeline(run)
+    participant DBG as /behavior:devops:pipeline(debug)
+    participant WN as /behavior:workspace:repo --action new
+    participant FIX as /behavior:development:develop
+    participant GIT as /behavior:development:git
+    participant RUN as /behavior:devops:pipeline(run)
     participant A1 as zzaia-devops-specialist
     participant A2 as zzaia-workspace-manager
     participant A3 as zzaia-developer-specialist
@@ -136,7 +136,7 @@ sequenceDiagram
         RUN-->>A1: New run ID
         A1-->>W: Run ID + completion status
 
-        W->>U: /workspace:ask-user-question (pipeline outcome?)
+        W->>U: /behavior:workspace:ask-user-question (pipeline outcome?)
         U-->>W: Success or Failure
         W->>W: Increment iteration counter
 
@@ -152,7 +152,7 @@ sequenceDiagram
 
 ## ACCEPTANCE CRITERIA
 
-- Workflow successfully orchestrates `/devops:pipeline --action debug`, `/workspace:repo --action new`, `/development:develop`, `/development:git`, and `/devops:pipeline --action run` in sequence
+- Workflow successfully orchestrates `/behavior:devops:pipeline --action debug`, `/behavior:workspace:repo --action new`, `/behavior:development:develop`, `/behavior:development:git`, and `/behavior:devops:pipeline --action run` in sequence
 - Loop continues until pipeline succeeds or max iterations is reached
 - Each iteration extracts new run ID from pipeline run response and uses it in next debug phase
 - Iteration counter and safety limit are enforced

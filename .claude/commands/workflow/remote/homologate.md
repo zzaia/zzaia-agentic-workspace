@@ -59,43 +59,43 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 1. **Retrieve Work Item and Resolve Test Case**: Fetch work item details and ensure a Test Case exists
 
-   - Call `/devops:work-item --action read --id <work-item> --project <project>`
+   - Call `/behavior:devops:work-item --action read --id <work-item> --project <project>`
    - Retrieve full hierarchy: title, description, acceptance criteria, and all child work items
    - **MANDATORY**: description must not be empty
    - **MANDATORY**: work item is **read-only** — no updates, comments, or writes to the work item in any phase
-   - If `--test-case` provided: Call `/devops:work-item --action read --id <test-case> --project <project>` to load existing Test Case
-   - If `--test-case` NOT provided: Call `/devops:work-item --action create --type "Test Case" --title "Test Case: <work-item-title>" --parent <work-item> --project <project>` to create a new Test Case linked as child — use its ID as `<test-case>` for all subsequent phases
+   - If `--test-case` provided: Call `/behavior:devops:work-item --action read --id <test-case> --project <project>` to load existing Test Case
+   - If `--test-case` NOT provided: Call `/behavior:devops:work-item --action create --type "Test Case" --title "Test Case: <work-item-title>" --parent <work-item> --project <project>` to create a new Test Case linked as child — use its ID as `<test-case>` for all subsequent phases
 
 2. **Gather Referenced Documentation**: Enrich testing context with external materials if provided
 
-   - If `--doc` provided: Call `/document:read --doc <doc>`
-   - If `--ref-url` provided: Call `/websearch --query <ref-url>`
+   - If `--doc` provided: Call `/skill:document:read --doc <doc>`
+   - If `--ref-url` provided: Call `/behavior:websearch --query <ref-url>`
    - Compile retrieved content into testing context
 
 3. **Generate BDD Documentation**: Translate acceptance criteria and child work items into BDD scenarios
 
-   - Call `/management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
+   - Call `/behavior:management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios appropriate for `--type` (API flows for e2e, UI flows for ui, contract flows for integration)
-   - Call `/document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
+   - Call `/skill:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
 
-   - Call `/workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
-   - If user indicates changes: Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
+   - Call `/behavior:workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
+   - If user indicates changes: Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
 
 5. **Execute Tests**: Iterate through each BDD step in the Test Case Steps section in sequence
 
    - If `--type e2e` — before first step, resolve Postman request:
-     1. Call `/workspace:postman --action read --target request` to search for an existing request matching the BDD step URL/method in the Agentic Workspace
+     1. Call `/behavior:workspace:postman --action read --target request` to search for an existing request matching the BDD step URL/method in the Agentic Workspace
      2. If found: use the existing request for execution
-     3. If not found: Call `/workspace:postman --action create --target request --spec "<method + url + headers + body>"` to create it, then use it
-   - If authentication is required (login, token, credential): Call `/workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
+     3. If not found: Call `/behavior:workspace:postman --action create --target request --spec "<method + url + headers + body>"` to create it, then use it
+   - If authentication is required (login, token, credential): Call `/behavior:workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
    - For each step in Test Case Steps (in order):
      1. Execute the step appropriate to `--type`:
      2. Collect diagnostics immediately after execution regardless of pass/fail:
-        - Call `/devops:new-relic --action debug --application-name <application>` to capture server-side logs
-        - If `--type ui`: Call `/workspace:playwright --action debug --url <url>` to capture browser console logs
+        - Call `/behavior:devops:new-relic --action debug --application-name <application>` to capture server-side logs
+        - If `--type ui`: Call `/behavior:workspace:playwright --action debug --url <url>` to capture browser console logs
      3. Display concise step report in prompt: step name, result (pass/fail), response time, anomalies or warnings found
 
 6. **Correlate Step Findings**: Consolidate all per-step diagnostic data into a unified findings list
@@ -106,19 +106,19 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 7. **Generate Test Result Report**: Document all test outcomes and diagnostics
 
-   - Call `/document:write --template test-result-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
+   - Call `/skill:document:write --template test-result-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
    - **MANDATORY**: Report must be posted before user validation
 
 8. **Validate Report and Define Bugs**: Review failures and decide which bugs to create
 
-   - Call `/workspace:ask-user-question --question "Reply to the test result report in the Test Case discussion with the approved bug list, then confirm to continue"`
-   - Call `/devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve user replies with approved failures, severity adjustments, and dismissals
+   - Call `/behavior:workspace:ask-user-question --question "Reply to the test result report in the Test Case discussion with the approved bug list, then confirm to continue"`
+   - Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve user replies with approved failures, severity adjustments, and dismissals
    - Compile the final approved bug list from discussion replies before proceeding
    - **MANDATORY**: Do NOT create any bug work items before user explicitly approves the final list
 
 9. **Create Bug Work Items**: Create one bug work item per approved failure
 
-   - For each approved failure: Call `/devops:work-item --action create --type Bug --title "<failure-description>" --description "<steps-to-reproduce + expected-vs-actual + diagnostic-evidence>" --severity <severity> --parent <test-case> --project <project>`
+   - For each approved failure: Call `/behavior:devops:work-item --action create --type Bug --title "<failure-description>" --description "<steps-to-reproduce + expected-vs-actual + diagnostic-evidence>" --severity <severity> --parent <test-case> --project <project>`
    - Provide summary list of all created bug IDs with links
 
 ## DELEGATION
@@ -136,16 +136,16 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 sequenceDiagram
     participant U as User
     participant W as /workflow:remote:homologate
-    participant WI as /devops:work-item
-    participant DR as /document:read
-    participant WS as /websearch
-    participant BDD as /management:business
-    participant TST as /development:test
-    participant PM as /workspace:postman
-    participant NR as /devops:new-relic(debug)
-    participant PW as /workspace:playwright(debug)
-    participant RV as /development:review
-    participant DW as /document:write
+    participant WI as /behavior:devops:work-item
+    participant DR as /skill:document:read
+    participant WS as /behavior:websearch
+    participant BDD as /behavior:management:business
+    participant TST as /behavior:development:test
+    participant PM as /behavior:workspace:postman
+    participant NR as /behavior:devops:new-relic(debug)
+    participant PW as /behavior:workspace:playwright(debug)
+    participant RV as /behavior:development:review
+    participant DW as /skill:document:write
 
     U->>W: /workflow:remote:homologate --type <e2e|ui|integration> <params>
     W->>WI: --action read --id <work-item> --project <project>
@@ -169,7 +169,7 @@ sequenceDiagram
     BDD-->>W: BDD scenarios (Given/When/Then)
     W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field steps
     DW-->>W: BDD written to Test Case steps
-    W->>U: /workspace:ask-user-question (review Test Case BDD & confirm)
+    W->>U: /behavior:workspace:ask-user-question (review Test Case BDD & confirm)
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
@@ -195,7 +195,7 @@ sequenceDiagram
     W->>W: Correlate all step findings by severity
     W->>DW: --template test-result-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
     DW-->>W: Report posted to Test Case discussion
-    W->>U: /workspace:ask-user-question (reply to Test Case discussion with approved bug list)
+    W->>U: /behavior:workspace:ask-user-question (reply to Test Case discussion with approved bug list)
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: Approved failures, severities, dismissals

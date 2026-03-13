@@ -64,8 +64,26 @@ Language-specific coding standards are defined in `.claude/rules/` directory:
 - Maintain comprehensive documentation standards
 - Implement testing strategies per language conventions
 
+## Command Hierarchy
+
+Commands are organized in a four-layer hierarchy, each layer calling into the next:
+
+```
+workflow → behavior → skill → template
+```
+
+| Layer | Prefix | Purpose |
+|-------|--------|---------|
+| **Workflow** | `/workflow:*` | Orchestrates end-to-end tasks by sequencing multiple behaviors |
+| **Behavior** | `/behavior:*` | Executes a single domain operation, optionally invoking skills |
+| **Skill** | `/skill:*` | Reusable capability with its own instructions, template, examples, and scripts |
+| **Template** | `templates/` | Static markdown templates that skills populate with real content |
+
+This hierarchy enables complex automation through composition without coupling layers.
+
 ## Key Principles
 
+- Command hierarchy: workflow → behavior → skill → template
 - Agent orchestration system with specialized responsibilities
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
