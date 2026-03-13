@@ -2,7 +2,10 @@
 name: zzaia-workspace-manager
 description: Manage workspace operations including repository cloning, git worktree management, browser session diagnostics, and Aspire AppHost telemetry collection
 tools: *
-mcpServers: playwright, postman, aspire
+mcpServers: 
+  - playwright
+  - postman
+  - aspire
 model: sonnet
 color: purple
 ---

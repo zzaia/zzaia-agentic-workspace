@@ -37,6 +37,8 @@ agents:
     description: Execute tests against the target URL following BDD
   - name: zzaia-document-specialist
     description: Generate BDD and test result documentation
+  - name: zzaia-workspace-manager
+    description: Resolve and manage Postman requests in the Agentic Workspace for e2e test execution
 ---
 
 ## PURPOSE
@@ -84,6 +86,10 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 5. **Execute Tests**: Iterate through each BDD step in the Test Case Steps section in sequence
 
+   - If `--type e2e` — before first step, resolve Postman request:
+     1. Call `/workspace:postman --action read --target request` to search for an existing request matching the BDD step URL/method in the Agentic Workspace
+     2. If found: use the existing request for execution
+     3. If not found: Call `/workspace:postman --action create --target request --spec "<method + url + headers + body>"` to create it, then use it
    - If authentication is required (login, token, credential): Call `/workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
    - For each step in Test Case Steps (in order):
      1. Execute the step appropriate to `--type`:
@@ -122,6 +128,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 - `zzaia-devops-specialist` — Retrieve work items, post discussions, create child bug work items
 - `zzaia-tester-specialist` — Execute tests against the target URL, capture results and error details
 - `zzaia-document-specialist` — Generate BDD scenarios, create test result documentation
+- `zzaia-workspace-manager` — Resolve, create, and execute Postman requests in the Agentic Workspace (e2e only)
 
 ## WORKFLOW DIAGRAM
 
@@ -134,6 +141,7 @@ sequenceDiagram
     participant WS as /websearch
     participant BDD as /management:business
     participant TST as /development:test
+    participant PM as /workspace:postman
     participant NR as /devops:new-relic(debug)
     participant PW as /workspace:playwright(debug)
     participant RV as /development:review
@@ -165,6 +173,14 @@ sequenceDiagram
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
+    opt --type is e2e
+        W->>PM: --action read --target request
+        PM-->>W: Existing request or not found
+        alt request not found
+            W->>PM: --action create --target request --spec <method+url+headers+body>
+            PM-->>W: Request created
+        end
+    end
     loop for each BDD step in Test Case Steps
         W->>TST: execute step --type <type> --environment <url>
         TST-->>W: Step result (pass/fail, timing, errors)
