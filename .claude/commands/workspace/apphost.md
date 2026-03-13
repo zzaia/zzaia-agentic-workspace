@@ -39,12 +39,12 @@ Single interface for Aspire AppHost management. Routes to setup or diagnostics b
 3. **Read Documentation** — Read `host/README.md` for configuration patterns
 4. **Generate Configurations** — Delegate to `zzaia-developer-specialist` to implement settings, registrations, project references, and appsettings
 5. **Validate Build** — Run `dotnet build`; fix compilation errors
-6. **Verify with Aspire MCP** — `mcp__aspire__list_apphosts` → `mcp__aspire__select_apphost` → `mcp__aspire__list_resources`
+6. **Verify with Aspire MCP** — Discover AppHost, select it, and list resources to confirm all services appear
 
 ### action=debug
 
-1. **Discover Resources** — `mcp__aspire__list_resources`; filter by `--application` if set
-2. **Collect Telemetry** — For each resource: `mcp__aspire__list_console_logs`, `mcp__aspire__list_structured_logs`, `mcp__aspire__list_traces`, `mcp__aspire__list_trace_structured_logs`
+1. **Discover Resources** — List all running resources; filter by `--application` if set
+2. **Collect Telemetry** — For each resource: console logs, structured logs, traces, trace logs
 3. **Report** — Categorize by severity ❌ ⚠️; group by application; output markdown report
 
 ## DELEGATION
@@ -85,8 +85,8 @@ sequenceDiagram
 
 ## ACCEPTANCE CRITERIA
 
-- `setup`: all worktrees valid, build passes, all services appear in Aspire MCP resource list
-- `debug`: read-only, uses `mcp__aspire__` tools only, report includes summary table per application
+- `setup`: all worktrees valid, build passes, all services appear in Aspire resource list
+- `debug`: read-only, report includes summary table per application
 
 ## EXAMPLES
 

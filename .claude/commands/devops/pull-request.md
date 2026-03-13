@@ -67,8 +67,8 @@ Unified pull request management across Azure DevOps and GitHub with support for 
    - Verify work item exists in Azure DevOps (if provided)
 
 2. **Portal-Specific Operations**: Execute action with appropriate tooling
-   - **Azure DevOps**: Use mcp__azure-devops__repo_* tools for all operations
-   - **GitHub**: Use GitHub MCP tool for all operations
+   - **Azure DevOps**: Use Azure DevOps MCP tools for all operations
+   - **GitHub**: Use GitHub MCP tools for all operations
    - Retrieve context from workspace metadata when available
    - Apply defaults for target branch (main/master)
 
