@@ -53,6 +53,7 @@
     "zzaia-document-specialist",
     "zzaia-meta-agent",
     "zzaia-meta-command",
+    "zzaia-meta-skill",
     "zzaia-meta-workflow"
   ],
   "rules": [

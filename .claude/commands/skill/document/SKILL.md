@@ -18,9 +18,9 @@ Unified entry point for document operations. Routes to the appropriate sub-comma
 
 | Action  | Command                             | Description                                      |
 |---------|-------------------------------------|--------------------------------------------------|
-| `read`  | [@skill:document:read](./read.md)   | Extract text from PDF/Word files into context    |
-| `write` | [@skill:document:write](./write.md) | Generate and deliver markdown documents          |
-| `scrap` | [@skill:document:scrap](./scrap.md) | Discover and download documents from web sources |
+| `read`  | [@skill:document:read](./read/SKILL.md)   | Extract text from PDF/Word files into context    |
+| `write` | [@skill:document:write](./write/SKILL.md) | Generate and deliver markdown documents          |
+| `scrap` | [@skill:document:scrap](./scrap/SKILL.md) | Discover and download documents from web sources |
 
 ## Instructions
 
