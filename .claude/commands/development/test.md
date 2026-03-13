@@ -1,7 +1,7 @@
 ---
 name: /development:test
 description: Develop and run tests using framework detection and comprehensive test execution
-argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--type unit|integration|e2e|ui|load|ab|all] [--environment local|apphost|<url>] [--framework k6|locust|NBomber|playwright]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--type unit|integration|e2e|ui|load|ab|all] [--environment local|apphost|staging] [--framework k6|locust|NBomber|playwright]"
 agents:
   - name: zzaia-tester-specialist
     description: Framework detection and comprehensive test execution in readonly mode
@@ -137,15 +137,18 @@ sequenceDiagram
    Functional API testing (not just performance)
    Response validation
    Data integrity checks
-7. End-to-End Testing
+7. UI Testing
    Browser automation testing
    User journey testing
+8. End-to-end Testing
+   Direct API calls to validate complete behaviors and flows 
 
 ### Testing Frameworks
 
 1. **Grafana K6** - JavaScript-based load testing
 2. **Locust** - Python-based load testing
-2. **NBomber** - C#-based load testing
+3. **NBomber** - C#-based load testing
+4. **Postman** - Direct API request
 
 ### K6 Test File Structure Example
 

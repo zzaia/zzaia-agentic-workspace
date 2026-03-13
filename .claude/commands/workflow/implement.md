@@ -51,7 +51,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:new --repo <repo> --target-branch <target-branch> --branch <working-branch>`
+   - Call `/workspace:repo --action new --repo <repo> --target-branch <target-branch> --branch <working-branch>`
    - Verify branch is ready for code changes and target branch is up to date
 
 3. **Think & Architect**: Analyze requirements and design the solution
@@ -114,7 +114,7 @@ sequenceDiagram
     participant U as User
     participant P as /workflow:implement
     participant WI as /devops:work-item
-    participant WN as /workspace:new
+    participant WN as /workspace:repo --action new
     participant MA as /management:architect
     participant DW as /document:write
     participant DD as /development:develop

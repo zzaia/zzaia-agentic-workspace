@@ -88,8 +88,8 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
    - For each step in Test Case Steps (in order):
      1. Execute the step appropriate to `--type`:
      2. Collect diagnostics immediately after execution regardless of pass/fail:
-        - Call `/devops:debug-new-relic --application <application>` to capture server-side logs
-        - If `--type ui`: Call `/workspace:debug-playwright --url <url>` to capture browser console logs
+        - Call `/devops:new-relic --action debug --application-name <application>` to capture server-side logs
+        - If `--type ui`: Call `/workspace:playwright --action debug --url <url>` to capture browser console logs
      3. Display concise step report in prompt: step name, result (pass/fail), response time, anomalies or warnings found
 
 6. **Correlate Step Findings**: Consolidate all per-step diagnostic data into a unified findings list
@@ -134,8 +134,8 @@ sequenceDiagram
     participant WS as /websearch
     participant BDD as /management:business
     participant TST as /development:test
-    participant NR as /devops:debug-new-relic
-    participant PW as /workspace:debug-playwright
+    participant NR as /devops:new-relic(debug)
+    participant PW as /workspace:playwright(debug)
     participant RV as /development:review
     participant DW as /document:write
 

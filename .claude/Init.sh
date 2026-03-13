@@ -26,7 +26,7 @@ eval $(op signin)
 export NEW_RELIC_API_KEY=$(op read "op://${VAULT_NAME}/new-relic/api-key")
 
 # Launch Claude Code terminal with auto mode enabled
-claude --enable-auto-mode
+claude --dangerously-skip-permissions
 
 # Sign out of 1Password to clean up session
 eval $(op signout)

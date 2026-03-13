@@ -43,7 +43,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 2. **Create Homologation Branches**: Setup branches in all specified repositories
 
-   - Call `/workspace:new --repo <repo[i]> --target-branch <target-branch[i]> --branch <working-branch[i]>` for each repo/branch pair
+   - Call `/workspace:repo --action new --repo <repo[i]> --target-branch <target-branch[i]> --branch <working-branch[i]>` for each repo/branch pair
    - Confirm branch creation in each repository
 
 3. **Generate Test Plan**: Design test coverage from acceptance criteria
@@ -79,7 +79,7 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 9. **AppHost Setup and Test Execution**: Run integrated tests
 
-   - Call `/workspace:setup-apphost --repos <repos> --branches <working-branches>`
+   - Call `/workspace:apphost --action setup --applications "<repos:working-branches>"`
    - Call `/development:test --repos <repos> --branches <working-branches> --environment apphost`
    - Generate testing report with pass/fail results, coverage metrics, and issues found
    - Call `/workspace:ask-user-question --question "Confirm to proceed with bug creation for the identified failures" --options "Proceed with bug creation; Skip bug creation; Describe changes"`
@@ -110,13 +110,13 @@ sequenceDiagram
     participant U as User
     participant C as /workflow:homologate
     participant WI as /devops:work-item
-    participant WS as /workspace:new
+    participant WS as /workspace:repo --action new
     participant AR as /management:architect
     participant DT as /development:test
     participant DR as /development:review
     participant DD as /development:develop
     participant DG as /development:git
-    participant SA as /workspace:setup-apphost
+    participant SA as /workspace:apphost(setup)
     participant BW as /devops:work-item
     participant PR as /devops:pull-request
 

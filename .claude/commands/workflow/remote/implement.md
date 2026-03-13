@@ -50,7 +50,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:new --repo <repo> --branch <working-branch>`
+   - Call `/workspace:repo --action new --repo <repo> --branch <working-branch>`
    - Verify branch is ready for code changes and target branch is up to date
 
 3. **Write Documentation Locally**: Produce the SDD documentation from the work item architecture design
@@ -115,7 +115,7 @@ sequenceDiagram
     participant U as User
     participant P as /workflow:remote:implement
     participant WI as /devops:work-item
-    participant WN as /workspace:new
+    participant WN as /workspace:repo --action new
     participant DW as /document:write
     participant DD as /development:develop
     participant DR as /development:review

@@ -42,14 +42,14 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 1. **Initialize Loop** — Resolve parameters and set iteration counter to 0
 
    - If `--file` is provided, resolve git worktree context to infer `--project`, `--branch`, and `--pipeline` from remote URL, current branch, and YAML filename
-   - Call `/devops:debug-pipeline` with `--portal <portal> --project <project> --pipeline <pipeline> --run <run> --branch <branch>`
+   - Call `/devops:pipeline --action debug` with `--portal <portal> --project <project> --pipeline <pipeline> --run <run> --branch <branch>`
    - Capture structured issue report with all failed steps, errors, and warnings
    - Track returned run ID for subsequent phases
    - **MANDATORY** Record iteration 1 start time and initial issue count
 
 2. **Setup Workspace** — Ensure target branch is available locally
 
-   - Call `/workspace:new` with `--repo <project> --branch <branch>`
+   - Call `/workspace:repo --action new` with `--repo <project> --branch <branch>`
    - Skip if branch worktree already exists in workspace
    - **MANDATORY** Branch must be checked out before fixes are applied
 
@@ -68,7 +68,7 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 
 5. **Re-run Pipeline** — Trigger new pipeline run on target branch
 
-   - Call `/devops:run-pipeline` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
+   - Call `/devops:pipeline --action run` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
    - Capture new run ID and wait for completion
    - **MANDATORY** Extract run ID from response for next debug phase
 
@@ -98,11 +98,11 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 sequenceDiagram
     participant U as User
     participant W as /workflow:fix-pipeline
-    participant DBG as /devops:debug-pipeline
-    participant WN as /workspace:new
+    participant DBG as /devops:pipeline(debug)
+    participant WN as /workspace:repo --action new
     participant FIX as /development:develop
     participant GIT as /development:git
-    participant RUN as /devops:run-pipeline
+    participant RUN as /devops:pipeline(run)
     participant A1 as zzaia-devops-specialist
     participant A2 as zzaia-workspace-manager
     participant A3 as zzaia-developer-specialist
@@ -152,7 +152,7 @@ sequenceDiagram
 
 ## ACCEPTANCE CRITERIA
 
-- Workflow successfully orchestrates `/devops:debug-pipeline`, `/workspace:new`, `/development:develop`, `/development:git`, and `/devops:run-pipeline` in sequence
+- Workflow successfully orchestrates `/devops:pipeline --action debug`, `/workspace:repo --action new`, `/development:develop`, `/development:git`, and `/devops:pipeline --action run` in sequence
 - Loop continues until pipeline succeeds or max iterations is reached
 - Each iteration extracts new run ID from pipeline run response and uses it in next debug phase
 - Iteration counter and safety limit are enforced
