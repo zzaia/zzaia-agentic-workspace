@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:bdd-scenarios
+description: Template for BDD Given/When/Then scenarios derived from acceptance criteria and work item requirements
+user-invocable: false
+---
+
 # BDD Scenarios — [FeatureTitle]
 
 ## Overview

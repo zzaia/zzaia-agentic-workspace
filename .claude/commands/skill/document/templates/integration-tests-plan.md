@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:integration-tests-plan
+description: Template for integration test plans defining scope, test cases, environments, and success criteria
+user-invocable: false
+---
+
 # [ServiceName] - Integration Tests Plan
 
 ## Overview

@@ -1,20 +1,20 @@
 ---
-name: /skill:document:read
+name: read 
 description: Extract text from PDF and Word documents and inject content into conversation context
 argument-hint: "--file <path> [--summary]"
-agents:
-  - name: zzaia-document-specialist
-    description: Extract and structure content from PDF and Word documents
-scripts:
-  - name: extract-document.py 
-    script: .claude/scripts/extract-document.py 
-parameters:
-  - name: file
-    description: Path to PDF (.pdf) or Word (.docx) document file
-    required: true
-  - name: summary
-    description: Show content summary without full text extraction
-    required: false
+user-invocable: true 
+agent: zzaia-document-specialist
+metadata:
+  scripts:
+    - name: extract-document.py 
+      script: ./scripts/extract-document.py 
+  parameters:
+    - name: file
+      description: Path to PDF (.pdf) or Word (.docx) document file
+      required: true
+    - name: summary
+      description: Show content summary without full text extraction
+      required: false
 ---
 
 ## PURPOSE
@@ -29,7 +29,7 @@ Extract structured text content from PDF and Word documents to reference in conv
    - Validate file extension
    - Report unsupported formats gracefully
 
-2. **Extract Content**: Run `.claude/scripts/extract-document.py` to parse document
+2. **Extract Content**: Run `./scripts/extract-document.py` to parse document
 
    - PDF: Extract text from all pages using pypdf
    - DOCX: Extract from paragraphs and tables using python-docx

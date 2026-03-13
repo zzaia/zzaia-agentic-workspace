@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:service-data-model
+description: Template for service data model documentation with entity relationships, fields, and constraints
+user-invocable: false
+---
+
 # [serviceName] - Data Models
 
 ## Entity Relationship Diagram

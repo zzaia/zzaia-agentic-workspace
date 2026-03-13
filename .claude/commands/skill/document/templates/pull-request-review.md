@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:pull-request-review
+description: Template for structured pull request code review reports with findings, risks, and recommendations
+user-invocable: false
+---
+
 # Pull Request Review — [PRTitle]
 
 ## Summary

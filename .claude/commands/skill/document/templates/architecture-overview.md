@@ -1,3 +1,9 @@
+---
+name: skill:document:templates:architecture-overview
+description: Template for high-level system architecture overview covering components, interactions, and design decisions
+user-invocable: false
+---
+
 # [Project Name] - Architecture Overview
 
 [Brief system description and architectural approach]
