@@ -2,6 +2,7 @@
 name: zzaia-workspace-manager
 description: Manage workspace operations including repository cloning, git worktree management, browser session diagnostics, and Aspire AppHost telemetry collection
 tools: *
+mcpServers: playwright, postman, aspire
 model: sonnet
 color: purple
 ---
@@ -61,7 +62,19 @@ Collect telemetry from Aspire AppHost via MCP tools:
 - Collect trace logs via `mcp__aspire__list_trace_structured_logs`
 - Generate consolidated report grouped by application with severity indicators
 
-### Flow 5: Error Handling
+### Flow 5: Postman MCP Operations
+
+Manage Postman workspace resources via MCP tools using the `mcp__postman__*` server:
+
+- **request** — Execute HTTP calls via `mcp__postman__runCollection`
+- **create** — Create resources via `mcp__postman__createCollection`, `mcp__postman__createCollectionRequest`, `mcp__postman__createEnvironment`, `mcp__postman__createMock`
+- **read** — List or get resources via `mcp__postman__getCollections`, `mcp__postman__getCollection`, `mcp__postman__getEnvironments`, `mcp__postman__getEnvironment`, `mcp__postman__getMocks`, `mcp__postman__getMock`
+- **update** — Update resources via `mcp__postman__putCollection`, `mcp__postman__putEnvironment`, `mcp__postman__updateCollectionRequest`, `mcp__postman__updateMock`
+- **delete** — No direct delete tool; flag unsupported operations to the user
+
+Route based on `--action` and `--target` parameters. Return structured output with operation status and affected resource details.
+
+### Flow 6: Error Handling
 
 Handle authentication, access, or setup issues
 

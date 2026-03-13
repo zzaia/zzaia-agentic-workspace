@@ -109,18 +109,18 @@ DevOps platform operations across Azure DevOps and GitHub.
 
 - [**`/devops:work-item`**](.claude/commands/devops/work-item.md) - Work item retrieval and management
 - [**`/devops:pull-request`**](.claude/commands/devops/pull-request.md) - Pull request management
-- [**`/devops:debug-pipeline`**](.claude/commands/devops/debug-pipeline.md) - Pipeline log diagnostics
-- [**`/devops:debug-new-relic`**](.claude/commands/devops/debug-new-relic.md) - New Relic log diagnostics
-- [**`/devops:run-pipeline`**](.claude/commands/devops/run-pipeline.md) - Run new or existing pipelines
+- [**`/devops:pipeline`**](.claude/commands/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
+- [**`/devops:new-relic`**](.claude/commands/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
 
 ### Workspace
 
 Multi-repository workspace configuration.
 
-- [**`/workspace:new`**](.claude/commands/workspace/new.md) - Add repository
-- [**`/workspace:setup-vscode`**](.claude/commands/workspace/setup-vscode.md) - VS Code configuration
-- [**`/workspace:setup-apphost`**](.claude/commands/workspace/setup-apphost.md) - Aspire AppHost setup
-- [**`/workspace:debug-apphost`**](.claude/commands/workspace/debug-apphost.md) - AppHost log diagnostics
+- [**`/workspace:repo`**](.claude/commands/workspace/repo.md) - Clone repos or create branches (`--action new`)
+- [**`/workspace:apphost`**](.claude/commands/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
+- [**`/workspace:playwright`**](.claude/commands/workspace/playwright.md) - Playwright browser diagnostics (`--action debug`)
+- [**`/workspace:vscode`**](.claude/commands/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
+- [**`/workspace:postman`**](.claude/commands/workspace/postman.md) - Postman workspace operations (`--action request|create|read|update|delete`)
 
 ### Document
 
