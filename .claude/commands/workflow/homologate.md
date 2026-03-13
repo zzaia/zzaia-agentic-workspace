@@ -37,61 +37,61 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 
 1. **Retrieve Work Item**: Fetch work item details and acceptance criteria
 
-   - Call `/devops:work-item --work-item <work-item>`
+   - Call `/behavior:devops:work-item --work-item <work-item>`
    - Extract title, description, acceptance criteria
    - **MANDATORY** Validate work item description is not empty
 
 2. **Create Homologation Branches**: Setup branches in all specified repositories
 
-   - Call `/workspace:repo --action new --repo <repo[i]> --target-branch <target-branch[i]> --branch <working-branch[i]>` for each repo/branch pair
+   - Call `/behavior:workspace:repo --action new --repo <repo[i]> --target-branch <target-branch[i]> --branch <working-branch[i]>` for each repo/branch pair
    - Confirm branch creation in each repository
 
 3. **Generate Test Plan**: Design test coverage from acceptance criteria
 
-   - Call `/management:architect --description "<description>" --context "<acceptance-criteria>" --focus test-plan`
+   - Call `/behavior:management:architect --description "<description>" --context "<acceptance-criteria>" --focus test-plan`
    - Document all test scenarios derived from acceptance criteria
-   - Call `/workspace:ask-user-question --question "Please clarify the testing scope or confirm it is correct to proceed"`
+   - Call `/behavior:workspace:ask-user-question --question "Please clarify the testing scope or confirm it is correct to proceed"`
    - Create concise Test Plan document covering test scope only
 
 4. **User Approval**: Wait for Test Plan approval
 
-   - Call `/workspace:ask-user-question --question "Is the test coverage complete? Confirm to proceed or describe what is missing"`
+   - Call `/behavior:workspace:ask-user-question --question "Is the test coverage complete? Confirm to proceed or describe what is missing"`
 
 5. **Implement Tests**: Write and run tests in each working branch
 
-   - Call `/development:test --repo <repo[i]> --branch <working-branch[i]> --action implement` for each repo
+   - Call `/behavior:development:test --repo <repo[i]> --branch <working-branch[i]> --action implement` for each repo
    - Implement test cases covering all acceptance criteria
    - Ensure test coverage across all specified repositories
 
 6. **Commit Initial Tests**: Persist test implementations
 
-   - Call `/development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "test: <description> [#<work-item>]"` for each repo
+   - Call `/behavior:development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "test: <description> [#<work-item>]"` for each repo
 
 7. **Review and Fix**: Validate test quality
 
-   - Call `/development:review --repo <repo[i]> --branch <working-branch[i]>` for each repo
-   - Call `/workspace:ask-user-question --question "Are any test improvements needed?" --options "Continue; Describe improvements needed"`
-   - Call `/development:develop --repo <repo[i]> --branch <working-branch[i]> --task "Fix test review issues"` as needed
+   - Call `/behavior:development:review --repo <repo[i]> --branch <working-branch[i]>` for each repo
+   - Call `/behavior:workspace:ask-user-question --question "Are any test improvements needed?" --options "Continue; Describe improvements needed"`
+   - Call `/behavior:development:develop --repo <repo[i]> --branch <working-branch[i]> --task "Fix test review issues"` as needed
 
 8. **Commit and Push Fixes**: Persist fixes
 
-   - Call `/development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "fix: <description> [#<work-item>]"` for each repo
+   - Call `/behavior:development:git --repo <repo[i]> --branch <working-branch[i]> --action commit-push --message "fix: <description> [#<work-item>]"` for each repo
 
 9. **AppHost Setup and Test Execution**: Run integrated tests
 
-   - Call `/workspace:apphost --action setup --applications "<repos:working-branches>"`
-   - Call `/development:test --repos <repos> --branches <working-branches> --environment apphost`
+   - Call `/behavior:workspace:apphost --action setup --applications "<repos:working-branches>"`
+   - Call `/behavior:development:test --repos <repos> --branches <working-branches> --environment apphost`
    - Generate testing report with pass/fail results, coverage metrics, and issues found
-   - Call `/workspace:ask-user-question --question "Confirm to proceed with bug creation for the identified failures" --options "Proceed with bug creation; Skip bug creation; Describe changes"`
+   - Call `/behavior:workspace:ask-user-question --question "Confirm to proceed with bug creation for the identified failures" --options "Proceed with bug creation; Skip bug creation; Describe changes"`
 
 10. **Create Bug Work Items**: File issues found in test execution
 
-    - Call `/devops:work-item --create --type Bug --title "<issue>" --description "<steps-to-reproduce>" --severity <severity> --parent <work-item>` for each bug
+    - Call `/behavior:devops:work-item --create --type Bug --title "<issue>" --description "<steps-to-reproduce>" --severity <severity> --parent <work-item>` for each bug
     - Provide summary of all created bug work items with IDs and links
 
 11. **Create Pull Requests**: Open PRs for all repositories
 
-    - Call `/devops:pull-request --repo <repo[i]> --source-branch <working-branch[i]> --target-branch <target-branch[i]> --work-item <work-item> --draft` for each repo
+    - Call `/behavior:devops:pull-request --repo <repo[i]> --source-branch <working-branch[i]> --target-branch <target-branch[i]> --work-item <work-item> --draft` for each repo
     - Provide all PR URLs in final summary
 
 ## DELEGATION
@@ -109,16 +109,16 @@ Orchestrate complete homologation (QA/acceptance testing) workflow for one or mo
 sequenceDiagram
     participant U as User
     participant C as /workflow:homologate
-    participant WI as /devops:work-item
-    participant WS as /workspace:repo --action new
-    participant AR as /management:architect
-    participant DT as /development:test
-    participant DR as /development:review
-    participant DD as /development:develop
-    participant DG as /development:git
-    participant SA as /workspace:apphost(setup)
-    participant BW as /devops:work-item
-    participant PR as /devops:pull-request
+    participant WI as /behavior:devops:work-item
+    participant WS as /behavior:workspace:repo --action new
+    participant AR as /behavior:management:architect
+    participant DT as /behavior:development:test
+    participant DR as /behavior:development:review
+    participant DD as /behavior:development:develop
+    participant DG as /behavior:development:git
+    participant SA as /behavior:workspace:apphost(setup)
+    participant BW as /behavior:devops:work-item
+    participant PR as /behavior:devops:pull-request
 
     U->>C: /homologate (work-item, repos, branches, description)
     C->>C: Validate parameters
@@ -132,7 +132,7 @@ sequenceDiagram
     C->>AR: Generate Test Plan (test cases focus)
     AR-->>C: Test Plan document
 
-    C->>U: /workspace:ask-user-question (approve Test Plan)
+    C->>U: /behavior:workspace:ask-user-question (approve Test Plan)
     U-->>C: Approval or clarifications
 
     C->>DT: Implement tests (per branch)
@@ -145,7 +145,7 @@ sequenceDiagram
     DR-->>C: Review feedback
 
     opt Fixes needed
-        C->>U: /workspace:ask-user-question (address fixes)
+        C->>U: /behavior:workspace:ask-user-question (address fixes)
         U-->>C: Approval for fixes
         C->>DD: Implement fixes
         DD-->>C: Fix summary
@@ -160,7 +160,7 @@ sequenceDiagram
     C->>DT: Execute tests (AppHost environment)
     DT-->>C: Testing report (pass/fail, coverage, issues)
 
-    C->>U: /workspace:ask-user-question (approve bug creation)
+    C->>U: /behavior:workspace:ask-user-question (approve bug creation)
     U-->>C: Approval or modifications
 
     loop For each issue found

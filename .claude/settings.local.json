@@ -7,7 +7,7 @@
       "Bash(git symbolic-ref:*)",
       "Bash(tree:*)",
       "Bash(python3:*)",
-      "SlashCommand(/websearch:*)",
+      "SlashCommand(/behavior:websearch:*)",
       "Bash(git --git-dir=.git --work-tree=. config core.bare false)",
       "Bash(git --git-dir=.git remote:*)",
       "Bash(git --git-dir=.git branch:*)"

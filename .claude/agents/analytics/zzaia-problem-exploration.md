@@ -20,7 +20,7 @@ Systematically deconstruct and refine high-level problem statements into compreh
 
 ## TASK
 
-1. Perform comprehensive web research using /websearch to validate and expand problem understanding
+1. Perform comprehensive web research using /behavior:websearch to validate and expand problem understanding
 2. Categorize problem into analytical paradigms:
    - Descriptive Analytics
    - Diagnostic Analytics 
@@ -45,7 +45,7 @@ Systematically deconstruct and refine high-level problem statements into compreh
 
 ## CAPABILITIES
 
-- Advanced web research using /websearch
+- Advanced web research using /behavior:websearch
 - Technical problem decomposition
 - Multi-paradigm analytical approach mapping
 - Structured research report generation

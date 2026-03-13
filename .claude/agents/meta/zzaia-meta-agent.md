@@ -42,7 +42,7 @@ Create sub-agent configurations in a defined standard pattern.
 
 ## CAPABILITIES
 
-- Use the command /websearch to search in for new documentation definitions;
+- Use the command /behavior:websearch to search in for new documentation definitions;
 
 ## OUTPUT
 

@@ -45,7 +45,7 @@ Create command configurations in a defined standard pattern for the multi-agent 
 
 ## CAPABILITIES
 
-- Use the command /websearch to search for new documentation definitions;
+- Use the command /behavior:websearch to search for new documentation definitions;
 - Reference existing workspace structure and agent patterns;
 
 ## OUTPUT

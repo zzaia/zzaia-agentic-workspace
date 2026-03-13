@@ -43,59 +43,59 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/devops:work-item --work-item <work-item> --portal <portal> --project <project>`
+   - Call `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - Pass retrieved context to implementation phase
    - **MANDATORY** Work item description must not be empty
-   - Change work item state to **Active** via `/devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Active`
+   - Change work item state to **Active** via `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/workspace:repo --action new --repo <repo> --target-branch <target-branch> --branch <working-branch>`
+   - Call `/behavior:workspace:repo --action new --repo <repo> --target-branch <target-branch> --branch <working-branch>`
    - Verify branch is ready for code changes and target branch is up to date
 
 3. **Think & Architect**: Analyze requirements and design the solution
 
    - **SKIP this phase if work item type is Bug**
-   - Call `/management:architect --description "<description>" --context "<work-item-details>"`
+   - Call `/behavior:management:architect --description "<description>" --context "<work-item-details>"`
    - Clarify all requirements with the user before proceeding
-   - Call `/workspace:ask-user-question --question "<clarifying question about requirements>"`
+   - Call `/behavior:workspace:ask-user-question --question "<clarifying question about requirements>"`
    - Produce a concise architecture design covering only what is relevant to the feature
    - **MANDATORY** All open questions must be resolved before proceeding to documentation
 
 4. **Write Documentation**: Produce the SDD documentation from the architecture design
 
    - **SKIP this phase if work item type is Bug**
-   - Call `/document:write --context "<architecture-output>" --output local`
+   - Call `/skill:document:write --context "<architecture-output>" --output local`
    - Generate one concise Specification Driven Design (SDD) document for the feature
    - **MANDATORY** Documentation must be written to file before user approval phase
 
 5. **Wait User Approval**: Wait for the user to review and make changes to the SDD documentation
 
    - **SKIP this phase if work item type is Bug**
-   - Call `/workspace:ask-user-question --question "Please review the SDD documentation and confirm to proceed or describe changes needed"`
+   - Call `/behavior:workspace:ask-user-question --question "Please review the SDD documentation and confirm to proceed or describe changes needed"`
 
 6. **Implement Feature**: Execute development based on approved SDD documentation or description
 
-   - Call `/development:develop --repo <repo> --branch <working-branch> --task "<description>"`
+   - Call `/behavior:development:develop --repo <repo> --branch <working-branch> --task "<description>"`
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
 7. **Review Changes**: Review all developed changes
 
-   - Call `/development:review --repo <repo> --branch <working-branch>`
-   - Call `/workspace:ask-user-question --question "What would you like to fix or improve?" --options "Continue as-is; Describe fixes needed"`
-   - Call `/development:develop --repo <repo> --branch <working-branch> --task "Fix review issues"`
+   - Call `/behavior:development:review --repo <repo> --branch <working-branch>`
+   - Call `/behavior:workspace:ask-user-question --question "What would you like to fix or improve?" --options "Continue as-is; Describe fixes needed"`
+   - Call `/behavior:development:develop --repo <repo> --branch <working-branch> --task "Fix review issues"`
 
 8. **Commit and Push**: Stage, commit, and push all changes
 
-   - Call `/development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
+   - Call `/behavior:development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
-   - Change work item state to **Resolved** via `/devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Resolved`
+   - Change work item state to **Resolved** via `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Resolved`
 
 9. **Create Draft Pull Request**: Open pull request
 
-   - Call `/devops:pull-request --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
+   - Call `/behavior:devops:pull-request --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
    - Link PR to original work item
 
 ## DELEGATION
@@ -113,14 +113,14 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 sequenceDiagram
     participant U as User
     participant P as /workflow:implement
-    participant WI as /devops:work-item
-    participant WN as /workspace:repo --action new
-    participant MA as /management:architect
-    participant DW as /document:write
-    participant DD as /development:develop
-    participant DR as /development:review
-    participant DG as /development:git
-    participant PR as /devops:pull-request
+    participant WI as /behavior:devops:work-item
+    participant WN as /behavior:workspace:repo --action new
+    participant MA as /behavior:management:architect
+    participant DW as /skill:document:write
+    participant DD as /behavior:development:develop
+    participant DR as /behavior:development:review
+    participant DG as /behavior:development:git
+    participant PR as /behavior:devops:pull-request
 
     U->>P: /workflow:implement <params>
 
@@ -139,7 +139,7 @@ sequenceDiagram
         P->>DW: Write SDD documentation
         DW-->>P: SDD file written
 
-        P->>U: /workspace:ask-user-question (review SDD)
+        P->>U: /behavior:workspace:ask-user-question (review SDD)
         U-->>P: Approved / changes requested
     end
 
@@ -148,7 +148,7 @@ sequenceDiagram
 
     P->>DR: Review changes
     DR-->>P: Review report
-    P->>U: /workspace:ask-user-question (fix/improve?)
+    P->>U: /behavior:workspace:ask-user-question (fix/improve?)
     U-->>P: Feedback
     P->>DD: Apply fixes
     DD-->>P: Fixes applied
