@@ -34,11 +34,9 @@ agents:
   - name: zzaia-devops-specialist
     description: Retrieve work items, post discussions, create bug work items
   - name: zzaia-tester-specialist
-    description: Execute tests against the target URL following BDD
+    description: Execute tests via /behavior:development:test
   - name: zzaia-document-specialist
     description: Generate BDD and test result documentation
-  - name: zzaia-workspace-manager
-    description: Resolve and manage Postman requests in the Agentic Workspace for e2e test execution
 ---
 
 ## PURPOSE
@@ -84,19 +82,11 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
    - Call `/behavior:workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
    - If user indicates changes: Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
 
-5. **Execute Tests**: Iterate through each BDD step in the Test Case Steps section in sequence
+5. **Execute Tests**: Iterate over each BDD step in the Test Case Steps and execute individually
 
-   - If `--type e2e` — before first step, resolve Postman request:
-     1. Call `/behavior:workspace:postman --action read --target request` to search for an existing request matching the BDD step URL/method in the Agentic Workspace
-     2. If found: use the existing request for execution
-     3. If not found: Call `/behavior:workspace:postman --action create --target request --spec "<method + url + headers + body>"` to create it, then use it
-   - If authentication is required (login, token, credential): Call `/behavior:workspace:ask-user-question --question "Authentication required. Please provide credentials or perform manual login in the Playwright session, then confirm to continue"`
    - For each step in Test Case Steps (in order):
-     1. Execute the step appropriate to `--type`:
-     2. Collect diagnostics immediately after execution regardless of pass/fail:
-        - Call `/behavior:devops:new-relic --action debug --application-name <application>` to capture server-side logs
-        - If `--type ui`: Call `/behavior:workspace:playwright --action debug --url <url>` to capture browser console logs
-     3. Display concise step report in prompt: step name, result (pass/fail), response time, anomalies or warnings found
+     - Call `/behavior:development:test --type <type> --step "<step>" --environment <url> --application <application>`
+     - Display concise step report immediately: step name, result (pass/fail), response time, anomalies
 
 6. **Correlate Step Findings**: Consolidate all per-step diagnostic data into a unified findings list
 
@@ -126,9 +116,8 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-devops-specialist` — Retrieve work items, post discussions, create child bug work items
-- `zzaia-tester-specialist` — Execute tests against the target URL, capture results and error details
+- `zzaia-tester-specialist` — Execute tests via `/behavior:development:test`, capture results
 - `zzaia-document-specialist` — Generate BDD scenarios, create test result documentation
-- `zzaia-workspace-manager` — Resolve, create, and execute Postman requests in the Agentic Workspace (e2e only)
 
 ## WORKFLOW DIAGRAM
 
@@ -141,10 +130,6 @@ sequenceDiagram
     participant WS as /behavior:websearch
     participant BDD as /behavior:management:business
     participant TST as /behavior:development:test
-    participant PM as /behavior:workspace:postman
-    participant NR as /behavior:devops:new-relic(debug)
-    participant PW as /behavior:workspace:playwright(debug)
-    participant RV as /behavior:development:review
     participant DW as /skill:document:write
 
     U->>W: /workflow:remote:homologate --type <e2e|ui|integration> <params>
@@ -173,26 +158,11 @@ sequenceDiagram
     U-->>W: Confirmed
     W->>WI: --action read-discussion --id <test-case> --project <project>
     WI-->>W: User replies and BDD corrections
-    opt --type is e2e
-        W->>PM: --action read --target request
-        PM-->>W: Existing request or not found
-        alt request not found
-            W->>PM: --action create --target request --spec <method+url+headers+body>
-            PM-->>W: Request created
-        end
-    end
     loop for each BDD step in Test Case Steps
-        W->>TST: execute step --type <type> --environment <url>
-        TST-->>W: Step result (pass/fail, timing, errors)
-        W->>NR: --application <application>
-        NR-->>W: Server-side logs
-        alt --type is ui
-            W->>PW: --url <url>
-            PW-->>W: Browser console logs
-        end
-        W-->>U: Step report (concise inline)
+        W->>TST: /behavior:development:test --type <type> --step <step> --environment <url> --application <application>
+        TST-->>W: Step report (pass/fail, timing, anomalies)
+        W-->>U: Concise step report
     end
-    W->>W: Correlate all step findings by severity
     W->>DW: --template test-result-report --title "Results: <title>" --context <results+logs> --work-item <test-case> --target-field discussion
     DW-->>W: Report posted to Test Case discussion
     W->>U: /behavior:workspace:ask-user-question (reply to Test Case discussion with approved bug list)
