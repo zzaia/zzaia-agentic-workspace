@@ -1,7 +1,7 @@
 ---
 name: document
 description: Document operations — read, write, and scrape PDF/Word documents
-argument-hint: "--action <read|write|scrap> [options]"
+argument-hint: "--action <read|write|scrap> --description <text> [options]"
 ---
 
 # document Skill
@@ -10,9 +10,10 @@ Unified entry point for document operations. Routes to the appropriate sub-comma
 
 ## Parameters
 
-| Parameter  | Required | Description                                         |
-|------------|----------|-----------------------------------------------------|
-| `--action` | Yes      | Operation to perform: `read`, `write`, or `scrap`   |
+| Parameter       | Required | Description                                         |
+|-----------------|----------|-----------------------------------------------------|
+| `--action`      | Yes      | Operation to perform: `read`, `write`, or `scrap`   |
+| `--description` | No       | Broader description of what to do within the action |
 
 ## Action Routing
 
