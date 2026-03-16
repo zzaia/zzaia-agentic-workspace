@@ -97,7 +97,7 @@ Path: `.claude/commands/skill/<skill-name>/<action>/SKILL.md`
 ---
 name: <action>
 description: <one-line description>
-argument-hint: "--<param> <value> [--<optional-param> <value>]"
+argument-hint: "--<param> <value> --description <text> [--<optional-param> <value>]"
 user-invocable: true
 agent: <agent-name>
 metadata:
@@ -108,6 +108,9 @@ metadata:
     - name: <param-name>
       description: <param description>
       required: <true|false>
+    - name: description
+      description: Broader description of what to do within this action
+      required: false
 ---
 
 ## PURPOSE
