@@ -15,9 +15,21 @@ echo ""
 echo "         ⚡  Agentic Workspace  ⚡"
 echo ""
 
-# Prompt for 1Password vault name
-read -p "Enter 1Password vault name: " VAULT_NAME
-export VAULT_NAME
+# Accept vault name and session ID as args (re-exec path) or prompt the user
+if [ -n "$1" ] && [ -n "$2" ]; then
+    VAULT_NAME="$1"
+    SESSION_ID="$2"
+else
+    read -p "Enter 1Password vault name: " VAULT_NAME
+    read -p "Enter session ID: " SESSION_ID
+fi
+export VAULT_NAME SESSION_ID
+
+# Ensure session runs inside tmux for persistent terminal support
+if [ -z "$TMUX" ]; then
+    tmux new-session -A -s "${VAULT_NAME}-${SESSION_ID}" "$0" "$VAULT_NAME" "$SESSION_ID"
+    exit $?
+fi
 
 # Sign in to 1Password to enable secret injection
 eval $(op signin)
