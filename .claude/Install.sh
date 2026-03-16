@@ -135,9 +135,17 @@ if ! "$CONDA_BIN" env list | grep -q "venv-development"; then
     "$CONDA_BIN" create -n venv-development python=3 -y
 fi
 
-# ── 12. k6 Load Testing + Web Dashboard ─────────────────────────────────────
+# ── 12. tmux ────────────────────────────────────────────────────────────────
+if ! is_installed tmux; then
+    echo "[12/13] Installing tmux..."
+    sudo apt-get install -y tmux
+else
+    echo "[12/13] tmux already installed"
+fi
+
+# ── 13. k6 Load Testing + Web Dashboard ─────────────────────────────────────
 if ! is_installed k6; then
-    echo "[12/12] Installing k6..."
+    echo "[13/13] Installing k6..."
     sudo gpg --no-default-keyring \
         --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
         --keyserver hkp://keyserver.ubuntu.com:80 \
@@ -147,7 +155,7 @@ if ! is_installed k6; then
     sudo apt-get update -qq
     sudo apt-get install -y k6
 else
-    echo "[12/12] k6 already installed"
+    echo "[13/13] k6 already installed"
 fi
 
 pip install pypdf python-docx
