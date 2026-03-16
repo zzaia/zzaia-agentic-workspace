@@ -29,13 +29,13 @@ Execute a single BDD step as a browser interaction via Playwright, collect New R
 
 2. **Execute Step**
 
-   - Call `/behavior:workspace:playwright --action run --url <environment> --step "<step>"`
+   - Call `/skill:playwright:navigate --url <environment> --description "<step>"`
    - Capture: interaction result, screenshot on failure, execution time
 
 3. **Collect Diagnostics**
 
    - Call `/behavior:devops:new-relic --action debug --application-name <application>` for server-side logs
-   - Call `/behavior:workspace:playwright --action debug --url <environment>` for browser console logs
+   - Call `/skill:playwright:debug --url <environment>` for browser console logs
 
 4. **Report Step Result**
 
@@ -53,15 +53,15 @@ Execute a single BDD step as a browser interaction via Playwright, collect New R
 ```mermaid
 sequenceDiagram
     participant C as behavior:development:test:ui
-    participant PW as /behavior:workspace:playwright
+    participant PW as /skill:playwright
     participant TS as zzaia-tester-specialist
     participant NR as /behavior:devops:new-relic
 
-    C->>PW: --action run --url <environment> --step <step>
+    C->>PW: /skill:playwright:navigate --url <environment> --description <step>
     PW-->>C: Interaction result (pass/fail, timing)
     C->>NR: --action debug --application-name <application>
     NR-->>C: Server-side logs and anomalies
-    C->>PW: --action debug --url <environment>
+    C->>PW: /skill:playwright:debug --url <environment>
     PW-->>C: Browser console logs
     C-->>C: Step report (pass/fail, timing, anomalies)
 ```
