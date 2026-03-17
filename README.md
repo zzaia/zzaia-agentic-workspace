@@ -228,7 +228,7 @@ sequenceDiagram
 | [**zzaia-web-searcher**](.claude/agents/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
 | [**zzaia-document-specialist**](.claude/agents/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
 | [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent generation utilities |
-| [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation utilities |
+| [**zzaia-meta-behavior**](.claude/agents/meta/zzaia-meta-behavior.md) | Behavior generation utilities |
 | [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Skill generation utilities |
 | [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation utilities |
 
