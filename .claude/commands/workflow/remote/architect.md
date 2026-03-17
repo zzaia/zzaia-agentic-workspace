@@ -1,7 +1,7 @@
 ---
 name: /workflow:remote:architect
 description: Orchestrate architectural documentation and work-item hierarchy creation using Specification Driven Design
-argument-hint: "--selected-work-item <id> --portal <url> --project <name> [--description <text>]"
+argument-hint: "--selected-work-item <id> --project <name> [--description <text>] [--workspace <path>] [--doc <path>] [--url <url>]"
 parameters:
   - name: selected-work-item
     description: Work item ID to architect (Epic, Feature, User Story, or Task)
@@ -25,50 +25,50 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelize hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent teams collaboration through Azure DevOps discussions during the architectural design. The
-
+Orchestrate architectural documentation and work-item hierarchy creation for a given selected work item using Specification Driven Design (SDD). Decomposes requirements into a parallelizable hierarchy of work items, each with embedded SDD documentation at the appropriate abstraction level (Epic → Feature → User Story → Task). Enables human and agent team collaboration through Azure DevOps discussions, gating every structural change behind user approval before proceeding.
 
 ## WORKFLOW PHASES
 
 1. **Retrieve Work Item Chain**
-   - Call `/behavior:devops:work-item --id <selected-work-item> --project <project>`
+   - Call `/behavior:devops:work-item --action read --id <selected-work-item> --project <project>`
    - Collect Title, Description, Acceptance Criteria from each level (Epic → Feature → User Story → Task)
-   - **MANDATORY** Selected work item description must not be empty
+   - **MANDATORY** Selected work item description must not be empty before proceeding
 
 2. **Gather Repository and Referenced Documentation**
-   - Inspect local workspace path `<workspace>` using the `Read` tool for source code, configs, and existing docs
-   - Call `/skill:document:read --doc <doc>` if a local document path is provided
-   - Call `/behavior:websearch --url <url>` if a URL reference is provided
-   - Enrich architectural context with retrieved repository structure and materials
+   - If `workspace` is provided: inspect the local path using the `Read` tool for source code, configs, and existing docs
+   - If `doc` is provided: call `/skill:document:read --file <doc>` to inject local document context
+   - If `url` is provided: call `/behavior:websearch --query "<url>"` to fetch and inject URL context
+   - Enrich architectural context with all retrieved materials
 
 3. **Generate Selected Work Item Architecture**
-   - Call `/behavior:management:architect --work-description "<description>" --work-directory <workspace>`
+   - Call `/behavior:management:architect --work-description "<description>"` (include `--work-directory <workspace>` only if `workspace` is provided)
    - Call `/behavior:management:clarify --context "<architectural-design-output>"` to generate critical clarification questions
-   - Call `/behavior:devops:work-item --id <selected-work-item> --project <project>` to post a discussion with all clarification questions as a numbered list
+   - Call `/behavior:devops:work-item --action post-discussion --id <selected-work-item> --project <project>` to post all clarification questions as a numbered list
    - **MANDATORY** Do NOT create child work items or update descriptions before user responds
 
 4. **Validate Selected Work Item Documentation**
    - Call `/behavior:workspace:ask-user-question --question "Reply to the Azure DevOps discussion with your answers, then confirm to continue"`
-   - Call `/behavior:devops:work-item --id <selected-work-item> --project <project>` to read all discussion answers
-   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item> --target-field discussion` to generate the finalized SDD
+   - Call `/behavior:devops:work-item --action read-discussion --id <selected-work-item> --project <project>` to read all discussion answers
+   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item> --target-field discussion` to post the finalized SDD as a discussion thread
 
 5. **Plan Child Work Item Hierarchy**
    - Call `/behavior:management:plan --work-description "<finalized-sdd-content>"` to decompose into a parallelizable agile hierarchy
-   - Call `/behavior:devops:work-item --id <selected-work-item> --project <project>` to post the full plan (hierarchy, dependency graph, parallelization map) as a discussion
+   - Call `/behavior:devops:work-item --action post-discussion --id <selected-work-item> --project <project>` to post the full plan (hierarchy, dependency graph, parallelization map) as a discussion
    - **MANDATORY** Do NOT create any child work items before the user approves the plan
 
 6. **Validate Plan**
    - Call `/behavior:workspace:ask-user-question --question "Reply to the plan discussion in Azure DevOps with your feedback, then confirm to continue"`
-   - Call `/behavior:devops:work-item --id <selected-work-item> --project <project>` to read all plan approval/feedback from the discussion
+   - Call `/behavior:devops:work-item --action read-discussion --id <selected-work-item> --project <project>` to read all plan approval/feedback from the discussion
 
 7. **Create Child Work Items**
-   - Call `/behavior:devops:work-item --project <project>` to create all work items with dependency links (`related`, `consumes-from`) per the plan
-   - Call `/skill:document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id> --target-field discussion` for each child work item
+   - Call `/behavior:devops:work-item --action create --project <project>` to create all work items with dependency links (`related`, `consumes-from`) per the approved plan
+   - Collect all returned child work item IDs before proceeding
+   - For each child work item ID: call `/skill:document:write --template service-architecture --title "<child-work-item-title>" --work-item <child-work-item-id> --target-field discussion`
 
 8. **Validate Overall Architecture**
    - Call `/behavior:workspace:ask-user-question --question "Review all work items in Azure DevOps and reply to each individual discussion if changes are needed, then confirm to continue"`
-   - For each work item: call `/behavior:devops:work-item --id <child-work-item-id> --project <project>` to read answers from its individual discussion
-   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to update the SDD with the answers
+   - For each work item: call `/behavior:devops:work-item --action read-discussion --id <child-work-item-id> --project <project>` to read answers from its individual discussion
+   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to post the updated SDD as a discussion thread
 
 ## WORKFLOW
 
@@ -81,78 +81,75 @@ sequenceDiagram
     participant DW as document:write
     participant D as DevOps
 
-    U->>C: /workflow:remote:architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL]
-    C->>C: Validate parameters
-    C->>WM: Retrieve selected work item chain
+    U->>C: /workflow:remote:architect --selected-work-item ID [--description TEXT] [--doc PATH] [--url URL] [--workspace PATH]
+    C->>C: Validate parameters — selected-work-item description must not be empty
+    C->>WM: /behavior:devops:work-item --action read retrieve selected work item chain
     WM->>D: Query work items
     D-->>WM: Return hierarchy
     WM-->>C: Work item chain data
+    opt --workspace provided
+        C->>C: Inspect repository structure and source code
+    end
     opt --doc provided
-        C->>C: /skill:document:read inject local file context
+        C->>C: /skill:document:read --file inject local file context
     end
     opt --url provided
-        C->>C: /behavior:websearch fetch URL context
-    end
-    opt workspace provided
-        C->>C: Inspect repository structure and source code
+        C->>C: /behavior:websearch --query fetch URL context
     end
     C->>AR: /behavior:management:architect with enriched context
     AR-->>C: Architectural design
     C->>C: /behavior:management:clarify generate clarification questions
-    C->>WM: Post clarification questions as discussion on selected work item
+    C->>WM: /behavior:devops:work-item --action post-discussion clarification questions
     WM->>D: Create discussion thread
     D-->>C: Discussion link
     C->>U: /behavior:workspace:ask-user-question: reply in DevOps and confirm
     U-->>C: Confirmation
-    C->>WM: Read discussion answers
+    C->>WM: /behavior:devops:work-item --action read-discussion fetch answers
     WM->>D: Fetch discussion replies
     D-->>WM: Answers
     WM-->>C: Discussion content
-    C->>DW: /skill:document:write generate selected work item SDD
-    DW-->>C: SDD markdown
-    C->>WM: Update selected work item description with finalized SDD
-    WM->>D: Update description
+    C->>DW: /skill:document:write --target-field discussion post selected work item SDD
+    DW-->>C: SDD posted as discussion thread
     C->>C: /behavior:management:plan decompose SDD into agile hierarchy
-    C->>WM: Post plan (hierarchy, dependencies, parallelization map) as discussion on selected work item
+    C->>WM: /behavior:devops:work-item --action post-discussion post plan
     WM->>D: Create plan discussion thread
     D-->>C: Discussion link
     C->>U: /behavior:workspace:ask-user-question: review and approve plan in DevOps discussion
     U-->>C: Confirmation
-    C->>WM: Read plan approval from selected work item discussion
+    C->>WM: /behavior:devops:work-item --action read-discussion read plan approval
     WM->>D: Fetch discussion replies
     D-->>WM: Approval content
     WM-->>C: Confirmed plan
-    C->>WM: Create all child work items with dependency links per plan
+    C->>WM: /behavior:devops:work-item --action create all child work items with dependency links
     WM->>D: Batch create work items and links
     D-->>WM: Child work item IDs
-    C->>DW: /skill:document:write generate SDD for all child work items
-    DW-->>C: SDD markdown per work item
-    C->>WM: Update all child work item descriptions with finalized SDD
-    WM->>D: Batch update descriptions
+    WM-->>C: Collected child work item IDs
+    C->>DW: /skill:document:write --target-field discussion SDD for all child work items
+    DW-->>C: SDD posted as discussion threads per work item
     C->>U: /behavior:workspace:ask-user-question: review all work items in DevOps, reply to each discussion if changes needed, and confirm
     U-->>C: Confirmation
     loop For Each Work Item
-        C->>WM: Read answers from work item discussion
+        C->>WM: /behavior:devops:work-item --action read-discussion fetch answers
         WM->>D: Fetch discussion replies
         D-->>WM: Answers
         WM-->>C: Discussion content
-        C->>DW: /skill:document:write update SDD with answers
-        DW-->>C: Updated SDD markdown
-        C->>WM: Update work item description with revised SDD
-        WM->>D: Update description
+        C->>DW: /skill:document:write --target-field discussion post updated SDD with answers
+        DW-->>C: Updated SDD posted as discussion thread
     end
     C-->>U: Complete - all work items architected with SDD
 ```
 
 ## ACCEPTANCE CRITERIA
 
+- Selected work item description validated as non-empty before any phase proceeds
 - Selected work item chain retrieved and understood
-- Referenced documentation integrated into context
+- All provided optional context sources (workspace, doc, url) integrated into architectural context before design begins
 - Selected work item SDD discussion posted before any structural changes
 - Selected work item description updated with finalized markdown SDD
 - Work-item plan (hierarchy, dependency graph, parallelization map) posted as discussion on selected work item
 - Plan validated via DevOps discussion before any child work items are created
 - Child work items created with SDD documentation embedded in descriptions from the start
+- All child work item IDs captured before SDD write loop begins
 - Dependency links established between child work items per the validated plan
 - Overall architecture validated by user reviewing individual work item discussions before completion
 - All work item SDDs updated with answers from their individual Azure DevOps discussions
