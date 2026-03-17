@@ -3,7 +3,6 @@ name: new
 description: Create a new named tmux session with optional directory and window name
 argument-hint: "--name <session-name> [--dir <path>] [--window <name>] [--description <context>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   parameters:
     - name: name
@@ -31,12 +30,6 @@ Create a new tmux session with a specified name, optional starting directory, an
 3. **Configure**: If `--dir` is provided, set the session's working directory
 4. **Name Window**: If `--window` is provided, rename the initial window
 5. **Verify**: Confirm the session was created successfully
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Creates tmux sessions and manages terminal workspace configuration
 
 ## WORKFLOW
 

@@ -3,7 +3,6 @@ name: send-keys
 description: Send keystrokes or commands to a target tmux session/pane
 argument-hint: "--name <session-name> --keys <command> [--pane <index>] [--description <context>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   parameters:
     - name: name
@@ -31,12 +30,6 @@ Send keyboard input or shell commands to a specific pane within a tmux session. 
 3. **Send**: Execute `tmux send-keys -t <session>:<window>.<pane> <keys> Enter`
 4. **Verify**: Confirm the keys were sent without error
 5. **Report**: Provide confirmation of the command sent
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Sends commands to tmux panes and manages interactive terminal automation
 
 ## WORKFLOW
 

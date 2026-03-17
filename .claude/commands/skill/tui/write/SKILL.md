@@ -3,7 +3,6 @@ name: write
 description: Send a structured event to the TUI for display as a formatted log entry
 argument-hint: "--type <info|success|error|warning|agent|tool|markdown> --message <text> [--description <text>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   scripts:
     - name: client
@@ -29,12 +28,6 @@ Send a structured event to the TUI via Unix socket. The event is rendered as a f
 1. **Validate input**: Ensure `--type` is one of the allowed values and `--message` is provided
 2. **Build JSON payload**: Create `{"type": "<type>", "message": "<message>"}`
 3. **Connect and send**: Use `client.py` to send the payload to `/tmp/zzaia-tui.sock`
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Handle socket communication and event dispatch
 
 ## WORKFLOW
 

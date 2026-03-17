@@ -3,7 +3,6 @@ name: close
 description: Gracefully shutdown the running TUI server and remove Unix socket
 argument-hint: "[--description <text>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   scripts:
     - name: client
@@ -23,12 +22,6 @@ Gracefully shutdown the running TUI server by sending a shutdown signal via the 
 1. **Send shutdown signal**: Use `client.py` to send `{"type": "shutdown"}` message to the socket
 2. **Wait for exit**: Give the server process time to exit cleanly
 3. **Clean up files**: Remove `/tmp/zzaia-tui.sock` and `/tmp/zzaia-tui.pid`
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Handle process termination and file cleanup
 
 ## WORKFLOW
 

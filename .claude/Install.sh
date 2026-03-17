@@ -158,7 +158,7 @@ else
     echo "[13/13] k6 already installed"
 fi
 
-pip install pypdf python-docx
+pip install pypdf python-docx textual
 
 echo ""
 echo "✅ Installation complete."

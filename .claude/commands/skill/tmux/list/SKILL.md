@@ -3,7 +3,6 @@ name: list
 description: List all active tmux sessions with status, windows, and creation time
 argument-hint: "[--description <context>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   parameters:
     - name: description
@@ -21,12 +20,6 @@ Retrieve and display all currently active tmux sessions with detailed informatio
 2. **Format**: Parse session data to extract name, window count, and timestamp
 3. **Display**: Present sessions in a tabular format with status indicators
 4. **Filter**: Highlight attached vs. detached sessions
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Queries tmux session state and workspace status
 
 ## WORKFLOW
 
