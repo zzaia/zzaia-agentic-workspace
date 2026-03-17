@@ -30,12 +30,9 @@ Attach to an existing tmux session by name or index, switching the active termin
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:attach --name dev
-    C->>WM: Attach to session 'dev'
-    WM->>WM: Run tmux attach-session
-    WM-->>C: Attached to session
+    C->>C: Run tmux attach-session -t dev
     C-->>U: Terminal switched to session
 ```
 

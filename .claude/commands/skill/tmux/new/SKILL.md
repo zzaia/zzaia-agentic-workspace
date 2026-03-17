@@ -37,12 +37,9 @@ Create a new tmux session with a specified name, optional starting directory, an
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:new --name dev --dir /repo
-    C->>WM: Create session named 'dev' in /repo
-    WM->>WM: Run tmux new-session
-    WM-->>C: Session created
+    C->>C: Run tmux new-session -d -s dev
     C-->>U: Session 'dev' ready
 ```
 
