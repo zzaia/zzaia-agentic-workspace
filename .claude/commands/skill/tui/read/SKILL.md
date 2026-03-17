@@ -3,7 +3,6 @@ name: read
 description: Read the last N log lines from the TUI via Unix socket
 argument-hint: "--lines <number> [--description <text>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   scripts:
     - name: client
@@ -27,12 +26,6 @@ Query the TUI server for the last N log lines and retrieve them via the Unix soc
 2. **Build request**: Create `{"type": "read", "lines": N}`
 3. **Send query**: Use `client.py` to send the request to `/tmp/zzaia-tui.sock`
 4. **Parse response**: Extract and format the returned log lines
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Handle socket communication and log retrieval
 
 ## WORKFLOW
 

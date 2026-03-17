@@ -3,7 +3,6 @@ name: split-window
 description: Split a tmux window horizontally or vertically in a target session/window
 argument-hint: "--name <session-name> [--direction <horizontal|vertical>] [--window <index>] [--description <context>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   parameters:
     - name: name
@@ -33,12 +32,6 @@ Split a tmux window into multiple panes either horizontally or vertically within
    - Vertical: `tmux split-window -v -t <session>:<window>`
 4. **Verify**: Confirm the pane was created successfully
 5. **Report**: Display the new pane layout
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Manages tmux window layouts and pane configuration
 
 ## WORKFLOW
 

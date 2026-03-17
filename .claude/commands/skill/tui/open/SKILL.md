@@ -3,7 +3,6 @@ name: open
 description: Start TUI server in a new tmux split pane with Unix socket at /tmp/zzaia-tui.sock
 argument-hint: "--session <name> --direction <horizontal|vertical> [--description <text>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   scripts:
     - name: server
@@ -29,12 +28,6 @@ Start a Textual TUI server in a new tmux split pane. The TUI listens on a Unix s
 1. **Create tmux split**: Use `skill:tmux:split-window` to create a new pane in the specified direction
 2. **Launch server**: Execute `server.py` in the new pane, which binds the Unix socket and starts the Textual app
 3. **Verify socket**: Confirm the socket file exists at `/tmp/zzaia-tui.sock` and is ready for connections
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Handle tmux split pane creation and server process management
 
 ## WORKFLOW
 

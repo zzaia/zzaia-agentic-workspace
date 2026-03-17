@@ -3,7 +3,6 @@ name: kill-session
 description: Kill tmux sessions by name or kill all sessions
 argument-hint: "[--name <session-name>] [--description <context>]"
 user-invocable: true
-agent: zzaia-workspace-manager
 metadata:
   parameters:
     - name: name
@@ -27,12 +26,6 @@ Terminate one or more tmux sessions. If a session name is provided, kills that s
    - All sessions: `tmux kill-server`
 4. **Verify**: Confirm the session(s) were killed successfully
 5. **Report**: Display confirmation with killed session details
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Manages tmux session lifecycle and cleanup operations
 
 ## WORKFLOW
 
