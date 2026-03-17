@@ -37,12 +37,9 @@ Send keyboard input or shell commands to a specific pane within a tmux session. 
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:send-keys --name dev --keys "npm start"
-    C->>WM: Send 'npm start' to session 'dev'
-    WM->>WM: Run tmux send-keys
-    WM-->>C: Command sent
+    C->>C: Run tmux send-keys -t dev "npm start" Enter
     C-->>U: Keys sent to pane
 ```
 

@@ -33,12 +33,9 @@ Terminate one or more tmux sessions. If a session name is provided, kills that s
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:kill-session --name dev
-    C->>WM: Kill session 'dev'
-    WM->>WM: Run tmux kill-session
-    WM-->>C: Session terminated
+    C->>C: Run tmux kill-session -t dev
     C-->>U: Session 'dev' killed
 ```
 

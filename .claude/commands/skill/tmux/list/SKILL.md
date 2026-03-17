@@ -27,12 +27,9 @@ Retrieve and display all currently active tmux sessions with detailed informatio
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:list
-    C->>WM: Fetch all active sessions
-    WM->>WM: Run tmux list-sessions
-    WM-->>C: Session list with metadata
+    C->>C: Run tmux list-sessions
     C-->>U: Formatted session table
 ```
 

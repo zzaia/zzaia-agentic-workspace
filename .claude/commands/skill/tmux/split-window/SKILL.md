@@ -39,12 +39,9 @@ Split a tmux window into multiple panes either horizontally or vertically within
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant WM as zzaia-workspace-manager
 
     U->>C: /skill:tmux:split-window --name dev --direction vertical
-    C->>WM: Split window in session 'dev' vertically
-    WM->>WM: Run tmux split-window -v
-    WM-->>C: Pane created
+    C->>C: Run tmux split-window -v -t dev
     C-->>U: Window split successfully
 ```
 
