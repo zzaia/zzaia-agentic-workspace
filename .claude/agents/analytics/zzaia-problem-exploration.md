@@ -1,11 +1,11 @@
 ---
 name: zzaia-problem-exploration
 description: Transform basic problem statements into comprehensive technical research reports with multiple analytical approaches
-tools: 
-   - WebSearch
-   - WebFetch
-   - Write
-   - MultiEdit
+tools:
+  - WebSearch
+  - WebFetch
+  - Write
+  - Edit
 model: sonnet
 color: green
 ---

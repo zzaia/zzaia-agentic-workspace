@@ -2,9 +2,11 @@
 name: zzaia-meta-skill
 description: Generates a new, complete Claude Code skill in the standard folder structure. Use this to create new skills. Use this Proactively when the user asks you to create a new skill.
 tools:
+  - Read
   - Write
+  - Edit
   - WebFetch
-  - MultiEdit
+  - Glob
 model: haiku
 color: purple
 ---
@@ -21,7 +23,7 @@ Create skills in the standard multi-file folder structure for the multi-agent or
 
 1. **Fetch Documentation**: Get latest documentation from:
 
-   - `https://code.claude.com/docs/en/skills`
+   - `https://docs.anthropic.com/en/docs/claude-code/slash-commands`
 
 2. **Ask Clarifying Questions**:
 

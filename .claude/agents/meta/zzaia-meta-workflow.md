@@ -1,10 +1,12 @@
 ---
 name: zzaia-meta-workflow
 description: Use when creating or updating workflow commands in .claude/commands/workflow/ that orchestrate sequences of existing commands across the ZZAIA system.
-tools: 
+tools:
+  - Read
   - Write
+  - Edit
   - WebFetch
-  - MultiEdit
+  - Glob
 model: haiku
 color: cyan
 ---

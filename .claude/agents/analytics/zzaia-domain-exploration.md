@@ -1,11 +1,11 @@
 ---
 name: zzaia-domain-exploration
 description: Proactively uncover hidden, commercially viable problems across multiple domains for data science and software engineering solutions
-tools: 
-   - WebSearch
-   - WebFetch
-   - Write
-   - MultiEdit
+tools:
+  - WebSearch
+  - WebFetch
+  - Write
+  - Edit
 model: sonnet
 color: green
 ---
