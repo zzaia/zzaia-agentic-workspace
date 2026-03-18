@@ -1,7 +1,7 @@
 ---
 name: implement
 description: Orchestrate implementation of multiple work items by analyzing dependencies and dispatching parallel or sequential execution
-argument-hint: "--work-items <id-list> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --description <text>"
+argument-hint: "--work-items <id-list> --portal <azure|github> --project <name> --target-branch <branch> --description <text>"
 user-invocable: true
 metadata:
   parameters:
@@ -13,9 +13,6 @@ metadata:
       required: true
     - name: project
       description: Project name in the DevOps portal
-      required: true
-    - name: repo
-      description: Repository name shared across all work items
       required: true
     - name: target-branch
       description: Base branch for all feature branches
@@ -34,11 +31,17 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 1. **Retrieve all work items**
 
    - For each ID in `--work-items`, call `/behavior:devops:work-item --action read --id <id> --project <project> --platform <portal>`
-   - Collect per-item: title, type, parent, child links, and related work-item IDs
-   - Build a dependency map: `{ id → [blocked-by ids] }`
+   - Collect per-item: title, type, parent, child links, related work-item IDs, and **repository reference**
+   - Resolve `repo` per work item using this priority order:
+     1. Repository name or URL explicitly mentioned in the work item description or tags
+     2. Repository inferred from the work item's parent or linked items
+     3. Repository matched by inspecting `workspace/` for a worktree or folder name that aligns with the work item's domain/title
+   - Fail with a clear error if no repository can be resolved for a work item
+   - For each resolved repo, verify that the target branch worktree exists in `workspace/<repo>.worktrees/`; if absent, call `/behavior:workspace:repo --action new --repo <repoName|repoUrl> --branch <working-branch> --target-branch <target-branch>` to clone and set it up before dispatching
 
 2. **Analyse dependencies**
 
+   - Build a dependency map: `{ id → [blocked-by ids] }`
    - Inspect each work item's relationships (parent/child, predecessor/successor, related links)
    - Dependency classification rules:
      - **parent/child**: child depends on parent — parent must complete first
@@ -53,10 +56,11 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 
    - For each item derive `working-branch` as `feature/wi-<id>`
    - Escape `--description` content: wrap in quotes and replace any internal quotes with `\"` to prevent invocation parsing failures
-   - Build the complete self-contained invocation:
+   - Build the complete self-contained invocation using the resolved `repo` per item:
      ```
-     /workflow:remote:implement --work-item <id> --portal <portal> --project <project> --repo <repo> --target-branch <target-branch> --working-branch feature/wi-<id> --description <description> --auto-continue
+     /workflow:remote:implement --work-item <id> --portal <portal> --project <project> --repo <resolved-repo> --target-branch <target-branch> --working-branch feature/wi-<id> --description <description> --auto-continue
      ```
+   - Create the list of invocations for each item, grouped by their execution group (parallel or sequential) taking into account the maximum number of agents to dispatch simultaneously in parallel groups (default: 5)
 
 4. **Dispatch by execution plan**
 
@@ -83,11 +87,12 @@ sequenceDiagram
     participant WI as /behavior:devops:work-item
     participant AT as /behavior:workspace:agent-teams
 
-    U->>W: --work-items <ids> --portal <p> --project <pr> --repo <r> --target-branch <tb>
+    U->>W: --work-items <ids> --portal <p> --project <pr> --target-branch <tb>
 
     loop Retrieve each work item
         W->>WI: --id <id> --project <project> --platform <portal>
-        WI-->>W: title, type, relationships
+        WI-->>W: title, type, relationships, repo reference
+        W->>W: Resolve repo from description or workspace
     end
 
     W->>W: Build dependency map and execution plan
@@ -111,6 +116,8 @@ sequenceDiagram
 ## ACCEPTANCE CRITERIA
 
 - All work items retrieved and their relationships inspected before any dispatch
+- Repository resolved per work item from description or workspace; error reported if unresolvable
+- Missing repos or target branches cloned and set up via `/behavior:workspace:repo --action new` before dispatch
 - Dependency map correctly identifies blocked-by relationships
 - Independent items dispatched in parallel via `agent-teams --mode parallel`
 - Dependent items dispatched only after their predecessors complete successfully
@@ -121,9 +128,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/orchestrate:implement --work-items 1605,1606,1607 --portal azure --project my-project --repo order-service --target-branch develop --description "Implement provider module features"
+/orchestrate:implement --work-items 1605,1606,1607 --portal azure --project my-project --target-branch develop --description "Implement provider module features"
 
-/orchestrate:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --repo api-gateway --target-branch main --description "Add gateway routing features"
+/orchestrate:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --target-branch main --description "Add gateway routing features"
 ```
 
 ## OUTPUT
