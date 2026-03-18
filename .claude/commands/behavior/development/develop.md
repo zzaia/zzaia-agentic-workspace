@@ -15,6 +15,9 @@ parameters:
   - name: branch
     description: Target branch name for the development
     required: true
+  - name: auto-continue
+    description: Skip interactive refinement loop and user approval; implement tests automatically without prompting
+    required: false
 ---
 
 ## PURPOSE
@@ -32,16 +35,13 @@ Execute focused implementation tasks for development work. Uses task specificati
 
 2. **Testing Development**
 
-   - Implement tests after implementation only if user permission
-   - Only implement tests if specificated by the user
-   - Ask the user if tests should be implemented
+   - If `--auto-continue` is set, implement tests automatically as part of the implementation
+   - Otherwise ask the user if tests should be implemented before proceeding
 
 3. **Finalizing**
 
-   - Presents implementation results to user
-   - Ask for user improvements
-   - Execute them via developer specialist and continues loop
-   - Process completes when implementation satisfies user requirements
+   - If `--auto-continue` is set, complete immediately after implementation without requesting user feedback
+   - Otherwise present results, ask for improvements, and continue loop until user approves
 
 ## DELEGATION
 
