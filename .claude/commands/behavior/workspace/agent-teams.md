@@ -1,7 +1,7 @@
 ---
 name: /behavior:workspace:agent-teams
 description: Orchestrate teams of specialized agents to collectively execute a task in consensus or parallel mode
-argument-hint: "--mode <consensus|parallel> --context <task-context> [--tasks <task-list>] [--agents <agent-list>] [--description <description>]"
+argument-hint: "--mode <consensus|parallel> --context <task-context> [--tasks <task-list>] [--agents <agent-list>] [--description <description>] [--max-agents <n>]"
 agents:
   - name: zzaia-tech-leader
     description: Lead task execution through a given workflow using sub-agents; coordinates and reports results back to the team session
@@ -21,6 +21,10 @@ parameters:
   - name: description
     description: Broader description of what the team should accomplish
     required: false
+  - name: max-agents
+    description: Maximum number of agents running simultaneously; excess tasks are queued and dispatched as slots free up
+    required: false
+    type: integer
 ---
 
 ## PURPOSE
@@ -40,9 +44,9 @@ Orchestrate teams of specialized agents to execute tasks collaboratively. Choose
 ### parallel mode
 
 1. **Validate**: Ensure `--tasks` is provided; fail gracefully if absent
-2. **Parse Input**: Extract `--context` and `--tasks` list
+2. **Parse Input**: Extract `--context`, `--tasks`, and `--max-agents` (default: unlimited)
 3. **Assign**: Map agents to individual tasks (auto-select or use `--agents`)
-4. **Dispatch**: Send all agents simultaneously, each with sub-task plus shared `--context`
+4. **Dispatch**: Send up to `--max-agents` agents simultaneously; queue remaining tasks and dispatch each as a slot frees up
 5. **Collect**: Gather all task outputs with agent attribution
 6. **Combine**: Merge into structured result with per-task grouping
 7. **Return**: Combined output with clear task-to-agent mapping
@@ -95,14 +99,14 @@ sequenceDiagram
 - Parallel mode correctly maps sub-tasks to agents with shared context
 - Missing `--tasks` in parallel mode fails with clear error message
 - Results include clear agent attribution for traceability
-- Auto-selection of agents occurs when `--agents` is omitted
+- `zzaia-tech-leader` is always the dispatched agent; `--agents` overrides for advanced use only
 
 ## EXAMPLES
 
 ```
 /behavior:workspace:agent-teams --mode consensus --context "Design a REST API for managing user accounts" --description "Get architectural perspectives on API design"
 
-/behavior:workspace:agent-teams --mode parallel --context "Refactor legacy authentication module" --tasks "Update login handler, Migrate session storage, Add MFA support" --agents "zzaia-developer-specialist,zzaia-code-reviewer"
+/behavior:workspace:agent-teams --mode parallel --context "Refactor legacy authentication module" --tasks "Update login handler, Migrate session storage, Add MFA support" --max-agents 3
 
 /behavior:workspace:agent-teams --mode consensus --context "Evaluate framework choice for real-time messaging"
 ```

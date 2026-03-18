@@ -46,10 +46,10 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/behavior:devops:work-item --action read --id <work-item> --project <project>`
+   - Call `/behavior:devops:work-item --action read --id <work-item> --project <project> --platform <portal>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs (skip for Bug type)
-   - Change work item state to **Active** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Active`
+   - Change work item state to **Active** via `/behavior:devops:work-item --id <work-item> --project <project> --platform <portal> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -89,13 +89,13 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 8. **Implement Accepted Reviews**: Apply review feedback based on user selection
 
    - Call `/behavior:devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve the PR review comment posted in Phase 7 and extract the numbered issue list from it
-   - Call `/behavior:development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>`
+   - Call `/behavior:development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>` — add `--auto-continue` when `--auto-continue` is set on this workflow
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
    - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>` before committing
    - Call `/behavior:development:git --action commit-push --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
-   - Change work item state to **Resolved** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Resolved`
+   - Change work item state to **Resolved** via `/behavior:devops:work-item --id <work-item> --project <project> --platform <portal> --action update --state Resolved`
 
 10. **Publish Pull Request**: Mark pull request as ready for review
 
@@ -153,8 +153,10 @@ sequenceDiagram
     DR-->>P: Numbered issue list
     P->>DW: Write pull-request-review to PR comment
     DW-->>P: Review posted
-    P->>U: /behavior:workspace:ask-user-question (confirm to continue)
-    U-->>P: Confirmed
+    alt auto-continue not set
+        P->>U: /behavior:workspace:ask-user-question (confirm to continue)
+        U-->>P: Confirmed
+    end
 
     P->>PR: Read review issues from PR
     PR-->>P: Issue list
