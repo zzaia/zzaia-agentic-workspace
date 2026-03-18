@@ -2,6 +2,9 @@
 name: /behavior:workspace:agent-teams
 description: Orchestrate teams of specialized agents to collectively execute a task in consensus or parallel mode
 argument-hint: "--mode <consensus|parallel> --context <task-context> [--tasks <task-list>] [--agents <agent-list>] [--description <description>]"
+agents:
+  - name: zzaia-tech-leader
+    description: Lead task execution through a given workflow using sub-agents; coordinates and reports results back to the team session
 parameters:
   - name: mode
     description: Collaboration mode - consensus for multiple perspectives on single task, parallel for distributing sub-tasks
@@ -44,44 +47,42 @@ Orchestrate teams of specialized agents to execute tasks collaboratively. Choose
 6. **Combine**: Merge into structured result with per-task grouping
 7. **Return**: Combined output with clear task-to-agent mapping
 
+## DELEGATION
+
+**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
+
+- `zzaia-tech-leader` — Lead task execution through a given workflow using sub-agents; coordinates and reports results back to the team session
+
 ## WORKFLOW
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant CMD as Command
-    participant DEV as zzaia-developer-specialist
-    participant TST as zzaia-tester-specialist
-    participant OPS as zzaia-devops-specialist
-    participant REV as zzaia-code-reviewer
+    participant TL as zzaia-tech-leader
+    participant SUB as sub-agents
 
     U->>CMD: /behavior:workspace:agent-teams <params>
     CMD->>CMD: Parse and validate parameters
 
     alt mode == consensus
-        par Dispatch all agents with shared context
-            CMD->>DEV: context
-            CMD->>TST: context
-            CMD->>OPS: context
-            CMD->>REV: context
+        par Dispatch tech-leaders with shared context
+            CMD->>TL: context + workflow (instance A)
+            CMD->>TL: context + workflow (instance B)
         end
-        DEV-->>CMD: Development perspective
-        TST-->>CMD: Testing perspective
-        OPS-->>CMD: DevOps perspective
-        REV-->>CMD: Review perspective
+        TL->>SUB: Delegate steps via workflow
+        SUB-->>TL: Step results
+        TL-->>CMD: Structured result (task, status, output)
         CMD->>CMD: Synthesize consensus from all outputs
     else mode == parallel
         CMD->>CMD: Verify --tasks present
-        par Assign one task per agent
-            CMD->>DEV: sub-task + context
-            CMD->>TST: sub-task + context
-            CMD->>OPS: sub-task + context
-            CMD->>REV: sub-task + context
+        par Assign one task per tech-leader
+            CMD->>TL: sub-task + context + workflow (A)
+            CMD->>TL: sub-task + context + workflow (B)
         end
-        DEV-->>CMD: Task result
-        TST-->>CMD: Task result
-        OPS-->>CMD: Task result
-        REV-->>CMD: Task result
+        TL->>SUB: Delegate steps via workflow
+        SUB-->>TL: Step results
+        TL-->>CMD: Structured result (task, status, output)
         CMD->>CMD: Merge into structured output
     end
 
