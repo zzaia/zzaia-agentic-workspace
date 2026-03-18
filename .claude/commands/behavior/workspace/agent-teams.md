@@ -2,15 +2,6 @@
 name: /behavior:workspace:agent-teams
 description: Orchestrate teams of specialized agents to collectively execute a task in consensus or parallel mode
 argument-hint: "--mode <consensus|parallel> --context <task-context> [--tasks <task-list>] [--agents <agent-list>] [--description <description>]"
-agents:
-  - name: zzaia-developer-specialist
-    description: Execute implementation sub-tasks and contribute development perspective
-  - name: zzaia-tester-specialist
-    description: Validate quality, test coverage, and contribute testing perspective
-  - name: zzaia-devops-specialist
-    description: Contribute DevOps, pipeline, and infrastructure perspective
-  - name: zzaia-code-reviewer
-    description: Contribute code quality, standards, and review perspective
 parameters:
   - name: mode
     description: Collaboration mode - consensus for multiple perspectives on single task, parallel for distributing sub-tasks
@@ -52,15 +43,6 @@ Orchestrate teams of specialized agents to execute tasks collaboratively. Choose
 5. **Collect**: Gather all task outputs with agent attribution
 6. **Combine**: Merge into structured result with per-task grouping
 7. **Return**: Combined output with clear task-to-agent mapping
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-developer-specialist` — Execute implementation sub-tasks and contribute development perspective
-- `zzaia-tester-specialist` — Validate quality, test coverage, and contribute testing perspective
-- `zzaia-devops-specialist` — Contribute DevOps, pipeline, and infrastructure perspective
-- `zzaia-code-reviewer` — Contribute code quality, standards, and review perspective
 
 ## WORKFLOW
 

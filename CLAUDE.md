@@ -17,17 +17,15 @@ Multi-agent orchestration system for multi-language development workflows across
 
 ### Agent Architecture
 
-Specialized agents in `.claude/agents/`:
+Agents organized in `.claude/agents/` by role:
 
-- **zzaia-task-clarifier** - Requirements analysis
-- **zzaia-developer-specialist** - Multi-language implementation
-- **zzaia-workspace-manager** - Workspace operations: repository cloning, worktree management, browser diagnostics, AppHost telemetry
-- **zzaia-tester-specialist** - Build validation and quality assurance
-- **zzaia-code-reviewer** - Code quality and static analysis
-- **zzaia-devops-specialist** - Azure DevOps and GitHub DevOps operations
-- **zzaia-meta-agent** - Agent generation utilities
-- **zzaia-meta-behavior** - Behavior generation utilities
-- **zzaia-meta-workflow** - Workflow command generation utilities
+**meta/** — System self-improvement agents:
+- `zzaia-meta-agent`, `zzaia-meta-behavior`, `zzaia-meta-workflow`, `zzaia-meta-skill`
+
+**sub/** — All specialist sub-agents invoked by commands and workflows:
+- `zzaia-task-clarifier`, `zzaia-document-specialist`, `zzaia-workspace-manager`, `zzaia-web-searcher`, `zzaia-developer-specialist`, `zzaia-tester-specialist`, `zzaia-devops-specialist`, `zzaia-code-reviewer`
+
+**team/** — Reserved for dedicated agent-teams teammates (currently empty)
 
 ## Workspace Structure
 
@@ -66,14 +64,15 @@ Language-specific coding standards are defined in `.claude/rules/` directory:
 
 ## Command Hierarchy
 
-Commands are organized in a four-layer hierarchy, each layer calling into the next:
+Commands are organized in a five-layer hierarchy, each layer calling into the next:
 
 ```
-workflow → behavior → skill → template
+orchestrate → workflow → behavior → skill → template
 ```
 
 | Layer | Prefix | Purpose |
 |-------|--------|---------|
+| **Orchestrate** | `/orchestrate:*` | Multi-item coordination — dispatches multiple workflows in parallel or sequentially based on dependency analysis |
 | **Workflow** | `/workflow:*` | Orchestrates end-to-end tasks by sequencing multiple behaviors |
 | **Behavior** | `/behavior:*` | Executes a single domain operation, optionally invoking skills |
 | **Skill** | `/skill:*` | Reusable capability with its own instructions, template, examples, and scripts |
@@ -83,7 +82,7 @@ This hierarchy enables complex automation through composition without coupling l
 
 ## Key Principles
 
-- Command hierarchy: workflow → behavior → skill → template
+- Command hierarchy: orchestrate → workflow → behavior → skill → template
 - Agent orchestration system with specialized responsibilities
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
