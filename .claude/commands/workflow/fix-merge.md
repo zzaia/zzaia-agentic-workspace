@@ -31,7 +31,7 @@ Merge from a target branch into the working branch, automatically resolving merg
 1. **Merge from Target Branch**: Pull target branch then perform merge operation and resolve all merge conflicts
 
    - Call `/behavior:development:git` with `--repo <repo>` `--branch <target-branch>` `--action pull` to ensure target branch is up to date
-   - Call `/behavior:development:git` with `--repo <repo>` `--working-branch <working-branch>` `--target-branch <target-branch>` `--action merge`
+   - Call `/behavior:development:git` with `--repo <repo>` `--branch <working-branch>` `--source-branch <target-branch>` `--action merge`
    - Resolve merge conflicts with context from `--description`
    - **MANDATORY** Verify no unresolved conflicts remain
 

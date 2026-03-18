@@ -46,36 +46,36 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/behavior:devops:work-item --id <work-item> --project <project>`
+   - Call `/behavior:devops:work-item --action read --id <work-item> --project <project>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - **MANDATORY** Work item description must not be empty and must contain SDD documentation with all ADRs (skip for Bug type)
    - Change work item state to **Active** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
-   - Call `/behavior:workspace:repo --action new --repo <repo> --branch <working-branch>`
+   - Call `/behavior:workspace:repo --action new --repo <repo> --branch <working-branch> --target-branch <target-branch>`
    - Verify branch is ready for code changes and target branch is up to date
 
 3. **Write Documentation Locally**: Produce the SDD documentation from the work item architecture design
 
    - **SKIP this phase if work item type is Bug**
+   - Derive `<feature-name>` by converting `<work-item-title>` to lowercase kebab-case (e.g., `implement-provider-entities`)
    - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
    - Organize following folder and name conventions that already exist
 
 4. **Implement Feature**: Execute development based on SDD documentation or description
 
-   - Call `/behavior:development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>`
+   - Call `/behavior:development:develop --task "<description + SDD content>" --repo <repo> --branch <working-branch>` — add `--auto-continue` when `--auto-continue` is set on this workflow
    - Implement functionality with comprehensive testing
    - Ensure code follows language-specific standards
 
 5. **Commit and Push**: Stage, commit, and push implementation changes
 
-   - Call `/behavior:development:git --action commit --repository <repo> --branch <working-branch> --message "feat: <description> [#<work-item>]"`
-   - Push changes to remote origin
+   - Call `/behavior:development:git --action commit-push --repository <repo> --branch <working-branch> --message "feat: <description> [#<work-item>]"`
 
 6. **Create Draft Pull Request**: Open draft pull request
 
-   - Call `/behavior:devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item>`
+   - Call `/behavior:devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft true`
    - Link PR to original work item
 
 7. **Review Changes**: Review all developed changes and post findings to PR
@@ -88,14 +88,13 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
 8. **Implement Accepted Reviews**: Apply review feedback based on user selection
 
-   - Call `/behavior:devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve all selected reviewed issues from PR
+   - Call `/behavior:devops:pull-request --action read --portal <portal> --project <project> --repo <repo> --pr <pr-id>` to retrieve the PR review comment posted in Phase 7 and extract the numbered issue list from it
    - Call `/behavior:development:develop --task "Fix all review issues: <numbered-issue-list>" --repo <repo> --branch <working-branch>`
 
 9. **Commit and Push**: Stage, commit, and push all changes
 
-   - Call `/behavior:development:git --action commit --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
-   - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --branch <working-branch> --target-branch <target-branch>` before pushing
-   - Push changes to remote origin
+   - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>` before committing
+   - Call `/behavior:development:git --action commit-push --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
    - Change work item state to **Resolved** via `/behavior:devops:work-item --id <work-item> --project <project> --action update --state Resolved`
 
 10. **Publish Pull Request**: Mark pull request as ready for review
@@ -179,7 +178,7 @@ sequenceDiagram
 - Work item details retrieved with non-empty SDD documentation and ADRs (except Bug type)
 - Work item state changed to Active at start of workflow
 - Feature branch created from target branch with correct naming
-- SDD documentation written to local /doc folder following existing conventions (skipped for Bug type)
+- SDD documentation written to `./docs/` folder following existing conventions (skipped for Bug type)
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference

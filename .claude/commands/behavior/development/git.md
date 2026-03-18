@@ -1,10 +1,10 @@
 ---
 name: /behavior:development:git
 description: Execute comprehensive Git version control operations with standardized branch management
-argument-hint: "--action init|branch|commit|push|commit-push|merge|status [--repository <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
+argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repository <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
 parameters:
   - name: action
-    description: The git operation to perform (init, branch, commit, push, commit-push, merge, status)
+    description: The git operation to perform (init, branch, commit, push, commit-push, pull, merge, status)
     required: true
   - name: repository
     description: Target repository name for the operation
@@ -98,8 +98,11 @@ sequenceDiagram
         else Operation: commit
             C->>G: git add . && git commit -m "<message>"
             G->>R: Stage and commit changes
+        else Operation: pull
+            C->>G: git pull origin <branch>
+            G->>R: Pull latest changes
         else Operation: merge
-            C->>G: git merge <branch>
+            C->>G: git merge <source-branch>
             G->>R: Merge branches
         else Operation: status
             C->>G: git status

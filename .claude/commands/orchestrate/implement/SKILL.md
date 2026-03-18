@@ -33,13 +33,17 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 
 1. **Retrieve all work items**
 
-   - For each ID in `--work-items`, call `/behavior:devops:work-item --id <id> --project <project>`
+   - For each ID in `--work-items`, call `/behavior:devops:work-item --action read --id <id> --project <project> --platform <portal>`
    - Collect per-item: title, type, parent, child links, and related work-item IDs
    - Build a dependency map: `{ id → [blocked-by ids] }`
 
 2. **Analyse dependencies**
 
    - Inspect each work item's relationships (parent/child, predecessor/successor, related links)
+   - Dependency classification rules:
+     - **parent/child**: child depends on parent — parent must complete first
+     - **predecessor/successor**: successor depends on predecessor
+     - **related**: informational only — does NOT create an execution dependency
    - Classify items into execution groups:
      - **Parallel group**: items with no mutual dependency — can run simultaneously
      - **Sequential chain**: items where B depends on A — A must complete before B starts
@@ -48,6 +52,7 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 3. **Build invocation strings**
 
    - For each item derive `working-branch` as `feature/wi-<id>`
+   - Escape `--description` content: wrap in quotes and replace any internal quotes with `\"` to prevent invocation parsing failures
    - Build the complete self-contained invocation:
      ```
      /workflow:remote:implement --work-item <id> --portal <portal> --project <project> --repo <repo> --target-branch <target-branch> --working-branch feature/wi-<id> --description <description> --auto-continue
@@ -64,7 +69,8 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 
 5. **Consolidate results**
 
-   - Each agent returns: `work_item_id`, `branch`, `pr_url`, `status` (`completed | failed | partial`), `error`
+   - Each agent **must** return a structured result with exactly these fields: `work_item_id`, `branch`, `pr_url`, `status` (`completed | failed | partial`), `error`, `group`
+   - If an agent response does not contain these fields, treat the item as `status: failed` with `error: "missing structured result"`
    - Present delivery table: work-item → branch → PR URL → status → group
    - Report per-item failures with error context; a failed item blocks any dependents in subsequent groups
 

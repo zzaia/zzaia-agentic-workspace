@@ -67,6 +67,10 @@ parameters:
     required: false
     type: integer
     default: 20
+  - name: --state
+    description: Work item state for update operations (Active, Resolved, Closed, etc.)
+    required: false
+    type: string
 ---
 
 ## PURPOSE
