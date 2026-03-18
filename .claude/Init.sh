@@ -21,15 +21,8 @@ if [ -n "$1" ] && [ -n "$2" ]; then
     SESSION_ID="$2"
 else
     read -p "Enter 1Password vault name: " VAULT_NAME
-    read -p "Enter session ID: " SESSION_ID
 fi
 export VAULT_NAME SESSION_ID
-
-# Ensure session runs inside tmux for persistent terminal support
-if [ -z "$TMUX" ]; then
-    tmux new-session -A -s "${VAULT_NAME}-${SESSION_ID}" "$0" "$VAULT_NAME" "$SESSION_ID"
-    exit $?
-fi
 
 # Sign in to 1Password to enable secret injection
 eval $(op signin)
