@@ -25,7 +25,8 @@ Agents organized in `.claude/agents/` by role:
 **sub/** — All specialist sub-agents invoked by commands and workflows:
 - `zzaia-task-clarifier`, `zzaia-document-specialist`, `zzaia-workspace-manager`, `zzaia-web-searcher`, `zzaia-developer-specialist`, `zzaia-tester-specialist`, `zzaia-devops-specialist`, `zzaia-code-reviewer`
 
-**team/** — Reserved for dedicated agent-teams teammates (currently empty)
+**team/** — Dedicated agent-teams teammates dispatched inside agent-teams sessions:
+- `zzaia-tech-leader` — leads task execution through a workflow using sub-agents; coordinates and returns structured results to the orchestrator
 
 ## Workspace Structure
 
