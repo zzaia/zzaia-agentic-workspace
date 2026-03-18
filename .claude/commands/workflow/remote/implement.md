@@ -24,6 +24,9 @@ parameters:
   - name: description
     description: Implementation description/details for the developer
     required: true
+  - name: auto-continue
+    description: Skip interactive review confirmation and proceed automatically (use when invoked from orchestrators)
+    required: false
 agents:
   - name: zzaia-task-clarifier
     description: Analyze work item requirements and clarify acceptance criteria
@@ -80,7 +83,8 @@ Execute a complete implementation workflow that orchestrates multiple developmen
    - Call `/behavior:development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
    - Generate numbered issue list from review output
    - Call `/skill:document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
-   - Call `/behavior:workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Continue — read selected issues from pull-request; Continue without fixing any issue; <Any user input>"`
+   - If `--auto-continue` is set, skip the question and proceed automatically to fix all issues
+   - Otherwise call `/behavior:workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Fix all issues; Continue without fixing; <Any user input>"`
 
 8. **Implement Accepted Reviews**: Apply review feedback based on user selection
 
@@ -180,7 +184,8 @@ sequenceDiagram
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
 - Review findings posted to PR as numbered issue list using `pull-request-review` template via `/skill:document:write`
-- User asked only to confirm to continue — no issue selection required
+- When `--auto-continue` is set, review confirmation is skipped and all issues are fixed automatically
+- When interactive, user chooses between fixing all issues, continuing without fixes, or providing custom input
 - All review issues implemented and committed with conventional format referencing work item
 - Merge conflicts resolved via `/workflow:fix-merge` before final push
 - Work item state changed to Resolved after final commit and push
