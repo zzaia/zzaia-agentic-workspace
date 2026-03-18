@@ -2,9 +2,11 @@
 name: zzaia-meta-behavior
 description: Generates a new, complete Claude Code behavior configuration in the standard pattern. Use this to create new behaviors. Use this Proactively when the user asks you to create a new behavior.
 tools:
+  - Read
   - Write
+  - Edit
   - WebFetch
-  - MultiEdit
+  - Glob
 model: haiku
 color: purple
 ---
