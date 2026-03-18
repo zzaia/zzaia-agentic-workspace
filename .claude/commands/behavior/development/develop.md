@@ -60,16 +60,24 @@ sequenceDiagram
 
     U->>C: /develop [task] [repo] [branch]
 
-    loop Implementation & Refinement
-        C->>DS: Execute implementation
+    alt auto-continue set
+        C->>DS: Execute implementation + tests
         DS->>P: Apply code changes
         P-->>DS: Implementation complete
         DS-->>C: Implementation results
-        C->>U: Present implementation results
-        alt User approves completion
-            C-->>U: Development complete
-        else User provides improvements
-            C->>DS: Apply user suggestions
+        C-->>U: Development complete
+    else Interactive mode
+        loop Implementation & Refinement
+            C->>DS: Execute implementation
+            DS->>P: Apply code changes
+            P-->>DS: Implementation complete
+            DS-->>C: Implementation results
+            C->>U: Present implementation results
+            alt User approves completion
+                C-->>U: Development complete
+            else User provides improvements
+                C->>DS: Apply user suggestions
+            end
         end
     end
 ```
@@ -91,7 +99,8 @@ sequenceDiagram
 Defines when the whole process must be considered completed
 
 - Implementation satisfies user requirements
-- User approval granted for completion
+- When `--auto-continue` is set: tests implemented automatically and workflow completes without user interaction
+- When interactive: user approval granted for completion
 
 ## OUTPUT
 

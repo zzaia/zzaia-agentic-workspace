@@ -61,7 +61,7 @@ Retrieve all work items, analyse their relationships to identify dependencies an
 4. **Dispatch by execution plan**
 
    - For each group in the execution plan:
-     - Call `/behavior:workspace:agent-teams --mode parallel --context "<shared-context>" --tasks "<group-invocations>" --description "Implement group <n>: <ids>"`
+     - Call `/behavior:workspace:agent-teams --mode parallel --context "<shared-context>" --tasks "<group-invocations>" --description "Implement group <n>: <ids>" --max-agents 5`
      - Collect results from all agents in the group
      - If there is a **next group** (sequential dependency): call `/behavior:workspace:ask-user-question --question "Group <n> complete. PRs are open for: <pr-urls>. Review and approve the pull requests before continuing. Proceed to group <n+1>?" --options "Continue; Abort"` and wait for user confirmation before dispatching the next group
      - If user selects **Abort**, stop execution and report completed and pending groups
@@ -86,7 +86,7 @@ sequenceDiagram
     U->>W: --work-items <ids> --portal <p> --project <pr> --repo <r> --target-branch <tb>
 
     loop Retrieve each work item
-        W->>WI: --id <id> --project <project>
+        W->>WI: --id <id> --project <project> --platform <portal>
         WI-->>W: title, type, relationships
     end
 

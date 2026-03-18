@@ -15,6 +15,9 @@ parameters:
   - name: description
     description: Additional context about the merge or expected conflicts
     required: false
+  - name: auto-continue
+    description: Skip interactive review confirmation and proceed automatically
+    required: false
 agents:
   - name: zzaia-developer-specialist
     description: Resolve merge conflicts and fix post-merge issues
@@ -37,10 +40,10 @@ Merge from a target branch into the working branch, automatically resolving merg
 
 2. **Review Merge Result**: Identify issues that arose from the merge
 
-   - Call `/behavior:development:review` with `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
-   - Focus only on issues merge files with conflict
+   - Call `/behavior:development:review` with `--target repo` `--repo <repo>` `--branch <working-branch>` `--context "verification of merged related files"`
+   - Focus only on issues in merged files with conflict
    - Document all issues found
-   - Call `/behavior:workspace:ask-user-question --question "Review findings confirmed. Approve proceeding to fixes?" --options "Proceed with fixes; Describe additional context"`
+   - If `--auto-continue` is not set, call `/behavior:workspace:ask-user-question --question "Review findings confirmed. Approve proceeding to fixes?" --options "Proceed with fixes; Describe additional context"`
 
 3. **Fix Issues**: Address all issues identified in the review
 
@@ -48,10 +51,9 @@ Merge from a target branch into the working branch, automatically resolving merg
    - Fix all identified issues systematically
    - Re-run `/behavior:development:review` to verify fixes
 
-4. **Push Changes**: Commit and push all changes to remote
+4. **Commit and Push**: Commit and push all changes to remote
 
-   - Call `/behavior:development:git` with `--repo <repo>` `--branch <working-branch>` `--action push`
-   - Push all commits to remote
+   - Call `/behavior:development:git` with `--repo <repo>` `--branch <working-branch>` `--action commit-push` `--message "fix: resolve post-merge issues"`
    - **MANDATORY** Verify remote branch is updated
 
 ## DELEGATION
