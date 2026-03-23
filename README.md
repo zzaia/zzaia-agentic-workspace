@@ -47,20 +47,6 @@ The workspace will automatically:
 - Launch Claude Code with MCP servers configured
 - Enable all workspace commands and agents
 
-### Example: Implement and Homologate a Feature
-
-```bash
-# 1. Implement a work item (creates branch, SDD doc, code, PR)
-/workflow:implement work-item=1042 repos=order-service target-branches=develop working-branches=feature/add-order-status description="Add order status tracking endpoint with history log"
-
-# 2. After implementation is merged, homologate the feature (creates test plan, runs tests against AppHost, files bugs) specially great for multi application testing
-/workflow:homologate work-item=1042 repos=order-service target-branches=develop working-branches=homolog/sprint-12 description="Validate order status endpoint against acceptance criteria"
-
-# 3. For each bug work item created in step 2, implement the fix
-/workflow:implement work-item=1055 repos=order-service target-branches=develop working-branches=fix/order-status-empty-response description="Fix order status returning empty response when no history exists"
-/workflow:implement work-item=1056 repos=order-service target-branches=develop working-branches=fix/order-status-403 description="Fix 403 on order status endpoint for non-admin users"
-```
-
 ### Use as Remote Plugin
 
 Add to your `.claude/plugins.json`:
@@ -71,36 +57,6 @@ Add to your `.claude/plugins.json`:
     { "name": "zzaia-workspace", "url": "https://github.com/zzaia/zzaia-agentic-workspace" }
   ]
 }
-```
-
-## ⚡ End-to-End Automation
-
-From a product specification document to production-ready - human super-visioned automated flow.
-
-```mermaid
-sequenceDiagram
-    actor U as Product Spec
-    participant A as workflow:remote:architect
-    actor T as Tech Team
-    participant I as orchestrator:implement
-    participant D as dev/stg
-    participant H as workflow:remote:homologate
-
-    U->>A: PDF / Word / MD / POC
-    A-->>T: BDD + Epic + Work Items + SDDs
-    T-->>A: Review and update SDDs
-    A->>I: Approved work items
-    I-->>T: All PRs created
-    T-->>I: Review and complete PRs
-    I->>D: Deploy
-    loop Until no bugs
-        D->>H: E2E BDD homologation
-        H-->>I: Bug work items
-        I-->>T: Bug fix PRs
-        T-->>I: Review and complete PRs
-        I->>D: Deploy fix
-    end
-    D-->>U: Ready for Production
 ```
 
 ## 🏗️ Command Hierarchy
@@ -132,6 +88,55 @@ sequenceDiagram
 | **Behavior** | `/behavior:*` | Single domain operation with agent delegation (e.g. run a pipeline, create a PR) |
 | **Skill** | `/skill:*` | Self-contained capability with `SKILL.md`, `template.md`, `examples/`, `scripts/` |
 | **Template** | `templates/` | Markdown blueprints filled in by skills with real conversation context |
+
+## ⚡ End-to-End Automation
+
+From a product specification document to production-ready - human super-visioned automated flow.
+
+```mermaid
+sequenceDiagram
+    actor U as Product Spec
+    participant A as workflow:remote:architect
+    actor T as Tech Team
+    participant I as orchestrator:implement
+    participant D as dev/stg
+    participant H as workflow:remote:homologate
+
+    U->>A: PDF / Word / MD / POC
+    A-->>T: BDD + Epic + Work Items + SDDs
+    T-->>A: Review and update SDDs
+    A->>I: Approved work items
+    I-->>T: All PRs created
+    T-->>I: Review and complete PRs
+    I->>D: Deploy
+    loop Until no bugs
+        D->>H: E2E BDD
+        H-->>I: Bug work items
+        I-->>T: Bug fix PRs
+        T-->>I: Review and complete PRs
+        I->>D: Deploy fix
+    end
+    D-->>U: Ready for Production
+```
+
+### Example Commands
+
+```bash
+# 1. Generate BDD, Epic, Work Items and SDDs from a product spec document
+/workflow:remote:architect --selected-work-item 2001 --project MyProject --description "Feature description" --doc ./spec.pdf
+
+# 2. Implement all approved work items in parallel — all PRs created via agent teams
+/orchestrator:implement --work-items 2002,2003,2004 --portal azure --project MyProject --target-branch develop --description "Feature description"
+
+# 3. Run E2E BDD against staging — creates test case, runs scenarios, files bugs
+/workflow:remote:homologate --work-item 2001 --project MyProject --url https://staging.myapp.com --application MyApp --type e2e
+
+# 4. If bugs found — implement all bug fix work items and create PRs
+/orchestrator:implement --work-items 2010,2011 --portal azure --project MyProject --target-branch develop --description "Bug fixes"
+
+# 5. Re-run until no bugs found
+/workflow:remote:homologate --work-item 2001 --project MyProject --url https://staging.myapp.com --application MyApp --type e2e
+```
 
 This layering keeps each command focused on one responsibility and makes the system extensible without coupling between layers.
 
