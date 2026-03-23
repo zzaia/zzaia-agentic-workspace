@@ -73,6 +73,36 @@ Add to your `.claude/plugins.json`:
 }
 ```
 
+## ⚡ End-to-End Automation
+
+From a product specification document to production-ready - human super-visioned automated flow.
+
+```mermaid
+sequenceDiagram
+    actor U as Product Spec
+    participant A as workflow:remote:architect
+    actor T as Tech Team
+    participant I as orchestrator:implement
+    participant D as dev/stg
+    participant H as workflow:remote:homologate
+
+    U->>A: PDF / Word / MD
+    A-->>T: BDD + Epic + Work Items + SDDs
+    T-->>A: Review and update SDDs
+    A->>I: Approved work items
+    I-->>T: All PRs created
+    T-->>I: Review and complete PRs
+    I->>D: Deploy
+    loop Until no bugs
+        D->>H: E2E BDD homologation
+        H-->>I: Bug work items
+        I-->>T: Bug fix PRs
+        T-->>I: Review and complete PRs
+        I->>D: Deploy fix
+    end
+    D-->>U: Ready for Production
+```
+
 ## 🏗️ Command Hierarchy
 
 Commands are organized in a five-layer hierarchy. Each layer calls into the next, enabling complex automation through composition:
