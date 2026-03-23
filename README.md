@@ -73,29 +73,29 @@ Add to your `.claude/plugins.json`:
 
 ## 🏗️ Command Hierarchy
 
-Commands are organized in a four-layer hierarchy. Each layer calls into the next, enabling complex automation through composition:
+Commands are organized in a five-layer hierarchy. Each layer calls into the next, enabling complex automation through composition:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  workflow    Orchestrates end-to-end tasks by            │
-│  /workflow:* sequencing multiple behaviors in order      │
-│                              │                           │
-│                              ▼                           │
-│  behavior    Executes a single domain operation,         │
-│  /behavior:* optionally invoking skills                  │
-│                              │                           │
-│                              ▼                           │
-│  skill       Reusable capability with its own            │
-│  /skill:*    instructions, template, examples, scripts   │
-│                              │                           │
-│                              ▼                           │
-│  template    Static markdown templates that skills       │
-│  templates/  populate with real content                  │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant O as /orchestrator:*
+    participant W as /workflow:*
+    participant B as /behavior:*
+    participant S as /skill:*
+    participant T as templates/
+
+    O->>W: dispatch workflows (parallel or sequential)
+    W->>B: sequence domain operations
+    B->>S: invoke reusable capabilities
+    S->>T: populate markdown blueprints
+    T-->>S: structured content
+    S-->>B: capability result
+    B-->>W: operation complete
+    W-->>O: workflow result
 ```
 
 | Layer | Prefix | Responsibility |
 |-------|--------|----------------|
+| **Orchestrator** | `/orchestrator:*` | Multi-item coordination — dispatches workflows in parallel or sequentially based on dependency analysis |
 | **Workflow** | `/workflow:*` | Sequence of behaviors for a complete task (e.g. implement a work item end-to-end) |
 | **Behavior** | `/behavior:*` | Single domain operation with agent delegation (e.g. run a pipeline, create a PR) |
 | **Skill** | `/skill:*` | Self-contained capability with `SKILL.md`, `template.md`, `examples/`, `scripts/` |
@@ -174,7 +174,13 @@ End-to-end orchestration workflows, that are a combination of sequential minor c
 - [**`/workflow:remote:implement`**](.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
 - [**`/workflow:remote:homologate`**](.claude/commands/workflow/remote/homologate.md) - Homologation testing workflow with BDD, live URL testing, diagnostics, and bug reporting
 
-### Meta
+### Orchestrator
+
+Multi-item coordination commands that dispatch workflows in parallel or sequentially based on dependency analysis.
+
+- [**`/orchestrator:implement`**](.claude/commands/orchestrator/implement/SKILL.md) - Implement multiple work items with dependency-aware parallel or sequential dispatch
+
+### Utils 
 
 System utilities and information.
 
@@ -192,30 +198,24 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 
 > See [host/README.md](host/README.md) for full setup details.
 
-## 🏗️ Architecture
- 
-The agentic system is composed a single orchestrator agent that can call other sub-agents by using simple commands (skills). 
-   
-
-```mermaid
-sequenceDiagram
-    participant U as 👤 User
-    participant CC as 🧠 Claude Code
-    participant C as ⚙️ Commands
-    participant A as 🤖 Agents
-    participant W as 📁 Workspace
-
-    U->>CC: Execute Command
-    CC->>C: Invoke Command
-    C->>A: Coordinate Agents
-    A->>W: Modify/Create Files
-    W-->>A: Return Results
-    A-->>C: Operation Complete
-    C-->>CC: Command Finished
-    CC-->>U: Results & Status
-```
-
 ## 🤖 Specialized Agents
+
+Agents are organized in `.claude/agents/` by type, each with a distinct role in the system:
+
+### `meta/` — System Self-Improvement
+
+Generate new components in standardized patterns. Used to extend the agentic system itself.
+
+| Agent | Role |
+| ----- | ---- |
+| [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent definition generation |
+| [**zzaia-meta-behavior**](.claude/agents/meta/zzaia-meta-behavior.md) | Behavior command generation |
+| [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Skill generation |
+| [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation |
+
+### `sub/` — Specialist Working Agents
+
+Highly specialized agents invoked by commands and workflows to perform focused tasks.
 
 | Agent | Role |
 | ----- | ---- |
@@ -223,14 +223,18 @@ sequenceDiagram
 | [**zzaia-developer-specialist**](.claude/agents/zzaia-developer-specialist.md) | Multi-language implementation |
 | [**zzaia-tester-specialist**](.claude/agents/zzaia-tester-specialist.md) | Build and test validation |
 | [**zzaia-code-reviewer**](.claude/agents/zzaia-code-reviewer.md) | Code quality and static analysis |
-| [**zzaia-repository-manager**](.claude/agents/zzaia-repository-manager.md) | Multi-repository worktree coordination |
+| [**zzaia-workspace-manager**](.claude/agents/zzaia-workspace-manager.md) | Multi-repository worktree coordination |
 | [**zzaia-devops-specialist**](.claude/agents/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
 | [**zzaia-web-searcher**](.claude/agents/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
 | [**zzaia-document-specialist**](.claude/agents/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
-| [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent generation utilities |
-| [**zzaia-meta-behavior**](.claude/agents/meta/zzaia-meta-behavior.md) | Behavior generation utilities |
-| [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Skill generation utilities |
-| [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation utilities |
+
+### `team/` — Macro Agents for Agent Teams
+
+High-level agents dispatched inside agent-teams sessions to lead and coordinate sub-agents.
+
+| Agent | Role |
+| ----- | ---- |
+| [**zzaia-tech-leader**](.claude/agents/team/zzaia-tech-leader.md) | Leads task execution through a workflow using sub-agents; coordinates and returns structured results to the orchestrator |
 
 ## 📁 Structure
 
@@ -238,6 +242,7 @@ sequenceDiagram
 .claude/
 ├── agents/              # AI agent definitions
 ├── commands/            # Command configurations
+│   ├── orchestrator/
 │   ├── behavior/
 │   ├── skill/
 │   └── workflow/
