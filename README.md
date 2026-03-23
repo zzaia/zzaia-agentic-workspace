@@ -86,7 +86,7 @@ sequenceDiagram
     participant D as dev/stg
     participant H as workflow:remote:homologate
 
-    U->>A: PDF / Word / MD
+    U->>A: PDF / Word / MD / POC
     A-->>T: BDD + Epic + Work Items + SDDs
     T-->>A: Review and update SDDs
     A->>I: Approved work items
