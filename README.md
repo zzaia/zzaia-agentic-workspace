@@ -7,7 +7,9 @@
 
 ## 🚀 Quick Start
 
-### Optional 
+### Optional: 1Password Setup
+
+The workspace functions without 1Password, but secret injection will be unavailable.
 
 1. **1Password CLI** — [Installation guide](https://developer.1password.com/docs/cli/get-started/)
 2. **1Password Account** — Configure a vault with your service credentials
@@ -105,7 +107,7 @@ This layering keeps each command focused on one responsibility and makes the sys
 
 ## 📋 Available Commands
 
-All individual commands can be called to by users to make individual operations, workflows are a combination of multiple commands.
+All individual commands can be called by users for standalone operations; workflows combine multiple commands.
 
 ### Analytics
 
@@ -150,21 +152,23 @@ Multi-repository workspace configuration.
 
 - [**`/behavior:workspace:repo`**](.claude/commands/behavior/workspace/repo.md) - Clone repos or create branches (`--action new`)
 - [**`/behavior:workspace:apphost`**](.claude/commands/behavior/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
-- [**`/behavior:workspace:playwright`**](.claude/commands/behavior/workspace/playwright.md) - Playwright browser diagnostics (`--action debug`)
 - [**`/behavior:workspace:vscode`**](.claude/commands/behavior/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
-- [**`/behavior:workspace:postman`**](.claude/commands/behavior/workspace/postman.md) - Postman workspace operations (`--action request|create|read|update|delete`)
+- [**`/behavior:workspace:agent-teams`**](.claude/commands/behavior/workspace/agent-teams.md) - Orchestrate teams of specialized agents in consensus or parallel mode
+- [**`/behavior:workspace:ask-user-question`**](.claude/commands/behavior/workspace/ask-user-question.md) - Prompt user for free-form or selection input
 
-### Document
+### Skills
 
-Document content extraction and retrieval.
+Reusable capabilities invoked by behaviors and workflows.
 
-- [**`/skill:document:read`**](.claude/commands/skill/document/read.md) - Extract PDF and Word document content
-- [**`/skill:document:write`**](.claude/commands/skill/document/write.md) - Write markdown documentation to targets
-- [**`/skill:document:scraping`**](.claude/commands/skill/document/scraping.md) - Search and download documents from web
+- [**`/skill:document:read`**](.claude/commands/skill/document/read/SKILL.md) - Extract PDF and Word document content
+- [**`/skill:document:write`**](.claude/commands/skill/document/write/SKILL.md) - Write markdown documentation to targets
+- [**`/skill:document:scrap`**](.claude/commands/skill/document/scrap/SKILL.md) - Search and download documents from web
+- [**`/skill:playwright`**](.claude/commands/skill/playwright/SKILL.md) - Browser session management, diagnostics, and screenshots
+- [**`/skill:postman`**](.claude/commands/skill/postman/SKILL.md) - Postman workspace operations (`request|create|read|update|delete`)
 
 ### Workflow
 
-End-to-end orchestration workflows, that are a combination of sequential minor commands, that aims to a major task automation.
+End-to-end workflows that sequence behaviors and skills into complete automated tasks.
 
 - [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
 - [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
@@ -202,6 +206,16 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 
 Agents are organized in `.claude/agents/` by type, each with a distinct role in the system:
 
+### `analytics/` — Analytics Agents
+
+Specialized agents for domain research, problem exploration, and dataset discovery.
+
+| Agent | Role |
+| ----- | ---- |
+| [**zzaia-problem-exploration**](.claude/agents/analytics/zzaia-problem-exploration.md) | Transform problem statements into technical research reports |
+| [**zzaia-domain-exploration**](.claude/agents/analytics/zzaia-domain-exploration.md) | Uncover commercially viable problems across domains |
+| [**zzaia-dataset-exploration**](.claude/agents/analytics/zzaia-dataset-exploration.md) | Discover and evaluate ML datasets from authoritative repositories |
+
 ### `meta/` — System Self-Improvement
 
 Generate new components in standardized patterns. Used to extend the agentic system itself.
@@ -219,14 +233,14 @@ Highly specialized agents invoked by commands and workflows to perform focused t
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-task-clarifier**](.claude/agents/zzaia-task-clarifier.md) | Requirements analysis |
-| [**zzaia-developer-specialist**](.claude/agents/zzaia-developer-specialist.md) | Multi-language implementation |
-| [**zzaia-tester-specialist**](.claude/agents/zzaia-tester-specialist.md) | Build and test validation |
-| [**zzaia-code-reviewer**](.claude/agents/zzaia-code-reviewer.md) | Code quality and static analysis |
-| [**zzaia-workspace-manager**](.claude/agents/zzaia-workspace-manager.md) | Multi-repository worktree coordination |
-| [**zzaia-devops-specialist**](.claude/agents/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
-| [**zzaia-web-searcher**](.claude/agents/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
-| [**zzaia-document-specialist**](.claude/agents/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
+| [**zzaia-task-clarifier**](.claude/agents/sub/zzaia-task-clarifier.md) | Requirements analysis |
+| [**zzaia-developer-specialist**](.claude/agents/sub/zzaia-developer-specialist.md) | Multi-language implementation |
+| [**zzaia-tester-specialist**](.claude/agents/sub/zzaia-tester-specialist.md) | Build and test validation |
+| [**zzaia-code-reviewer**](.claude/agents/sub/zzaia-code-reviewer.md) | Code quality and static analysis |
+| [**zzaia-workspace-manager**](.claude/agents/sub/zzaia-workspace-manager.md) | Multi-repository worktree coordination |
+| [**zzaia-devops-specialist**](.claude/agents/sub/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
+| [**zzaia-web-searcher**](.claude/agents/sub/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
+| [**zzaia-document-specialist**](.claude/agents/sub/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
 
 ### `team/` — Macro Agents for Agent Teams
 
@@ -241,6 +255,10 @@ High-level agents dispatched inside agent-teams sessions to lead and coordinate 
 ```
 .claude/
 ├── agents/              # AI agent definitions
+│   ├── analytics/       # Analytics research agents
+│   ├── meta/            # System self-improvement agents
+│   ├── sub/             # Specialist working agents
+│   └── team/            # Macro agents for agent-teams sessions
 ├── commands/            # Command configurations
 │   ├── orchestrator/
 │   ├── behavior/
@@ -248,12 +266,11 @@ High-level agents dispatched inside agent-teams sessions to lead and coordinate 
 │   └── workflow/
 │       ├── analytics/
 │       └── remote/
-├── hooks/               # Lifecycle hooks and scripts
-│   └── extract-document.py
+├── output-styles/       # Claude output format definitions
 ├── plugins/
 │   └── plugin.json      # Single plugin configuration
 ├── rules/               # Language-specific standards
-marketplace.json         # Marketplace configuration
+├── marketplace.json     # Marketplace configuration
 CLAUDE.md                # System guidance
 workspace/               # Multi-repository workspace
 ```
