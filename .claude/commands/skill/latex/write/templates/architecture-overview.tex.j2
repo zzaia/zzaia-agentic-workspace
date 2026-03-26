@@ -1,0 +1,134 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Architecture Overview}}
+\lhead{\textcolor{muted}{\small {{ project_name | default('[Project Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{ {{ project_name | default('[Project Name]') }} }\\[0.5em]
+       \large Architecture Overview}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ system_description | default('[Brief system description and architectural approach]') }}
+
+\section{Architectural Decisions}
+
+{% for adr in adrs | default([]) %}
+\subsection{ADR {{ loop.index }}: {{ adr.title | default('[Decision Title]') }}}
+\textbf{Decision:} {{ adr.decision | default('[What was decided]') }}
+
+{{ adr.details | default('') }}
+
+\textbf{Rationale:} {{ adr.rationale | default('[Why this decision was made]') }}
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+{% else %}
+\subsection{ADR 001: [Decision Title]}
+\textbf{Decision:} [What was decided]
+
+\textbf{Rationale:} [Why this decision was made]
+{% endfor %}
+
+\section{C4 Context Diagram}
+
+{% if diagram_context %}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{ {{ diagram_context }} }
+\caption{System Context}
+\end{figure}
+{% else %}
+\begin{center}
+\begin{tikzpicture}
+\draw[dashed, color=muted] (0,0) rectangle (14,4);
+\node[color=muted] at (7,2) {\textit{C4 Context Diagram — provide image path via \texttt{diagram\_context} in \texttt{--data}}};
+\end{tikzpicture}
+\end{center}
+{% endif %}
+
+\section{C4 Container Diagram}
+
+{% if diagram_container %}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{ {{ diagram_container }} }
+\caption{Container Architecture}
+\end{figure}
+{% else %}
+\begin{center}
+\begin{tikzpicture}
+\draw[dashed, color=muted] (0,0) rectangle (14,4);
+\node[color=muted] at (7,2) {\textit{C4 Container Diagram — provide image path via \texttt{diagram\_container} in \texttt{--data}}};
+\end{tikzpicture}
+\end{center}
+{% endif %}
+
+\section{Architecture Components}
+
+{% for category in components | default([]) %}
+\subsection{ {{ category.name | default('[Component Category]') }} }
+\begin{itemize}[leftmargin=*]
+{% for item in category.items | default([]) %}
+  \item \textbf{ {{ item.name }} }: {{ item.description }} \textcolor{muted}{\small({{ item.tech | default('') }})}
+{% endfor %}
+\end{itemize}
+{% else %}
+\subsection{[Component Category]}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{[Component Name]}: [Description] \textcolor{muted}{\small([Technologies])}
+\end{itemize}
+{% endfor %}
+
+\section{Technology Stack}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Layer} & \textbf{Technologies} \\
+\midrule
+{% for row in tech_stack | default([]) %}
+{{ row.layer }} & {{ row.technologies }} \\
+{% else %}
+[Layer] & [Technologies] \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Related Documentation}
+
+\begin{itemize}[leftmargin=*]
+{% for doc in related_docs | default([]) %}
+  \item \href{ {{ doc.url }} }{ {{ doc.title }} } — {{ doc.description }}
+{% else %}
+  \item [Doc Title] — [Description]
+{% endfor %}
+\end{itemize}
+
+\end{document}

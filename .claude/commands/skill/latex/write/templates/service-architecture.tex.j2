@@ -1,0 +1,154 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{codebg}{RGB}{245,245,245}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0.4pt,
+  rulecolor=\color{muted},
+  breaklines=true,
+}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Service Architecture}}
+\lhead{\textcolor{muted}{\small {{ service_name | default('[Service Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{ {{ service_name | default('[Service Name]') }} }\\[0.5em]
+       \large Service Architecture}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ service_description | default('[Brief service description and purpose]') }}
+
+\subsection*{Core Responsibilities}
+{{ core_responsibilities | default('[Description of what this service does]') }}
+
+\section{Architectural Decisions}
+
+{% for adr in adrs | default([]) %}
+\subsection{ADR {{ loop.index }}: {{ adr.title | default('[Decision Title]') }}}
+\textbf{Decision:} {{ adr.decision }}
+
+{{ adr.details | default('') }}
+
+\textbf{Rationale:} {{ adr.rationale }}
+\vspace{0.3em}\hrule\vspace{0.3em}
+{% else %}
+\subsection{ADR 001: [Decision Title]}
+\textbf{Decision:} [What was decided]
+
+\textbf{Rationale:} [Why this decision was made]
+{% endfor %}
+
+\section{C4 Container Diagram}
+
+{% if diagram_container %}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{ {{ diagram_container }} }
+\caption{Container diagram for {{ service_name | default('[Service Name]') }}}
+\end{figure}
+{% else %}
+\begin{center}
+\begin{tikzpicture}
+\draw[dashed, color=muted] (0,0) rectangle (14,4);
+\node[color=muted] at (7,2) {\textit{C4 Container Diagram — provide image path via \texttt{diagram\_container} in \texttt{--data}}};
+\end{tikzpicture}
+\end{center}
+{% endif %}
+
+\section{Primary Flow}
+
+{% if diagram_sequence %}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{ {{ diagram_sequence }} }
+\caption{ {{ flow_name | default('[Primary Flow Name]') }} }
+\end{figure}
+{% else %}
+\begin{center}
+\begin{tikzpicture}
+\draw[dashed, color=muted] (0,0) rectangle (14,3);
+\node[color=muted] at (7,1.5) {\textit{Sequence Diagram — provide image path via \texttt{diagram\_sequence} in \texttt{--data}}};
+\end{tikzpicture}
+\end{center}
+{% endif %}
+
+\section{Clean Architecture Layer Structure}
+
+\begin{lstlisting}
+{{ service_name | default('[ServiceName]') }}/
++-- Common/
++-- {{ service_name | default('[ServiceName]') }}.Domain/
+|   +-- Entities/
+|   +-- ValueObjects/
+|   +-- DomainEvents/
+|   +-- Enums/
++-- {{ service_name | default('[ServiceName]') }}.Application/
+|   +-- Commands/
+|   +-- Queries/
+|   +-- Handlers/
+|   +-- Validators/
+|   +-- DTOs/
+|   +-- Interfaces/
++-- {{ service_name | default('[ServiceName]') }}.Infrastructure/
+|   +-- Persistence/
+|   +-- Integration/
+|   +-- Messaging/
++-- {{ service_name | default('[ServiceName]') }}.API/
+|   +-- Controllers/
+|   +-- Middleware/
+|   +-- Extensions/
++-- {{ service_name | default('[ServiceName]') }}.Tests/
+    +-- Unit/
+    +-- Integration/
+\end{lstlisting}
+
+\section{Design Decisions}
+
+\begin{tabular}{ll}
+\textbf{Event-Driven:} & {{ event_driven | default('[Strategy]') }} \\
+\textbf{Logging:} & {{ logging | default('[Strategy]') }} \\
+\textbf{Mapping:} & {{ mapping | default('[Library and pattern]') }} \\
+\textbf{Secret Store:} & {{ secret_store | default('[Strategy]') }} \\
+\textbf{Validation:} & {{ validation | default('[Strategy]') }} \\
+\textbf{Resilience:} & {{ resilience | default('[Circuit breaker, retry config]') }} \\
+\textbf{Scaling:} & {{ scaling | default('[HPA configuration]') }} \\
+\end{tabular}
+
+\section{Recommended Tools}
+
+\begin{itemize}[leftmargin=*]
+{% for tool in tools | default(['[Tool 1]', '[Tool 2]']) %}
+  \item {{ tool }}
+{% endfor %}
+\end{itemize}
+
+\end{document}

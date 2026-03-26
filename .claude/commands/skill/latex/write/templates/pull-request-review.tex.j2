@@ -1,0 +1,133 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{array}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{critical}{RGB}{180,40,40}
+\definecolor{high}{RGB}{200,100,0}
+\definecolor{medium}{RGB}{200,160,0}
+\definecolor{low}{RGB}{60,140,80}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0.4pt,
+  rulecolor=\color{muted},
+  breaklines=true,
+}
+
+\newcommand{\sevcritical}{\textcolor{critical}{\textbf{Critical}}}
+\newcommand{\sevhigh}{\textcolor{high}{\textbf{High}}}
+\newcommand{\sevmedium}{\textcolor{medium}{\textbf{Medium}}}
+\newcommand{\sevlow}{\textcolor{low}{\textbf{Low}}}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Pull Request Review}}
+\lhead{\textcolor{muted}{\small {{ pr_title | default('[PR Title]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{Pull Request Review}\\[0.5em]
+       \large {{ pr_title | default('[PR Title]') }}}
+\author{ {{ reviewer | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+
+\begin{tabular}{ll}
+\textbf{PR:} & {{ pr_id | default('[#ID — Title]') }} \\
+\textbf{Repository:} & {{ repository | default('[repo-name]') }} \\
+\textbf{Branch:} & \texttt{ {{ source_branch | default('[source]') }} } $\rightarrow$ \texttt{ {{ target_branch | default('[target]') }} } \\
+\textbf{Reviewed:} & {{ reviewed_at | default('[datetime]') }} \\
+\textbf{Result:} & {{ result | default('[Approved / Changes requested]') }} — {{ issues_count | default('[X]') }} issues found \\
+\end{tabular}
+
+\section{Issues Found}
+
+{% for issue in issues | default([]) %}
+\subsection{ {{ loop.index }}. {{ issue.title | default('[Issue Title]') }} }
+
+\begin{tabular}{ll}
+\textbf{Severity:} &
+{% if issue.severity == 'Critical' %}\sevcritical
+{% elif issue.severity == 'High' %}\sevhigh
+{% elif issue.severity == 'Medium' %}\sevmedium
+{% else %}\sevlow{% endif %} \\
+\textbf{File:} & \texttt{ {{ issue.file | default('[file/path.ext]') }} } — line {{ issue.line | default('[N]') }} \\
+\textbf{Category:} & {{ issue.category | default('[Bug / Security / Performance / Design]') }} \\
+\end{tabular}
+
+\vspace{0.3em}
+\textbf{Problem:} {{ issue.problem | default('[Description of the issue]') }}
+
+{% if issue.suggestion %}
+\textbf{Suggestion:}
+\begin{lstlisting}
+{{ issue.suggestion }}
+\end{lstlisting}
+{% endif %}
+
+{% else %}
+\subsection{1. [Issue Title]}
+\begin{tabular}{ll}
+\textbf{Severity:} & \sevhigh \\
+\textbf{File:} & \texttt{[file/path.ext]} — line [N] \\
+\textbf{Category:} & [Bug / Security / Performance] \\
+\end{tabular}
+
+\vspace{0.3em}
+\textbf{Problem:} [Description of the issue]
+{% endfor %}
+
+\section{Positives}
+
+\begin{itemize}[leftmargin=*]
+{% for item in positives | default(['[What was done well]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\section{Summary Table}
+
+\begin{center}
+\begin{longtable}{>{\small}p{0.4cm} >{\small}p{4cm} >{\small}p{1.8cm} >{\small}p{2.5cm} >{\small}p{3cm}}
+\toprule
+\textbf{\#} & \textbf{File} & \textbf{Severity} & \textbf{Category} & \textbf{Status} \\
+\midrule
+\endhead
+{% for issue in issues | default([]) %}
+{{ loop.index }} & \texttt{ {{ issue.file | default('[file]') }} } & {{ issue.severity | default('[severity]') }} & {{ issue.category | default('[category]') }} & {{ issue.status | default('Must fix') }} \\
+{% else %}
+1 & \texttt{[file]} & High & Bug & Must fix \\
+{% endfor %}
+\bottomrule
+\end{longtable}
+\end{center}
+
+\section{Decision}
+
+\textbf{Verdict:} {{ result | default('[Approved / Changes requested]') }}
+
+\vspace{0.5em}
+{{ decision_rationale | default('[Brief rationale for the decision]') }}
+
+\end{document}

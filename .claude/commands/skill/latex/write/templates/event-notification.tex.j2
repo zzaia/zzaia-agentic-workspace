@@ -1,0 +1,170 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{jsonkey}{RGB}{0,100,180}
+
+\lstdefinelanguage{json}{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0.4pt,
+  rulecolor=\color{muted},
+  string=[s]{"}{"},
+  stringstyle=\color{jsonkey},
+  breaklines=true,
+}
+
+\lstdefinelanguage{yaml}{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0.4pt,
+  rulecolor=\color{muted},
+  keywords={apiVersion,kind,metadata,spec,name,type,version},
+  keywordstyle=\color{jsonkey},
+  breaklines=true,
+}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Event Notification System}}
+\lhead{\textcolor{muted}{\small {{ project_name | default('[Project Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{}{0em}{}
+
+\title{\textbf{ {{ project_name | default('[Project Name]') }} }\\[0.5em]
+       \large Event Notification System}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ overview | default('[Event system description]') }}
+
+\textbf{Infrastructure:} {{ infrastructure | default('[Event infrastructure]') }}
+
+\section{Event Catalog}
+
+{% for category in event_categories | default([]) %}
+\subsection{ {{ category.name }} (Published by {{ category.publisher }})}
+
+{% for event in category.events | default([]) %}
+\subsubsection{ {{ loop.index }}. {{ event.name }} }
+
+\begin{tabular}{ll}
+\textbf{Publisher:} & {{ event.publisher | default(category.publisher) }} \\
+\textbf{Subscribers:} & {{ event.subscribers | default('[subscribers]') }} \\
+\end{tabular}
+
+\vspace{0.3em}
+{{ event.description | default('[Event description]') }}
+
+\textbf{Payload Schema:}
+\begin{lstlisting}[language=json]
+{
+  "event_id": "uuid",
+  "event_type": "{{ event.type | default('[eventType]') }}",
+  "timestamp": "{{ event.timestamp_format | default('ISO8601') }}",
+  "payload": {
+{% for field in event.payload_fields | default([]) %}
+    "{{ field.name }}": "{{ field.example | default('[value]') }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  }
+}
+\end{lstlisting}
+
+{% if event.field_definitions %}
+\textbf{Field Definitions:}
+\begin{itemize}[leftmargin=*]
+{% for field in event.field_definitions %}
+  \item \texttt{ {{ field.path }} } ({{ field.type }}, {{ field.required | default('optional') }}): {{ field.description }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% endfor %}
+{% else %}
+\subsection{[Category] (Published by [Publisher Service])}
+
+\subsubsection{1. [Event Name]}
+\begin{tabular}{ll}
+\textbf{Publisher:} & [publisher] \\
+\textbf{Subscribers:} & [subscribers] \\
+\end{tabular}
+{% endfor %}
+
+\section{Topic Configuration}
+
+\textbf{Naming convention:} \texttt{ {{ topic_naming_pattern | default('[topicNamingPattern]') }} }
+
+\begin{itemize}[leftmargin=*]
+{% for topic in topic_examples | default(['[exampleTopic1]']) %}
+  \item \texttt{ {{ topic }} }
+{% endfor %}
+\end{itemize}
+
+\section{Idempotency Strategy}
+
+{{ idempotency_description | default('[Idempotency description]') }}
+
+\section{Error Handling}
+
+\textbf{Retry Strategy:}
+\begin{itemize}[leftmargin=*]
+{% for item in retry_strategy | default(['[retry description]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\textbf{Dead Letter Queue:}
+\begin{itemize}[leftmargin=*]
+{% for item in dlq | default(['[DLQ description]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\section{Monitoring \& Observability}
+
+\textbf{Metrics:}
+\begin{itemize}[leftmargin=*]
+{% for metric in metrics | default([]) %}
+  \item \texttt{ {{ metric.name }} } ({{ metric.type }}): {{ metric.description }}
+{% else %}
+  \item \texttt{[metricName]} ([type]): [description]
+{% endfor %}
+\end{itemize}
+
+\section{Testing Strategy}
+
+\begin{itemize}[leftmargin=*, label=\textbf{Unit:}]
+{% for item in unit_tests | default(['[unit test description]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\begin{itemize}[leftmargin=*, label=\textbf{Integration:}]
+{% for item in integration_tests | default(['[integration test description]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\end{document}
