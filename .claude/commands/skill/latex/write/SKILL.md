@@ -22,7 +22,7 @@ metadata:
 
 ## PURPOSE
 
-Compile LaTeX documents to PDF using the tectonic engine. Accepts a Jinja2-templated `.tex.j2` file, renders it with provided data, and produces a PDF output file.
+Compile LaTeX documents to PDF using the tectonic engine. Accepts a Jinja2-templated `.tex.j2` file, auto-generates diagrams from Mermaid/Graphviz code in `--data`, renders the template, and produces a PDF output file.
 
 ## EXECUTION
 
@@ -32,13 +32,20 @@ Compile LaTeX documents to PDF using the tectonic engine. Accepts a Jinja2-templ
    - Verify output directory is writable
    - Parse JSON data if provided
 
-2. **Render Template**: Run `./scripts/render-latex.py` to process Jinja2 template
+2. **Auto-generate Diagrams**: Scan `--data` for `diagram_*` keys containing diagram code
+
+   - Keys starting with `diagram_` whose value is Mermaid or Graphviz source are auto-rendered to PNG
+   - PNGs are saved to `<output_dir>/diagrams/`
+   - The key value is replaced with the PNG path before template rendering
+   - Keys already containing file paths (`.png`, `/path/to/file`) are passed through unchanged
+
+3. **Render Template**: Run `./scripts/render-latex.py` to process Jinja2 template
 
    - Load `.tex.j2` template file
-   - Render with provided JSON data variables
+   - Render with resolved data (diagram keys now contain PNG paths)
    - Write temporary `.tex` file to workspace
 
-3. **Compile with Tectonic**: Execute tectonic CLI engine
+4. **Compile with Tectonic**: Execute tectonic CLI engine
 
    - Run `tectonic` on rendered `.tex` file
    - Capture compilation output and errors

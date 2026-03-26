@@ -16,8 +16,8 @@ Unified entry point for LaTeX document operations. Routes to the appropriate sub
 
 ## Action Routing
 
-| Action  | Command                             | Description                              |
-|---------|-------------------------------------|------------------------------------------|
+| Action  | Command                                | Description                             |
+|---------|----------------------------------------|-----------------------------------------|
 | `write` | [@skill:latex:write](./write/SKILL.md) | Generate PDF from Jinja2 LaTeX template |
 
 ## Instructions

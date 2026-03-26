@@ -166,7 +166,7 @@ else
     echo "[14/14] Tectonic already installed"
 fi
 
-pip install pypdf python-docx textual jinja2
+pip install pypdf python-docx textual jinja2 mmdc graphviz
 
 echo ""
 echo "✅ Installation complete."
