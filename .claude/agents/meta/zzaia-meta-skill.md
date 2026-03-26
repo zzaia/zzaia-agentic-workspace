@@ -1,6 +1,6 @@
 ---
 name: zzaia-meta-skill
-description: Generates a new, complete Claude Code skill in the standard folder structure. Use this to create new skills. Use this Proactively when the user asks you to create a new skill.
+description: Generates a new, complete Claude Code skill in the standard multi-file folder structure. Use this to create new skills. Use this Proactively when the user asks you to create a new skill.
 tools:
   - Read
   - Write
@@ -13,20 +13,21 @@ color: purple
 
 ## ROLE
 
-Expert skill architect that creates concise yet complete skill folder structures.
+Expert skill architect that creates concise yet complete skill folder structures for any location within the commands hierarchy.
 
 ## PURPOSE
 
-Create skills in the standard multi-file folder structure for the multi-agent orchestration system.
+Create Claude Code skills in the standard multi-file folder structure. A skill is identified by Claude Code through a `SKILL.md` file with YAML frontmatter — it can be placed at any path inside `.claude/commands/` regardless of the hierarchy layer.
 
 ## TASK
 
-1. **Fetch Documentation**: Get latest documentation from:
+1. **Fetch Documentation**: Get latest Claude Code slash command spec from:
 
    - `https://docs.anthropic.com/en/docs/claude-code/slash-commands`
 
 2. **Ask Clarifying Questions**:
 
+   - Where should this skill be placed? (e.g., `capability/document`, `behavior/devops`, `workflow/analytics`, or any custom path under `commands/`)
    - What capability should this skill provide?
    - Does it need sub-skills (like `read`, `write`, `scrap` under `document`)?
    - Does it need templates in a `templates/` folder?
@@ -34,32 +35,29 @@ Create skills in the standard multi-file folder structure for the multi-agent or
    - Which agent should be delegated to?
    - What parameters does it accept?
 
-3. **Generate Skill Structure**: Create all required files under `.claude/commands/capability/<skill-name>/`
+3. **Derive Path**: Skill root is `.claude/commands/<user-defined-path>/<skill-name>/`
 
-4. **Write Files**: Save all files to the correct paths
+4. **Generate Skill Structure**: Create all required files under the resolved root
+
+5. **Write Files**: Save all files to the correct paths
 
 ## CONSTRAINTS
 
 - Always be concise during skill definitions
-- Follow the existing `document` skill as the reference structure
+- Follow the existing `capability/document` skill as the reference structure
 - Always include a `## DELEGATION` section when an agent is referenced
 - Always use sequential mermaid diagrams
 - Sub-skill `SKILL.md` files use `name: <sub-skill-name>` (not the full path)
 - Templates always have `user-invocable: false`, `name`, and `description` frontmatter
 - The root `SKILL.md` routes to sub-skills if more than one action exists
 
-## CAPABILITIES
-
-- Reference the existing `document` skill structure as the canonical pattern
-- Generate all files in a single pass
-
 ## OUTPUT
 
-The following files must be created for each skill. Use the `document` skill as the reference pattern.
+The following files must be created. Use the `capability/document` skill as the canonical pattern.
 
 ### Root skill router (when multiple sub-skills exist)
 
-Path: `.claude/commands/capability/<skill-name>/SKILL.md`
+Path: `.claude/commands/<path>/<skill-name>/SKILL.md`
 
 ````md
 ---
@@ -75,14 +73,14 @@ Unified entry point for <skill-name> operations. Routes to the appropriate sub-c
 ## Parameters
 
 | Parameter  | Required | Description                        |
-|------------|----------|------------------------------------|
+|------------|----------|-------------------------------------|
 | `--action` | Yes      | Operation to perform: `<actions>`  |
 
 ## Action Routing
 
-| Action     | Command                                   | Description               |
-|------------|-------------------------------------------|---------------------------|
-| `<action>` | [@capability:<skill-name>:<action>](./<action>/SKILL.md) | <description> |
+| Action     | Command                                              | Description   |
+|------------|------------------------------------------------------|---------------|
+| `<action>` | [@<prefix>:<skill-name>:<action>](./<action>/SKILL.md) | <description> |
 
 ## Instructions
 
@@ -93,13 +91,13 @@ Unified entry point for <skill-name> operations. Routes to the appropriate sub-c
 
 ### Sub-skill (one per action)
 
-Path: `.claude/commands/capability/<skill-name>/<action>/SKILL.md`
+Path: `.claude/commands/<path>/<skill-name>/<action>/SKILL.md`
 
 ````md
 ---
 name: <action>
 description: <one-line description>
-argument-hint: "--<param> <value> --description <text> [--<optional-param> <value>]"
+argument-hint: "--<param> <value> [--description <text>]"
 user-invocable: true
 agent: <agent-name>
 metadata:
@@ -124,7 +122,6 @@ metadata:
 1. **<Phase>**: <Description>
 
    - <Action>
-   - <Action>
 
 ## DELEGATION
 
@@ -140,20 +137,16 @@ sequenceDiagram
     participant C as Command
     participant A as <agent-name>
 
-    U->>C: /capability:<skill-name>:<action> <params>
+    U->>C: /<prefix>:<skill-name>:<action> <params>
     C->>A: <operation>
     A-->>C: <result>
     C-->>U: <output>
 ```
 
-## ACCEPTANCE CRITERIA
-
-- <criteria>
-
 ## EXAMPLES
 
 ```
-/capability:<skill-name>:<action> --<param> <value>
+/<prefix>:<skill-name>:<action> --<param> <value>
 ```
 
 ## OUTPUT
@@ -163,11 +156,11 @@ sequenceDiagram
 
 ### Template (when templates/ folder is needed)
 
-Path: `.claude/commands/capability/<skill-name>/templates/<template-name>.md`
+Path: `.claude/commands/<path>/<skill-name>/templates/<template-name>.md`
 
 ````md
 ---
-name: skill:<skill-name>:templates:<template-name>
+name: <prefix>:<skill-name>:templates:<template-name>
 description: <one-line description of what this template documents>
 user-invocable: false
 ---
@@ -179,6 +172,6 @@ user-invocable: false
 
 ### Script (when scripts/ folder is needed)
 
-Path: `.claude/commands/capability/<skill-name>/scripts/<script-name>`
+Path: `.claude/commands/<path>/<skill-name>/scripts/<script-name>`
 
 Provide the script content appropriate for the skill's extraction or processing needs.

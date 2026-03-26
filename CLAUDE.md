@@ -20,7 +20,7 @@ Multi-agent orchestration system for multi-language development workflows across
 Agents organized in `.claude/agents/` by role:
 
 **meta/** — System self-improvement agents:
-- `zzaia-meta-agent`, `zzaia-meta-behavior`, `zzaia-meta-workflow`, `zzaia-meta-skill`
+- `zzaia-meta-agent`, `zzaia-meta-command`, `zzaia-meta-workflow`, `zzaia-meta-skill`
 
 **sub/** — All specialist sub-agents invoked by commands and workflows:
 - `zzaia-task-clarifier`, `zzaia-document-specialist`, `zzaia-workspace-manager`, `zzaia-web-searcher`, `zzaia-developer-specialist`, `zzaia-tester-specialist`, `zzaia-devops-specialist`, `zzaia-code-reviewer`
