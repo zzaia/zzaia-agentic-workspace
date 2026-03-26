@@ -266,7 +266,7 @@ Generate new components in standardized patterns. Used to extend the agentic sys
 | Agent | Role |
 | ----- | ---- |
 | [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent definition generation |
-| [**zzaia-meta-behavior**](.claude/agents/meta/zzaia-meta-behavior.md) | Behavior command generation |
+| [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation for any hierarchy layer |
 | [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Capability generation |
 | [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation |
 
