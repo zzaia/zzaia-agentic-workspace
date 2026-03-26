@@ -6,6 +6,7 @@ tools:
   - WebSearch
 mcpServers: 
   - tavily
+  - Microsoft 365
 model: haiku
 color: cyan
 ---
