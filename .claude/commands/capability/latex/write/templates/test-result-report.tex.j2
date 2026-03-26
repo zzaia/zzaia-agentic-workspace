@@ -11,6 +11,8 @@
 \usepackage{titlesec}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -37,12 +39,14 @@
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
 
+\emergencystretch=2em
+
 \begin{document}
 \maketitle
 
 \section*{Summary}
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Work Item:} & {{ work_item | default('[#ID — Title]') }} \\
 \textbf{Test Case:} & {{ test_case | default('[#ID — Title]') }} \\
 \textbf{Target URL:} & \url{ {{ target_url | default('[url]') }} } \\
@@ -100,7 +104,7 @@
 \section{Bug Work Items Created}
 
 \begin{center}
-\begin{tabular}{llll}
+\begin{tabular}{p{1.5cm}p{6cm}p{3cm}p{3cm}}
 \toprule
 \textbf{Bug ID} & \textbf{Title} & \textbf{Severity} & \textbf{Step} \\
 \midrule

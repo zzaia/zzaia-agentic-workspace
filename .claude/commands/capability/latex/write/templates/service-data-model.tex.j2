@@ -12,6 +12,8 @@
 \usepackage{parskip}
 \usepackage{titlesec}
 \usepackage{listings}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -39,6 +41,8 @@
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
 
+\emergencystretch=2em
+
 \begin{document}
 \maketitle
 \tableofcontents
@@ -47,7 +51,7 @@
 \section{Entity Relationship Diagram}
 
 {% if diagram_er %}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{ {{ diagram_er }} }
 \caption{Entity Relationship Diagram — {{ service_name | default('[Service Name]') }}}
