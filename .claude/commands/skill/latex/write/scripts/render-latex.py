@@ -37,15 +37,11 @@ def validate_inputs(template_path: str, output_path: str) -> RenderConfig:
     template = Path(template_path).resolve()
     if not template.exists():
         raise FileNotFoundError(f"Template file not found: {template}")
-    if template.suffix != ".j2":
-        raise ValueError(
-            f"Template must have .tex.j2 extension, got: {template.name}"
-        )
+    if not template.name.endswith(".tex.j2"):
+        raise ValueError(f"Template must have .tex.j2 extension, got: {template.name}")
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
-    return RenderConfig(
-        template_path=template, output_path=output, data={}
-    )
+    return RenderConfig(template_path=template, output_path=output, data={})
 
 
 def load_template_data(data_json: Optional[str]) -> Dict[str, Any]:
@@ -58,7 +54,7 @@ def load_template_data(data_json: Optional[str]) -> Dict[str, Any]:
         Dictionary of template variables.
 
     Raises:
-        json.JSONDecodeError: If JSON is invalid.
+        ValueError: If JSON is invalid.
     """
     if not data_json:
         return {}
@@ -79,14 +75,12 @@ def render_template(config: RenderConfig) -> Path:
 
     Raises:
         ImportError: If jinja2 is not installed.
-        Exception: If template rendering fails.
+        RuntimeError: If template rendering fails.
     """
     try:
         from jinja2 import Environment, FileSystemLoader, select_autoescape
     except ImportError:
-        raise ImportError(
-            "jinja2 not installed. Run: pip install jinja2"
-        )
+        raise ImportError("jinja2 not installed. Run: pip install jinja2")
     template_dir = config.template_path.parent
     template_name = config.template_path.name
     env = Environment(
@@ -138,23 +132,17 @@ def compile_latex(tex_file: Path) -> Path:
                 stderr=result.stderr,
             )
     except FileNotFoundError:
-        raise FileNotFoundError(
-            "tectonic not found. Install via: snap install tectonic"
-        )
+        raise FileNotFoundError("tectonic not found. Install via: snap install tectonic")
     pdf_path = tex_file.with_suffix(".pdf")
     if not pdf_path.exists():
-        raise RuntimeError(
-            f"PDF compilation did not produce output: {pdf_path}"
-        )
+        raise RuntimeError(f"PDF compilation did not produce output: {pdf_path}")
     return pdf_path
 
 
 def main() -> None:
-    """Main entry point for LaTeX rendering and compilation."""
+    """Main entry point for template rendering and PDF compilation."""
     if len(sys.argv) < 3:
-        print(
-            "Usage: python render-latex.py <template.tex.j2> <output.pdf> [data.json]"
-        )
+        print("Usage: python render-latex.py <template.tex.j2> <output.pdf> [data_json]")
         sys.exit(1)
     template_arg = sys.argv[1]
     output_arg = sys.argv[2]
