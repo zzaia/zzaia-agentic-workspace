@@ -2,10 +2,14 @@
 \usepackage[utf-8]{inputenc}
 \usepackage[margin=1in]{geometry}
 \usepackage{hyperref}
+\usepackage{float}
+\usepackage{microtype}
 
 \title{{{ title | default('Document Title') }}}
 \author{{{ author | default('Author Name') }}}
 \date{{{ date | default('') }}}
+
+\emergencystretch=2em
 
 \begin{document}
 

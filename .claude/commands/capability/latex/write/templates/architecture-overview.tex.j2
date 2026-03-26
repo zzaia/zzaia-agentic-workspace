@@ -12,6 +12,7 @@
 \usepackage{parskip}
 \usepackage{titlesec}
 \usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -29,6 +30,8 @@
        \large Architecture Overview}
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
+
+\emergencystretch=2em
 
 \begin{document}
 \maketitle
@@ -109,7 +112,7 @@
 \section{Technology Stack}
 
 \begin{center}
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \toprule
 \textbf{Layer} & \textbf{Technologies} \\
 \midrule

@@ -10,6 +10,8 @@
 \usepackage{parskip}
 \usepackage{titlesec}
 \usepackage{listings}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -46,12 +48,14 @@
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
 
+\emergencystretch=2em
+
 \begin{document}
 \maketitle
 
 \section*{Overview}
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Feature:} & {{ feature_name | default('[Feature name]') }} \\
 \textbf{Work Item:} & {{ work_item | default('[#ID — Title]') }} \\
 \textbf{Domain:} & {{ domain | default('[Bounded context]') }} \\
@@ -117,7 +121,7 @@ Scenario Outline: {{ scenario_outline.title }}
 \section{Acceptance Criteria Mapping}
 
 \begin{center}
-\begin{tabular}{lll}
+\begin{tabular}{p{4cm}p{7cm}p{3cm}}
 \toprule
 \textbf{Scenario} & \textbf{Acceptance Criterion} & \textbf{Status} \\
 \midrule

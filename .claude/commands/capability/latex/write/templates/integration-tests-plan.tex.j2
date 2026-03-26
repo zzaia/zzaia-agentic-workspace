@@ -10,6 +10,8 @@
 \usepackage{parskip}
 \usepackage{titlesec}
 \usepackage{multirow}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -31,6 +33,8 @@
        \large Integration Tests Plan}
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
+
+\emergencystretch=2em
 
 \begin{document}
 \maketitle
@@ -64,7 +68,7 @@
 \section{Test Environment}
 
 \begin{center}
-\begin{tabular}{lll}
+\begin{tabular}{p{3.5cm}p{3.5cm}p{7cm}}
 \toprule
 \textbf{Resource} & \textbf{Type} & \textbf{Configuration} \\
 \midrule
@@ -125,7 +129,7 @@
 
 \section{CI/CD Integration}
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Pipeline stage:} & {{ pipeline_stage | default('[stage name]') }} \\
 \textbf{Trigger:} & {{ trigger | default('[trigger condition]') }} \\
 \textbf{Timeout:} & {{ timeout | default('[Xm]') }} \\

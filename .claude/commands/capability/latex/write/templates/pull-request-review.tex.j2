@@ -12,6 +12,8 @@
 \usepackage{listings}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -48,12 +50,14 @@
 \author{ {{ reviewer | default('') }} }
 \date{ {{ date | default('') }} }
 
+\emergencystretch=2em
+
 \begin{document}
 \maketitle
 
 \section*{Summary}
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{PR:} & {{ pr_id | default('[#ID — Title]') }} \\
 \textbf{Repository:} & {{ repository | default('[repo-name]') }} \\
 \textbf{Branch:} & \texttt{ {{ source_branch | default('[source]') }} } $\rightarrow$ \texttt{ {{ target_branch | default('[target]') }} } \\
@@ -66,7 +70,7 @@
 {% for issue in issues | default([]) %}
 \subsection{ {{ loop.index }}. {{ issue.title | default('[Issue Title]') }} }
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Severity:} &
 {% if issue.severity == 'Critical' %}\sevcritical
 {% elif issue.severity == 'High' %}\sevhigh
@@ -88,7 +92,7 @@
 
 {% else %}
 \subsection{1. [Issue Title]}
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Severity:} & \sevhigh \\
 \textbf{File:} & \texttt{[file/path.ext]} — line [N] \\
 \textbf{Category:} & [Bug / Security / Performance] \\

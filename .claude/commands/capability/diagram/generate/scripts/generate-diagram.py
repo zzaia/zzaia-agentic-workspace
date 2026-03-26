@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate diagram PNG from Mermaid, Graphviz, D2, PlantUML, or Diagrams source using local renderers."""
 
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -169,7 +170,7 @@ def render_diagrams(config: DiagramConfig) -> None:
         if not pngs:
             raise RuntimeError("No PNG output produced by diagrams execution")
         config.output_path.parent.mkdir(parents=True, exist_ok=True)
-        pngs[0].rename(config.output_path)
+        shutil.copy2(pngs[0], config.output_path)
 
 
 def render_plantuml(config: DiagramConfig) -> None:

@@ -76,12 +76,11 @@ Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or 
    | Condition | Renderer | Rationale |
    |---|---|---|
    | Value ends with `.png`, `.svg`, `.pdf` or starts with `/`, `./`, `~/` | _(skip — already a path)_ | Pre-existing image |
-   | Starts with `from diagrams import` or `from diagrams.` | `diagrams` | AWS/Azure/GCP/K8s cloud icons |
-   | Starts with `@startuml` | `plantuml` | Formal C4 with Person/System/Container icons |
-   | Starts with `digraph`, `graph {`, `strict digraph` | `graphviz` | Graph/dependency layout with `splines=ortho` |
-   | Starts with `C4Context`, `C4Container`, `C4Component` | `d2` | Architecture diagrams — cleanest layout via ELK |
-   | Starts with any other Mermaid keyword (`graph`, `flowchart`, `sequenceDiagram`, `erDiagram`, `mindmap`, `gitgraph`, etc.) | `mermaid` | Sequence flows, flowcharts, inline markdown diagrams |
-   | Tagged with explicit renderer hint (e.g. ` ```d2 diagram_arch`) | use tagged renderer | User override takes precedence |
+   | Tagged with explicit renderer hint (e.g. ` ```d2 diagram_arch`) | use tagged renderer | User override — highest priority |
+   | Starts with `@startuml` | `plantuml` | PlantUML-specific syntax |
+   | Starts with `digraph`, `graph {`, `strict digraph` | `graphviz` | Graphviz DOT syntax |
+   | Starts with `sequenceDiagram`, `stateDiagram`, `gantt`, `journey`, `gitgraph`, `timeline` | `mermaid` | Types unsupported by diagrams package |
+   | **All other diagram code** (C4, flowchart, graph, erDiagram, mindmap, architecture, or any Python diagrams code) | **`diagrams`** ⬅ default | **Default renderer — Python diagrams package with C4 support and cloud icons** |
 
 4. **Compile PDF**
 

@@ -12,6 +12,8 @@
 \usepackage{parskip}
 \usepackage{titlesec}
 \usepackage{listings}
+\usepackage{float}
+\usepackage{microtype}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -38,6 +40,8 @@
        \large Service Architecture}
 \author{ {{ author | default('') }} }
 \date{ {{ date | default('') }} }
+
+\emergencystretch=2em
 
 \begin{document}
 \maketitle
@@ -70,7 +74,7 @@
 \section{C4 Container Diagram}
 
 {% if diagram_container %}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{ {{ diagram_container }} }
 \caption{Container diagram for {{ service_name | default('[Service Name]') }}}
@@ -87,7 +91,7 @@
 \section{Primary Flow}
 
 {% if diagram_sequence %}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{ {{ diagram_sequence }} }
 \caption{ {{ flow_name | default('[Primary Flow Name]') }} }
@@ -133,7 +137,7 @@
 
 \section{Design Decisions}
 
-\begin{tabular}{ll}
+\begin{tabular}{p{4cm}p{10cm}}
 \textbf{Event-Driven:} & {{ event_driven | default('[Strategy]') }} \\
 \textbf{Logging:} & {{ logging | default('[Strategy]') }} \\
 \textbf{Mapping:} & {{ mapping | default('[Library and pattern]') }} \\
