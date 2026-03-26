@@ -166,7 +166,23 @@ else
     echo "[14/14] Tectonic already installed"
 fi
 
-pip install pypdf python-docx textual jinja2 mmdc graphviz
+# ── 15. D2 (architecture diagram language) ──────────────────────────────────
+if ! is_installed d2; then
+    echo "[15/16] Installing D2..."
+    curl -fsSL https://d2lang.com/install.sh | sh -s --
+else
+    echo "[15/16] D2 already installed"
+fi
+
+# ── 16. PlantUML (C4 diagram support) ───────────────────────────────────────
+if ! is_installed plantuml; then
+    echo "[16/16] Installing PlantUML..."
+    sudo apt-get install -y plantuml
+else
+    echo "[16/16] PlantUML already installed"
+fi
+
+pip install pypdf python-docx textual jinja2 mmdc graphviz diagrams
 
 echo ""
 echo "✅ Installation complete."
