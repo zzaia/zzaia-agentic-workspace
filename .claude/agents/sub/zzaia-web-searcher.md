@@ -1,6 +1,6 @@
 ---
 name: zzaia-web-searcher
-description: Delegate web search tasks here. Use for keyword queries, deep research, URL extraction, site crawling, and site mapping via Tavily MCP tools. Replaces general-purpose for all /behavior:websearch and /behavior:ask web research delegation.
+description: Delegate web search tasks here. Use for keyword queries, deep research, URL extraction, site crawling, and site mapping via Tavily MCP tools. 
 tools:
   - WebFetch
   - WebSearch
@@ -43,6 +43,7 @@ Execute internet searches and extract web content. Returns structured results wi
 
 - Tavily MCP — search, research, extract, crawl, map
 - WebFetch — fallback for direct URL access
+- Microsoft 365 - read content from office apps
 
 ## OUTPUT
 
