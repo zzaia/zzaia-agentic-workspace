@@ -1,0 +1,116 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{longtable}
+\usepackage{array}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{pass}{RGB}{40,140,70}
+\definecolor{fail}{RGB}{180,40,40}
+\definecolor{warn}{RGB}{200,140,0}
+
+\newcommand{\pass}{\textcolor{pass}{\textbf{PASS}}}
+\newcommand{\fail}{\textcolor{fail}{\textbf{FAIL}}}
+\newcommand{\finding}{\textcolor{warn}{\textbf{FINDING}}}
+\newcommand{\inconclusive}{\textcolor{muted}{\textbf{?}}}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Test Result Report}}
+\lhead{\textcolor{muted}{\small {{ work_item_title | default('[Work Item]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{Test Result Report}\\[0.5em]
+       \large {{ work_item_title | default('[Work Item Title]') }}}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+
+\begin{tabular}{ll}
+\textbf{Work Item:} & {{ work_item | default('[#ID — Title]') }} \\
+\textbf{Test Case:} & {{ test_case | default('[#ID — Title]') }} \\
+\textbf{Target URL:} & \url{ {{ target_url | default('[url]') }} } \\
+\textbf{Test Type:} & {{ test_type | default('[e2e | ui | integration]') }} \\
+\textbf{Executed:} & {{ executed | default('[datetime]') }} \\
+\textbf{Result:} & {{ result_label | default('[PASSED | FINDINGS | FAILED]') }} — {{ result_counts | default('[X passed / Y findings / Z failed / W total]') }} \\
+\end{tabular}
+
+\section{Test Steps}
+
+\begin{longtable}{>{\small}p{0.4cm} >{\small}p{4.5cm} >{\small}p{1.5cm} >{\small}p{2cm} >{\small}p{2.5cm} >{\small}p{3cm}}
+\toprule
+\textbf{\#} & \textbf{Scenario} & \textbf{Status} & \textbf{Response} & \textbf{Evidence} & \textbf{Notes} \\
+\midrule
+\endhead
+{% for step in test_steps | default([]) %}
+{{ loop.index }} &
+{{ step.scenario | default('[Given/When/Then scenario]') }} &
+{% if step.status == 'pass' %}\pass{% elif step.status == 'fail' %}\fail{% elif step.status == 'finding' %}\finding{% else %}\inconclusive{% endif %} &
+{{ step.response | default('—') }} &
+{{ step.evidence | default('—') }} &
+{{ step.notes | default('—') }} \\
+{% else %}
+1 & [Scenario 1] & \pass & 200 OK & — & — \\
+2 & [Scenario 2] & \finding & 200 OK & [IDs observed] & [Anomaly detail] \\
+3 & [Scenario 3] & \fail & 500 & — & [Error detail] \\
+{% endfor %}
+\bottomrule
+\end{longtable}
+
+\section{Findings}
+
+{% for finding in findings | default([]) %}
+\subsection{Finding {{ loop.index }} — S{{ finding.severity | default('?') }}: {{ finding.title | default('[Title]') }}}
+
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \textbf{Step:} {{ finding.step | default('[step number and scenario]') }}
+  \item \textbf{Endpoint / Action:} {{ finding.endpoint | default('[Method and route]') }}
+  \item \textbf{Behavior:} {{ finding.behavior | default('[Observed behavior]') }}
+  \item \textbf{Impact:} {{ finding.impact | default('[Impact on system or user]') }}
+  \item \textbf{Evidence:} {{ finding.evidence | default('[Relevant IDs, log entries]') }}
+\end{itemize}
+
+{% else %}
+\subsection{Finding 1 — S[severity]: [Title]}
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \textbf{Step:} [step number and scenario]
+  \item \textbf{Endpoint:} [Method and route]
+  \item \textbf{Behavior:} [Observed behavior]
+  \item \textbf{Impact:} [Impact description]
+  \item \textbf{Evidence:} [Relevant evidence]
+\end{itemize}
+{% endfor %}
+
+\section{Bug Work Items Created}
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\textbf{Bug ID} & \textbf{Title} & \textbf{Severity} & \textbf{Step} \\
+\midrule
+{% for bug in bugs | default([]) %}
+\#{{ bug.id }} & {{ bug.title }} & {{ bug.severity }} & {{ bug.step }} \\
+{% else %}
+\#[id] & [title] & [Critical / High / Medium / Low] & [step] \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+
+\end{document}

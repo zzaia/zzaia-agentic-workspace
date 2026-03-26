@@ -1,0 +1,153 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{pgfgantt}
+\usepackage{wasysym}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{ganttblue}{RGB}{70,130,200}
+\definecolor{ganttred}{RGB}{200,60,60}
+\definecolor{ganttgreen}{RGB}{60,160,90}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Implementation Plan}}
+\lhead{\textcolor{muted}{\small {{ project_name | default('[Project Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{ {{ project_name | default('[Project Name]') }} }\\[0.5em]
+       \large Master Implementation Plan}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ project_description | default('[Brief project description and scope]') }}
+
+\vspace{0.5em}
+\textbf{Total Effort:} {{ total_effort | default('[X] points') }} (parallel) \quad
+\textbf{Tech:} {{ tech_summary | default('[Key technologies]') }}
+
+\vspace{0.5em}
+\textit{Effort estimated using Fibonacci: 1, 2, 3, 5, 8, 13, 21, 34, 55}
+
+\section{Implementation Timeline}
+
+\begin{ganttchart}[
+  hgrid,
+  vgrid,
+  bar/.style={fill=ganttblue},
+  bar incomplete/.style={fill=ganttblue!30},
+  progress label text={},
+  title label font=\small,
+  bar label font=\small,
+  group label font=\small\bfseries,
+  milestone label font=\small\itshape,
+  x unit=0.9cm,
+  y unit chart=0.7cm,
+  canvas/.style={draw=muted!40},
+  title/.style={fill=primary!10, draw=primary!30},
+]{ {{ gantt_start | default(1) }} }{ {{ gantt_end | default(12) }} }
+  \gantttitle{ {{ gantt_title | default('Implementation Timeline') }} }{ {{ gantt_end | default(12) }} } \\
+{% for phase in phases | default([]) %}
+  \ganttgroup{ {{ phase.name }} }{ {{ phase.start }} }{ {{ phase.end }} } \\
+{% for task in phase.tasks | default([]) %}
+  \ganttbar{% if task.critical %}[bar/.style={fill=ganttred}]{% endif %}{ {{ task.name }} }{ {{ task.start }} }{ {{ task.end }} } \\
+{% endfor %}
+{% else %}
+  \ganttgroup{Phase 1}{1}{3} \\
+  \ganttbar{[Task 1]}{1}{2} \\
+  \ganttgroup{Phase 2}{4}{8} \\
+  \ganttbar{[Task 2A]}{4}{6} \\
+  \ganttbar[bar/.style={fill=ganttgreen}]{[Task 2B]}{4}{7} \\
+  \ganttgroup{Phase 3}{9}{12} \\
+  \ganttbar[bar/.style={fill=ganttred}]{[Task 3 — Critical]}{9}{12} \\
+{% endfor %}
+\end{ganttchart}
+
+\vspace{0.5em}
+\textcolor{ganttblue}{$\blacksquare$} Parallel \quad \textcolor{ganttred}{$\blacksquare$} Critical path \quad \textcolor{ganttgreen}{$\blacksquare$} Optional
+
+\section{Phases}
+
+{% for phase in phases | default([]) %}
+\subsection{Phase {{ loop.index }}: {{ phase.name | default('[Phase Name]') }} ({{ phase.effort | default('?') }} points)}
+
+\textbf{Parallel:} {{ 'Yes' if phase.parallel else 'No' }} \quad \textbf{Team:} {{ phase.team | default('[Team composition]') }}
+
+\begin{itemize}[leftmargin=*, label=\Square]
+{% for task in phase.tasks | default([]) %}
+  \item {{ task.name }} ({{ task.effort | default('?') }})
+{% endfor %}
+\end{itemize}
+
+{% if phase.outputs %}\textbf{Outputs:} {{ phase.outputs }}{% endif %}
+{% if phase.dependencies %}\textbf{Dependencies:} {{ phase.dependencies }}{% endif %}
+
+{% else %}
+\subsection{Phase 1: [Phase Name] ([effort] points)}
+\textbf{Parallel:} Yes \quad \textbf{Team:} [Team composition]
+\begin{itemize}[leftmargin=*, label=\Square]
+  \item [Task 1] ([effort])
+  \item [Task 2] ([effort])
+\end{itemize}
+{% endfor %}
+
+\section{Effort Summary}
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Execution Mode} & \textbf{Points} \\
+\midrule
+Parallel execution & {{ parallel_effort | default('[X]') }} \\
+Sequential execution & {{ sequential_effort | default('[Y]') }} \\
+\midrule
+\textbf{Efficiency gain} & {{ efficiency_gain | default('[Z] ([P]\%)') }} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Success Criteria}
+
+\textbf{Technical}
+\begin{itemize}[leftmargin=*]
+{% for item in success_technical | default(['[Criterion 1]']) %}
+  \item[$\checkmark$] {{ item }}
+{% endfor %}
+\end{itemize}
+
+\textbf{Business}
+\begin{itemize}[leftmargin=*]
+{% for item in success_business | default(['[Criterion 1]']) %}
+  \item[$\checkmark$] {{ item }}
+{% endfor %}
+\end{itemize}
+
+\section{Risk Mitigation}
+
+\begin{itemize}[leftmargin=*]
+{% for risk in risks | default([]) %}
+  \item \textbf{ {{ risk.name }} } $\rightarrow$ {{ risk.mitigation }}
+{% else %}
+  \item \textbf{[Risk 1]} $\rightarrow$ [Mitigation strategy]
+{% endfor %}
+\end{itemize}
+
+\end{document}

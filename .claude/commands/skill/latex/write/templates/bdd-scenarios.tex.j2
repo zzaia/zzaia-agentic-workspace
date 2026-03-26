@@ -1,0 +1,143 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{keyword}{RGB}{0,100,180}
+
+\lstdefinelanguage{Gherkin}{
+  keywords={Feature,Background,Scenario,Scenario Outline,Given,When,Then,And,But,Examples},
+  keywordstyle=\color{keyword}\bfseries,
+  morestring=[b]",
+  stringstyle=\color{muted},
+  comment=[l]{\#},
+  commentstyle=\color{muted}\itshape,
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{muted},
+  breaklines=true,
+  captionpos=b,
+}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small BDD Scenarios}}
+\lhead{\textcolor{muted}{\small {{ feature_title | default('[Feature Title]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{BDD Scenarios}\\[0.5em]
+       \large {{ feature_title | default('[Feature Title]') }}}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+
+\section*{Overview}
+
+\begin{tabular}{ll}
+\textbf{Feature:} & {{ feature_name | default('[Feature name]') }} \\
+\textbf{Work Item:} & {{ work_item | default('[#ID — Title]') }} \\
+\textbf{Domain:} & {{ domain | default('[Bounded context]') }} \\
+\end{tabular}
+
+\vspace{1em}
+{{ feature_description | default('[One-sentence description of what this feature delivers]') }}
+
+\section{Background}
+
+\begin{lstlisting}[language=Gherkin]
+Background:
+  Given {{ background_given | default('[shared precondition]') }}
+{% if background_and %}
+  And {{ background_and }}
+{% endif %}
+\end{lstlisting}
+
+\section{Scenarios}
+
+{% for scenario in scenarios | default([]) %}
+\subsection{Scenario: {{ scenario.title | default('[Scenario Title]') }}}
+
+\begin{lstlisting}[language=Gherkin]
+Scenario: {{ scenario.title | default('[Scenario Title]') }}
+  Given {{ scenario.given | default('[initial context]') }}
+  When {{ scenario.when | default('[action performed]') }}
+  Then {{ scenario.then | default('[expected outcome]') }}
+{% if scenario.and %}
+  And {{ scenario.and }}
+{% endif %}
+\end{lstlisting}
+
+{% else %}
+\subsection{Scenario: [Happy Path]}
+
+\begin{lstlisting}[language=Gherkin]
+Scenario: [Descriptive name of primary flow]
+  Given [initial context or system state]
+  When [action performed by actor or system]
+  Then [expected observable outcome]
+  And [additional assertion]
+\end{lstlisting}
+{% endfor %}
+
+{% if scenario_outline %}
+\subsection{Scenario Outline: {{ scenario_outline.title | default('[Parameterized Scenario]') }}}
+
+\begin{lstlisting}[language=Gherkin]
+Scenario Outline: {{ scenario_outline.title }}
+  Given [context with <parameter>]
+  When [action with <input>]
+  Then [outcome matches <expected>]
+
+  Examples:
+    | parameter | input | expected |
+{% for row in scenario_outline.examples | default([]) %}
+    | {{ row.parameter }} | {{ row.input }} | {{ row.expected }} |
+{% endfor %}
+\end{lstlisting}
+{% endif %}
+
+\section{Acceptance Criteria Mapping}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Scenario} & \textbf{Acceptance Criterion} & \textbf{Status} \\
+\midrule
+{% for mapping in criteria_mapping | default([]) %}
+{{ mapping.scenario }} & {{ mapping.criterion }} & {{ mapping.status | default('Pending') }} \\
+{% else %}
+[Scenario 1] & [criterion text] & Pending \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Out of Scope}
+
+\begin{itemize}[leftmargin=*]
+{% for item in out_of_scope | default([]) %}
+  \item {{ item }}
+{% else %}
+  \item [Behavior explicitly not covered]
+{% endfor %}
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,142 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{multirow}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{pass}{RGB}{40,140,70}
+\definecolor{fail}{RGB}{180,40,40}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Integration Tests Plan}}
+\lhead{\textcolor{muted}{\small {{ service_name | default('[Service Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\newcommand{\tcrow}[4]{\textbf{Given:} #1\newline\textbf{When:} #2\newline\textbf{Then:} #3\newline\textit{Tags: \texttt{#4}}}
+
+\title{\textbf{ {{ service_name | default('[Service Name]') }} }\\[0.5em]
+       \large Integration Tests Plan}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ overview | default('[Brief description of integration testing scope and strategy]') }}
+
+\vspace{0.5em}
+\textbf{Stack:} {{ stack | default('[test framework]') }} \quad
+\textbf{Environment:} {{ environment | default('[test environment]') }} \quad
+\textbf{Coverage target:} {{ coverage_target | default('[X\%]') }}
+
+\section{Scope}
+
+\subsection{In Scope}
+\begin{itemize}[leftmargin=*]
+{% for item in in_scope | default(['[component/flow 1]', '[component/flow 2]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\subsection{Out of Scope}
+\begin{itemize}[leftmargin=*]
+{% for item in out_of_scope | default(['[excluded component 1]']) %}
+  \item {{ item }}
+{% endfor %}
+\end{itemize}
+
+\section{Test Environment}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Resource} & \textbf{Type} & \textbf{Configuration} \\
+\midrule
+{% for res in resources | default([]) %}
+{{ res.name }} & {{ res.type }} & {{ res.config }} \\
+{% else %}
+[resource1] & [type] & [config] \\
+{% endfor %}
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Setup:} \texttt{ {{ setup_command | default('[setup command or script]') }} }
+
+\section{Test Scenarios}
+
+{% for group in test_groups | default([]) %}
+\subsection{ {{ group.name | default('[Scenario Group]') }} }
+
+{% for tc in group.test_cases | default([]) %}
+\paragraph{TC-{{ '%03d' % loop.index }}: {{ tc.title | default('[Test Case Name]') }}}
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \textbf{Given:} {{ tc.given }}
+  \item \textbf{When:} {{ tc.when }}
+  \item \textbf{Then:} {{ tc.then }}
+  \item \textit{Tags: \texttt{ {{ tc.tags | default('') }} }}
+\end{itemize}
+\vspace{0.3em}
+{% endfor %}
+
+{% else %}
+\subsection{[Scenario Group 1]}
+
+\paragraph{TC-001: [Test Case Name]}
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \textbf{Given:} [precondition]
+  \item \textbf{When:} [action]
+  \item \textbf{Then:} [expected outcome]
+  \item \textit{Tags: \texttt{[tag1], [tag2]}}
+\end{itemize}
+{% endfor %}
+
+\section{Test Data}
+
+{% for category in test_data | default([]) %}
+\subsection{ {{ category.name }} }
+\begin{itemize}[leftmargin=*]
+{% for item in category.items | default([]) %}
+  \item \texttt{ {{ item.name }} }: {{ item.description }}
+{% endfor %}
+\end{itemize}
+{% else %}
+\subsection{[Data Category 1]}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{[dataItem1]}: [description]
+\end{itemize}
+{% endfor %}
+
+\section{CI/CD Integration}
+
+\begin{tabular}{ll}
+\textbf{Pipeline stage:} & {{ pipeline_stage | default('[stage name]') }} \\
+\textbf{Trigger:} & {{ trigger | default('[trigger condition]') }} \\
+\textbf{Timeout:} & {{ timeout | default('[Xm]') }} \\
+\end{tabular}
+
+\section{Success Criteria}
+
+\begin{itemize}[leftmargin=*]
+{% for criterion in success_criteria | default(['[criterion 1]', '[criterion 2]']) %}
+  \item[$\checkmark$] {{ criterion }}
+{% endfor %}
+\end{itemize}
+
+\end{document}

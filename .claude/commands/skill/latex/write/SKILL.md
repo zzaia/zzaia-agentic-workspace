@@ -10,7 +10,7 @@ metadata:
       script: ./scripts/render-latex.py
   parameters:
     - name: template
-      description: Path to Jinja2 LaTeX template file (.tex.j2)
+      description: "Template to use or path to a .tex.j2 file: architecture-overview, bdd-scenarios, implementation-plan, integration-tests-plan, service-architecture, service-data-model, event-notification, test-result-report, pull-request-review, document"
       required: true
     - name: output
       description: Output PDF file path where compiled PDF will be saved

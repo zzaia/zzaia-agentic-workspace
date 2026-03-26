@@ -1,0 +1,199 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{listings}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+\definecolor{codebg}{RGB}{245,245,245}
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  backgroundcolor=\color{codebg},
+  frame=single, framerule=0.4pt,
+  rulecolor=\color{muted},
+  breaklines=true,
+}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small Data Model}}
+\lhead{\textcolor{muted}{\small {{ service_name | default('[Service Name]') }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{ {{ service_name | default('[Service Name]') }} }\\[0.5em]
+       \large Data Models}
+\author{ {{ author | default('') }} }
+\date{ {{ date | default('') }} }
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Entity Relationship Diagram}
+
+{% if diagram_er %}
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{ {{ diagram_er }} }
+\caption{Entity Relationship Diagram — {{ service_name | default('[Service Name]') }}}
+\end{figure}
+{% else %}
+\begin{center}
+\begin{tikzpicture}
+\draw[dashed, color=muted] (0,0) rectangle (14,4);
+\node[color=muted] at (7,2) {\textit{ER Diagram — provide image path via \texttt{diagram\_er} in \texttt{--data}}};
+\node[color=muted, font=\small] at (7,1) {\textit{Generate with Python graphviz or matplotlib and pass the PNG/PDF path}};
+\end{tikzpicture}
+\end{center}
+{% endif %}
+
+\section{Entities}
+
+{% for entity in entities | default([]) %}
+\subsection{ {{ entity.name }} Entity}
+{{ entity.description | default('') }}
+
+\textbf{Key Attributes:}
+\begin{itemize}[leftmargin=*]
+{% for attr in entity.attributes | default([]) %}
+  \item \texttt{ {{ attr.name }} } ({{ attr.type }}, {{ attr.constraints | default('') }}): {{ attr.description }}
+{% endfor %}
+\end{itemize}
+
+{% if entity.business_rules %}
+\textbf{Business Rules:}
+\begin{itemize}[leftmargin=*]
+{% for rule in entity.business_rules %}
+  \item {{ rule }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% if entity.relationships %}
+\textbf{Relationships:}
+\begin{itemize}[leftmargin=*]
+{% for rel in entity.relationships %}
+  \item {{ rel }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% if entity.indexes %}
+\textbf{Indexes:}
+\begin{itemize}[leftmargin=*]
+{% for idx in entity.indexes %}
+  \item {{ idx }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% else %}
+\subsection{[Entity Name] Entity}
+[Entity description]
+
+\textbf{Key Attributes:}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{[attributeName]} ([type], [constraints]): [description]
+\end{itemize}
+{% endfor %}
+
+\section{Value Objects}
+
+{% for vo in value_objects | default([]) %}
+\subsection{ {{ vo.name }} }
+{{ vo.description | default('') }}
+
+\textbf{Properties:}
+\begin{itemize}[leftmargin=*]
+{% for prop in vo.properties | default([]) %}
+  \item \texttt{ {{ prop.name }} } ({{ prop.type }}): {{ prop.description }}
+{% endfor %}
+\end{itemize}
+
+{% if vo.validation %}
+\textbf{Validation:}
+\begin{itemize}[leftmargin=*]
+{% for rule in vo.validation %}
+  \item {{ rule }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% if vo.example %}
+\textbf{Example:}
+\begin{lstlisting}
+{{ vo.example }}
+\end{lstlisting}
+{% endif %}
+
+{% else %}
+\subsection{[Value Object Name]}
+[Description]
+
+\textbf{Properties:}
+\begin{itemize}[leftmargin=*]
+  \item \texttt{[propertyName]} ([type]): [description]
+\end{itemize}
+{% endfor %}
+
+\section{Domain Events}
+
+{% for event in domain_events | default([]) %}
+\subsection{ {{ event.name }} }
+\textbf{Trigger:} {{ event.trigger }} \quad \textbf{Published by:} {{ event.publisher }}
+
+\textbf{Payload:}
+\begin{itemize}[leftmargin=*]
+{% for field in event.payload | default([]) %}
+  \item \texttt{ {{ field.name }} } ({{ field.type }}): {{ field.description }}
+{% endfor %}
+\end{itemize}
+
+{% if event.subscribers %}
+\textbf{Subscribers:}
+\begin{itemize}[leftmargin=*]
+{% for sub in event.subscribers %}
+  \item {{ sub }}
+{% endfor %}
+\end{itemize}
+{% endif %}
+
+{% else %}
+\subsection{[Event Name]}
+\textbf{Trigger:} [trigger] \quad \textbf{Published by:} [publisher]
+{% endfor %}
+
+\section{Migration Strategy}
+
+{% for phase in migration_phases | default([]) %}
+\subsection{Phase {{ loop.index }}: {{ phase.name }}}
+\begin{enumerate}[leftmargin=*]
+{% for step in phase.steps | default([]) %}
+  \item {{ step }}
+{% endfor %}
+\end{enumerate}
+\textbf{Rollback:} {{ phase.rollback | default('[rollback strategy]') }}
+{% else %}
+\subsection{Phase 1: [Phase Name]}
+\begin{enumerate}[leftmargin=*]
+  \item [Migration step 1]
+\end{enumerate}
+\textbf{Rollback:} [Rollback description]
+{% endfor %}
+
+\end{document}
