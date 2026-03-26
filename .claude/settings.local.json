@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(git *)",
@@ -34,7 +37,8 @@
       "Bash(bash *)",
       "Bash(sh *)",
       "Bash(chmod *)",
-      "SlashCommand(*)"
+      "SlashCommand(*)",
+      "Bash(xargs sed:*)"
     ],
     "deny": [
       "Bash(curl *)",
@@ -53,8 +57,5 @@
       "Bash(pkill *)"
     ]
   },
-  "outputStyle": "agentic-concise",
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  }
+  "outputStyle": "agentic-concise"
 }

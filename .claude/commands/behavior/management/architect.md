@@ -74,7 +74,7 @@ sequenceDiagram
 - Test strategy defined per architectural layer
 - SDD specification outline provided per component
 - Does NOT generate clarifying questions — delegates to `/behavior:management:clarify` for that
-- Does NOT generate documentation artifacts — delegates to `/skill:document:write` for that
+- Does NOT generate documentation artifacts — delegates to `/capability:document:write` for that
 
 ## EXAMPLES
 

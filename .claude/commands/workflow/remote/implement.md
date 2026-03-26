@@ -60,7 +60,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - **SKIP this phase if work item type is Bug**
    - Derive `<feature-name>` by converting `<work-item-title>` to lowercase kebab-case (e.g., `implement-provider-entities`)
-   - Call `/skill:document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
+   - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --output ./docs/<feature-name>.md`
    - Organize following folder and name conventions that already exist
 
 4. **Implement Feature**: Execute development based on SDD documentation or description
@@ -82,7 +82,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/behavior:development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
    - Generate numbered issue list from review output
-   - Call `/skill:document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
+   - Call `/capability:document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
    - If `--auto-continue` is set, skip the question and proceed automatically to fix all issues
    - Otherwise call `/behavior:workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Fix all issues; Continue without fixing; <Any user input>"`
 
@@ -119,7 +119,7 @@ sequenceDiagram
     participant P as /workflow:remote:implement
     participant WI as /behavior:devops:work-item
     participant WN as /behavior:workspace:repo --action new
-    participant DW as /skill:document:write
+    participant DW as /capability:document:write
     participant DD as /behavior:development:develop
     participant DR as /behavior:development:review
     participant DG as /behavior:development:git
@@ -184,7 +184,7 @@ sequenceDiagram
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
-- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/skill:document:write`
+- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/capability:document:write`
 - When `--auto-continue` is set, review confirmation is skipped and all issues are fixed automatically
 - When interactive, user chooses between fixing all issues, continuing without fixes, or providing custom input
 - All review issues implemented and committed with conventional format referencing work item

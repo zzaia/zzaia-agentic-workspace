@@ -22,7 +22,7 @@ Run [`.claude/Install.sh`](.claude/Install.sh) to install all required tools:
 bash .claude/Install.sh
 ```
 
-Installs: `git`, `node.js`, `VS Code`, `Claude Code CLI`, `1Password`, `Docker`, `.NET SDK`, `Aspire workload`, `Dapr CLI`, `Aspirate`, `Anaconda`, `k6`, `pypdf`, `python-docx`
+Installs: `git`, `node.js`, `VS Code`, `Claude Code CLI`, `1Password`, `Docker`, `.NET SDK`, `Aspire workload`, `Dapr CLI`, `Aspirate`, `Anaconda`, `k6`, `tectonic`, `pypdf`, `python-docx`, `jinja2`, `mmdc`, `graphviz`
 
 ### Initialize ZZAIA Agentic Workspace
 
@@ -68,7 +68,7 @@ sequenceDiagram
     participant O as /orchestrator:*
     participant W as /workflow:*
     participant B as /behavior:*
-    participant S as /skill:*
+    participant S as /capability:*
     participant T as templates/
 
     O->>W: dispatch workflows (parallel or sequential)
@@ -86,8 +86,8 @@ sequenceDiagram
 | **Orchestrator** | `/orchestrator:*` | Multi-item coordination — dispatches workflows in parallel or sequentially based on dependency analysis |
 | **Workflow** | `/workflow:*` | Sequence of behaviors for a complete task (e.g. implement a work item end-to-end) |
 | **Behavior** | `/behavior:*` | Single domain operation with agent delegation (e.g. run a pipeline, create a PR) |
-| **Skill** | `/skill:*` | Self-contained capability with `SKILL.md`, `template.md`, `examples/`, `scripts/` |
-| **Template** | `templates/` | Markdown blueprints filled in by skills with real conversation context |
+| **Capability** | `/capability:*` | Self-contained capability with `SKILL.md`, `template.md`, `examples/`, `scripts/` |
+| **Template** | `templates/` | Markdown blueprints filled in by capabilities with real conversation context |
 
 ## ⚡ End-to-End Automation
 
@@ -172,6 +172,12 @@ Project management and architecture coordination.
 - [**`/behavior:management:architect`**](.claude/commands/behavior/management/architect.md) - Architecture specifications
 - [**`/behavior:management:clarify`**](.claude/commands/behavior/management/clarify.md) - Requirements clarification
 
+### Document
+
+Document generation operations.
+
+- [**`/behavior:document:latex`**](.claude/commands/behavior/document/latex.md) - Generate PDF from markdown or JSON data via LaTeX templates with diagram auto-generation
+
 ### DevOps
 
 DevOps platform operations across Azure DevOps and GitHub.
@@ -191,19 +197,21 @@ Multi-repository workspace configuration.
 - [**`/behavior:workspace:agent-teams`**](.claude/commands/behavior/workspace/agent-teams.md) - Orchestrate teams of specialized agents in consensus or parallel mode
 - [**`/behavior:workspace:ask-user-question`**](.claude/commands/behavior/workspace/ask-user-question.md) - Prompt user for free-form or selection input
 
-### Skills
+### Capabilities
 
 Reusable capabilities invoked by behaviors and workflows.
 
-- [**`/skill:document:read`**](.claude/commands/skill/document/read/SKILL.md) - Extract PDF and Word document content
-- [**`/skill:document:write`**](.claude/commands/skill/document/write/SKILL.md) - Write markdown documentation to targets
-- [**`/skill:document:scrap`**](.claude/commands/skill/document/scrap/SKILL.md) - Search and download documents from web
-- [**`/skill:playwright`**](.claude/commands/skill/playwright/SKILL.md) - Browser session management, diagnostics, and screenshots
-- [**`/skill:postman`**](.claude/commands/skill/postman/SKILL.md) - Postman workspace operations (`request|create|read|update|delete`)
+- [**`/capability:document:read`**](.claude/commands/capability/document/read/SKILL.md) - Extract PDF and Word document content
+- [**`/capability:document:write`**](.claude/commands/capability/document/write/SKILL.md) - Write markdown documentation to targets
+- [**`/capability:document:scrap`**](.claude/commands/capability/document/scrap/SKILL.md) - Search and download documents from web
+- [**`/capability:latex:write`**](.claude/commands/capability/latex/write/SKILL.md) - Generate PDF from Jinja2 LaTeX templates
+- [**`/capability:diagram:generate`**](.claude/commands/capability/diagram/generate/SKILL.md) - Render Mermaid or Graphviz diagrams to PNG
+- [**`/capability:playwright`**](.claude/commands/capability/playwright/SKILL.md) - Browser session management, diagnostics, and screenshots
+- [**`/capability:postman`**](.claude/commands/capability/postman/SKILL.md) - Postman workspace operations (`request|create|read|update|delete`)
 
 ### Workflow
 
-End-to-end workflows that sequence behaviors and skills into complete automated tasks.
+End-to-end workflows that sequence behaviors and capabilities into complete automated tasks.
 
 - [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
 - [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
@@ -259,7 +267,7 @@ Generate new components in standardized patterns. Used to extend the agentic sys
 | ----- | ---- |
 | [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent definition generation |
 | [**zzaia-meta-behavior**](.claude/agents/meta/zzaia-meta-behavior.md) | Behavior command generation |
-| [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Skill generation |
+| [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Capability generation |
 | [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation |
 
 ### `sub/` — Specialist Working Agents
@@ -297,7 +305,7 @@ High-level agents dispatched inside agent-teams sessions to lead and coordinate 
 ├── commands/            # Command configurations
 │   ├── orchestrator/
 │   ├── behavior/
-│   ├── skill/
+│   ├── capability/
 │   └── workflow/
 │       ├── analytics/
 │       └── remote/

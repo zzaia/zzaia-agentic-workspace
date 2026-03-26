@@ -57,7 +57,7 @@ sequenceDiagram
     participant C as Command
     participant A as zzaia-devops-specialist
 
-    U->>C: /skill:repo:create-branch --portal <portal> --project <project> --repo <repo> --branch <branch> [--source-branch <source>]
+    U->>C: /capability:repo:create-branch --portal <portal> --project <project> --repo <repo> --branch <branch> [--source-branch <source>]
     C->>A: Resolve source branch and create new branch
     A-->>C: Branch creation confirmation
     C-->>U: Success message with branch details
@@ -75,9 +75,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/skill:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch feature/new-feature
-/skill:repo:create-branch --portal github --project my-org --repo my-repo --branch feature/new-feature --source-branch develop
-/skill:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch bugfix/issue-123 --source-branch release/v1.0
+/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch feature/new-feature
+/capability:repo:create-branch --portal github --project my-org --repo my-repo --branch feature/new-feature --source-branch develop
+/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch bugfix/issue-123 --source-branch release/v1.0
 ```
 
 ## OUTPUT

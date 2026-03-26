@@ -19,7 +19,7 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or a collection of markdown files — extract Mermaid/Graphviz diagram blocks, generate PNGs via `skill:diagram:generate`, then compile the PDF via `skill:latex:write`.
+Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or a collection of markdown files — extract Mermaid/Graphviz diagram blocks, generate PNGs via `capability:diagram:generate`, then compile the PDF via `capability:latex:write`.
 
 ## EXECUTION
 
@@ -53,7 +53,7 @@ When loading from markdown:
 ### Step 3 — Generate Diagrams
 
 For each `diagram_*` key whose value is Mermaid or Graphviz source code:
-- Invoke `@skill:diagram:generate` in parallel
+- Invoke `@capability:diagram:generate` in parallel
 - Replace value with generated PNG path
 - Save PNGs to `--diagrams-dir` (default: `<output_dir>/diagrams/`)
 
@@ -63,7 +63,7 @@ A value is a pre-existing path when it ends with `.png`, `.pdf`, `.svg` or start
 
 ### Step 4 — Compile PDF
 
-Invoke `@skill:latex:write` with resolved data (all `diagram_*` keys now contain PNG paths).
+Invoke `@capability:latex:write` with resolved data (all `diagram_*` keys now contain PNG paths).
 
 ### Step 5 — Report
 
@@ -71,8 +71,8 @@ Confirm PDF path, list diagrams generated, report any skipped placeholders.
 
 ## DELEGATION
 
-- `@skill:diagram:generate` — Render diagram code to PNG (parallel for multiple diagrams)
-- `@skill:latex:write` — Compile LaTeX template to PDF
+- `@capability:diagram:generate` — Render diagram code to PNG (parallel for multiple diagrams)
+- `@capability:latex:write` — Compile LaTeX template to PDF
 
 ## WORKFLOW
 
@@ -80,8 +80,8 @@ Confirm PDF path, list diagrams generated, report any skipped placeholders.
 sequenceDiagram
     participant U as User
     participant B as behavior:document:latex
-    participant D as skill:diagram:generate
-    participant L as skill:latex:write
+    participant D as capability:diagram:generate
+    participant L as capability:latex:write
 
     U->>B: --template --output --data
     B->>B: Detect data type (JSON / .md file / directory)

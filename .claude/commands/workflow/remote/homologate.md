@@ -66,7 +66,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 2. **Gather Referenced Documentation**: Enrich testing context with external materials if provided
 
-   - If `--doc` provided: Call `/skill:document:read --doc <doc>`
+   - If `--doc` provided: Call `/capability:document:read --doc <doc>`
    - If `--ref-url` provided: Call `/behavior:websearch --query <ref-url>`
    - Compile retrieved content into testing context
 
@@ -74,7 +74,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
    - Call `/behavior:management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios appropriate for `--type` (API flows for e2e, UI flows for ui, contract flows for integration)
-   - Call `/skill:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
+   - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
@@ -96,7 +96,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 7. **Generate Test Result Report**: Document all test outcomes and diagnostics
 
-   - Call `/skill:document:write --template test-result-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
+   - Call `/capability:document:write --template test-result-report --title "<type> Test Results: <work-item-title>" --context "<test-results + diagnostic-logs>" --work-item <test-case> --target-field discussion`
    - **MANDATORY**: Report must be posted before user validation
 
 8. **Validate Report and Define Bugs**: Review failures and decide which bugs to create
@@ -126,11 +126,11 @@ sequenceDiagram
     participant U as User
     participant W as /workflow:remote:homologate
     participant WI as /behavior:devops:work-item
-    participant DR as /skill:document:read
+    participant DR as /capability:document:read
     participant WS as /behavior:websearch
     participant BDD as /behavior:management:business
     participant TST as /behavior:development:test
-    participant DW as /skill:document:write
+    participant DW as /capability:document:write
 
     U->>W: /workflow:remote:homologate --type <e2e|ui|integration> <params>
     W->>WI: --action read --id <work-item> --project <project>

@@ -47,7 +47,7 @@ sequenceDiagram
     participant C as Command
     participant A as zzaia-devops-specialist
 
-    U->>C: /skill:repo:read --portal <portal> --project <project> --repo <repo>
+    U->>C: /capability:repo:read --portal <portal> --project <project> --repo <repo>
     C->>A: Fetch repository metadata
     A-->>C: Metadata (name, URL, branch, visibility, size)
     C-->>U: Formatted metadata output
@@ -62,8 +62,8 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/skill:repo:read --portal azure --project MyOrg --repo MyRepo
-/skill:repo:read --portal github --project my-org --repo my-repo
+/capability:repo:read --portal azure --project MyOrg --repo MyRepo
+/capability:repo:read --portal github --project my-org --repo my-repo
 ```
 
 ## OUTPUT
