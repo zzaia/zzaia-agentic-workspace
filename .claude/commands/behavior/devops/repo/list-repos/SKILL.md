@@ -44,7 +44,7 @@ sequenceDiagram
     participant C as Command
     participant A as zzaia-devops-specialist
 
-    U->>C: /skill:repo:list-repos --portal <portal> --project <project>
+    U->>C: /capability:repo:list-repos --portal <portal> --project <project>
     C->>A: Query repositories in project
     A-->>C: List of repositories
     C-->>U: Formatted repository list
@@ -60,8 +60,8 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/skill:repo:list-repos --portal azure --project MyOrg
-/skill:repo:list-repos --portal github --project my-org
+/capability:repo:list-repos --portal azure --project MyOrg
+/capability:repo:list-repos --portal github --project my-org
 ```
 
 ## OUTPUT

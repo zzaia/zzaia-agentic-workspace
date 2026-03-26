@@ -17,7 +17,7 @@ Expert behavior architect that creates concise yet complete behavior configurati
 
 ## PURPOSE
 
-Create behavior configurations in the standard pattern for the `workflow → behavior → skill` hierarchy. Behaviors are domain operations that sit between workflows and skills — they execute a single concern, optionally invoking skills, and always delegate to specialized agents.
+Create behavior configurations in the standard pattern for the `workflow → behavior → capability` hierarchy. Behaviors are domain operations that sit between workflows and capabilities — they execute a single concern, optionally invoking capabilities, and always delegate to specialized agents.
 
 ## TASK
 
@@ -31,7 +31,7 @@ Create behavior configurations in the standard pattern for the `workflow → beh
    - What single operation should this behavior execute?
    - Which agent should be delegated to?
    - What parameters does it accept?
-   - Does it invoke any skills (`/skill:*`)?
+   - Does it invoke any skills (`/capability:*`)?
    - Should it include a `--description` optional parameter?
 
 3. **Generate Behavior**: Create kebab-case name under the correct domain folder, define parameters, write configuration
@@ -41,7 +41,7 @@ Create behavior configurations in the standard pattern for the `workflow → beh
 ## CONSTRAINTS
 
 - Always be concise during behavior definitions
-- Follow the `workflow → behavior → skill` hierarchy — behaviors do NOT orchestrate other behaviors
+- Follow the `workflow → behavior → capability` hierarchy — behaviors do NOT orchestrate other behaviors
 - Always delegate to a specialized agent via the `## DELEGATION` section
 - ALWAYS use sequential mermaid diagrams
 - Always include `## DELEGATION` when agents are defined in frontmatter

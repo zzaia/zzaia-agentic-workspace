@@ -25,8 +25,8 @@ Execute a single BDD step as a direct API call against a live URL, resolve or cr
 
 1. **Resolve Postman Request**
 
-   - Call `/skill:postman:read --target request` to find existing request matching the step URL/method
-   - If not found: Call `/skill:postman:create --target request --spec "<method + url + headers + body>"`
+   - Call `/capability:postman:read --target request` to find existing request matching the step URL/method
+   - If not found: Call `/capability:postman:create --target request --spec "<method + url + headers + body>"`
 
 2. **Authentication** *(if required)*
 
@@ -58,7 +58,7 @@ Execute a single BDD step as a direct API call against a live URL, resolve or cr
 ```mermaid
 sequenceDiagram
     participant C as behavior:development:test:e2e
-    participant PM as /skill:postman
+    participant PM as /capability:postman
     participant TS as zzaia-tester-specialist
     participant NR as /behavior:devops:new-relic
 

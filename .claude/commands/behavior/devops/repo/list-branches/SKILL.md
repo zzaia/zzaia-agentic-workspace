@@ -52,7 +52,7 @@ sequenceDiagram
     participant C as Command
     participant A as zzaia-devops-specialist
 
-    U->>C: /skill:repo:list-branches --portal <portal> --project <project> --repo <repo> [--branch <prefix>]
+    U->>C: /capability:repo:list-branches --portal <portal> --project <project> --repo <repo> [--branch <prefix>]
     C->>A: Query branches in repository
     A-->>C: List of branches (filtered if prefix provided)
     C-->>U: Formatted branch list
@@ -69,9 +69,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/skill:repo:list-branches --portal azure --project MyOrg --repo MyRepo
-/skill:repo:list-branches --portal github --project my-org --repo my-repo --branch feature/
-/skill:repo:list-branches --portal azure --project MyOrg --repo MyRepo --branch hotfix/
+/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo
+/capability:repo:list-branches --portal github --project my-org --repo my-repo --branch feature/
+/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo --branch hotfix/
 ```
 
 ## OUTPUT

@@ -68,22 +68,22 @@ Language-specific coding standards are defined in `.claude/rules/` directory:
 Commands are organized in a five-layer hierarchy, each layer calling into the next:
 
 ```
-orchestrator → workflow → behavior → skill → template
+orchestrator → workflow → behavior → capability → template
 ```
 
 | Layer | Prefix | Purpose |
 |-------|--------|---------|
 | **Orchestrator** | `/orchestrator:*` | Multi-item coordination — dispatches multiple workflows in parallel or sequentially based on dependency analysis |
 | **Workflow** | `/workflow:*` | Orchestrates end-to-end tasks by sequencing multiple behaviors |
-| **Behavior** | `/behavior:*` | Executes a single domain operation, optionally invoking skills |
-| **Skill** | `/skill:*` | Reusable capability with its own instructions, template, examples, and scripts |
-| **Template** | `templates/` | Static markdown templates that skills populate with real content |
+| **Behavior** | `/behavior:*` | Executes a single domain operation, optionally invoking capabilities |
+| **Capability** | `/capability:*` | Reusable capability with its own instructions, template, examples, and scripts |
+| **Template** | `templates/` | Static markdown templates that capabilities populate with real content |
 
 This hierarchy enables complex automation through composition without coupling layers.
 
 ## Key Principles
 
-- Command hierarchy: orchestrator → workflow → behavior → skill → template
+- Command hierarchy: orchestrator → workflow → behavior → capability → template
 - Agent orchestration system with specialized responsibilities
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination

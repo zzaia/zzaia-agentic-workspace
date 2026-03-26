@@ -66,7 +66,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 4. **Write Documentation**: Produce the SDD documentation from the architecture design
 
    - **SKIP this phase if work item type is Bug**
-   - Call `/skill:document:write --context "<architecture-output>" --output local`
+   - Call `/capability:document:write --context "<architecture-output>" --output local`
    - Generate one concise Specification Driven Design (SDD) document for the feature
    - **MANDATORY** Documentation must be written to file before user approval phase
 
@@ -116,7 +116,7 @@ sequenceDiagram
     participant WI as /behavior:devops:work-item
     participant WN as /behavior:workspace:repo --action new
     participant MA as /behavior:management:architect
-    participant DW as /skill:document:write
+    participant DW as /capability:document:write
     participant DD as /behavior:development:develop
     participant DR as /behavior:development:review
     participant DG as /behavior:development:git

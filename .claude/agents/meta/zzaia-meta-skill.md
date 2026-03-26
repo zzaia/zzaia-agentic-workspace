@@ -34,7 +34,7 @@ Create skills in the standard multi-file folder structure for the multi-agent or
    - Which agent should be delegated to?
    - What parameters does it accept?
 
-3. **Generate Skill Structure**: Create all required files under `.claude/commands/skill/<skill-name>/`
+3. **Generate Skill Structure**: Create all required files under `.claude/commands/capability/<skill-name>/`
 
 4. **Write Files**: Save all files to the correct paths
 
@@ -59,7 +59,7 @@ The following files must be created for each skill. Use the `document` skill as 
 
 ### Root skill router (when multiple sub-skills exist)
 
-Path: `.claude/commands/skill/<skill-name>/SKILL.md`
+Path: `.claude/commands/capability/<skill-name>/SKILL.md`
 
 ````md
 ---
@@ -82,7 +82,7 @@ Unified entry point for <skill-name> operations. Routes to the appropriate sub-c
 
 | Action     | Command                                   | Description               |
 |------------|-------------------------------------------|---------------------------|
-| `<action>` | [@skill:<skill-name>:<action>](./<action>/SKILL.md) | <description> |
+| `<action>` | [@capability:<skill-name>:<action>](./<action>/SKILL.md) | <description> |
 
 ## Instructions
 
@@ -93,7 +93,7 @@ Unified entry point for <skill-name> operations. Routes to the appropriate sub-c
 
 ### Sub-skill (one per action)
 
-Path: `.claude/commands/skill/<skill-name>/<action>/SKILL.md`
+Path: `.claude/commands/capability/<skill-name>/<action>/SKILL.md`
 
 ````md
 ---
@@ -140,7 +140,7 @@ sequenceDiagram
     participant C as Command
     participant A as <agent-name>
 
-    U->>C: /skill:<skill-name>:<action> <params>
+    U->>C: /capability:<skill-name>:<action> <params>
     C->>A: <operation>
     A-->>C: <result>
     C-->>U: <output>
@@ -153,7 +153,7 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/skill:<skill-name>:<action> --<param> <value>
+/capability:<skill-name>:<action> --<param> <value>
 ```
 
 ## OUTPUT
@@ -163,7 +163,7 @@ sequenceDiagram
 
 ### Template (when templates/ folder is needed)
 
-Path: `.claude/commands/skill/<skill-name>/templates/<template-name>.md`
+Path: `.claude/commands/capability/<skill-name>/templates/<template-name>.md`
 
 ````md
 ---
@@ -179,6 +179,6 @@ user-invocable: false
 
 ### Script (when scripts/ folder is needed)
 
-Path: `.claude/commands/skill/<skill-name>/scripts/<script-name>`
+Path: `.claude/commands/capability/<skill-name>/scripts/<script-name>`
 
 Provide the script content appropriate for the skill's extraction or processing needs.
