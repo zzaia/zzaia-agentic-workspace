@@ -1,0 +1,39 @@
+\documentclass[12pt]{article}
+\usepackage[utf-8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+
+\title{{{ title | default('Document Title') }}}
+\author{{{ author | default('Author Name') }}}
+\date{{{ date | default('') }}}
+
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+
+{% if introduction %}
+{{ introduction }}
+{% else %}
+This is a sample introduction section. Replace this text with your content.
+{% endif %}
+
+{% if sections %}
+{% for section in sections %}
+\section{{{ section.name }}}
+
+{{ section.content }}
+
+{% endfor %}
+{% endif %}
+
+\section*{Conclusion}
+
+{% if conclusion %}
+{{ conclusion }}
+{% else %}
+This is a sample conclusion section. Replace this text with your content.
+{% endif %}
+
+\end{document}

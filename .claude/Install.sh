@@ -158,7 +158,15 @@ else
     echo "[13/13] k6 already installed"
 fi
 
-pip install pypdf python-docx textual
+# ── 14. Tectonic (LaTeX → PDF engine) ──────────────────────────────────────
+if ! is_installed tectonic; then
+    echo "[14/14] Installing Tectonic (LaTeX engine)..."
+    sudo snap install tectonic
+else
+    echo "[14/14] Tectonic already installed"
+fi
+
+pip install pypdf python-docx textual jinja2
 
 echo ""
 echo "✅ Installation complete."
