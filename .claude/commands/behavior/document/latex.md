@@ -1,7 +1,7 @@
 ---
 name: /behavior:document:latex
-description: Generate a LaTeX PDF document — auto-generates diagrams from Mermaid/Graphviz code then compiles to PDF
-argument-hint: "--template <name> --output <path.pdf> [--data <json>] [--diagrams-dir <path>]"
+description: Generate a LaTeX PDF document from JSON data, a markdown file, or a collection directory — auto-generates diagrams then compiles to PDF
+argument-hint: "--template <name> --output <path.pdf> [--data <json|file.md|dir/>] [--diagrams-dir <path>]"
 parameters:
   - name: template
     description: "Template name or path to .tex.j2 file: architecture-overview, service-architecture, service-data-model, bdd-scenarios, implementation-plan, integration-tests-plan, event-notification, test-result-report, pull-request-review, document"
@@ -10,7 +10,7 @@ parameters:
     description: Output PDF file path
     required: true
   - name: data
-    description: JSON string with template variables. Keys starting with 'diagram_' containing Mermaid or Graphviz code will be auto-rendered to PNG before compilation.
+    description: "Data source — one of: (1) JSON string with template variables, (2) path to a .md file, (3) path to a directory of .md files (collection)"
     required: false
   - name: diagrams-dir
     description: Directory to save generated diagram PNGs (default: <output_dir>/diagrams/)
@@ -19,33 +19,60 @@ parameters:
 
 ## PURPOSE
 
-Orchestrate full LaTeX PDF generation: detect diagram code in template data, generate PNGs via `skill:diagram:generate`, then compile the PDF via `skill:latex:write`.
+Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or a collection of markdown files — extract Mermaid/Graphviz diagram blocks, generate PNGs via `skill:diagram:generate`, then compile the PDF via `skill:latex:write`.
 
 ## EXECUTION
 
-1. **Parse Data**: Extract `--data` JSON and identify `diagram_*` keys
+### Step 1 — Resolve Data Source
 
-2. **Generate Diagrams**: For each `diagram_*` key whose value is Mermaid or Graphviz source code
-   - Invoke `@skill:diagram:generate` with the code and output path
-   - Replace the value in data with the generated PNG path
-   - Diagrams are saved to `--diagrams-dir` (default: `<output_dir>/diagrams/`)
+Detect the `--data` input type and load template variables accordingly:
 
-3. **Compile PDF**: Invoke `@skill:latex:write` with the resolved data (diagram keys now contain PNG paths)
+| `--data` value | Type | Action |
+|---|---|---|
+| Starts with `{` | JSON string | Parse directly as template variables |
+| Path to a `.md` file | Markdown file | Read file → extract variables and Mermaid blocks |
+| Path to a directory | Collection | Read all `.md` files → merge content into template variables |
+| Omitted | None | Use empty data, rely on template defaults |
 
-4. **Report**: Confirm PDF path and list diagrams generated
+### Step 2 — Extract from Markdown (when --data is a file or directory)
 
-## MERMAID DETECTION
+When loading from markdown:
+1. **Parse front matter** (YAML between `---` delimiters) as template variables
+2. **Extract named Mermaid/Graphviz blocks** — fenced code blocks tagged with a diagram key:
+   ````
+   ```mermaid diagram_container
+   C4Container
+     Container(api, "API")
+   ```
+   ````
+   → stored as `diagram_container` in template data
+3. **Extract unnamed Mermaid blocks** — indexed as `diagram_1`, `diagram_2`, etc.
+4. **Map section headings to template fields** — e.g. `## Overview` → `overview`, `## Core Responsibilities` → `core_responsibilities`
+5. **For collections** (directory): merge all files — later files override earlier ones for the same key; diagrams are indexed by filename prefix + block index
 
-A `diagram_*` value is treated as diagram code (not a path) when it:
-- Starts with a Mermaid keyword: `graph`, `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram`, `erDiagram`, `gantt`, `C4Context`, `C4Container`, `mindmap`, `gitgraph`, `timeline`, etc.
-- Starts with a Graphviz keyword: `digraph`, `graph {`, `strict digraph`
+### Step 3 — Generate Diagrams
 
-A value is treated as a pre-existing path when it ends with `.png`, `.pdf`, `.jpg`, `.svg` or starts with `/`, `./`, `~/`.
+For each `diagram_*` key whose value is Mermaid or Graphviz source code:
+- Invoke `@skill:diagram:generate` in parallel
+- Replace value with generated PNG path
+- Save PNGs to `--diagrams-dir` (default: `<output_dir>/diagrams/`)
+
+A value is diagram code when it starts with a Mermaid keyword (`graph`, `flowchart`, `sequenceDiagram`, `C4Context`, `C4Container`, `erDiagram`, `mindmap`, `gitgraph`, etc.) or Graphviz keyword (`digraph`, `graph {`).
+
+A value is a pre-existing path when it ends with `.png`, `.pdf`, `.svg` or starts with `/`, `./`, `~/`.
+
+### Step 4 — Compile PDF
+
+Invoke `@skill:latex:write` with resolved data (all `diagram_*` keys now contain PNG paths).
+
+### Step 5 — Report
+
+Confirm PDF path, list diagrams generated, report any skipped placeholders.
 
 ## DELEGATION
 
-- `@skill:diagram:generate` — Render each diagram code to PNG (run in parallel for multiple diagrams)
-- `@skill:latex:write` — Compile LaTeX template to PDF after diagrams are ready
+- `@skill:diagram:generate` — Render diagram code to PNG (parallel for multiple diagrams)
+- `@skill:latex:write` — Compile LaTeX template to PDF
 
 ## WORKFLOW
 
@@ -57,43 +84,82 @@ sequenceDiagram
     participant L as skill:latex:write
 
     U->>B: --template --output --data
-    B->>B: Parse diagram_* keys from data
+    B->>B: Detect data type (JSON / .md file / directory)
+    alt Markdown file or collection
+        B->>B: Parse front matter + extract diagram blocks + map sections
+    end
     par Generate diagrams (parallel)
-        B->>D: diagram_container code → PNG
-        B->>D: diagram_sequence code → PNG
-        B->>D: diagram_er code → PNG
+        B->>D: diagram_* code → PNG
     end
     D-->>B: PNG paths
-    B->>B: Replace diagram codes with PNG paths in data
-    B->>L: --template --output --data (with PNG paths)
+    B->>B: Replace diagram codes with PNG paths
+    B->>L: --template --output --data (resolved)
     L-->>B: PDF compiled
-    B-->>U: PDF ready + diagrams generated
+    B-->>U: PDF ready + diagrams listed
 ```
 
 ## EXAMPLES
 
 ```
-# Architecture doc with auto-generated C4 diagrams
+# From JSON data
 /behavior:document:latex \
   --template architecture-overview \
   --output ./docs/architecture.pdf \
-  --data '{"project_name":"MySystem","diagram_context":"C4Context\n  Person(u,\"User\")\n  System(s,\"System\")\n  Rel(u,s,\"Uses\")","diagram_container":"C4Container\n  Container(api,\"API\",\"ASP.NET\")\n  Container(db,\"DB\",\"PostgreSQL\")\n  Rel(api,db,\"Reads\")"}'
+  --data '{"project_name":"MySystem","diagram_context":"C4Context\n  Person(u,\"User\")\n  System(s,\"System\")\n  Rel(u,s,\"Uses\")"}'
 
-# Service architecture with sequence diagram
+# From a single markdown file (front matter + mermaid blocks extracted)
 /behavior:document:latex \
   --template service-architecture \
   --output ./docs/service.pdf \
-  --data '{"service_name":"OrderService","diagram_sequence":"sequenceDiagram\n  Client->>API: POST /order\n  API->>DB: Insert\n  DB-->>API: OK\n  API-->>Client: 201"}'
+  --data ./docs/service-architecture.md
 
-# With pre-existing diagram images (no generation needed)
+# From a collection directory (all .md files merged)
+/behavior:document:latex \
+  --template architecture-overview \
+  --output ./docs/full-architecture.pdf \
+  --data ./docs/architecture/
+
+# With pre-existing diagram images
 /behavior:document:latex \
   --template service-data-model \
   --output ./docs/model.pdf \
   --data '{"service_name":"Payment","diagram_er":"./diagrams/er.png"}'
 ```
 
+### Markdown File Format
+
+```markdown
+---
+service_name: OrderService
+author: Team
+date: 2026-03-26
+---
+
+## Overview
+Brief service description here.
+
+## Core Responsibilities
+Handles order lifecycle management.
+
+```mermaid diagram_container
+C4Container
+  Container(api, "API", "ASP.NET")
+  Container(db, "DB", "PostgreSQL")
+  Rel(api, db, "Reads")
+```
+
+```mermaid diagram_sequence
+sequenceDiagram
+  Client->>API: POST /order
+  API->>DB: Insert
+  DB-->>API: OK
+  API-->>Client: 201
+```
+```
+
 ## OUTPUT
 
 - PDF file at `--output` path
-- List of diagrams generated with paths
+- List of diagrams generated (name → PNG path)
+- Skipped placeholders (diagram_* keys without code or path)
 - Compilation status
