@@ -19,7 +19,7 @@ metadata:
       description: Keyword or phrase to filter messages by content (case-insensitive)
       required: false
     - name: limit
-      description: Maximum number of messages to return (default 50)
+      description: Page size for each MCP fetch call (default 50, max 1000); pagination continues automatically until all messages in the range are retrieved
       required: false
 ---
 
@@ -36,11 +36,13 @@ Read and retrieve Microsoft Teams chat or channel conversations with support for
    - Confirm unique chat or return disambiguation if multiple matches
    - Handle ambiguous names by clarifying with user
 
-2. **Retrieve Messages**: Fetch messages from matched conversation
+2. **Retrieve Messages**: Fetch all messages from matched conversation with automatic pagination
 
-   - Use Microsoft 365 MCP Teams tools to retrieve message history
+   - Use Microsoft 365 MCP Teams tools to retrieve message history in pages (`--limit` controls page size, default 50)
+   - **Paginate until complete**: continue fetching next pages until the end boundary (`--last-message`) is reached or no more messages are available — never stop early because a single page was exhausted
+   - Page size is capped at 1000 messages per call; values above 1000 are silently clamped
    - Retrieve metadata: sender, timestamp, content
-   - Preserve message order and threading information
+   - Preserve message order and threading information across all pages
 
 3. **Apply Range Filters**: Parse and apply `--begin-message` and `--last-message` boundaries
 
@@ -54,13 +56,13 @@ Read and retrieve Microsoft Teams chat or channel conversations with support for
    - Case-insensitive search within message content
    - Include only messages matching keyword
 
-5. **Format Output**: Return structured results limited to `--limit`
+5. **Format Output**: Return all collected messages after filters
 
    - Chat/channel name matched
-   - Total message count retrieved and count after filters
+   - Total message count retrieved (all pages) and count after filters
    - Each message: `[YYYY-MM-DD HH:MM] Sender: message content`
    - Applied filters summary
-   - Source confirmation (Teams MCP)
+   - Page count and source confirmation (Teams MCP)
 
 ## DELEGATION
 
@@ -82,25 +84,29 @@ sequenceDiagram
     A-->>C: Resolved parameters
     C->>M: Search chats/channels by name
     M-->>C: Matching chat/channel
-    C->>M: Retrieve messages from chat
-    M-->>C: Message list with metadata
-    C->>C: Apply date/time/text filters
+    C->>M: Fetch page (--limit size)
+    M-->>C: Message page + next cursor
+    loop Until end boundary reached or no more pages
+        C->>M: Fetch next page
+        M-->>C: Message page + next cursor
+    end
+    C->>C: Apply date/time/text range filters
     C->>C: Apply keyword filter
-    C->>C: Limit to --limit count
-    C-->>U: Formatted message results
+    C-->>U: All matching messages (all pages)
 ```
 
 ## ACCEPTANCE CRITERIA
 
 - Resolves chat/channel name using Microsoft 365 MCP (partial match support)
-- Retrieves complete message history with sender and timestamp
+- Paginates automatically until all messages in the `--begin-message`/`--last-message` range are fetched — never stops at a single page
+- `--limit` controls page size per MCP call (default 50), not total result count
+- Retrieves complete message history with sender and timestamp across all pages
 - Parses date (YYYY-MM-DD), time (HH:MM), and text anchors for range filtering
 - Case-insensitive keyword filtering on message content
-- Respects `--limit` parameter (default 50)
 - Returns messages in chronological order
 - Handles missing chat with clear error message
 - Handles ambiguous chat names by asking user for clarification
-- Output shows applied filters and result count
+- Output shows page count, applied filters, and result count
 
 ## EXAMPLES
 
@@ -115,8 +121,8 @@ sequenceDiagram
 ## OUTPUT
 
 - Matched chat or channel name with confirmation
-- Message count retrieved and count after applying filters
+- Total messages retrieved (all pages) and count after filters
 - Formatted message list: `[YYYY-MM-DD HH:MM] Sender: message content`
-- Applied filters summary (date range, keywords, limit)
-- Source confirmation (Microsoft 365 MCP)
+- Applied filters summary (date range, keywords, page size)
+- Page count and source confirmation (Microsoft 365 MCP)
 - Any clarification requests if parameters are ambiguous
