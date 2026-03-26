@@ -11,6 +11,7 @@
 \usepackage{fancyhdr}
 \usepackage{parskip}
 \usepackage{titlesec}
+\usepackage{float}
 
 \definecolor{primary}{RGB}{30,80,160}
 \definecolor{muted}{RGB}{100,100,100}
@@ -58,7 +59,7 @@
 \section{C4 Context Diagram}
 
 {% if diagram_context %}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{ {{ diagram_context }} }
 \caption{System Context}
@@ -75,7 +76,7 @@
 \section{C4 Container Diagram}
 
 {% if diagram_container %}
-\begin{figure}[h!]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{ {{ diagram_container }} }
 \caption{Container Architecture}
@@ -94,7 +95,7 @@
 {% for category in components | default([]) %}
 \subsection{ {{ category.name | default('[Component Category]') }} }
 \begin{itemize}[leftmargin=*]
-{% for item in category.items | default([]) %}
+{% for item in category['items'] | default([]) %}
   \item \textbf{ {{ item.name }} }: {{ item.description }} \textcolor{muted}{\small({{ item.tech | default('') }})}
 {% endfor %}
 \end{itemize}

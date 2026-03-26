@@ -1,7 +1,7 @@
 ---
 name: /behavior:document:latex
-description: Generate a LaTeX PDF document from JSON data, a markdown file, or a collection directory — auto-generates diagrams then compiles to PDF
-argument-hint: "--template <name> --output <path.pdf> [--data <json|file.md|dir/>] [--diagrams-dir <path>]"
+description: Generate LaTeX PDF documents from JSON data, markdown files, or directory collections with automatic diagram generation and compilation
+argument-hint: "--template <name> --output <path.pdf> [--data <json|file.md|dir/>] [--diagrams-dir <path>] [--description <text>]"
 parameters:
   - name: template
     description: "Template name or path to .tex.j2 file: architecture-overview, service-architecture, service-data-model, bdd-scenarios, implementation-plan, integration-tests-plan, event-notification, test-result-report, pull-request-review, document"
@@ -15,6 +15,9 @@ parameters:
   - name: diagrams-dir
     description: Directory to save generated diagram PNGs (default: <output_dir>/diagrams/)
     required: false
+  - name: description
+    description: Broader context for the PDF generation
+    required: false
 ---
 
 ## PURPOSE
@@ -23,56 +26,75 @@ Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or 
 
 ## EXECUTION
 
-### Step 1 — Resolve Data Source
+1. **Resolve Data Source**
 
-Detect the `--data` input type and load template variables accordingly:
+   Detect the `--data` input type and load template variables:
 
-| `--data` value | Type | Action |
-|---|---|---|
-| Starts with `{` | JSON string | Parse directly as template variables |
-| Path to a `.md` file | Markdown file | Read file → extract variables and Mermaid blocks |
-| Path to a directory | Collection | Read all `.md` files → merge content into template variables |
-| Omitted | None | Use empty data, rely on template defaults |
+   | `--data` value | Type | Action |
+   |---|---|---|
+   | Starts with `{` | JSON string | Parse directly as template variables |
+   | Path to a `.md` file | Markdown file | Read file → extract variables and diagram blocks |
+   | Path to a directory | Collection | Read all `.md` files → merge content into template variables |
+   | Omitted | None | Use empty data, rely on template defaults |
 
-### Step 2 — Extract from Markdown (when --data is a file or directory)
+2. **Extract from Markdown** (when `--data` is a file or directory)
 
-When loading from markdown:
-1. **Parse front matter** (YAML between `---` delimiters) as template variables
-2. **Extract named Mermaid/Graphviz blocks** — fenced code blocks tagged with a diagram key:
-   ````
-   ```mermaid diagram_container
-   C4Container
-     Container(api, "API")
-   ```
-   ````
-   → stored as `diagram_container` in template data
-3. **Extract unnamed Mermaid blocks** — indexed as `diagram_1`, `diagram_2`, etc.
-4. **Map section headings to template fields** — e.g. `## Overview` → `overview`, `## Core Responsibilities` → `core_responsibilities`
-5. **For collections** (directory): merge all files — later files override earlier ones for the same key; diagrams are indexed by filename prefix + block index
+   - **Parse front matter** (YAML between `---` delimiters) as template variables
+   - **Extract named diagram blocks** — fenced code blocks tagged with a diagram key (optionally with explicit renderer):
+     ````
+     ```mermaid diagram_sequence
+     sequenceDiagram
+       Client->>API: POST /order
+     ```
 
-### Step 3 — Generate Diagrams
+     ```d2 diagram_arch
+     direction: down
+     wasm -> bff: GraphQL
+     ```
 
-For each `diagram_*` key whose value is Mermaid or Graphviz source code:
-- Invoke `@capability:diagram:generate` in parallel
-- Replace value with generated PNG path
-- Save PNGs to `--diagrams-dir` (default: `<output_dir>/diagrams/`)
+     ```python diagram_infra
+     from diagrams import Diagram
+     from diagrams.azure.compute import AppService
+     ...
+     ```
+     ````
+   - **Extract unnamed diagram blocks** — indexed as `diagram_1`, `diagram_2`, etc.; renderer auto-selected per diagram content
+   - **Map section headings to template fields** — e.g. `## Overview` → `overview`, `## Core Responsibilities` → `core_responsibilities`
+   - **For collections** (directory): merge all files — later files override earlier ones for the same key; diagrams indexed by filename prefix + block index
 
-A value is diagram code when it starts with a Mermaid keyword (`graph`, `flowchart`, `sequenceDiagram`, `C4Context`, `C4Container`, `erDiagram`, `mindmap`, `gitgraph`, etc.) or Graphviz keyword (`digraph`, `graph {`).
+3. **Generate Diagrams**
 
-A value is a pre-existing path when it ends with `.png`, `.pdf`, `.svg` or starts with `/`, `./`, `~/`.
+   For each `diagram_*` key whose value is diagram source code:
 
-### Step 4 — Compile PDF
+   - **Select the best renderer** using the table below
+   - Invoke `capability:diagram:generate` with renderer type in parallel
+   - Replace value with generated PNG path
+   - Save PNGs to `--diagrams-dir` (default: `<output_dir>/diagrams/`)
 
-Invoke `@capability:latex:write` with resolved data (all `diagram_*` keys now contain PNG paths).
+   **Renderer selection — apply the first matching rule:**
 
-### Step 5 — Report
+   | Condition | Renderer | Rationale |
+   |---|---|---|
+   | Value ends with `.png`, `.svg`, `.pdf` or starts with `/`, `./`, `~/` | _(skip — already a path)_ | Pre-existing image |
+   | Starts with `from diagrams import` or `from diagrams.` | `diagrams` | AWS/Azure/GCP/K8s cloud icons |
+   | Starts with `@startuml` | `plantuml` | Formal C4 with Person/System/Container icons |
+   | Starts with `digraph`, `graph {`, `strict digraph` | `graphviz` | Graph/dependency layout with `splines=ortho` |
+   | Starts with `C4Context`, `C4Container`, `C4Component` | `d2` | Architecture diagrams — cleanest layout via ELK |
+   | Starts with any other Mermaid keyword (`graph`, `flowchart`, `sequenceDiagram`, `erDiagram`, `mindmap`, `gitgraph`, etc.) | `mermaid` | Sequence flows, flowcharts, inline markdown diagrams |
+   | Tagged with explicit renderer hint (e.g. ` ```d2 diagram_arch`) | use tagged renderer | User override takes precedence |
 
-Confirm PDF path, list diagrams generated, report any skipped placeholders.
+4. **Compile PDF**
+
+   Invoke `capability:latex:write` with resolved data (all `diagram_*` keys now contain PNG paths).
+
+5. **Report**
+
+   Confirm PDF path, list diagrams generated, report any skipped placeholders.
 
 ## DELEGATION
 
-- `@capability:diagram:generate` — Render diagram code to PNG (parallel for multiple diagrams)
-- `@capability:latex:write` — Compile LaTeX template to PDF
+- `capability:diagram:generate` — Render diagram code to PNG (parallel for multiple diagrams)
+- `capability:latex:write` — Compile LaTeX template to PDF
 
 ## WORKFLOW
 
