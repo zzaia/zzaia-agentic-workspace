@@ -1,0 +1,53 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{titlesec}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{longtable}
+
+\definecolor{primary}{RGB}{30,80,160}
+\definecolor{muted}{RGB}{100,100,100}
+
+\hypersetup{colorlinks=true, linkcolor=primary, urlcolor=primary}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{muted}{\small BDD User Flows}}
+\lhead{\textcolor{muted}{\small {{ project_name | default('[Project Name]') | safe }}}}
+\cfoot{\thepage}
+\titleformat{\section}{\large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\normalsize\bfseries}{}{0em}{}
+
+\title{\textbf{ {{ title | default('[Title]') | safe }} }\\[0.5em]
+       \large {{ subtitle | default('') | safe }}\\[0.3em]
+       \normalsize\textcolor{muted}{Version {{ version | default('1.0') | safe }}}}
+\author{ {{ author | default('') | safe }} }
+\date{ {{ date | default('') | safe }} }
+
+\emergencystretch=2em
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Overview}
+{{ overview | default('') | safe }}
+
+{% for section in sections | default([]) %}
+\section{ {{ section.heading | safe }} }
+{{ section.content | safe }}
+
+{% endfor %}
+
+\end{document}
