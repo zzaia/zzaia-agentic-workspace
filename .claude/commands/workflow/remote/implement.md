@@ -95,6 +95,8 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - If merge conflicts are detected, call `/workflow:fix-merge --repo <repo> --working-branch <working-branch> --target-branch <target-branch>` before committing
    - Call `/behavior:development:git --action commit-push --repository <repo> --branch <working-branch> --message "fix: apply review feedback [#<work-item>]"`
+   - Call `/behavior:devops:work-item --action update --id <work-item> --project <project> --platform <portal> --description "<updated-description-incorporating-all-review-changes>"` to sync work item description with all changes made
+   - Call `/behavior:devops:pull-request --action comment --portal <portal> --project <project> --repo <repo> --pr <pr-id> --message "All review issues resolved. Work item description updated to reflect changes."` to confirm consistency in PR
    - Change work item state to **Resolved** via `/behavior:devops:work-item --id <work-item> --project <project> --platform <portal> --action update --state Resolved`
 
 10. **Publish Pull Request**: Mark pull request as ready for review

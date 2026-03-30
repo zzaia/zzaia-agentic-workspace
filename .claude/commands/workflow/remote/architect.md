@@ -50,6 +50,8 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
    - Call `/behavior:workspace:ask-user-question --question "Reply to the Azure DevOps discussion with your answers, then confirm to continue"`
    - Call `/behavior:devops:work-item --action read-discussion --id <selected-work-item> --project <project>` to read all discussion answers
    - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --work-item <selected-work-item> --target-field discussion` to post the finalized SDD as a discussion thread
+   - Call `/behavior:devops:work-item --action update --id <selected-work-item> --project <project> --description "<finalized-sdd-content>"` to sync description with discussion content
+   - Call `/behavior:devops:work-item --action post-discussion --id <selected-work-item> --project <project>` to reply confirming description was updated with all discussion answers
 
 5. **Plan Child Work Item Hierarchy**
    - Call `/behavior:management:plan --work-description "<finalized-sdd-content>"` to decompose into a parallelizable agile hierarchy
@@ -67,8 +69,11 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 
 8. **Validate Overall Architecture**
    - Call `/behavior:workspace:ask-user-question --question "Review all work items in Azure DevOps and reply to each individual discussion if changes are needed, then confirm to continue"`
-   - For each work item: call `/behavior:devops:work-item --action read-discussion --id <child-work-item-id> --project <project>` to read answers from its individual discussion
-   - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to post the updated SDD as a discussion thread
+   - For each work item:
+     - Call `/behavior:devops:work-item --action read-discussion --id <child-work-item-id> --project <project>` to read answers from its individual discussion
+     - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to post the updated SDD as a discussion thread
+     - Call `/behavior:devops:work-item --action update --id <child-work-item-id> --project <project> --description "<updated-sdd-content>"` to sync description with the updated SDD
+     - Call `/behavior:devops:work-item --action post-discussion --id <child-work-item-id> --project <project>` to reply confirming what changed in description based on discussion observations
 
 ## WORKFLOW
 
