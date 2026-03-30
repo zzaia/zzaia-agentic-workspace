@@ -80,7 +80,11 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
 
    - Call `/behavior:workspace:ask-user-question --question "Review the BDD scenarios in the Test Case and confirm to continue or describe changes needed"`
-   - If user indicates changes: Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections and apply them before proceeding
+   - If user indicates changes:
+     - Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections
+     - Apply all corrections to the BDD scenarios
+     - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to update Test Case steps with corrected scenarios
+     - Call `/behavior:devops:work-item --action post-discussion --id <test-case> --project <project>` to reply confirming what was updated in Test Case steps based on observations
 
 5. **Execute Tests**: Iterate over each BDD step in the Test Case Steps and execute individually
 
@@ -109,6 +113,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 9. **Create Bug Work Items**: Create one bug work item per approved failure
 
    - For each approved failure: Call `/behavior:devops:work-item --action create --type Bug --title "<failure-description>" --description "<steps-to-reproduce + expected-vs-actual + diagnostic-evidence>" --severity <severity> --parent <test-case> --project <project>`
+   - Call `/behavior:devops:work-item --action post-discussion --id <test-case> --project <project>` to reply confirming all created bug IDs and any dismissed failures, ensuring the discussion reflects the final state
    - Provide summary list of all created bug IDs with links
 
 ## DELEGATION
