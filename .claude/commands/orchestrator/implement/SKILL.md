@@ -128,9 +128,9 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/orchestrate:implement --work-items 1605,1606,1607 --portal azure --project my-project --target-branch develop --description "Implement provider module features"
+/orchestrator:implement --work-items 1605,1606,1607 --portal azure --project my-project --target-branch develop --description "Implement provider module features"
 
-/orchestrate:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --target-branch main --description "Add gateway routing features"
+/orchestrator:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --target-branch main --description "Add gateway routing features"
 ```
 
 ## OUTPUT
