@@ -69,11 +69,11 @@ Orchestrate architectural documentation and work-item hierarchy creation for a g
 
 8. **Validate Overall Architecture**
    - Call `/behavior:workspace:ask-user-question --question "Review all work items in Azure DevOps and reply to each individual discussion if changes are needed, then confirm to continue"`
-   - For each work item:
-     - Call `/behavior:devops:work-item --action read-discussion --id <child-work-item-id> --project <project>` to read answers from its individual discussion
-     - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --work-item <child-work-item-id> --target-field discussion` to post the updated SDD as a discussion thread
-     - Call `/behavior:devops:work-item --action update --id <child-work-item-id> --project <project> --description "<updated-sdd-content>"` to sync description with the updated SDD
-     - Call `/behavior:devops:work-item --action post-discussion --id <child-work-item-id> --project <project>` to reply confirming what changed in description based on discussion observations
+   - For each work item (selected work item AND all child work items):
+     - Call `/behavior:devops:work-item --action read-discussion --id <work-item-id> --project <project>` to read answers from its individual discussion
+     - Call `/capability:document:write --template service-architecture --title "<work-item-title>" --work-item <work-item-id> --target-field discussion` to post the updated SDD as a discussion thread
+     - Call `/behavior:devops:work-item --action update --id <work-item-id> --project <project> --description "<updated-sdd-content>"` to sync description with the updated SDD
+     - Call `/behavior:devops:work-item --action post-discussion --id <work-item-id> --project <project>` to reply confirming what changed in description based on discussion observations
 
 ## WORKFLOW
 
