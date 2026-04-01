@@ -38,7 +38,8 @@
       "Bash(sh *)",
       "Bash(chmod *)",
       "SlashCommand(*)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "WebSearch"
     ],
     "deny": [
       "Bash(curl *)",
@@ -57,5 +58,8 @@
       "Bash(pkill *)"
     ]
   },
-  "outputStyle": "agentic-concise"
+  "outputStyle": "agentic-concise",
+  "preferences": {
+    "tmuxSplitPanes": true
+  }
 }
