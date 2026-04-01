@@ -4,7 +4,7 @@
       "command": "npx",
       "args": ["-y", "tavily-mcp@latest"],
       "env": {
-        "TAVILY_API_KEY": "op://${VAULT_NAME}/tavily/credential"
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
       }
     },
     "azure-devops": {
@@ -17,8 +17,8 @@
         "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"
       ],
       "env": {
-        "ADO_MCP_AUTH_TOKEN": "op://${VAULT_NAME}/azure-devops/pat",
-        "AZURE_DEVOPS_ORGANIZATION": "op://${VAULT_NAME}/azure-devops/organization"
+        "ADO_MCP_AUTH_TOKEN": "${ADO_MCP_AUTH_TOKEN}",
+        "AZURE_DEVOPS_ORGANIZATION": "${AZURE_DEVOPS_ORGANIZATION}"
       }
     },
     "playwright": {
@@ -33,7 +33,7 @@
         "--region us"
       ],
       "env": {
-        "POSTMAN_API_KEY": "op://${VAULT_NAME}/postman/credential"
+        "POSTMAN_API_KEY": "${POSTMAN_API_KEY}"
       }
     },
     "aspire": {
