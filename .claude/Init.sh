@@ -3,37 +3,42 @@
 # Initializes the Claude Code terminal environment
 # Signs in to 1Password for secret management
 # Launches Claude Code with disabled permission checks
+#
+# Usage: ./Init.sh --vault-name <vault> --session-name <name>
 
-echo ""
-echo "  ███████╗███████╗ █████╗ ██╗ █████╗ "
-echo "     ███╔╝   ███╔╝██╔══██╗██║██╔══██╗"
-echo "    ███╔╝   ███╔╝ ███████║██║███████║ "
-echo "   ███╔╝   ███╔╝  ██╔══██║██║██╔══██║ "
-echo "  ███████╗███████╗██║  ██║██║██║  ██║ "
-echo "  ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝"
-echo ""
-echo "         ⚡  Agentic Workspace  ⚡"
-echo ""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --vault-name)   VAULT_NAME="$2";   shift 2 ;;
+        --session-name) SESSION_NAME="$2"; shift 2 ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+done
 
-# Accept vault name and session ID as args (re-exec path) or prompt the user
-if [ -n "$1" ] && [ -n "$2" ]; then
-    VAULT_NAME="$1"
-    SESSION_ID="$2"
-else
-    read -p "Enter 1Password vault name: " VAULT_NAME
+if [[ -z "$VAULT_NAME" || -z "$SESSION_NAME" ]]; then
+    echo "Usage: ./Init.sh --vault-name <vault> --session-name <name>"
+    exit 1
 fi
-export VAULT_NAME SESSION_ID
 
-# Sign in to 1Password to enable secret injection
-eval $(op signin)
+SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${SESSION_NAME}'))")
 
-# Export global secret variables in claude's environment
-export NEW_RELIC_API_KEY=$(op read "op://${VAULT_NAME}/new-relic/api-key")
-
-# Launch Claude Code terminal with auto mode enabled
-claude --dangerously-skip-permissions
-
-# Sign out of 1Password to clean up session
-eval $(op signout)
+tmux new-session -s "$SESSION_NAME" "
+echo ''
+echo '  ███████╗███████╗ █████╗ ██╗ █████╗ '
+echo '     ███╔╝   ███╔╝██╔══██╗██║██╔══██╗'
+echo '    ███╔╝   ███╔╝ ███████║██║███████║ '
+echo '   ███╔╝   ███╔╝  ██╔══██║██║██╔══██║ '
+echo '  ███████╗███████╗██║  ██║██║██║  ██║ '
+echo '  ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝'
+echo ''
+echo '         ⚡  Agentic Workspace  ⚡'
+echo ''
+eval \$(op signin) && \
+export NEW_RELIC_API_KEY=\$(op read 'op://${VAULT_NAME}/new-relic/api-key') && \
+if ! claude --dangerously-skip-permissions --resume ${SESSION_UUID}; then
+    claude --dangerously-skip-permissions --session-id ${SESSION_UUID}
+fi
+op signout
+exec bash
+"
 
 exit 0
