@@ -33,6 +33,10 @@ echo ''
 echo '         ⚡  Agentic Workspace  ⚡'
 echo ''
 eval \$(op signin) && \
+export TAVILY_API_KEY=\$(op read 'op://${VAULT_NAME}/tavily/credential') && \
+export ADO_MCP_AUTH_TOKEN=\$(op read 'op://${VAULT_NAME}/azure-devops/pat') && \
+export AZURE_DEVOPS_ORGANIZATION=\$(op read 'op://${VAULT_NAME}/azure-devops/organization') && \
+export POSTMAN_API_KEY=\$(op read 'op://${VAULT_NAME}/postman/credential') && \
 export NEW_RELIC_API_KEY=\$(op read 'op://${VAULT_NAME}/new-relic/api-key') && \
 if ! claude --dangerously-skip-permissions --resume ${SESSION_UUID}; then
     claude --dangerously-skip-permissions --session-id ${SESSION_UUID}
