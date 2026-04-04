@@ -19,9 +19,9 @@ if [[ -z "$VAULT_NAME" || -z "$SESSION_NAME" ]]; then
     exit 1
 fi
 
-SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${SESSION_NAME}'))")
+SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${VAULT_NAME}_${SESSION_NAME}'))")
 
-tmux new-session -s "$SESSION_NAME" "
+tmux new-session -s "${VAULT_NAME}_${SESSION_NAME}" "
 echo ''
 echo '  ███████╗███████╗ █████╗ ██╗ █████╗ '
 echo '     ███╔╝   ███╔╝██╔══██╗██║██╔══██╗'
