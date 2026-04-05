@@ -47,9 +47,9 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
    - Track returned run ID for subsequent phases
    - **MANDATORY** Record iteration 1 start time and initial issue count
 
-2. **Setup Workspace** — Ensure target branch is available locally
+2. **Setup Workspace** — Ensure target branch is available locally for any working repo
 
-   - Call `/behavior:workspace:repo --action new` with `--repo <project> --branch <branch>`
+   - Call `/behavior:workspace:repo --action new` with `--repo <project> --branch <branch>` to any repo that will be worked on
    - Skip if branch worktree already exists in workspace
    - **MANDATORY** Branch must be checked out before fixes are applied
 
