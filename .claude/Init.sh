@@ -21,6 +21,11 @@ fi
 
 SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${VAULT_NAME}_${SESSION_NAME}'))")
 
+if tmux has-session -t "${VAULT_NAME}_${SESSION_NAME}" 2>/dev/null; then
+    tmux attach-session -t "${VAULT_NAME}_${SESSION_NAME}"
+    exit 0
+fi
+
 tmux new-session -s "${VAULT_NAME}_${SESSION_NAME}" "
 echo ''
 echo '  ███████╗███████╗ █████╗ ██╗ █████╗ '
