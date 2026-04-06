@@ -34,7 +34,7 @@
     "/workflow:implement",
     "/workflow:homologate",
     "/workflow:fix-merge",
-    "/workflow:fix-pipeline",
+    "/workflow:remote:fix-pipeline",
     "/workflow:remote:architect",
     "/workflow:remote:implement",
     "/workflow:remote:homologate"
