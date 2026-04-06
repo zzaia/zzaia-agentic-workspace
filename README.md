@@ -216,7 +216,7 @@ End-to-end workflows that sequence behaviors and capabilities into complete auto
 - [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
 - [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
 - [**`/workflow:fix-merge`**](.claude/commands/workflow/fix-merge.md) - Merge conflict resolution
-- [**`/workflow:fix-pipeline`**](.claude/commands/workflow/fix-pipeline.md) - Iterative pipeline repair loop
+- [**`/workflow:remote:fix-pipeline`**](.claude/commands/workflow/remote/fix-pipeline.md) - Iterative pipeline repair loop
 - [**`/workflow:remote:architect`**](.claude/commands/workflow/remote/architect.md) - Specification Driven Design orchestration with AGILE Azure DevOps integration
 - [**`/workflow:remote:implement`**](.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
 - [**`/workflow:remote:homologate`**](.claude/commands/workflow/remote/homologate.md) - Homologation testing workflow with BDD, live URL testing, diagnostics, and bug reporting

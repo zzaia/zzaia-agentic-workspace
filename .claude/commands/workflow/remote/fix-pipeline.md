@@ -1,5 +1,5 @@
 ---
-name: /workflow:fix-pipeline
+name: /workflow:remote:fix-pipeline
 description: Iterative pipeline repair loop until successful completion
 argument-hint: "--portal <platform> [--file <path>] [--project <name>] [--pipeline <id-or-name>] [--branch <branch>] [--run <id>] [--max-iterations <count>]"
 parameters:
@@ -115,7 +115,7 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant W as /workflow:fix-pipeline
+    participant W as /workflow:remote:fix-pipeline
     participant DBG as /behavior:devops:pipeline(debug)
     participant WN as /behavior:workspace:repo --action new
     participant FIX as /behavior:development:develop
@@ -127,7 +127,7 @@ sequenceDiagram
     participant A3 as zzaia-developer-specialist
     participant PR as /behavior:devops:pull-request(create)
 
-    U->>W: /workflow:fix-pipeline <params>
+    U->>W: /workflow:remote:fix-pipeline <params>
     W->>W: Initialize loop (iteration = 0)
 
     loop Until success or max iterations
@@ -205,18 +205,16 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/workflow:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
+/workflow:remote:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
 
-/workflow:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline
 
-/workflow:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --branch feature/my-feature --max-iterations 3
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --branch feature/my-feature --max-iterations 3
 
-/workflow:fix-pipeline --portal azure --project MyProject --pipeline 42 --run 1850
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline 42 --run 1850
 ```
 
 ## OUTPUT
 
 - Per-iteration summary: iteration #, issues found, fixes applied, run result
 - Final success report with total iterations, complete list of all changes made, and PR link
-- Partial progress report if max iterations reached without success (user prompted to continue or stop)
-- Pipeline run link and final run ID
