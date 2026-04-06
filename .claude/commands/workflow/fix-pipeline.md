@@ -47,13 +47,12 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
    - Track returned run ID for subsequent phases
    - **MANDATORY** Record iteration 1 start time and initial issue count
 
-2. **Setup Workspace** — Ensure target branch is available locally for any working repo
-
+2. **Setup Workspace** — Ensure all working branches are available locally
    - Call `/behavior:workspace:repo --action new` with `--repo <project> --branch <branch>` to any repo that will be worked on
    - Skip if branch worktree already exists in workspace
    - **MANDATORY** Branch must be checked out before fixes are applied
 
-3. **Fix Issues** — Implement targeted fixes from the issue report
+3. **Fix Issues** — Implement targeted fixes from the issue report in all working branches
 
    - Call `/behavior:development:develop` with issue report as task context
    - Pass pipeline ID, branch, and list of failures to fix
@@ -66,27 +65,38 @@ Automate iterative pipeline repair by cycling through debug, fix, and re-run pha
    - Push changes to `<branch>` on remote
    - **MANDATORY** Changes must be pushed before triggering re-run
 
-5. **Re-run Pipeline** — Trigger new pipeline run on target branch
+5. **Configure Template Resource** — Point a consumer pipeline to the template branch when a template pipeline was changed
+
+   - Inspect the fix summary from Phase 3 to determine whether any modified file is a shared pipeline template (e.g. resides under `templates/`, `pipeline-templates/`, or is referenced via `extends:` in another YAML)
+   - **If no template pipeline was changed**: skip this phase entirely and proceed to Phase 6
+   - **If a template pipeline was changed**:
+     - Identify (or create) a consumer pipeline whose YAML references the changed template via an `extends:` or `resources.repositories` block
+     - Call `/behavior:devops:pipeline --action update` to patch the consumer pipeline's resource repository `ref` to `refs/heads/<branch>` so it consumes the template directly from the working branch
+     - If no consumer pipeline exists, call `/behavior:devops:pipeline --action create` to register a minimal validation pipeline in the same project that references the template branch as a repository resource
+     - Set `<pipeline>` to this consumer pipeline for all subsequent phases so validation runs against the branch instead of the merged template
+   - **MANDATORY** The consumer pipeline `ref` must target `refs/heads/<branch>` before triggering any run — never rely on the default branch while template changes are unmerged
+
+6. **Re-run Pipeline** — Trigger new pipeline run on target branch
 
    - Call `/behavior:devops:pipeline --action run` with `--portal <portal> --project <project> --pipeline <pipeline> --branch <branch>`
    - Capture new run ID and wait for completion
    - **MANDATORY** Extract run ID from response for next debug phase
 
-6. **Evaluate Result** — Poll pipeline run status automatically
+7. **Evaluate Result** — Poll pipeline run status automatically
 
    - Wait 1 minute, then call `/behavior:devops:pipeline --action debug` to check run status
    - Repeat polling every 1 minute until run reaches a terminal state (Success or Failure)
    - Parse run result: **Success** or **Failure**
    - Increment iteration counter
 
-7. **Loop Control** — Decide next action
+8. **Loop Control** — Decide next action
 
-   - **On Success**: stop loop, report completion summary, then proceed to Phase 8
+   - **On Success**: stop loop, report completion summary, then proceed to Phase 9
    - **On Failure and iterations < max**: Go back to Phase 1 with new run ID
    - **On Failure and iterations >= max**: Ask user whether to continue or stop; stop if user declines
    - **On unresolvable failure** (same errors repeat across iterations): Ask user whether to continue or stop
 
-8. **Create Pull Request** — Open PR after successful pipeline
+9. **Create Pull Request** — Open PR after successful pipeline or necessary template pipelines
 
    - Call `/behavior:devops:pull-request --action create --portal <portal> --project <project> --repo <repo> --source-branch <branch> --target-branch main`
    - Include summary of all fixes applied across iterations in PR description
@@ -110,6 +120,7 @@ sequenceDiagram
     participant WN as /behavior:workspace:repo --action new
     participant FIX as /behavior:development:develop
     participant GIT as /behavior:development:git
+    participant TPL as /behavior:devops:pipeline(update/create)
     participant RUN as /behavior:devops:pipeline(run)
     participant A1 as zzaia-devops-specialist
     participant A2 as zzaia-workspace-manager
@@ -139,6 +150,13 @@ sequenceDiagram
         A3->>GIT: Commit + push to branch
         GIT-->>A3: Changes pushed
         A3-->>W: Git done
+
+        alt Template pipeline changed
+            W->>A1: Detect template change in fix summary
+            A1->>TPL: Patch or create consumer pipeline resource ref to refs/heads/<branch>
+            TPL-->>A1: Consumer pipeline configured
+            A1-->>W: Pipeline target updated
+        end
 
         W->>A1: Invoke re-run phase
         A1->>RUN: Trigger pipeline run
@@ -172,11 +190,12 @@ sequenceDiagram
 
 ## ACCEPTANCE CRITERIA
 
-- Workflow successfully orchestrates `/behavior:devops:pipeline --action debug`, `/behavior:workspace:repo --action new`, `/behavior:development:develop`, `/behavior:development:git`, `/behavior:devops:pipeline --action run`, and `/behavior:devops:pull-request --action create` in sequence
+- Workflow successfully orchestrates `/behavior:devops:pipeline --action debug`, `/behavior:workspace:repo --action new`, `/behavior:development:develop`, `/behavior:development:git`, `/behavior:devops:pipeline --action update/create`, `/behavior:devops:pipeline --action run`, and `/behavior:devops:pull-request --action create` in sequence
 - Loop continues until pipeline succeeds or max iterations is reached
 - Each iteration extracts new run ID from pipeline run response and uses it in next debug phase
 - Pipeline status is polled automatically every 1 minute — user is never interrupted during polling
 - User is asked to continue only when: max iterations reached OR same errors repeat across iterations
+- When a template pipeline is changed, a consumer pipeline is configured to reference the template branch as a resource before any run is triggered — no PR approval is required to validate the changes
 - On pipeline success, a pull request is automatically created with a summary of all fixes applied
 - Iteration counter and safety limit are enforced
 - Per-iteration summary includes iteration number, issue count, fixes applied, and run result
