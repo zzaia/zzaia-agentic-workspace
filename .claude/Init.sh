@@ -37,6 +37,7 @@ echo '  ╚══════╝╚══════╝╚═╝  ╚═╝╚�
 echo ''
 echo '         ⚡  Agentic Workspace  ⚡'
 echo ''
+export CLAUDE_CONFIG_DIR=~/.claude
 warn_missing() {
     local secret_ref=\"\$1\"
     local var_name=\"\$2\"
