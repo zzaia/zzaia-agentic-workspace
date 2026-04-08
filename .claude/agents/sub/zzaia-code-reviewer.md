@@ -7,7 +7,7 @@ tools:
   - Glob
   - Bash
   - Grep
-model: sonnet
+model: haiku
 color: blue
 ---
 

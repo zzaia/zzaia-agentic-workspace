@@ -5,7 +5,7 @@ tools:
    - WebSearch
    - WebFetch
    - Write
-model: sonnet
+model: haiku
 color: green
 ---
 

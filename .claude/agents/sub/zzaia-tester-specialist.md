@@ -7,7 +7,7 @@ mcpServers:
    - postman
    - aspire
    - new-relic
-model: sonnet 
+model: haiku
 color: yellow
 ---
 

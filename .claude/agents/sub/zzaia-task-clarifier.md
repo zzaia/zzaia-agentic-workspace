@@ -2,7 +2,7 @@
 name: zzaia-task-clarifier
 description: Transform vague task descriptions into clear, actionable specifications
 tools: *
-model: sonnet
+model: haiku
 color: cyan
 ---
 

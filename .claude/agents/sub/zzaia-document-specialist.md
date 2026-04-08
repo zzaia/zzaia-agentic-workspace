@@ -6,7 +6,7 @@ mcpServers:
   - playwright
   - tavily
   - azure-devops
-model: sonnet
+model: haiku
 color: yellow
 ---
 
