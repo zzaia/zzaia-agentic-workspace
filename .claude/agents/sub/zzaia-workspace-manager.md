@@ -6,7 +6,7 @@ mcpServers:
   - playwright
   - postman
   - aspire
-model: sonnet
+model: haiku
 color: purple
 ---
 

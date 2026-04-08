@@ -6,7 +6,7 @@ tools:
   - WebFetch
   - Write
   - Edit
-model: sonnet
+model: haiku
 color: green
 ---
 
