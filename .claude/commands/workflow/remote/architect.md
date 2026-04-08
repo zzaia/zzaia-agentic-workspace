@@ -93,7 +93,7 @@ Orchestrate architectural documentation and work-item hierarchy creation for a s
 
 1. Call `/behavior:management:business --context "<all-gathered-context-with-clarification-answers>"` to generate business-level behavior flows and scenarios
 2. Call `/capability:document:write --template bdd-scenarios --title "<feature-description> User BDD Scenarios" --context "<business-bdd-output>" --output docs/user-bdd-scenarios.md` to format and write user BDD document
-3. Call `/behavior:management:architect --context "<all-gathered-context-with-clarification-answers>"` to generate holistic architectural design (considering BDD, SDD, DDD, Microservice, Clean Architecture together)
+3. Call `/behavior:management:architect --context "<all-gathered-context-with-clarification-answers>"` to generate holistic architectural design 
 4. Call `/capability:document:write --template bdd-scenarios --title "<feature-description> Application BDD Specifications" --context "<architect-output>" --output docs/application-bdd-specifications.md` to format architect output as application-level BDD specifications
 5. Call `/behavior:development:git --action commit-push --repository <selected-repo> --branch <selected-branch> --message "docs: add behavior documentation (user and application BDD) for <feature-description>"`
 6. Call `/behavior:workspace:ask-user-question --question "Review the user BDD and application BDD documents in the pull request. How would you like to proceed?" --options "a) Continue; b) Make changes from pull-request comments; c) Make changes from prompt; d) Other"`
