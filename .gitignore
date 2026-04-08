@@ -213,7 +213,8 @@ __marimo__/
 !CLAUDE.md
 !LICENSE
 !README.md
-!.mcp.json
+!.claudeignore
+!.claude/.mcp.json
 !.gitignore
 !.vscode
 !.claude/agents/
