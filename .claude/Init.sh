@@ -20,6 +20,7 @@ if [[ -z "$VAULT_NAME" || -z "$SESSION_NAME" ]]; then
 fi
 
 SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${VAULT_NAME}_${SESSION_NAME}'))")
+export CLAUDE_CONFIG_DIR=.claude/
 
 if tmux has-session -t "${VAULT_NAME}_${SESSION_NAME}" 2>/dev/null; then
     tmux attach-session -t "${VAULT_NAME}_${SESSION_NAME}"
@@ -37,7 +38,6 @@ echo '  ╚══════╝╚══════╝╚═╝  ╚═╝╚�
 echo ''
 echo '         ⚡  Agentic Workspace  ⚡'
 echo ''
-export CLAUDE_CONFIG_DIR=~/.claude
 warn_missing() {
     local secret_ref=\"\$1\"
     local var_name=\"\$2\"
