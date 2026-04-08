@@ -1,0 +1,102 @@
+# Build outputs and artifacts
+bin/
+obj/
+dist/
+build/
+out/
+target/
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+
+# Package management
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.pnpm-store/
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+*.egg
+dist/
+build/
+
+# Runtime and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.dmypy.json
+.ruff_cache/
+.turbo/
+.next/
+.nuxt/
+.vuepress/dist/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+.nyc_output/
+lcov-report/
+
+# Node-specific
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.eslintcache
+
+# Python-specific
+*.log
+*.pot
+.pytest_cache/
+.tox/
+.nox/
+.hypothesis/
+
+# C#/.NET-specific
+.vs/
+.vscode/
+launchSettings.json
+appsettings.Development.json
+
+# Dependencies and lock files (keep these for reference)
+# package.json (keep)
+# requirements.txt (keep)
+# .csproj (keep)
+# .sln (keep)
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Claude specific
+.claude/plugins/marketplaces/
