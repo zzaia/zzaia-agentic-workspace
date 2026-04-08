@@ -211,6 +211,18 @@ workspace/*
 host/*
 !settings.local.json
 *.code-workspace
+cache/
+sessions/
+plugins/
+.claude.json
+.credentials.json
+history.jsonl
+backups/
+settings.json
+mcp-needs-auth-cache.json
+projects/
+file-history/
+shell-snapshots/
 
 # Ignore build output
 bin/
