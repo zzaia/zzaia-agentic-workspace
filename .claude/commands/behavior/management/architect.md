@@ -1,6 +1,6 @@
 ---
 name: /behavior:management:architect
-description: Analyze context and produce architectural design following SDD, Microservice, DDD, Clean Architecture, SOLID
+description: Analyze architectural requirements through 4-layer hierarchical thinking (SDD Overview → Application BDD → Specific App BDD → Specific SDD)
 argument-hint: "[--work-description <text>] [--work-directory <path>] [--context <text>] [--focus <area>]"
 parameters:
   - name: work-description
