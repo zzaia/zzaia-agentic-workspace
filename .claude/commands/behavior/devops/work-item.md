@@ -1,13 +1,13 @@
 ---
 name: /behavior:devops:work-item
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
-argument-hint: "[--action read|create|update|post-discussion|read-discussion] [--id <id>] [--project <name>] [--type Bug|Task|Feature|UserStory|Epic] [--title <text>] [--description <text>] [--status <state>] [--parent <id>] [--severity Low|Medium|High|Critical] [--platform azure|github|git-lab]"
+argument-hint: "[--action read|create|update|link|tag|post-discussion|read-discussion] [--id <id>] [--project <name>] [--type Bug|Task|Feature|UserStory|Epic] [--title <text>] [--description <text>] [--status <state>] [--parent <id>] [--severity Low|Medium|High|Critical] [--platform azure|github|git-lab]"
 agents:
   - name: zzaia-devops-specialist
     description: Retrieve, query, and manage work items across Azure DevOps and GitHub
 parameters:
   - name: --action
-    description: Operation to perform (read, create, update, post-discussion, read-discussion) — defaults to read
+    description: Operation to perform (read, create, update, link, tag, post-discussion, read-discussion) — defaults to read
     required: false
     type: string
     default: read
@@ -69,6 +69,18 @@ parameters:
     default: 20
   - name: --state
     description: Work item state for update operations (Active, Resolved, Closed, etc.)
+    required: false
+    type: string
+  - name: --link-id
+    description: Target work item ID for link operations (predecessor, successor, related)
+    required: false
+    type: string
+  - name: --link
+    description: Artifact reference (URL, branch, commit) for artifact-type links
+    required: false
+    type: string
+  - name: --tag
+    description: Tag name to add to work item (for tag action)
     required: false
     type: string
 ---
