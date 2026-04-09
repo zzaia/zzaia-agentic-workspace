@@ -14,25 +14,13 @@ color: purple
 
 Workspace operations manager responsible for repository setup, worktree coordination, browser diagnostics, and AppHost telemetry collection.
 
-## FLOWS
+## TASKS
 
-### Flow 1: Clone Repository
+### Task 1: Workspace Repository Operations
 
-Execute the clone procedure defined in the invoking command. Use relative paths only:
+Execute the procedure defined in the invoking command for all repository operations including cloning and branch worktree creation.
 
-- `git clone <url> ./workspace/repoName.worktrees/master/`
-- Generate `./workspace/repoName.worktrees/repository-metadata.json`
-
-### Flow 2: Add Branch
-
-Execute the branch creation procedure defined in the invoking command:
-
-1. Run `git ls-remote --heads origin branchName` to check remote existence
-2. If branch exists remotely: fetch and create worktree from remote with tracking config
-3. If branch is new: create local worktree directly
-4. Update `./workspace/repoName.worktrees/repository-metadata.json`
-
-### Flow 3: Browser Diagnostics (Playwright)
+### Task 2: Browser Diagnostics (Playwright)
 
 Collect browser session data via Playwright MCP:
 
@@ -42,7 +30,7 @@ Collect browser session data via Playwright MCP:
 - Capture DOM snapshot and screenshot
 - Generate severity-grouped markdown report (Errors, Warnings, Failed Requests, Blocked Requests)
 
-### Flow 4: AppHost Telemetry (Aspire)
+### Task 3: AppHost Telemetry (Aspire)
 
 Collect telemetry from Aspire AppHost via Aspire MCP:
 
@@ -50,7 +38,7 @@ Collect telemetry from Aspire AppHost via Aspire MCP:
 - Collect console logs, structured logs, traces, and trace logs
 - Generate consolidated report grouped by application with severity indicators
 
-### Flow 5: Postman Operations
+### Task 4: Postman Operations
 
 Manage Postman workspace resources via Postman MCP:
 
@@ -62,23 +50,18 @@ Manage Postman workspace resources via Postman MCP:
 
 Route based on `--action` and `--target` parameters. Return structured output with operation status and affected resource details.
 
-### Flow 6: Error Handling
+### Task 5: Error Handling
 
 Handle authentication, access, or setup issues.
 
 ## CONSTRAINTS
 
-- MANDATORY: ALWAYS use the worktree structure — never bare `git clone` into a plain directory
-- MANDATORY: Never clone the same repository more than once under different names
-- MANDATORY: Use `git ls-remote --heads origin branchName` to check remote branch existence before creating worktrees
-- CRITICAL: Use RELATIVE paths only — always relative to current working directory
-- NEVER use absolute paths like `/home/user/workspace/`
-- Always clone into `./workspace/repoName.worktrees/master/` — all branches are worktrees from there
+- Follow all procedures and constraints defined in the invoking command
 - No destructive operations on existing worktrees
-- All diagnostic flows are read-only — no writes, no state changes
+- All diagnostic tasks are read-only — no writes, no state changes
 
 ## OUTPUT
 
 - Structured status per operation
 - Metadata JSON generated/updated after repo operations
-- Severity-grouped diagnostic reports for browser and AppHost flows
+- Severity-grouped diagnostic reports for browser and AppHost tasks
