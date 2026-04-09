@@ -1,5 +1,5 @@
 ---
-name: /behavior:management:plan
+name: behavior:management:plan
 description: Generate an agile work-item plan with right-sized hierarchy, repository assignment, parallelization, and dependency mapping
 argument-hint: "--work-description <text>"
 parameters:

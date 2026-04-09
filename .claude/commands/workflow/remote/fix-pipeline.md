@@ -1,5 +1,5 @@
 ---
-name: /workflow:remote:fix-pipeline
+name: workflow:remote:fix-pipeline
 description: Iterative pipeline repair loop until successful completion
 argument-hint: "--portal <platform> [--file <path>] [--project <name>] [--repo <name>] [--pipeline <id-or-name>] [--branch <branch>] [--target-branch <branch>] [--deps <repo>:<branch>[,<repo>:<branch>...]] [--work-item <id>] [--run <id>] [--max-iterations <count>]"
 parameters:

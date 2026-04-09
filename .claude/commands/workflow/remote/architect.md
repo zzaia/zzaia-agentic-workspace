@@ -1,5 +1,5 @@
 ---
-name: /workflow:remote:architect
+name: workflow:remote:architect
 description: Orchestrate architectural documentation via pull request with BDD, SDD, plan, and work-item creation using Specification Driven Design
 argument-hint: "--project <name> [--selected-work-item <id>] [--selected-repo <name>] [--selected-branch <name>] [--target-branch <name>] [--description <text>] [--workspace <path1;path2>] [--doc <path1;path2>] [--url <url1;url2>]"
 parameters:

@@ -1,5 +1,5 @@
 ---
-name: /behavior:document:latex
+name: behavior:document:latex
 description: Generate LaTeX PDF documents from JSON data, markdown files, or directory collections with automatic diagram generation and compilation
 argument-hint: "--template <name> --output <path.pdf> [--data <json|file.md|dir/>] [--diagrams-dir <path>] [--description <text>]"
 parameters:

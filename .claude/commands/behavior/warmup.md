@@ -1,5 +1,5 @@
 ---
-name: /behavior:warmup
+name: behavior:warmup
 description: Initialize session with CLAUDE.md guidelines and conversational rules
 argument-hint: "[--repo: <name>] [--brach: <name>] "
 parameters:
