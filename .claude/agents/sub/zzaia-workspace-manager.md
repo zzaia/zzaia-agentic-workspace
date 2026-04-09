@@ -18,30 +18,19 @@ Workspace operations manager responsible for repository setup, worktree coordina
 
 ### Flow 1: Clone Repository
 
-Clone repository and set up worktree structure in this main repository root:
+Execute the clone procedure defined in the invoking command. Use relative paths only:
 
-- Create `./workspace/repoName.worktrees/` directory (relative to current working directory)
-- Create `./workspace/repoName.worktrees/master/` (or main) branch worktree
+- `git clone <url> ./workspace/repoName.worktrees/master/`
 - Generate `./workspace/repoName.worktrees/repository-metadata.json`
 
 ### Flow 2: Add Branch
 
-Create new branch in existing repository in this main repository root:
+Execute the branch creation procedure defined in the invoking command:
 
-**CRITICAL Remote Check Sequence:**
-1. Run `git ls-remote --heads origin branchName` to check if branch exists remotely
-2. If output exists (returns SHA + ref):
-   - Branch exists remotely
-   - Run `git fetch origin branchName:refs/remotes/origin/branchName`
-   - Create worktree from remote: `git worktree add -b branchName path/branchName origin/branchName`
-3. If no output (empty result):
-   - Branch doesn't exist remotely
-   - Create new local branch: `git worktree add -b branchName path/branchName`
-
-**Execution:**
-- Create `./workspace/repoName.worktrees/branchName/` worktree (using appropriate method above)
-- Configure tracking if from remote: `git config branch.branchName.remote origin && git config branch.branchName.merge refs/heads/branchName`
-- Update `./workspace/repoName.worktrees/repository-metadata.json`
+1. Run `git ls-remote --heads origin branchName` to check remote existence
+2. If branch exists remotely: fetch and create worktree from remote with tracking config
+3. If branch is new: create local worktree directly
+4. Update `./workspace/repoName.worktrees/repository-metadata.json`
 
 ### Flow 3: Browser Diagnostics (Playwright)
 
@@ -75,36 +64,21 @@ Route based on `--action` and `--target` parameters. Return structured output wi
 
 ### Flow 6: Error Handling
 
-Handle authentication, access, or setup issues
+Handle authentication, access, or setup issues.
 
 ## CONSTRAINTS
 
+- MANDATORY: ALWAYS use the worktree structure — never bare `git clone` into a plain directory
+- MANDATORY: Never clone the same repository more than once under different names
 - MANDATORY: Use `git ls-remote --heads origin branchName` to check remote branch existence before creating worktrees
-- CRITICAL: Use RELATIVE paths only - workspace directory structure: `./workspace/repoName.worktrees/`
-- NEVER use absolute paths like `/home/user/workspace/` - always use current working directory relative paths
-- Always create master/main reference branch inside worktrees folder
-- Generate repository metadata inside worktrees folder
+- CRITICAL: Use RELATIVE paths only — always relative to current working directory
+- NEVER use absolute paths like `/home/user/workspace/`
+- Always clone into `./workspace/repoName.worktrees/master/` — all branches are worktrees from there
 - No destructive operations on existing worktrees
-- All branch worktrees must be inside the repoName.worktrees folder
-- Verify current working directory and use relative paths from there
 - All diagnostic flows are read-only — no writes, no state changes
 
-## WORKSPACE STRUCTURE
+## OUTPUT
 
-```
-./workspace/
-├── repoName.worktrees/
-│   ├── repository-metadata.json
-│   ├── master/                    # Reference branch
-│   └── branchName/               # Feature branches
-```
-
-## METADATA FORMAT
-
-```json
-{
-  "repository": "repoName",
-  "worktrees": ["master", "branchName"],
-  "active_branch": "branchName"
-}
-```
+- Structured status per operation
+- Metadata JSON generated/updated after repo operations
+- Severity-grouped diagnostic reports for browser and AppHost flows

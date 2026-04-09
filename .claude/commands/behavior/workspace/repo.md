@@ -1,5 +1,5 @@
 ---
-name: repo
+name: behavior:workspace:repo
 description: Manage workspace repositories — clone new repos or create worktree branches
 argument-hint: "--action <new> --repo <repoName|repoUrl> [--branch <branchName>] [--target-branch <baseBranch>]"
 agents:
@@ -26,29 +26,70 @@ Single interface for workspace repository management. Routes to clone or branch 
 
 ## ACTIONS
 
-| Action | Description                                                    |
-|--------|----------------------------------------------------------------|
-| `new`  | Clone a new repository or create a worktree branch in existing |
+| Action | Description                                                              |
+|--------|--------------------------------------------------------------------------|
+| `new`  | Set up a new repo in worktree structure, or add a worktree branch        |
+
+## MANDATORY RULE
+
+**ALWAYS use the worktree structure.** Never perform a bare `git clone` into a plain directory. Never clone the same repository more than once under different names. Every repository must live at `./workspace/repoName.worktrees/master/` with all branches as worktrees branching from it.
 
 ## EXECUTION
 
-### action=new — Repository Cloning (URL provided)
+### action=new — Initial Repository Setup (URL provided)
 
-1. **Parse URLs** — Validate HTTPS or SSH git repository URLs
-2. **Parallel Dispatch** — Call `zzaia-workspace-manager` for each repository in parallel
-3. **Aggregate Results** — Report success/failure per repository
+1. **Validate** — Confirm HTTPS or SSH git URL format; derive `repoName` from URL
+2. **Reject duplicates** — If `./workspace/repoName.worktrees/` already exists, stop and report — do not clone again
+3. **Clone into worktree root** — `git clone <url> ./workspace/repoName.worktrees/master/`
+4. **Metadata** — Generate `./workspace/repoName.worktrees/repository-metadata.json`
+5. **Parallel** — Dispatch multiple distinct repos in parallel when multiple URLs provided
 
-### action=new — Branch Creation (repo name + branch provided)
+### action=new — Branch Worktree (repo name + branch provided)
 
-1. **Parse Input** — Extract repository name and branch name; validate existing worktree structure
-2. **Remote Check** — Check remote for branch existence before creating new local one; default base to master/main
-3. **Create Worktree** — Call `zzaia-workspace-manager` to create branch worktree and update metadata
+1. **Validate** — Confirm `./workspace/repoName.worktrees/master/` exists; fail if not — run initial setup first
+2. **Remote Check** — From `./workspace/repoName.worktrees/master/` run `git ls-remote --heads origin <branchName>`
+   - Output exists → branch exists remotely:
+     - `git fetch origin branchName:refs/remotes/origin/branchName`
+     - `git worktree add -b branchName ../branchName origin/branchName`
+     - `git config branch.branchName.remote origin`
+     - `git config branch.branchName.merge refs/heads/branchName`
+   - No output → branch is new:
+     - `git worktree add -b branchName ../branchName`
+3. **Metadata** — Update `./workspace/repoName.worktrees/repository-metadata.json`
+
+## WORKSPACE STRUCTURE
+
+```
+./workspace/
+├── repoName.worktrees/
+│   ├── repository-metadata.json
+│   ├── master/                    # Reference branch
+│   └── branchName/               # Feature branches
+```
+
+## METADATA FORMAT
+
+```json
+{
+  "repository": "repoName",
+  "worktrees": ["master", "branchName"],
+  "active_branch": "branchName"
+}
+```
+
+## CONSTRAINTS
+
+- Use RELATIVE paths only — always relative to current working directory
+- NEVER use absolute paths like `/home/user/workspace/`
+- Always create master/main reference branch inside worktrees folder
+- No destructive operations on existing worktrees
+- All branch worktrees must be inside the `repoName.worktrees/` folder
 
 ## DELEGATION
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-workspace-manager` — Handles repository cloning, worktree management, and workspace integration
+- `zzaia-workspace-manager` — Executes git operations and generates metadata following the procedures above
 
 ## WORKFLOW
 
