@@ -215,8 +215,8 @@ __marimo__/
 !LICENSE
 !README.md
 !.claudeignore
+!.mcp.json
 !.claude/
-!.claude/.mcp.json
 !.claude/agents/
 !.claude/commands/
 !.claude/rules/
@@ -225,8 +225,8 @@ __marimo__/
 !.claude/Init.sh
 !.claude/Install.sh
 !.claude/marketplace.json
-!.claude/settings.local.json
 !.claude/settings.json
+!.claude/settings.local.json
 !.gitignore
 !.vscode
 
