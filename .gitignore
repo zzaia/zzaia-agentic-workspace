@@ -206,8 +206,10 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Whitelist: Ignore everything except explicitly un-ignored files
-# This must come BEFORE the catch-all /* pattern
+# Ignore everything at root level
+/*
+
+# Whitelist: explicitly un-ignore tracked files/directories
 !settings.local.json
 !agents/
 !commands/
@@ -216,22 +218,26 @@ __marimo__/
 !README.md
 !.claudeignore
 !.mcp.json
+!.gitignore
+!.vscode
+
+# Allow traversal into .claude/ but re-ignore its contents
 !.claude/
+.claude/*
 !.claude/agents/
 !.claude/commands/
 !.claude/rules/
-!.claude/plugins/plugins.json
 !.claude/output-styles/
 !.claude/Init.sh
 !.claude/Install.sh
 !.claude/marketplace.json
 !.claude/settings.json
 !.claude/settings.local.json
-!.gitignore
-!.vscode
 
-# Ignore everything else at root level
-/*
+# Allow traversal into .claude/plugins/ but re-ignore its contents
+!.claude/plugins/
+.claude/plugins/*
+!.claude/plugins/plugins.json
 
 # Ignore build output
 bin/
