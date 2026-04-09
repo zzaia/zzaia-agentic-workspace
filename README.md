@@ -315,10 +315,12 @@ workspace/               # Multi-repository workspace
 
 External service integrations via Model Context Protocol servers configured in [`.mcp.json`](.mcp.json).
 
-| Tool | Purpose | Secret (1Password) |
-|------|---------|---------------------|
-| **Tavily** | Web search, extract, crawl, map | `op://${VAULT_NAME}/tavily/credential` |
-| **Azure DevOps** | Work items, PRs, pipelines, repos | `op://${VAULT_NAME}/azure-devops/pat` |
+| Tool | Purpose | Env Var |
+|------|---------|---------|
+| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` |
+| **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
+| **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` |
+| **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` |
 | **Playwright** | Browser automation, screenshots | None (local) |
 | **Aspire** | AppHost resource inspection and control | None (local) |
 
@@ -329,19 +331,19 @@ The workspace uses 1Password CLI for secure, dynamic secret management across al
 ### How It Works
 
 1. **Vault Configuration**
-   - The `.mcp.json` file references secrets using `op://${VAULT_NAME}/item/field` syntax
-   - Vault name is set dynamically at workspace initialization
+   - `Init.sh` reads secrets from 1Password using `op://${VAULT_NAME}/item/field` refs
+   - Secrets are exported as environment variables before Claude Code launches
+   - `.mcp.json` consumes them via `${ENV_VAR}` interpolation at runtime
 
 2. **Initialization Flow**
    ```
-   User runs Init.sh → Prompts for vault name → Exports VAULT_NAME
-   → Signs in to 1Password → Launches Claude Code → Secrets injected
+   Init.sh → op signin → load_secret exports env vars → claude launches → MCP servers read env vars
    ```
 
 3. **Secret Resolution**
-   - MCP servers use `op run` command to resolve secrets at runtime
-   - Secrets are never stored in files, only referenced
-   - Each service retrieves its required credentials automatically
+   - Secrets are resolved once at startup by `Init.sh` and never written to disk
+   - Each MCP server reads its required env var automatically
+   - If 1Password is unavailable, env vars can be set manually before running `claude`
 
 ### Vault Structure
 
@@ -350,10 +352,14 @@ Organize your 1Password vault with items for each service:
 ```
 your-vault/
   ├── tavily/
-  │   └── credential (API key)
-  └── azure-devops/
-      ├── pat (Personal Access Token)
-      └── organization (Organization name)
+  │   └── credential      (TAVILY_API_KEY)
+  ├── azure-devops/
+  │   ├── pat             (ADO_MCP_AUTH_TOKEN)
+  │   └── organization    (AZURE_DEVOPS_ORGANIZATION)
+  ├── postman/
+  │   └── credential      (POSTMAN_API_KEY)
+  └── new-relic/
+      └── api-key         (NEW_RELIC_API_KEY)
 ```
 
 ### Adding New Services
@@ -366,22 +372,27 @@ your-vault/
      credential="your-secret-key"
    ```
 
-2. **Update .mcp.json**
+2. **Add `load_secret` call in `Init.sh`**
+   ```bash
+   load_secret 'SERVICE_API_KEY' 'op://${VAULT_NAME}/service-name/credential' 'SERVICE_API_KEY_OP_REF'
+   ```
+
+3. **Add server in `.mcp.json`**
    ```json
    {
      "mcpServers": {
        "service-name": {
-         "command": "op",
-         "args": ["run", "--", "command"],
+         "command": "npx",
+         "args": ["-y", "service-mcp-package"],
          "env": {
-           "API_KEY": "op://${VAULT_NAME}/service-name/credential"
+           "API_KEY": "${SERVICE_API_KEY}"
          }
        }
      }
    }
    ```
 
-3. **Restart Workspace**
+4. **Restart Workspace**
    Secrets are loaded at initialization
 
 ### Security Benefits
