@@ -88,6 +88,14 @@ sequenceDiagram
     R-->>U: Present review report
 ```
 
+## Language Rules
+
+Apply the appropriate rule file before any code review:
+
+**C#/.NET**: @commands/behavior/development/rules/dotnet-coding-rules.md
+**Python**: @commands/behavior/development/rules/python-coding-rules.md
+**JavaScript/TypeScript**: @commands/behavior/development/rules/javascript-coding-rules.md
+
 ## ACCEPTANCE CRITERIA
 
 - Comprehensive code quality assessment

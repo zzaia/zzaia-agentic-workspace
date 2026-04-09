@@ -20,6 +20,5 @@
     "automation"
   ],
   "commands": ["./.claude/commands"],
-  "agents": ["./.claude/agents"],
-  "rules": ["./.claude/rules"]
+  "agents": ["./.claude/agents"]
 }
