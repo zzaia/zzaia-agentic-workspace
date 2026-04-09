@@ -49,14 +49,9 @@ The workspace will automatically:
 
 ### Use as Remote Plugin
 
-Add to your `.claude/plugins.json`:
-
-```json
-{
-  "plugins": [
-    { "name": "zzaia-workspace", "url": "https://github.com/zzaia/zzaia-agentic-workspace" }
-  ]
-}
+```bash
+/plugin marketplace add zzaia/zzaia-agentic-workspace
+/plugin install zzaia-workspace@zzaia
 ```
 
 ## 🏗️ Command Hierarchy
@@ -310,10 +305,7 @@ High-level agents dispatched inside agent-teams sessions to lead and coordinate 
 │       ├── analytics/
 │       └── remote/
 ├── output-styles/       # Claude output format definitions
-├── plugins/
-│   └── plugin.json      # Single plugin configuration
 ├── rules/               # Language-specific standards
-├── marketplace.json     # Marketplace configuration
 CLAUDE.md                # System guidance
 workspace/               # Multi-repository workspace
 ```
@@ -416,7 +408,7 @@ Clone repository and use with VS Code workspace functionality for multi-reposito
 
 ### Plugin
 
-Single unified plugin at `.claude/plugins/plugin.json` — includes all commands, agents, rules, and hooks.
+Install via Claude Code marketplace — commands, agents, and rules are available namespaced as `/zzaia-workspace:*`.
 
 ## 📄 License
 
@@ -425,6 +417,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - **Documentation**: [CLAUDE.md](CLAUDE.md)
-- **Marketplace**: [.claude/marketplace.json](.claude/marketplace.json)
+- **Marketplace**: [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
 - **Issues**: [GitHub Issues](https://github.com/zzaia/zzaia-agentic-workspace/issues)
 - **Built with**: [Claude Code](https://claude.ai/code)

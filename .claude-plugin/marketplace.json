@@ -1,0 +1,30 @@
+{
+  "name": "zzaia",
+  "owner": {
+    "name": "Raphael Pizzaia",
+    "email": "raphael.pizzaia@example.com"
+  },
+  "metadata": {
+    "description": "ZZAIA Agentic Workspace — multi-agent orchestration for software engineering workflows",
+    "version": "1.0.0",
+    "homepage": "https://github.com/zzaia/zzaia-agentic-workspace"
+  },
+  "plugins": [
+    {
+      "name": "zzaia-workspace",
+      "source": "./",
+      "description": "Multi-agent orchestration system for software engineering workflows",
+      "version": "1.0.0",
+      "author": {
+        "name": "Raphael Pizzaia"
+      },
+      "keywords": [
+        "agentic",
+        "orchestration",
+        "development",
+        "analytics",
+        "management"
+      ]
+    }
+  ]
+}
