@@ -218,6 +218,7 @@ __marimo__/
 !README.md
 !.claudeignore
 !.mcp.json
+!.claude-plugin/
 !.gitignore
 !.vscode
 
