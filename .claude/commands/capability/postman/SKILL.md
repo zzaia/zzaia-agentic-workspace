@@ -1,5 +1,5 @@
 ---
-name: postman
+name: capability:postman
 description: Manage Postman workspace resources via MCP — collections, requests, environments, mocks, and HTTP execution
 argument-hint: "--action <request|create|read|update|delete> --description <text> [options]"
 ---

@@ -1,5 +1,5 @@
 ---
-name: new-relic
+name: behavior:devops:new-relic
 description: Manage New Relic diagnostics — query logs, errors, warnings, and anomalies for an application
 argument-hint: "--action <debug> --application-name <name>"
 agents:

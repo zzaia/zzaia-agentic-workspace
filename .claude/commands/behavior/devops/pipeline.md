@@ -1,5 +1,5 @@
 ---
-name: pipeline
+name: behavior:devops:pipeline
 description: Manage Azure DevOps pipelines — run existing or new pipelines, or diagnose build logs
 argument-hint: "--action <run|debug> --portal <azure> --project <name> [--pipeline <id|name>] [--branch <branch>] [--file <path>] [--file-name <yaml>] [--run <id>] [--limit <count>]"
 agents:

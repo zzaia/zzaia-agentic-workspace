@@ -1,5 +1,5 @@
 ---
-name: document
+name: capability:document
 description: Document operations — read, write, and scrape PDF/Word documents
 argument-hint: "--action <read|write|scrap> --description <text> [options]"
 ---

@@ -1,5 +1,5 @@
 ---
-name: implement
+name: orchestrator:implement
 description: Orchestrate implementation of multiple work items by analyzing dependencies and dispatching parallel or sequential execution
 argument-hint: "--work-items <id-list> --portal <azure|github> --project <name> --target-branch <branch> --description <text>"
 user-invocable: true

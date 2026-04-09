@@ -1,5 +1,5 @@
 ---
-name: list-branches
+name: behavior:devops:repo:list-branches
 description: List branches in a repository, optionally filtered by prefix
 argument-hint: "--portal <azure|github> --project <name> --repo <name> [--branch <prefix>]"
 user-invocable: true

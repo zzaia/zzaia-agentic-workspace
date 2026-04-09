@@ -1,5 +1,5 @@
 ---
-name: create
+name: capability:postman:create
 description: Create new Postman resources (collections, requests, environments, mocks)
 argument-hint: "--target <collection|request|environment|mock> --spec <payload> [--description <text>]"
 user-invocable: true

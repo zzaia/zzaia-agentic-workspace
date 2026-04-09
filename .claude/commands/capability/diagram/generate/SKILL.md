@@ -1,5 +1,5 @@
 ---
-name: diagram:generate
+name: capability:diagram:generate
 description: Generate PNG diagram from Mermaid, Graphviz, D2, PlantUML, or Diagrams (Python) source code using local offline renderers
 argument-hint: "--code <diagram_code> --output <path.png> [--type mermaid|graphviz|d2|plantuml|diagrams]"
 user-invocable: true

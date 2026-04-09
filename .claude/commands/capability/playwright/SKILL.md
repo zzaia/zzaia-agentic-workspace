@@ -1,5 +1,5 @@
 ---
-name: playwright
+name: capability:playwright
 description: Manage Playwright browser sessions — diagnose console logs, network errors, and page snapshots
 argument-hint: "--action <debug|navigate> [--url <page-url>] [--description <details>]"
 ---

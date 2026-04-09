@@ -1,5 +1,5 @@
 ---
-name: apphost
+name: behavior:workspace:apphost
 description: Manage Aspire AppHost — configure workspace applications or diagnose telemetry
 argument-hint: "--action <setup|debug> [--applications \"<name[:branch]> ...\"] [--application <name>]"
 agents:

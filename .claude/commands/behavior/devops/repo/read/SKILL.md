@@ -1,5 +1,5 @@
 ---
-name: read
+name: behavior:devops:repo:read
 description: Read repository metadata including name, URL, default branch, visibility, and size
 argument-hint: "--portal <azure|github> --project <name> --repo <name>"
 user-invocable: true

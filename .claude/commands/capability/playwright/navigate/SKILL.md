@@ -1,5 +1,5 @@
 ---
-name: navigate
+name: capability:playwright:navigate
 description: Navigate to a URL and interact with the page via Playwright MCP
 argument-hint: "--url <page-url> [--description <interaction-details>]"
 user-invocable: true

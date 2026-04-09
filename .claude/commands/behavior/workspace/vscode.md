@@ -1,5 +1,5 @@
 ---
-name: vscode
+name: behavior:workspace:vscode
 description: Generate and manage VSCode launch and task configurations for development environments
 argument-hint: "--action <setup|validate|update> [--repo <name>] [--branch <name>] [--mode <all|project>]"
 parameters:
