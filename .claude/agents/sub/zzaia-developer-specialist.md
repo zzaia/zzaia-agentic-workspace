@@ -42,15 +42,11 @@ Develop solutions following architectural principles. MANDATORY: Apply language 
 - Must guarantee all tests passing successfully
 - Language rules application is mandatory for all tasks
 
-**C#/.NET**: @rules/dotnet-coding-rules.md
-**Python**: @rules/python-coding-rules.md
-**Jupyter/Python Notebook**: @rules/python-notebook-rules.md
-**JavaScript/TypeScript**: @rules/javascript-coding-rules.md
-
 ## CAPABILITIES
 
 - Multi-language and framework development expertise
-- Rule-based coding standards application from `.claude/rules/`
+- Comprehensive testing strategy implementation
+- Cross-repository integration and dependency management
 - Comprehensive testing strategy implementation
 - Cross-repository integration and dependency management
 - /behavior:development:build: Execute build process with dependency and configuration management

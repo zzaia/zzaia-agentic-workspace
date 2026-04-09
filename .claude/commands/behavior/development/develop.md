@@ -94,6 +94,15 @@ sequenceDiagram
 
 ```
 
+## Language Rules
+
+Apply the appropriate rule file before any code modification:
+
+**C#/.NET**: @commands/behavior/development/rules/dotnet-coding-rules.md
+**Python**: @commands/behavior/development/rules/python-coding-rules.md
+**Jupyter/Python Notebook**: @commands/behavior/development/rules/python-notebook-rules.md
+**JavaScript/TypeScript**: @commands/behavior/development/rules/javascript-coding-rules.md
+
 ## Acceptance Criteria
 
 Defines when the whole process must be considered completed

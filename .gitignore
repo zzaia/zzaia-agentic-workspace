@@ -227,7 +227,6 @@ __marimo__/
 .claude/*
 !.claude/agents/
 !.claude/commands/
-!.claude/rules/
 !.claude/output-styles/
 !.claude/Init.sh
 !.claude/Install.sh
