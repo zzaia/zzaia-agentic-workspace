@@ -47,15 +47,21 @@ Single interface for workspace repository management. Routes to clone or branch 
 ### action=new — Branch Worktree (repo name + branch provided)
 
 1. **Validate** — Confirm `./workspace/repoName.worktrees/master/` exists; fail if not — run initial setup first
-2. **Remote Check** — From `./workspace/repoName.worktrees/master/` run `git ls-remote --heads origin <branchName>`
+2. **Derive path** — Split branch name on `/` to build the worktree path:
+   - `feature/implement-something` → `./workspace/repoName.worktrees/feature/implement-something/`
+   - `fix/issue-9` → `./workspace/repoName.worktrees/fix/issue-9/`
+   - `plan/new-job` → `./workspace/repoName.worktrees/plan/new-job/`
+   - `main` (no slash) → `./workspace/repoName.worktrees/main/`
+   - Create intermediate directories as needed (`mkdir -p`)
+3. **Remote Check** — From `./workspace/repoName.worktrees/master/` run `git ls-remote --heads origin <branchName>`
    - Output exists → branch exists remotely:
      - `git fetch origin branchName:refs/remotes/origin/branchName`
-     - `git worktree add -b branchName ../branchName origin/branchName`
+     - `git worktree add -b branchName <derived-path> origin/branchName`
      - `git config branch.branchName.remote origin`
      - `git config branch.branchName.merge refs/heads/branchName`
    - No output → branch is new:
-     - `git worktree add -b branchName ../branchName`
-3. **Metadata** — Update `./workspace/repoName.worktrees/repository-metadata.json`
+     - `git worktree add -b branchName <derived-path>`
+4. **Metadata** — Update `./workspace/repoName.worktrees/repository-metadata.json`
 
 ## WORKSPACE STRUCTURE
 
@@ -63,8 +69,13 @@ Single interface for workspace repository management. Routes to clone or branch 
 ./workspace/
 ├── repoName.worktrees/
 │   ├── repository-metadata.json
-│   ├── master/                    # Reference branch
-│   └── branchName/               # Feature branches
+│   ├── master/                         # Reference branch
+│   ├── feature/
+│   │   └── implement-something/        # feature/implement-something
+│   ├── fix/
+│   │   └── issue-9/                    # fix/issue-9
+│   └── plan/
+│       └── new-job/                    # plan/new-job
 ```
 
 ## METADATA FORMAT
