@@ -1,5 +1,5 @@
 ---
-name: latex:write
+name: capability:latex:write
 description: Generate PDF files from Jinja2 LaTeX templates using tectonic CLI engine
 argument-hint: "--template <path> --output <path> [--data <json>]"
 user-invocable: true

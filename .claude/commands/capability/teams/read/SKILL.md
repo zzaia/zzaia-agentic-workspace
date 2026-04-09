@@ -1,5 +1,5 @@
 ---
-name: read
+name: capability:teams:read
 description: Read and filter Microsoft Teams chat or channel conversations using Microsoft 365 MCP
 argument-hint: "--chat-name <name> [--begin-message <boundary>] [--last-message <boundary>] [--filter <keyword>] [--limit <count>]"
 user-invocable: true

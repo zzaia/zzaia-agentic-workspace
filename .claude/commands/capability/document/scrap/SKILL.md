@@ -1,5 +1,5 @@
 ---
-name: scrap
+name: capability:document:scrap
 description: Search, extract, and download PDF and Word documents from URLs or web searches with filtering capabilities and user confirmation checkpoints
 argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>]"
 agent: zzaia-document-specialist

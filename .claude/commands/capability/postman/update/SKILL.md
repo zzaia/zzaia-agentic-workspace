@@ -1,5 +1,5 @@
 ---
-name: update
+name: capability:postman:update
 description: Update existing Postman resources
 argument-hint: "--target <collection|request|environment|mock> --id <id> --spec <payload> [--description <text>]"
 user-invocable: true

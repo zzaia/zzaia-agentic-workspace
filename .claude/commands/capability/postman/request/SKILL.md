@@ -1,5 +1,5 @@
 ---
-name: request
+name: capability:postman:request
 description: Execute HTTP calls via Postman runner
 argument-hint: "--spec <payload> [--description <text>]"
 user-invocable: true

@@ -1,5 +1,5 @@
 ---
-name: delete
+name: capability:postman:delete
 description: Delete Postman resources by ID or name
 argument-hint: "--target <collection|request|environment|mock> --id <id> [--description <text>]"
 user-invocable: true

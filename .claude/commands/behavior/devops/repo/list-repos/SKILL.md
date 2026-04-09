@@ -1,5 +1,5 @@
 ---
-name: list-repos
+name: behavior:devops:repo:list-repos
 description: List all repositories in a project or organization
 argument-hint: "--portal <azure|github> --project <name>"
 user-invocable: true

@@ -1,5 +1,5 @@
 ---
-name: create-branch
+name: behavior:devops:repo:create-branch
 description: Create a new branch from a source branch
 argument-hint: "--portal <azure|github> --project <name> --repo <name> --branch <name> [--source-branch <name>]"
 user-invocable: true

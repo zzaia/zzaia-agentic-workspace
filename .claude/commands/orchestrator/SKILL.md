@@ -1,5 +1,5 @@
 ---
-name: orchestrate
+name: orchestrator
 description: Orchestrate multi-item workflows across repositories
 argument-hint: "--action <implement> [options]"
 ---

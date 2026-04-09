@@ -1,5 +1,5 @@
 ---
-name: e2e
+name: behavior:development:test:e2e
 description: Execute a single BDD step via direct API call with New Relic diagnostics
 argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app>"
 user-invocable: true

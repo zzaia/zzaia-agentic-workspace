@@ -1,5 +1,5 @@
 ---
-name: unit
+name: behavior:development:test:unit
 description: Unit test execution within a project using framework detection
 argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--framework auto]"
 user-invocable: true

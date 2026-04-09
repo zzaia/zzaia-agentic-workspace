@@ -1,5 +1,5 @@
 ---
-name: diagram
+name: capability:diagram
 description: Diagram generation — render Mermaid, Graphviz, D2, or PlantUML source code to PNG files locally
 argument-hint: "--action <generate> [options]"
 ---

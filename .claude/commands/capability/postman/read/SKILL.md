@@ -1,5 +1,5 @@
 ---
-name: read
+name: capability:postman:read
 description: Read and list Postman workspace resources
 argument-hint: "--target <collection|request|environment|mock> [--id <id>] [--description <text>]"
 user-invocable: true

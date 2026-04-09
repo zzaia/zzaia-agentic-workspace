@@ -1,5 +1,5 @@
 ---
-name: ui
+name: behavior:development:test:ui
 description: Execute a single BDD step via Playwright browser automation with New Relic and console diagnostics
 argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app>"
 user-invocable: true

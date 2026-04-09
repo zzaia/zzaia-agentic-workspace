@@ -1,5 +1,5 @@
 ---
-name: repo
+name: behavior:devops:repo
 description: Manage repositories in external DevOps portals — read metadata, list branches, create branches, and list repos across Azure DevOps and GitHub
 argument-hint: "--action <read|list-repos|list-branches|create-branch> [options]"
 ---
