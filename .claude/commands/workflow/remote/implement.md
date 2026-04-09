@@ -1,5 +1,5 @@
 ---
-name: /workflow:remote:implement
+name: workflow:remote:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
 argument-hint: "--work-item <id> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
 parameters:

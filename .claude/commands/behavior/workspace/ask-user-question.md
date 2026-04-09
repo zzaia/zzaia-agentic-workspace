@@ -1,5 +1,5 @@
 ---
-name: /behavior:workspace:ask-user-question
+name: behavior:workspace:ask-user-question
 description: Prompt the user for input using AskUserQuestion with free-form or numbered selection
 argument-hint: "--question <text> [--options <semicolon-separated-list>]"
 parameters:

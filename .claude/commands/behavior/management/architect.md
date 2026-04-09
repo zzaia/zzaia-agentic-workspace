@@ -1,5 +1,5 @@
 ---
-name: /behavior:management:architect
+name: behavior:management:architect
 description: Analyze architectural requirements through 4-layer hierarchical thinking (SDD Overview → Application BDD → Specific App BDD → Specific SDD)
 argument-hint: "[--work-description <text>] [--work-directory <path>] [--context <text>] [--focus <area>]"
 parameters:

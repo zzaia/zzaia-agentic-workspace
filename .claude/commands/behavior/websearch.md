@@ -1,5 +1,5 @@
 ---
-name: /behavior:websearch
+name: behavior:websearch
 description: Standardized web search protocol for comprehensive information gathering
 argument-hint: "--query <text> [--focus <area>]"
 agents:

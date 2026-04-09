@@ -1,5 +1,5 @@
 ---
-name: /behavior:workspace:agent-teams
+name: behavior:workspace:agent-teams
 description: Orchestrate teams of specialized agents to collectively execute a task in consensus or parallel mode, each displayed in a dedicated tmux pane
 argument-hint: "--mode <consensus|parallel> --context <task-context> [--tasks <task-list>] [--agents <agent-list>] [--description <description>] [--max-agents <n>] [--session <tmux-session>]"
 agents:

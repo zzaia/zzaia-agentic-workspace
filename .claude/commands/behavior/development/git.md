@@ -1,5 +1,5 @@
 ---
-name: /behavior:development:git
+name: behavior:development:git
 description: Execute comprehensive Git version control operations with standardized branch management
 argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repository <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
 parameters:

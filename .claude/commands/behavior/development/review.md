@@ -1,5 +1,5 @@
 ---
-name: /behavior:development:review
+name: behavior:development:review
 description: Comprehensive code review across git changes, repositories, and pull requests
 argument-hint: "--target changes|repo|pr [--repo <name>] [--branch <name>] [--path <path>] [--pr <url>] [--context <focus>] [--depth light|standard|deep]"
 agents:

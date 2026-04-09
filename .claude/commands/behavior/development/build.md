@@ -1,5 +1,5 @@
 ---
-name: /behavior:development:build
+name: behavior:development:build
 description: Multi-framework build with error reporting across repositories
 argument-hint: "--repo <name> --branch <name> --project <name>"
 parameters:

@@ -1,5 +1,5 @@
 ---
-name: /behavior:development:develop
+name: behavior:development:develop
 description: Full task development workflow with multi-agent orchestration
 argument-hint: "--task <description> --repo <name> --branch <name>"
 agents:

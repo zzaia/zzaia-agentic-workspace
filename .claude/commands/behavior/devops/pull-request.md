@@ -1,5 +1,5 @@
 ---
-name: /behavior:devops:pull-request
+name: behavior:devops:pull-request
 description: Manage pull requests across Azure DevOps and GitHub with create, read, update operations including reviewers, labels, templates, and code reviews, add comments
 argument-hint: "--action create|read|update --portal azure|github --project <name> --repo <name> [--source-branch <branch>] [--target-branch <branch>] [--draft] [--pr <id>] [--title <text>] [--description <text>] [--work-item <id>]"
 agents:

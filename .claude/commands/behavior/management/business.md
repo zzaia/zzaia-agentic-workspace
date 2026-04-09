@@ -1,5 +1,5 @@
 ---
-name: /behavior:management:business
+name: behavior:management:business
 description: Business and BDD analysis of system behaviors, user interactions, and business outcomes from pure business perspective before any technical decisions
 argument-hint: "[--context <description>] [--work-directory <path>]"
 parameters:

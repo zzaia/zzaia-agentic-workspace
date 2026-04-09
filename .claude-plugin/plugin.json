@@ -19,5 +19,12 @@
     "workspace",
     "automation"
   ],
-  "commands": ["./.claude/commands"]
+  "commands": ["./.claude/commands"],
+  "agents": [
+    "./.claude/agents/sub",
+    "./.claude/agents/meta",
+    "./.claude/agents/analytics",
+    "./.claude/agents/team"
+  ],
+  "mcpServers": "./.mcp.json"
 }

@@ -1,5 +1,5 @@
 ---
-name: /workflow:remote:homologate
+name: workflow:remote:homologate
 description: Orchestrate homologation testing with BDD, live URL testing, diagnostics, and bug reporting
 argument-hint: "--work-item <id> --project <project> --url <target-url> --application <app-name> --type e2e|ui|integration [--test-case <id>] [--description <context>] [--doc <file-path>] [--ref-url <url>]"
 parameters:

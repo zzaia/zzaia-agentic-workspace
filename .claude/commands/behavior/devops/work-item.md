@@ -1,5 +1,5 @@
 ---
-name: /behavior:devops:work-item
+name: behavior:devops:work-item
 description: Retrieve and manage work items across Azure DevOps, GitHub, and GitLab
 argument-hint: "[--action read|create|update|link|tag|post-discussion|read-discussion] [--id <id>] [--project <name>] [--type Bug|Task|Feature|UserStory|Epic] [--title <text>] [--description <text>] [--status <state>] [--parent <id>] [--severity Low|Medium|High|Critical] [--platform azure|github|git-lab]"
 agents:
