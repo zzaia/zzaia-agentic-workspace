@@ -7,26 +7,13 @@ Write-Host ""
 Write-Host "  ZZAIA Agentic Workspace"
 Write-Host ""
 
-# ── Bitwarden CLI ─────────────────────────────────────────────────────────────
+# ── Bitwarden login ───────────────────────────────────────────────────────────
 if (-not (Get-Command bw -ErrorAction SilentlyContinue)) {
-    Write-Host "[1/3] Installing Bitwarden CLI..."
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
-        winget install --id Bitwarden.BitwardenCLI --accept-source-agreements --accept-package-agreements
-    } else {
-        $bwVersion = (Invoke-RestMethod "https://api.github.com/repos/bitwarden/clients/releases/latest").tag_name -replace "cli-v", ""
-        $bwUrl = "https://github.com/bitwarden/clients/releases/download/cli-v$bwVersion/bw-windows-$bwVersion.zip"
-        Invoke-WebRequest -Uri $bwUrl -OutFile "$env:TEMP\bw.zip"
-        Expand-Archive -Path "$env:TEMP\bw.zip" -DestinationPath "$env:TEMP\bw-cli" -Force
-        Move-Item "$env:TEMP\bw-cli\bw.exe" "$env:LOCALAPPDATA\Microsoft\WindowsApps\bw.exe" -Force
-        Remove-Item "$env:TEMP\bw.zip", "$env:TEMP\bw-cli" -Recurse -Force
-    }
-    Write-Host "[1/3] Bitwarden CLI installed"
-} else {
-    Write-Host "[1/3] Bitwarden CLI already installed"
+    Write-Host "ERROR: Bitwarden CLI not found. Run Install-windows.ps1 first."
+    exit 1
 }
 
-# ── Bitwarden login ───────────────────────────────────────────────────────────
-Write-Host "[2/3] Unlocking Bitwarden vault..."
+Write-Host "[1/2] Unlocking Bitwarden vault..."
 
 $bwStatus = ""
 try {
@@ -67,7 +54,7 @@ Load-Secret "NEW_RELIC_API_KEY"          "new-relic"
 bw lock --session $env:BW_SESSION 2>$null | Out-Null
 
 # ── Launch Claude Code ────────────────────────────────────────────────────────
-Write-Host "[3/3] Launching Claude Code..."
+Write-Host "[2/2] Launching Claude Code..."
 Write-Host ""
 
 claude --enable-auto-mode

@@ -19,28 +19,13 @@ echo ""
 echo "         Agentic Workspace"
 echo ""
 
-# ── Bitwarden CLI ────────────────────────────────────────────────────────────
-if ! is_installed bw; then
-    echo "[1/3] Installing Bitwarden CLI..."
-    if is_installed snap; then
-        sudo snap install bw
-    else
-        BW_VERSION=$(curl -s https://api.github.com/repos/bitwarden/clients/releases/latest \
-            | grep '"tag_name"' | grep -o 'cli-v[0-9.]*' | head -1 | sed 's/cli-v//')
-        curl -fsSL "https://github.com/bitwarden/clients/releases/download/cli-v${BW_VERSION}/bw-linux-${BW_VERSION}.zip" \
-            -o /tmp/bw.zip
-        unzip -o /tmp/bw.zip -d /tmp/bw-cli
-        sudo mv /tmp/bw-cli/bw /usr/local/bin/bw
-        sudo chmod +x /usr/local/bin/bw
-        rm -rf /tmp/bw.zip /tmp/bw-cli
-    fi
-    echo "[1/3] Bitwarden CLI installed"
-else
-    echo "[1/3] Bitwarden CLI already installed"
+# ── Bitwarden login ──────────────────────────────────────────────────────────
+if ! command -v bw &>/dev/null; then
+    echo "ERROR: Bitwarden CLI not found. Run Install-ubuntu.sh first."
+    exit 1
 fi
 
-# ── Bitwarden login ──────────────────────────────────────────────────────────
-echo "[2/3] Unlocking Bitwarden vault..."
+echo "[1/2] Unlocking Bitwarden vault..."
 BW_STATUS=$(bw status 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4 || echo "unauthenticated")
 if [[ "$BW_STATUS" == "unauthenticated" ]]; then
     bw login
@@ -68,6 +53,6 @@ load_secret "NEW_RELIC_API_KEY"         "new-relic"
 bw lock --session "$BW_SESSION" >/dev/null 2>&1 || true
 
 # ── Launch Claude Code ───────────────────────────────────────────────────────
-echo "[3/3] Launching Claude Code..."
+echo "[2/2] Launching Claude Code..."
 echo ""
 claude --enable-auto-mode

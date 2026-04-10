@@ -8,10 +8,13 @@
       }
     },
     "azure-devops": {
-      "command": "sh",
+      "command": "npx",
       "args": [
-        "-c",
-        "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"
+        "-y",
+        "@azure-devops/mcp@next",
+        "${AZURE_DEVOPS_ORGANIZATION}",
+        "-a",
+        "envvar"
       ],
       "env": {
         "ADO_MCP_AUTH_TOKEN": "${ADO_MCP_AUTH_TOKEN}",
