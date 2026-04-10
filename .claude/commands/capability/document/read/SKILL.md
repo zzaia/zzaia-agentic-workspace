@@ -1,7 +1,7 @@
 ---
 name: read 
 description: Extract text from PDF and Word documents and inject content into conversation context
-argument-hint: "--file <path> [--summary]"
+argument-hint: "--file <path> [--summary] [--description <text>]"
 user-invocable: true 
 agent: zzaia-document-specialist
 metadata:
@@ -14,6 +14,9 @@ metadata:
       required: true
     - name: summary
       description: Show content summary without full text extraction
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

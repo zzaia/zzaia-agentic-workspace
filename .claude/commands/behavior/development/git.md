@@ -1,7 +1,7 @@
 ---
 name: behavior:development:git
 description: Execute comprehensive Git version control operations with standardized branch management
-argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repo <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
+argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repo <name>] [--branch <name>] [--message <text>] [--source-branch <name>] [--description <text>]"
 parameters:
   - name: action
     description: The git operation to perform (init, branch, commit, push, commit-push, pull, merge, status)
@@ -17,6 +17,9 @@ parameters:
     required: false
   - name: source-branch
     description: Source branch for merge operations (branch to merge from)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 agents:
   - name: zzaia-workspace-manager

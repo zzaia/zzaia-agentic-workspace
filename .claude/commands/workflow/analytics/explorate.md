@@ -1,7 +1,7 @@
 ---
 name: workflow:analytics:explorate
 description: Comprehensive research workflow for domain, problem, and dataset exploration
-argument-hint: "[--domain <context>]"
+argument-hint: "[--domain <context>] [--description <text>]"
 version: 1.0
 agents:
   - name: zzaia-domain-exploration

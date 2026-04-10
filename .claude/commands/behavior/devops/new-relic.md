@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:new-relic
 description: Manage New Relic diagnostics — query logs, errors, warnings, and anomalies for an application
-argument-hint: "--action <debug> --application-name <name>"
+argument-hint: "--action <debug> --application-name <name> [--description <text>]"
 agents:
   - name: zzaia-devops-specialist
     description: Query New Relic MCP tools and compile diagnostic findings
@@ -12,6 +12,9 @@ parameters:
   - name: application-name
     description: Application name to query in New Relic
     required: true
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

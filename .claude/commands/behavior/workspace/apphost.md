@@ -1,7 +1,7 @@
 ---
 name: behavior:workspace:apphost
 description: Manage Aspire AppHost — configure workspace applications or diagnose telemetry
-argument-hint: "--action <setup|debug> [--applications \"<name[:branch]> ...\"] [--application <name>]"
+argument-hint: "--action <setup|debug> [--applications \"<name[:branch]> ...\"] [--application <name>] [--description <text>]"
 agents:
   - name: zzaia-developer-specialist
     description: Implements AppHost configuration changes following .NET coding rules and AppHost documentation patterns
@@ -16,6 +16,9 @@ parameters:
     required: false
   - name: application
     description: "debug only — filter report to a single application name"
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

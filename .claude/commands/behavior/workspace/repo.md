@@ -1,7 +1,7 @@
 ---
 name: behavior:workspace:repo
 description: Manage workspace repositories — clone new repos or create worktree branches
-argument-hint: "--action <new> --repo <repoName|repoUrl> [--branch <branchName>] [--target-branch <baseBranch>]"
+argument-hint: "--action <new> --repo <repoName|repoUrl> [--branch <branchName>] [--target-branch <baseBranch>] [--description <text>]"
 agents:
   - name: zzaia-workspace-manager
     description: Handles repository cloning, worktree management, and workspace integration
@@ -17,6 +17,9 @@ parameters:
     required: false
   - name: target-branch
     description: Base branch to create the working branch from (defaults to main/master)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

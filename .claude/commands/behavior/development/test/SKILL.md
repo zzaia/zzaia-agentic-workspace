@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test
 description: Develop and run tests using framework detection and comprehensive test execution
-argument-hint: "--type <unit|e2e|ui> [--step <bdd-step>] [options]"
+argument-hint: "--type <unit|e2e|ui> [--step <bdd-step>] [options] [--description <text>]"
 ---
 
 # behavior:development:test

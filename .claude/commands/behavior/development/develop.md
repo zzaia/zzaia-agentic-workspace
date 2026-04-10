@@ -1,7 +1,7 @@
 ---
 name: behavior:development:develop
 description: Full task development workflow with multi-agent orchestration
-argument-hint: "--task <description> --repo <name> --branch <name>"
+argument-hint: "--task <description> --repo <name> --branch <name> [--description <text>]"
 agents:
   - name: zzaia-developer-specialist
     description: Implementation and development tasks with user feedback integration
@@ -17,6 +17,9 @@ parameters:
     required: true
   - name: auto-continue
     description: Skip interactive refinement loop and user approval; implement tests automatically without prompting
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

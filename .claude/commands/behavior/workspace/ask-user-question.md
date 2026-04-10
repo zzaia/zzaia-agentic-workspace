@@ -1,13 +1,16 @@
 ---
 name: behavior:workspace:ask-user-question
 description: Prompt the user for input using AskUserQuestion with free-form or numbered selection
-argument-hint: "--question <text> [--options <semicolon-separated-list>]"
+argument-hint: "--question <text> [--options <semicolon-separated-list>] [--description <text>]"
 parameters:
   - name: question
     description: The question or prompt text to present to the user
     required: true
   - name: options
     description: Semicolon-separated list of selectable options displayed as a numbered list
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

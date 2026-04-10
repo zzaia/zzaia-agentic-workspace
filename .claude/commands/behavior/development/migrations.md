@@ -1,7 +1,7 @@
 ---
 name: behavior:development:migrations
 description: Entity Framework Core migrations management across repositories
-argument-hint: "--repository <name> --branch <name> --action add|remove|list|update|script|drop [--migration <name>]"
+argument-hint: "--repository <name> --branch <name> --action add|remove|list|update|script|drop [--migration <name>] [--description <text>]"
 parameters:
   - name: repository
     description: Target repository name
@@ -14,6 +14,9 @@ parameters:
     required: true
   - name: migration
     description: Name for new migration (for add action)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

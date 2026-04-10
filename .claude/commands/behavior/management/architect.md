@@ -1,7 +1,7 @@
 ---
 name: behavior:management:architect
 description: Analyze architectural requirements through 4-layer hierarchical thinking (SDD Overview → Application BDD → Specific App BDD → Specific SDD)
-argument-hint: "[--work-description <text>] [--work-directory <path>] [--context <text>] [--focus <area>]"
+argument-hint: "[--work-description <text>] [--work-directory <path>] [--context <text>] [--focus <area>] [--description <text>]"
 parameters:
   - name: work-description
     description: Description or context about the system or feature to architect
@@ -19,6 +19,9 @@ parameters:
     description: Focus area to narrow the architectural output (e.g., test-plan, data-model, service-architecture, event-design)
     required: false
     type: string
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

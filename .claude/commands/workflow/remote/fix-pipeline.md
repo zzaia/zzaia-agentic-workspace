@@ -1,7 +1,7 @@
 ---
 name: workflow:remote:fix-pipeline
 description: Iterative pipeline repair loop until successful completion
-argument-hint: "--portal <platform> [--file <path>] [--project <name>] [--repo <name>] [--pipeline <id-or-name>] [--branch <branch>] [--target-branch <branch>] [--deps <repo>:<branch>[,<repo>:<branch>...]] [--work-item <id>] [--run <id>] [--max-iterations <count>]"
+argument-hint: "--portal <platform> [--file <path>] [--project <name>] [--repo <name>] [--pipeline <id-or-name>] [--branch <branch>] [--target-branch <branch>] [--deps <repo>:<branch>[,<repo>:<branch>...]] [--work-item <id>] [--run <id>] [--max-iterations <count>] [--description <text>]"
 parameters:
   - name: portal
     description: DevOps platform (azure)
@@ -35,6 +35,9 @@ parameters:
     required: false
   - name: max-iterations
     description: Safety limit on loop iterations (default 5)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 agents:
   - name: zzaia-devops-specialist

@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:repo:list-branches
 description: List branches in a repository, optionally filtered by prefix
-argument-hint: "--portal <azure|github> --project <name> --repo <name> [--branch <prefix>]"
+argument-hint: "--portal <azure|github> --project <name> --repo <name> [--branch <prefix>] [--description <text>]"
 user-invocable: true
 agent: zzaia-devops-specialist
 metadata:
@@ -17,6 +17,9 @@ metadata:
       required: true
     - name: branch
       description: Optional branch name prefix filter
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: behavior:development:build
 description: Multi-framework build with error reporting across repositories
-argument-hint: "--repo <name> --branch <name> --project <name>"
+argument-hint: "--repo <name> --branch <name> --project <name> [--description <text>]"
 parameters:
   - name: repo
     description: Repository name in workspace
@@ -12,6 +12,9 @@ parameters:
   - name: project
     description: Project name (must exist in a branch version)
     required: true
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

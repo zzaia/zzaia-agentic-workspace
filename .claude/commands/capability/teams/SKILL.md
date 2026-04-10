@@ -1,7 +1,7 @@
 ---
 name: capability:teams
 description: Microsoft Teams operations — read and filter chat/channel conversations
-argument-hint: "--action <read> [--chat-name <name>] [--begin-message <boundary>] [--last-message <boundary>] [--filter <keyword>] [--limit <count>]"
+argument-hint: "--action <read> [--chat-name <name>] [--begin-message <boundary>] [--last-message <boundary>] [--filter <keyword>] [--limit <count>] [--description <text>]"
 ---
 
 # teams Skill

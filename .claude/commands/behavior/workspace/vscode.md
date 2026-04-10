@@ -1,7 +1,7 @@
 ---
 name: behavior:workspace:vscode
 description: Generate and manage VSCode launch and task configurations for development environments
-argument-hint: "--action <setup|validate|update> [--repo <name>] [--branch <name>] [--mode <all|project>]"
+argument-hint: "--action <setup|validate|update> [--repo <name>] [--branch <name>] [--mode <all|project>] [--description <text>]"
 parameters:
   - name: action
     description: "Action to perform: setup, validate, update"
@@ -14,6 +14,9 @@ parameters:
     required: false
   - name: branch
     description: Specific branch for configuration
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

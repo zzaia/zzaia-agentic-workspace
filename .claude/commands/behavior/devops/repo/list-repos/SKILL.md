@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:repo:list-repos
 description: List all repositories in a project or organization
-argument-hint: "--portal <azure|github> --project <name>"
+argument-hint: "--portal <azure|github> --project <name> [--description <text>]"
 user-invocable: true
 agent: zzaia-devops-specialist
 metadata:
@@ -12,6 +12,9 @@ metadata:
     - name: project
       description: Project or organization name
       required: true
+    - name: description
+      description: Additional context or instructions for the operation
+      required: false
 ---
 
 ## PURPOSE

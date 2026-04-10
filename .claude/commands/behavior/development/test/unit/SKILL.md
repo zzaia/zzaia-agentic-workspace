@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:unit
 description: Unit test execution within a project using framework detection
-argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--framework auto]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--framework auto] [--description <text>]"
 user-invocable: true
 agent: zzaia-tester-specialist
 metadata:
@@ -21,6 +21,9 @@ metadata:
       default: run
     - name: framework
       description: Optional test framework override (auto-detected by default)
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

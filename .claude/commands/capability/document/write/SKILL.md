@@ -1,7 +1,7 @@
 ---
 name: capability:document:write
 description: Write markdown documentation by selecting a template from ./templates/ and delivering to a target output (local file, wiki, pull-request, work-item).
-argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>] [--target-field description|acceptance-criteria|discussion|comment]"
+argument-hint: "[template] [title] [--context <text>] [--output <path>] [--wiki] [--pr <id>] [--work-item <id>] [--target-field description|acceptance-criteria|discussion|comment] [--description <text>]"
 agent: zzaia-document-specialist
 metadata:
   parameters:
@@ -30,6 +30,9 @@ metadata:
       description: "Where to write within --pr or --work-item: description (default for pr), acceptance-criteria, discussion, comment"
       required: false
       default: discussion
+    - name: description
+      description: Additional context or instructions for the operation
+      required: false
 ---
 
 ## PURPOSE
