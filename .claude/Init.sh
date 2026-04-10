@@ -19,7 +19,7 @@ if [[ -z "$VAULT_NAME" || -z "$SESSION_NAME" ]]; then
     exit 1
 fi
 
-SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid5(uuid.NAMESPACE_DNS, '${VAULT_NAME}_${SESSION_NAME}'))")
+SESSION_UUID=$(python3 -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + "_" + sys.argv[2]))' "$VAULT_NAME" "$SESSION_NAME")
 export CLAUDE_CONFIG_DIR=.claude/
 
 if tmux has-session -t "${VAULT_NAME}_${SESSION_NAME}" 2>/dev/null; then
@@ -66,7 +66,10 @@ load_secret() {
     export \"\$var_name=\$secret_value\"
     tmux set-environment -t \"\$(tmux display-message -p '#S')\" \"\$var_name\" \"\$secret_value\" >/dev/null 2>&1 || true
 }
-if eval \"\$(op signin)\" >/dev/null 2>&1; then
+_OP_AUTH_TMP=\$(mktemp)
+op signin > \"\$_OP_AUTH_TMP\" 2>/dev/null && source \"\$_OP_AUTH_TMP\"; _OP_AUTH_STATUS=\$?
+rm -f \"\$_OP_AUTH_TMP\"
+if [[ \$_OP_AUTH_STATUS -eq 0 ]]; then
     load_secret 'TAVILY_API_KEY' 'op://${VAULT_NAME}/tavily/credential' 'TAVILY_API_KEY_OP_REF'
     load_secret 'ADO_MCP_AUTH_TOKEN' 'op://${VAULT_NAME}/azure-devops/pat' 'ADO_MCP_AUTH_TOKEN_OP_REF'
     load_secret 'AZURE_DEVOPS_ORGANIZATION' 'op://${VAULT_NAME}/azure-devops/organization' 'AZURE_DEVOPS_ORGANIZATION_OP_REF'
