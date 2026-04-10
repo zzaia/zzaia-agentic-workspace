@@ -16,9 +16,9 @@
 
 ## Step 1 — Install Prerequisites
 
-### Windows (PowerShell)
+### Option A — Automated Script
 
-Download and run the installer script:
+#### Windows (PowerShell)
 
 ```powershell
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-windows.ps1" -OutFile "Install-windows.ps1"
@@ -27,20 +27,42 @@ Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-wo
 
 > If PowerShell blocks the script, run first: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
-Installs: `Git`, `Node.js LTS`, `Claude Code CLI`, `Bitwarden CLI`, `VS Code`, `Docker Desktop`
+Installs: `Git`, `Node.js LTS`, `Claude Code`, `Bitwarden CLI`, `VS Code`, `Docker Desktop`, `.NET SDK`, `Aspire`, `Dapr`, `Aspirate`, `Anaconda`, `k6`, `D2`
 
-### Ubuntu / WSL
-
-Download and run the installer script:
+#### Ubuntu / WSL
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-ubuntu.sh -o Install-ubuntu.sh
 bash Install-ubuntu.sh
 ```
 
-Installs: `Git`, `Node.js LTS`, `Claude Code CLI`, `Bitwarden CLI`, `VS Code`, `Docker`, `.NET SDK`
+Installs: `Git`, `Node.js LTS`, `Claude Code`, `Bitwarden CLI`, `VS Code`, `Docker`, `.NET SDK`, `Aspire`, `Dapr`, `Aspirate`, `Anaconda`, `tmux`, `k6`, `Tectonic`, `D2`, `PlantUML`
 
 After installation, restart your terminal.
+
+---
+
+### Option B — Manual Install (minimum only)
+
+Install only **Claude Code** and **Bitwarden CLI** to get started. For all other tools, use the Install script above.
+
+#### Claude Code CLI
+
+Requires Node.js LTS — [nodejs.org](https://nodejs.org)
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+#### Bitwarden CLI
+
+```bash
+# Ubuntu / WSL
+sudo snap install bw
+
+# Windows (PowerShell)
+winget install --id Bitwarden.BitwardenCLI
+```
 
 ---
 
@@ -118,8 +140,6 @@ All configured tools should show as connected. Then verify commands are availabl
 - Type `/behavior` — should list behavior commands
 - Type `/workflow` — should list workflow commands
 - Type `/capability` — should list capability commands
-
-> If `azure-devops` MCP shows an error, see the note below.
 
 ---
 
