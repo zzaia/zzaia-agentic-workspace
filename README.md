@@ -7,45 +7,7 @@
 
 ## 🚀 Quick Start
 
-### Optional: 1Password Setup
-
-The workspace functions without 1Password, but secret injection will be unavailable.
-
-1. **1Password CLI** — [Installation guide](https://developer.1password.com/docs/cli/get-started/)
-2. **1Password Account** — Configure a vault with your service credentials
-
-### Install Dependencies in Ubuntu
-
-Run [`.claude/Install.sh`](.claude/Install.sh) to install all required tools:
-
-```bash
-bash .claude/Install.sh
-```
-
-Installs: `git`, `node.js`, `VS Code`, `Claude Code CLI`, `1Password`, `Docker`, `.NET SDK`, `Aspire workload`, `Dapr CLI`, `Aspirate`, `Anaconda`, `k6`, `tectonic`, `pypdf`, `python-docx`, `jinja2`, `mmdc`, `graphviz`
-
-### Initialize ZZAIA Agentic Workspace
-
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/zzaia/zzaia-agentic-workspace.git
-   cd zzaia-agentic-workspace
-   ```
-
-2. **Launch the Workspace**
-   ```bash
-   .claude/Init.sh
-   ```
-   When prompted, enter your 1Password vault name (e.g., `dev-secrets`)
-
-3. **Authenticate with 1Password**
-   Follow the 1Password CLI authentication prompts to enable secret injection
-
-The workspace will automatically:
-- Load your vault configuration
-- Inject secrets from 1Password
-- Launch Claude Code with MCP servers configured
-- Enable all workspace commands and agents
+> For full onboarding instructions see [QUICKSTART.md](QUICKSTART.md).
 
 ### Use as Remote Plugin
 
@@ -323,85 +285,6 @@ External service integrations via Model Context Protocol servers configured in [
 | **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` |
 | **Playwright** | Browser automation, screenshots | None (local) |
 | **Aspire** | AppHost resource inspection and control | None (local) |
-
-## 🔐 1Password Integration
-
-The workspace uses 1Password CLI for secure, dynamic secret management across all MCP servers and services.
-
-### How It Works
-
-1. **Vault Configuration**
-   - `Init.sh` reads secrets from 1Password using `op://${VAULT_NAME}/item/field` refs
-   - Secrets are exported as environment variables before Claude Code launches
-   - `.mcp.json` consumes them via `${ENV_VAR}` interpolation at runtime
-
-2. **Initialization Flow**
-   ```
-   Init.sh → op signin → load_secret exports env vars → claude launches → MCP servers read env vars
-   ```
-
-3. **Secret Resolution**
-   - Secrets are resolved once at startup by `Init.sh` and never written to disk
-   - Each MCP server reads its required env var automatically
-   - If 1Password is unavailable, env vars can be set manually before running `claude`
-
-### Vault Structure
-
-Organize your 1Password vault with items for each service:
-
-```
-your-vault/
-  ├── tavily/
-  │   └── credential      (TAVILY_API_KEY)
-  ├── azure-devops/
-  │   ├── pat             (ADO_MCP_AUTH_TOKEN)
-  │   └── organization    (AZURE_DEVOPS_ORGANIZATION)
-  ├── postman/
-  │   └── credential      (POSTMAN_API_KEY)
-  └── new-relic/
-      └── api-key         (NEW_RELIC_API_KEY)
-```
-
-### Adding New Services
-
-1. **Create 1Password Item**
-   ```bash
-   op item create --category=login \
-     --title="service-name" \
-     --vault="${VAULT_NAME}" \
-     credential="your-secret-key"
-   ```
-
-2. **Add `load_secret` call in `Init.sh`**
-   ```bash
-   load_secret 'SERVICE_API_KEY' 'op://${VAULT_NAME}/service-name/credential' 'SERVICE_API_KEY_OP_REF'
-   ```
-
-3. **Add server in `.mcp.json`**
-   ```json
-   {
-     "mcpServers": {
-       "service-name": {
-         "command": "npx",
-         "args": ["-y", "service-mcp-package"],
-         "env": {
-           "API_KEY": "${SERVICE_API_KEY}"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Restart Workspace**
-   Secrets are loaded at initialization
-
-### Security Benefits
-
-- **No Plaintext Secrets**: Credentials never stored in configuration files
-- **Dynamic Resolution**: Secrets fetched only when needed
-- **Vault Isolation**: Different vaults for different environments (dev, prod)
-- **Audit Trail**: 1Password tracks all secret access
-- **Team Sharing**: Securely share vault access without exposing secrets
 
 ## 🛡️ Quality Standards
 

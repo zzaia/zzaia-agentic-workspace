@@ -14,34 +14,33 @@
 
 ---
 
-## Step 1 — Platform Prerequisites
+## Step 1 — Install Prerequisites
 
 ### Windows (PowerShell)
 
-1. Open **PowerShell as Administrator** and run:
-   ```powershell
-   winget install --id OpenJS.NodeJS.LTS --accept-source-agreements
-   npm install -g @anthropic-ai/claude-code
-   ```
+Download and run the installer script:
 
-2. Verify Claude Code is working:
-   ```powershell
-   claude --version
-   ```
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-windows.ps1" -OutFile "Install-windows.ps1"
+.\Install-windows.ps1
+```
+
+> If PowerShell blocks the script, run first: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+Installs: `Git`, `Node.js LTS`, `Claude Code CLI`, `Bitwarden CLI`, `VS Code`, `Docker Desktop`
 
 ### Ubuntu / WSL
 
-1. Open a terminal and run:
-   ```bash
-   curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   npm install -g @anthropic-ai/claude-code
-   ```
+Download and run the installer script:
 
-2. Verify:
-   ```bash
-   claude --version
-   ```
+```bash
+curl -fsSL https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-ubuntu.sh -o Install-ubuntu.sh
+bash Install-ubuntu.sh
+```
+
+Installs: `Git`, `Node.js LTS`, `Claude Code CLI`, `Bitwarden CLI`, `VS Code`, `Docker`, `.NET SDK`
+
+After installation, restart your terminal.
 
 ---
 
@@ -51,11 +50,11 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 | Bitwarden Item Name | Password Value | Service |
 |---------------------|----------------|---------|
-| `zzaia-tavily` | Tavily API key | [tavily.com](https://tavily.com) |
-| `zzaia-azure-devops-pat` | Azure DevOps Personal Access Token | [Azure DevOps](https://dev.azure.com) |
-| `zzaia-azure-devops-org` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps |
-| `zzaia-postman` | Postman API key | [postman.com](https://postman.com) |
-| `zzaia-new-relic` | New Relic API key | [newrelic.com](https://newrelic.com) |
+| `tavily` | Tavily API key | [tavily.com](https://tavily.com) |
+| `azure-devops-pat` | Azure DevOps Personal Access Token | [Azure DevOps](https://dev.azure.com) |
+| `azure-devops-org` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps |
+| `postman` | Postman API key | [postman.com](https://postman.com) |
+| `new-relic` | New Relic API key | [newrelic.com](https://newrelic.com) |
 
 > Items you don't have credentials for can be skipped — the workspace will warn and continue without them.
 
@@ -63,7 +62,7 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 ## Step 3 — Run the Init Script
 
-Download and run the init script for your platform. It installs the Bitwarden CLI if missing, unlocks your vault, injects secrets as environment variables, and launches Claude Code in auto mode.
+Download and run the init script for your platform. It unlocks your Bitwarden vault, injects secrets as environment variables, and launches Claude Code in auto mode.
 
 ### Windows (PowerShell)
 
@@ -71,8 +70,6 @@ Download and run the init script for your platform. It installs the Bitwarden CL
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Init-windows.ps1" -OutFile "Init-windows.ps1"
 .\Init-windows.ps1
 ```
-
-> If PowerShell blocks the script, run: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
 ### Ubuntu / WSL
 
@@ -172,27 +169,6 @@ It is advised for a manual check in git changes in case of a target implementati
 
 ---
 
-## Note: Azure DevOps MCP without 1Password
-
-The default `.mcp.json` wraps the Azure DevOps MCP with the `op run` command from 1Password CLI.
-If you are using Bitwarden instead, update the `azure-devops` entry in `.mcp.json`:
-
-**Before:**
-```json
-"command": "op",
-"args": ["run", "--", "sh", "-c", "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"]
-```
-
-**After:**
-```json
-"command": "sh",
-"args": ["-c", "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"]
-```
-
-Then restart Claude Code.
-
----
-
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -201,7 +177,7 @@ Then restart Claude Code.
 | Commands start with `//` | Run `/reload-plugins` inside Claude Code |
 | `bw: command not found` | Re-run the init script or install manually: `sudo snap install bw` |
 | PowerShell script blocked | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Bitwarden item not found | Verify item name matches exactly (e.g. `zzaia-tavily`) and item type is Login |
+| Bitwarden item not found | Verify item name matches exactly (e.g. `tavily`) and item type is Login |
 
 ---
 
