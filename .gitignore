@@ -218,7 +218,9 @@ __marimo__/
 !README.md
 !QUICKSTART.md
 !Init-ubuntu.sh
+!Install-ubuntu.sh
 !Init-windows.ps1
+!Install-windows.ps1
 !.claudeignore
 !.mcp.json
 !.claude-plugin/

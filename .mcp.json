@@ -8,11 +8,8 @@
       }
     },
     "azure-devops": {
-      "command": "op",
+      "command": "sh",
       "args": [
-        "run",
-        "--",
-        "sh",
         "-c",
         "npx @azure-devops/mcp@next \"$AZURE_DEVOPS_ORGANIZATION\" -a envvar"
       ],

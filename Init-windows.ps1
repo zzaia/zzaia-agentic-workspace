@@ -58,11 +58,11 @@ function Load-Secret {
     }
 }
 
-Load-Secret "TAVILY_API_KEY"             "zzaia-tavily"
-Load-Secret "ADO_MCP_AUTH_TOKEN"         "zzaia-azure-devops-pat"
-Load-Secret "AZURE_DEVOPS_ORGANIZATION"  "zzaia-azure-devops-org"
-Load-Secret "POSTMAN_API_KEY"            "zzaia-postman"
-Load-Secret "NEW_RELIC_API_KEY"          "zzaia-new-relic"
+Load-Secret "TAVILY_API_KEY"             "tavily"
+Load-Secret "ADO_MCP_AUTH_TOKEN"         "azure-devops-pat"
+Load-Secret "AZURE_DEVOPS_ORGANIZATION"  "azure-devops-org"
+Load-Secret "POSTMAN_API_KEY"            "postman"
+Load-Secret "NEW_RELIC_API_KEY"          "new-relic"
 
 bw lock --session $env:BW_SESSION 2>$null | Out-Null
 

@@ -59,11 +59,11 @@ load_secret() {
     export "$var_name=$secret_value"
 }
 
-load_secret "TAVILY_API_KEY"          "zzaia-tavily"
-load_secret "ADO_MCP_AUTH_TOKEN"      "zzaia-azure-devops-pat"
-load_secret "AZURE_DEVOPS_ORGANIZATION" "zzaia-azure-devops-org"
-load_secret "POSTMAN_API_KEY"         "zzaia-postman"
-load_secret "NEW_RELIC_API_KEY"       "zzaia-new-relic"
+load_secret "TAVILY_API_KEY"            "tavily"
+load_secret "ADO_MCP_AUTH_TOKEN"        "azure-devops-pat"
+load_secret "AZURE_DEVOPS_ORGANIZATION" "azure-devops-org"
+load_secret "POSTMAN_API_KEY"           "postman"
+load_secret "NEW_RELIC_API_KEY"         "new-relic"
 
 bw lock --session "$BW_SESSION" >/dev/null 2>&1 || true
 

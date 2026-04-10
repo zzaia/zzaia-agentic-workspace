@@ -1,12 +1,12 @@
 ---
 name: behavior:development:git
 description: Execute comprehensive Git version control operations with standardized branch management
-argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repository <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
+argument-hint: "--action init|branch|commit|push|commit-push|pull|merge|status [--repo <name>] [--branch <name>] [--message <text>] [--source-branch <name>]"
 parameters:
   - name: action
     description: The git operation to perform (init, branch, commit, push, commit-push, pull, merge, status)
     required: true
-  - name: repository
+  - name: repo
     description: Target repository name for the operation
     required: false
   - name: branch
@@ -52,7 +52,7 @@ Branch naming must follow these strict conventions:
 1. **Parameter Validation**
    - Validate action type and parameters
    - Check branch naming conventions
-   - Verify repository context
+   - Verify repo context
 
 2. **Direct Git Execution**
    - Execute git commands directly
@@ -74,7 +74,7 @@ Branch naming must follow these strict conventions:
 
 - Execute git commands via `zzaia-workspace-manager`
 - Enforce branch naming and commit standards
-- Operate within current repository context
+- Operate within current repo context
 
 ## WORKFLOW
 
@@ -180,5 +180,5 @@ Co-Authored-By: Claude Sonnet 4.5
 1. Branch names MUST follow standardized prefixes
 2. Commit messages MUST use conventional commit format
 3. Commit messages MUST include zzaia workspace attribution
-4. Operations execute in current repository context
+4. Operations execute in current repo context
 5. Direct git command execution with standardized formatting
