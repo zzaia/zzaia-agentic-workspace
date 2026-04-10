@@ -2,12 +2,15 @@
 # Install.sh - ZZAIA Agentic Workspace Prerequisites Installer
 # Ubuntu/Debian - installs all required tools if not already present
 
-set -e
+set -euo pipefail
+
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 
 echo "🚀 ZZAIA Workspace Installer"
 echo "=============================="
 
 is_installed() { command -v "$1" &>/dev/null; }
+die() { echo "ERROR: $*" >&2; exit 1; }
 
 # ── 1. Git ──────────────────────────────────────────────────────────────────
 if ! is_installed git; then
@@ -21,7 +24,10 @@ fi
 # ── 2. Node.js + npm ────────────────────────────────────────────────────────
 if ! is_installed node; then
     echo "[2/12] Installing Node.js LTS + npm..."
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    NODESOURCE_TMP=$(mktemp)
+    curl -fsSL https://deb.nodesource.com/setup_lts.x -o "$NODESOURCE_TMP"
+    sudo -E bash "$NODESOURCE_TMP"
+    rm -f "$NODESOURCE_TMP"
     sudo apt-get install -y nodejs
 else
     echo "[2/12] Node.js already installed"
@@ -63,7 +69,8 @@ if ! is_installed docker; then
     sudo apt-get install -y ca-certificates curl gnupg lsb-release
     sudo install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-        | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+        || die "Failed to import Docker GPG key"
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
 https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
         | sudo tee /etc/apt/sources.list.d/docker.list
@@ -77,9 +84,11 @@ fi
 # ── 7. .NET (latest LTS SDK) ────────────────────────────────────────────────
 if ! is_installed dotnet; then
     echo "[7/12] Installing .NET SDK (latest LTS)..."
-    curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh
-    chmod +x /tmp/dotnet-install.sh
-    /tmp/dotnet-install.sh --channel LTS
+    DOTNET_TMP=$(mktemp)
+    curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$DOTNET_TMP"
+    chmod +x "$DOTNET_TMP"
+    "$DOTNET_TMP" --channel LTS
+    rm -f "$DOTNET_TMP"
     echo 'export DOTNET_ROOT="$HOME/.dotnet"' >> "$HOME/.bashrc"
     echo 'export PATH="$PATH:$HOME/.dotnet:$HOME/.dotnet/tools"' >> "$HOME/.bashrc"
     export DOTNET_ROOT="$HOME/.dotnet"
@@ -100,7 +109,11 @@ fi
 # ── 9. Dapr CLI ─────────────────────────────────────────────────────────────
 if ! is_installed dapr; then
     echo "[9/12] Installing Dapr CLI..."
-    wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
+    DAPR_TMP=$(mktemp)
+    wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O "$DAPR_TMP"
+    chmod +x "$DAPR_TMP"
+    /bin/bash "$DAPR_TMP"
+    rm -f "$DAPR_TMP"
 else
     echo "[9/12] Dapr already installed"
 fi
@@ -117,8 +130,10 @@ fi
 CONDA_DIR="$HOME/anaconda3"
 if ! is_installed conda; then
     echo "[11/12] Installing Anaconda..."
-    wget -q https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh -O /tmp/anaconda.sh
-    bash /tmp/anaconda.sh -b -p "$CONDA_DIR"
+    ANACONDA_TMP=$(mktemp)
+    wget -q https://repo.anaconda.com/archive/Anaconda3-latest-Linux-x86_64.sh -O "$ANACONDA_TMP"
+    bash "$ANACONDA_TMP" -b -p "$CONDA_DIR"
+    rm -f "$ANACONDA_TMP"
     "$CONDA_DIR/bin/conda" init bash
     export PATH="$CONDA_DIR/bin:$PATH"
 else
@@ -149,7 +164,8 @@ if ! is_installed k6; then
     sudo gpg --no-default-keyring \
         --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
         --keyserver hkp://keyserver.ubuntu.com:80 \
-        --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69 \
+        || die "Failed to import k6 GPG key"
     echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
         | sudo tee /etc/apt/sources.list.d/k6.list
     sudo apt-get update -qq
@@ -169,7 +185,11 @@ fi
 # ── 15. D2 (architecture diagram language) ──────────────────────────────────
 if ! is_installed d2; then
     echo "[15/16] Installing D2..."
-    curl -fsSL https://d2lang.com/install.sh | sh -s --
+    D2_TMP=$(mktemp)
+    curl -fsSL https://d2lang.com/install.sh -o "$D2_TMP"
+    chmod +x "$D2_TMP"
+    sh "$D2_TMP"
+    rm -f "$D2_TMP"
 else
     echo "[15/16] D2 already installed"
 fi
