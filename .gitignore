@@ -216,6 +216,9 @@ __marimo__/
 !CLAUDE.md
 !LICENSE
 !README.md
+!QUICKSTART.md
+!Init-ubuntu.sh
+!Init-windows.ps1
 !.claudeignore
 !.mcp.json
 !.claude-plugin/
