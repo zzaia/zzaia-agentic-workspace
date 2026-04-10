@@ -1,7 +1,7 @@
 ---
 name: capability:teams:read
 description: Read and filter Microsoft Teams chat or channel conversations using Microsoft 365 MCP
-argument-hint: "--chat-name <name> [--begin-message <boundary>] [--last-message <boundary>] [--filter <keyword>] [--limit <count>]"
+argument-hint: "--chat-name <name> [--begin-message <boundary>] [--last-message <boundary>] [--filter <keyword>] [--limit <count>] [--description <text>]"
 user-invocable: true
 agent: zzaia-web-searcher 
 metadata:
@@ -20,6 +20,9 @@ metadata:
       required: false
     - name: limit
       description: Page size for each MCP fetch call (default 50, max 1000); pagination continues automatically until all messages in the range are retrieved
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

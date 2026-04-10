@@ -1,7 +1,7 @@
 ---
 name: behavior:warmup
 description: Initialize session with CLAUDE.md guidelines and conversational rules
-argument-hint: "[--repo: <name>] [--brach: <name>] "
+argument-hint: "[--repo: <name>] [--brach: <name>]  [--description <text>]"
 parameters:
   - name: repo 
     description: Repository name to focus the work inside the workspace  
@@ -9,6 +9,9 @@ parameters:
   - name: branch 
     description: Branch name to focus the work inside the workspace  
     required: false 
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

@@ -1,7 +1,7 @@
 ---
 name: workflow:homologate
 description: Orchestrate complete homologation workflow for one or more applications, from work item retrieval through bug reporting
-argument-hint: "work-item=<id> repos=<name[,name]> target-branches=<branch[,branch]> working-branches=<branch[,branch]> description=<text>"
+argument-hint: "work-item=<id> repos=<name[,name]> target-branches=<branch[,branch]> working-branches=<branch[,branch]> description=<text> [--description <text>]"
 agents:
   - name: zzaia-task-clarifier
     description: Analyze work item requirements and validate acceptance criteria

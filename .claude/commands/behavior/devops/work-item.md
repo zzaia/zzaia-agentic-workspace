@@ -83,6 +83,9 @@ parameters:
     description: Tag name to add to work item (for tag action)
     required: false
     type: string
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

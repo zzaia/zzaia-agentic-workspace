@@ -1,7 +1,7 @@
 ---
 name: capability:latex
 description: LaTeX document operations — compile templates to PDF
-argument-hint: "--action <write> [options]"
+argument-hint: "--action <write> [options] [--description <text>]"
 ---
 
 # latex Skill

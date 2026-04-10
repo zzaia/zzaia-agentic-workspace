@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:e2e
 description: Execute a single BDD step via direct API call with New Relic diagnostics
-argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app>"
+argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app> [--description <text>]"
 user-invocable: true
 agent: zzaia-tester-specialist
 metadata:
@@ -15,6 +15,9 @@ metadata:
     - name: application
       description: New Relic application name for server-side diagnostics
       required: true
+    - name: description
+      description: Additional context or instructions for the operation
+      required: false
 ---
 
 ## PURPOSE

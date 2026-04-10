@@ -1,7 +1,7 @@
 ---
 name: behavior:ask
 description: Intelligent answering, query and clarification system with read-only access
-argument-hint: "--question <text> [--context <path|topic|repo>]"
+argument-hint: "--question <text> [--context <path|topic|repo>] [--description <text>]"
 agents:
   - name: zzaia-task-clarifier
     description: Query analysis related to tasks and codebases
@@ -13,6 +13,9 @@ parameters:
     required: true
   - name: context
     description: Optional context specification (file path, repository reference, or topic area)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

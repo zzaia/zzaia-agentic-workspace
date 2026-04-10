@@ -1,7 +1,7 @@
 ---
 name: capability:document:scrap
 description: Search, extract, and download PDF and Word documents from URLs or web searches with filtering capabilities and user confirmation checkpoints
-argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>]"
+argument-hint: "[--url <url>] [--search <keywords>] [--filters <json>] [--download] [--output-path <path>] [--description <text>]"
 agent: zzaia-document-specialist
 metadata:
   parameters:
@@ -19,6 +19,9 @@ metadata:
       required: false
     - name: output-path
       description: Local path for downloaded documents (default workspace/downloads/)
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

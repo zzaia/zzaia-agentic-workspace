@@ -1,11 +1,14 @@
 ---
 name: behavior:management:plan
 description: Generate an agile work-item plan with right-sized hierarchy, repository assignment, parallelization, and dependency mapping
-argument-hint: "--work-description <text>"
+argument-hint: "--work-description <text> [--description <text>]"
 parameters:
   - name: work-description
     description: Architectural design, BDD, or SDD context to decompose into an agile work-item plan
     required: true
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

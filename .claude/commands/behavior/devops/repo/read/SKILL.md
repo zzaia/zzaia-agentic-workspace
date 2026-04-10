@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:repo:read
 description: Read repository metadata including name, URL, default branch, visibility, and size
-argument-hint: "--portal <azure|github> --project <name> --repo <name>"
+argument-hint: "--portal <azure|github> --project <name> --repo <name> [--description <text>]"
 user-invocable: true
 agent: zzaia-devops-specialist
 metadata:
@@ -15,6 +15,9 @@ metadata:
     - name: repo
       description: Repository name
       required: true
+    - name: description
+      description: Additional context or instructions for the operation
+      required: false
 ---
 
 ## PURPOSE

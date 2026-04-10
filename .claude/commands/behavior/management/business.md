@@ -1,7 +1,7 @@
 ---
 name: behavior:management:business
 description: Business and BDD analysis of system behaviors, user interactions, and business outcomes from pure business perspective before any technical decisions
-argument-hint: "[--context <description>] [--work-directory <path>]"
+argument-hint: "[--context <description>] [--work-directory <path>] [--description <text>]"
 parameters:
   - name: context
     description: Free-text description of the business problem, feature request, or domain to analyze
@@ -11,6 +11,9 @@ parameters:
     description: Workspace directory to explore for existing domain context, specifications, or related artifacts
     required: false
     type: string
+  - name: description
+    description: Additional context or instructions for the operation
+    required: false
 ---
 
 ## PURPOSE

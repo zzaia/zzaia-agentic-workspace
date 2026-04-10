@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:pipeline
 description: Manage Azure DevOps pipelines — run existing or new pipelines, or diagnose build logs
-argument-hint: "--action <run|debug> --portal <azure> --project <name> [--pipeline <id|name>] [--branch <branch>] [--file <path>] [--file-name <yaml>] [--run <id>] [--limit <count>]"
+argument-hint: "--action <run|debug> --portal <azure> --project <name> [--pipeline <id|name>] [--branch <branch>] [--file <path>] [--file-name <yaml>] [--run <id>] [--limit <count>] [--description <text>]"
 agents:
   - name: zzaia-devops-specialist
     description: Execute Azure DevOps MCP pipeline queries, trigger runs, and collect build logs
@@ -32,6 +32,9 @@ parameters:
     required: false
   - name: limit
     description: "debug only — number of log entries per stage (default 10)"
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

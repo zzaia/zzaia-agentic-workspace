@@ -1,7 +1,7 @@
 ---
 name: capability:diagram:generate
 description: Generate PNG diagram from Mermaid, Graphviz, D2, PlantUML, or Diagrams (Python) source code using local offline renderers
-argument-hint: "--code <diagram_code> --output <path.png> [--type mermaid|graphviz|d2|plantuml|diagrams]"
+argument-hint: "--code <diagram_code> --output <path.png> [--type mermaid|graphviz|d2|plantuml|diagrams] [--description <text>]"
 user-invocable: true
 agent: zzaia-document-specialist
 metadata:
@@ -19,6 +19,9 @@ metadata:
       description: "Renderer: mermaid (default) | graphviz | d2 | plantuml | diagrams"
       required: false
       default: auto-detected
+    - name: description
+      description: Additional context or instructions for the operation
+      required: false
 ---
 
 ## PURPOSE

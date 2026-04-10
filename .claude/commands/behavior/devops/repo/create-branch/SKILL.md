@@ -1,7 +1,7 @@
 ---
 name: behavior:devops:repo:create-branch
 description: Create a new branch from a source branch
-argument-hint: "--portal <azure|github> --project <name> --repo <name> --branch <name> [--source-branch <name>]"
+argument-hint: "--portal <azure|github> --project <name> --repo <name> --branch <name> [--source-branch <name>] [--description <text>]"
 user-invocable: true
 agent: zzaia-devops-specialist
 metadata:
@@ -20,6 +20,9 @@ metadata:
       required: true
     - name: source-branch
       description: Source branch to create from (defaults to repository default branch)
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

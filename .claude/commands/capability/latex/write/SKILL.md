@@ -1,7 +1,7 @@
 ---
 name: capability:latex:write
 description: Generate PDF files from Jinja2 LaTeX templates using tectonic CLI engine
-argument-hint: "--template <path> --output <path> [--data <json>]"
+argument-hint: "--template <path> --output <path> [--data <json>] [--description <text>]"
 user-invocable: true
 agent: zzaia-document-specialist
 metadata:
@@ -17,6 +17,9 @@ metadata:
       required: true
     - name: data
       description: JSON string containing template variables for Jinja2 rendering
+      required: false
+    - name: description
+      description: Additional context or instructions for the operation
       required: false
 ---
 

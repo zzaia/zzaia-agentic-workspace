@@ -1,7 +1,7 @@
 ---
 name: behavior:development:update-dotnet-packages
 description: Update NuGet packages with comprehensive validation and safety checks
-argument-hint: "--repoName <name> --branch <name> [--target all|project|outdated|major]"
+argument-hint: "--repoName <name> --branch <name> [--target all|project|outdated|major] [--description <text>]"
 parameters:
   - name: repoName
     description: Repository name in workspace
@@ -11,6 +11,9 @@ parameters:
     required: true
   - name: target
     description: Update target (all, project, outdated, major)
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

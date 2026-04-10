@@ -1,7 +1,7 @@
 ---
 name: behavior:management:clarify
 description: Critical analysis of tasks and requirements, identifying inconsistencies, gaps, and missing concepts through structured questioning
-argument-hint: "[--context <text>] [--work-item <id>] [--doc <path>] [--url <url>]"
+argument-hint: "[--context <text>] [--work-item <id>] [--doc <path>] [--url <url>] [--description <text>]"
 agents:
   - name: zzaia-task-clarifier
     description: Analyze and decompose requirements, identify knowledge gaps, and generate critical questions
@@ -17,6 +17,9 @@ parameters:
     required: false
   - name: url
     description: URL reference for additional context
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 

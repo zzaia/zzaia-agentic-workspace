@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Orchestrate multi-item workflows across repositories
-argument-hint: "--action <implement> [options]"
+argument-hint: "--action <implement> [options] [--description <text>]"
 ---
 
 # orchestrate Skill

@@ -1,7 +1,7 @@
 ---
 name: workflow:analytics:analyze
 description: Comprehensive dataset download, visualization, and exploration workflow
-argument-hint: "[--dataset <url|description>]"
+argument-hint: "[--dataset <url|description>] [--description <text>]"
 version: 1.0
 agents:
   - zzaia-notebook-development

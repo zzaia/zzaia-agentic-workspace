@@ -1,7 +1,7 @@
 ---
 name: behavior:websearch
 description: Standardized web search protocol for comprehensive information gathering
-argument-hint: "--query <text> [--focus <area>]"
+argument-hint: "--query <text> [--focus <area>] [--description <text>]"
 agents:
   - name: zzaia-web-searcher
     description: Web search execution via Tavily MCP tools, content analysis, and information structuring
@@ -11,6 +11,9 @@ parameters:
     required: true
   - name: focus
     description: Optional focus area or specific aspect to research
+    required: false
+  - name: description
+    description: Additional context or instructions for the operation
     required: false
 ---
 
