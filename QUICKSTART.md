@@ -16,35 +16,7 @@
 
 ## Step 1 — Install Prerequisites
 
-### Option A — Automated Script
-
-#### Windows (PowerShell)
-
-```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-windows.ps1" -OutFile "Install-windows.ps1"
-.\Install-windows.ps1
-```
-
-> If PowerShell blocks the script, run first: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-
-Installs: `Git`, `Node.js LTS`, `Claude Code`, `Bitwarden CLI`, `VS Code`, `Docker Desktop`, `.NET SDK`, `Aspire`, `Dapr`, `Aspirate`, `Anaconda`, `k6`, `D2`
-
-#### Ubuntu / WSL
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Install-ubuntu.sh -o Install-ubuntu.sh
-bash Install-ubuntu.sh
-```
-
-Installs: `Git`, `Node.js LTS`, `Claude Code`, `Bitwarden CLI`, `VS Code`, `Docker`, `.NET SDK`, `Aspire`, `Dapr`, `Aspirate`, `Anaconda`, `tmux`, `k6`, `Tectonic`, `D2`, `PlantUML`
-
-After installation, restart your terminal.
-
----
-
-### Option B — Manual Install (minimum only)
-
-Install only **Claude Code** and **Bitwarden CLI** to get started. For all other tools, use the Install script above.
+Install **Claude Code** and **Bitwarden CLI** — these are the only hard requirements.
 
 #### Claude Code CLI
 
