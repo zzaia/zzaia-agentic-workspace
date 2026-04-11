@@ -82,25 +82,51 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 ---
 
-## Step 3 — Run the Init Script
+## Step 3 — Load Secrets and Launch Claude Code
 
-Download and run the init script for your platform. It unlocks your Bitwarden vault, injects secrets as environment variables, and launches Claude Code in auto mode.
+Unlock your Bitwarden vault, export each secret as an environment variable, then launch Claude Code. Secrets live only in the terminal session — never written to disk.
 
-### Windows (PowerShell)
+### Option A — Copy-paste commands
 
-```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Init-windows.ps1" -OutFile "Init-windows.ps1"
-.\Init-windows.ps1
-```
-
-### Ubuntu / WSL
+#### Ubuntu / WSL
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zzaia/zzaia-agentic-workspace/main/Init-ubuntu.sh -o Init-ubuntu.sh
-bash Init-ubuntu.sh
+bw login
+export BW_SESSION=$(bw unlock --raw)
+export TAVILY_API_KEY=$(bw get password tavily --session "$BW_SESSION")
+export ADO_MCP_AUTH_TOKEN=$(bw get password azure-devops-pat --session "$BW_SESSION")
+export AZURE_DEVOPS_ORGANIZATION=$(bw get password azure-devops-org --session "$BW_SESSION")
+export POSTMAN_API_KEY=$(bw get password postman --session "$BW_SESSION")
+export NEW_RELIC_API_KEY=$(bw get password new-relic --session "$BW_SESSION")
+bw lock --session "$BW_SESSION"; unset BW_SESSION
+claude --enable-auto-mode
 ```
 
-When prompted, enter your Bitwarden master password to unlock the vault. Secrets are loaded into the terminal session only — never written to disk.
+#### Windows (PowerShell)
+
+```powershell
+bw login
+$s = bw unlock --raw
+$env:TAVILY_API_KEY = bw get password tavily --session $s
+$env:ADO_MCP_AUTH_TOKEN = bw get password azure-devops-pat --session $s
+$env:AZURE_DEVOPS_ORGANIZATION = bw get password azure-devops-org --session $s
+$env:POSTMAN_API_KEY = bw get password postman --session $s
+$env:NEW_RELIC_API_KEY = bw get password new-relic --session $s
+bw lock --session $s; Remove-Variable s
+claude --enable-auto-mode
+```
+
+> Skip any `bw get` line for services you don't use — Claude will start without that MCP.
+
+### Option B — Init script
+
+```bash
+# Ubuntu / WSL
+bash Init-ubuntu.sh
+
+# Windows (PowerShell)
+.\Init-windows.ps1
+```
 
 ---
 
