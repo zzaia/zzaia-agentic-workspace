@@ -1,0 +1,42 @@
+[tools]
+node = "lts"
+python = "3.12"
+dotnet = "8"
+k6 = "latest"
+d2 = "latest"
+dapr = "latest"
+miniforge3 = "latest"
+"npm:@anthropic-ai/claude-code" = "latest"
+
+[settings]
+experimental = true
+
+[tasks.python-packages]
+description = "Install required Python packages"
+run = "pip install pypdf python-docx textual jinja2 mmdc graphviz diagrams"
+
+[tasks.conda-envs]
+description = "Create conda environments for analytics and development workflows"
+run = """
+conda create -n venv-analytics python=3.12 -y || true
+conda create -n venv-development python=3.12 -y || true
+"""
+
+[tasks.dotnet-tools]
+description = "Install .NET workloads and global tools"
+run = """
+dotnet workload install aspire
+dotnet tool install -g aspire 2>/dev/null || dotnet tool update -g aspire
+dotnet tool install -g aspirate 2>/dev/null || dotnet tool update -g aspirate
+"""
+
+[tasks.system-packages]
+description = "Install system packages via apt and snap"
+run = """
+sudo apt-get install -y tmux plantuml
+sudo snap install tectonic
+"""
+
+[tasks.install]
+description = "Full workspace setup — tools, packages, and environments"
+depends = ["python-packages", "conda-envs", "dotnet-tools", "system-packages"]
