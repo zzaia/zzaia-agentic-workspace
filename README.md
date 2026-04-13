@@ -311,6 +311,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - **Documentation**: [CLAUDE.md](CLAUDE.md)
+- **Claude Code Docs**: [code.claude.com/docs](https://code.claude.com/docs/en/overview)
 - **Marketplace**: [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
 - **Issues**: [GitHub Issues](https://github.com/zzaia/zzaia-agentic-workspace/issues)
 - **Built with**: [Claude Code](https://claude.ai/code)
