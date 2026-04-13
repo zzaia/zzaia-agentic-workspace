@@ -61,5 +61,6 @@
   "outputStyle": "agentic-concise",
   "preferences": {
     "tmuxSplitPanes": true
-  }
+  },
+  "model": "sonnet"
 }

@@ -2,7 +2,7 @@
 name: zzaia-tech-leader
 description: Team agent active only inside agent-teams sessions. Receives a task and a workflow, dispatches execution through sub-agents in .claude/agents/sub/, coordinates progress with teammates, and returns a structured result to the orchestrator.
 tools: *
-model: haiku
+model: sonnet 
 color: red 
 ---
 
