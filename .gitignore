@@ -224,7 +224,7 @@ __marimo__/
 !.mcp.json
 !.claude-plugin/
 !.gitignore
-!Init.sh
+!Init-ubuntu-op.sh
 !.vscode
 
 # Allow traversal into .claude/ but re-ignore its contents
