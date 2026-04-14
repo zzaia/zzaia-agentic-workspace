@@ -20,6 +20,16 @@ if [[ -z "$SESSION_NAME" ]]; then
     exit 1
 fi
 
+echo ''
+echo '  ███████╗███████╗ █████╗ ██╗ █████╗ '
+echo '     ███╔╝   ███╔╝██╔══██╗██║██╔══██╗'
+echo '    ███╔╝   ███╔╝ ███████║██║███████║ '
+echo '   ███╔╝   ███╔╝  ██╔══██║██║██╔══██║ '
+echo '  ███████╗███████╗██║  ██║██║██║  ██║ '
+echo '  ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝'
+echo ''
+echo '         ⚡  Agentic Workspace  ⚡'
+echo ''
 BW_SESSION=$(bw login --raw)
 export TAVILY_API_KEY=$(bw get password tavily --session "$BW_SESSION")
 export ADO_MCP_AUTH_TOKEN=$(bw get password azure-devops-pat --session "$BW_SESSION")
