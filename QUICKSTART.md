@@ -61,18 +61,21 @@ Run the init script for your platform and password manager. Secrets live only in
 ### Ubuntu / WSL — Bitwarden
 
 ```bash
-bash Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
+chmod +x Init-ubuntu.sh
+./Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
 ```
 
 ### Ubuntu / WSL — 1Password
 
 ```bash
-bash Init-ubuntu-op.sh --vault-name <vault> --session-name <name> [--full-automatic] [--tmux]
+chmod +x Init-ubuntu-op.sh
+./Init-ubuntu-op.sh --vault-name <vault> --session-name <name> [--full-automatic] [--tmux]
 ```
 
 ### Windows — Bitwarden (PowerShell)
 
 ```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 .\Init-windows.ps1 -SessionName <name> [-FullAutomatic] [-Tmux]
 ```
 
