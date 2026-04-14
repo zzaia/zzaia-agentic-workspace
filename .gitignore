@@ -237,6 +237,10 @@ __marimo__/
 !.claude/settings.json
 !.claude/settings.local.json
 
+# Docker — container configuration (local only)
+docker/
+!docker/
+
 # Allow traversal into .claude/plugins/ but re-ignore its contents
 !.claude/plugins/
 .claude/plugins/*

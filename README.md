@@ -202,6 +202,12 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 
 > See [host/README.md](host/README.md) for full setup details.
 
+## 🐳 Container
+
+The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via `mise.toml`. Deployable locally via Docker Compose or on a Kubernetes cluster, fully isolated from host resources.
+
+> See [docker/DOCKER.md](docker/DOCKER.md) for Docker and Kubernetes setup.
+
 ## 🤖 Specialized Agents
 
 Agents are organized in `.claude/agents/` by type, each with a distinct role in the system:

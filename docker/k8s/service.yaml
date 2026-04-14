@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zzaia-workspace
+  namespace: zzaia
+spec:
+  selector:
+    app: zzaia-workspace
+  ports:
+    - port: 2222
+      targetPort: 2222
+      protocol: TCP
+  # ClusterIP for internal-only access; change to LoadBalancer for external.
+  # Internal access: kubectl port-forward svc/zzaia-workspace 2222:2222 -n zzaia
+  type: ClusterIP
