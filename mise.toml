@@ -7,6 +7,7 @@ d2 = "latest"
 dapr = "latest"
 miniforge3 = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
+"npm:code-server" = "latest"
 
 [settings]
 experimental = true

@@ -77,10 +77,26 @@ All tools from `mise.toml` are provisioned at image build time:
 |----------|-------|
 | Runtimes | Node.js LTS, Python 3.12, .NET 8 |
 | CLI tools | Claude Code, Dapr, k6, D2 |
+| Editor | VS Code (`code-server`) — browser-based on port 8080 |
 | Data science | Miniforge3, conda envs (`venv-analytics`, `venv-development`) |
 | Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams |
 | .NET tools | Aspire workload, Aspirate |
 | System | tmux, PlantUML, git, build-essential |
+
+---
+
+## VS Code (code-server)
+
+SSH into the container and start `code-server`:
+
+```bash
+ssh -p 2222 zzaia@localhost
+code-server --bind-addr 0.0.0.0:8080 --auth none
+```
+
+Then open `http://localhost:8080` in your browser.
+
+> For persistent settings, mount a volume at `/home/zzaia/.config/code-server`.
 
 ---
 

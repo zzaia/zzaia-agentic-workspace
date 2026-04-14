@@ -43,7 +43,7 @@ RUN MISE_TMP=$(mktemp) \
 ENV PATH="/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH"
 
 # ── Tools via mise.toml ───────────────────────────────────────────────────────
-# Installs: node, python, dotnet, k6, d2, dapr, miniforge3, claude-code
+# Installs: node, python, dotnet, k6, d2, dapr, miniforge3, claude-code, code-server
 COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
 
 RUN mise install
@@ -66,4 +66,5 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 2222
+EXPOSE 8080
 ENTRYPOINT ["/entrypoint.sh"]

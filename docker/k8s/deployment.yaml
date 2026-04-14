@@ -28,6 +28,8 @@ spec:
           ports:
             - containerPort: 2222
               protocol: TCP
+            - containerPort: 8080
+              protocol: TCP
           securityContext:
             runAsNonRoot: false     # sshd must start as root to bind and switch users
             allowPrivilegeEscalation: true  # required for sshd setuid to zzaia(1000)

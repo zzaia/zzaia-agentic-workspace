@@ -12,6 +12,7 @@ services:
     container_name: zzaia-workspace
     ports:
       - "2222:2222"
+      - "8080:8080"
     environment:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:?Set SSH_PUBLIC_KEY to your public key contents}
     # ── Isolation — no host filesystem, network, or device access ──────────
