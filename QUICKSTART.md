@@ -56,49 +56,32 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 ## Step 3 — Load Secrets and Launch Claude Code
 
-Unlock your Bitwarden vault, export each secret as an environment variable, then launch Claude Code. Secrets live only in the terminal session — never written to disk.
+Run the init script for your platform and password manager. Secrets live only in the terminal session — never written to disk.
 
-### Option A — Copy-paste commands
-
-#### Ubuntu / WSL
+### Ubuntu / WSL — Bitwarden
 
 ```bash
-bw login
-export BW_SESSION=$(bw unlock --raw)
-export TAVILY_API_KEY=$(bw get password tavily --session "$BW_SESSION")
-export ADO_MCP_AUTH_TOKEN=$(bw get password azure-devops-pat --session "$BW_SESSION")
-export AZURE_DEVOPS_ORGANIZATION=$(bw get password azure-devops-org --session "$BW_SESSION")
-export POSTMAN_API_KEY=$(bw get password postman --session "$BW_SESSION")
-export NEW_RELIC_API_KEY=$(bw get password new-relic --session "$BW_SESSION")
-bw lock --session "$BW_SESSION"; unset BW_SESSION
-claude --enable-auto-mode
+bash Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
 ```
 
-#### Windows (PowerShell)
+### Ubuntu / WSL — 1Password
+
+```bash
+bash Init-ubuntu-op.sh --vault-name <vault> --session-name <name> [--full-automatic] [--tmux]
+```
+
+### Windows — Bitwarden (PowerShell)
 
 ```powershell
-bw login
-$s = bw unlock --raw
-$env:TAVILY_API_KEY = bw get password tavily --session $s
-$env:ADO_MCP_AUTH_TOKEN = bw get password azure-devops-pat --session $s
-$env:AZURE_DEVOPS_ORGANIZATION = bw get password azure-devops-org --session $s
-$env:POSTMAN_API_KEY = bw get password postman --session $s
-$env:NEW_RELIC_API_KEY = bw get password new-relic --session $s
-bw lock --session $s; Remove-Variable s
-claude --enable-auto-mode
+.\Init-windows.ps1 -SessionName <name> [-FullAutomatic] [-Tmux]
 ```
 
-> Skip any `bw get` line for services you don't use — Claude will start without that MCP.
-
-### Option B — Init script
-
-```bash
-# Ubuntu / WSL
-bash Init-ubuntu.sh
-
-# Windows (PowerShell)
-.\Init-windows.ps1
-```
+| Flag | Script | Description |
+|------|--------|-------------|
+| `--session-name` / `-SessionName` | all | **Required.** Named session for resume across restarts |
+| `--vault-name` | `Init-ubuntu-op.sh` | **Required.** 1Password vault name |
+| `--full-automatic` / `-FullAutomatic` | all | Skip permission prompts (`--dangerously-skip-permissions`) |
+| `--tmux` / `-Tmux` | all | Wrap Claude in a tmux session (attach if exists, create if not) |
 
 ---
 
