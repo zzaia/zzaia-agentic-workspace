@@ -1,8 +1,8 @@
+#Requires -Version 7
 # Init-windows.ps1 - ZZAIA Workspace Launcher (Windows PowerShell)
 param(
     [Parameter(Mandatory)][string]$SessionName,
-    [switch]$FullAutomatic,
-    [switch]$Tmux
+    [switch]$FullAutomatic
 )
 
 Write-Host ''
@@ -15,29 +15,57 @@ Write-Host '  ╚══════╝╚══════╝╚═╝  ╚═�
 Write-Host ''
 Write-Host '         ⚡  Agentic Workspace  ⚡'
 Write-Host ''
+
+if (-not (Get-Command bw -ErrorAction SilentlyContinue)) {
+    Write-Error "Bitwarden CLI 'bw' not found. Install it before running this script."
+    exit 1
+}
+
 $s = bw login --raw
-$env:TAVILY_API_KEY = bw get password tavily --session $s
-$env:ADO_MCP_AUTH_TOKEN = bw get password azure-devops-pat --session $s
-$env:AZURE_DEVOPS_ORGANIZATION = bw get password azure-devops-org --session $s
-$env:POSTMAN_API_KEY = bw get password postman --session $s
-$env:NEW_RELIC_API_KEY = bw get password new-relic --session $s
-bw logout 2>$null | Out-Null; Remove-Variable s
+if ($LASTEXITCODE -ne 0 -or -not $s) {
+    Write-Error "Bitwarden login failed."
+    exit 1
+}
 
-$claudeFlags = if ($FullAutomatic) { "--dangerously-skip-permissions" } else { "--enable-auto-mode" }
+$items = bw list items --session $s | ConvertFrom-Json
 
-$sessionUuid = python -c "import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1]))" $SessionName
+function Get-VaultSecret {
+    param($items, [string]$name)
+    $val = ($items | Where-Object { $_.name -eq $name }).login.password
+    if (-not $val) { Write-Warning "Vault item '$name' not found or has no password." }
+    return $val
+}
 
-if ($Tmux) {
-    tmux has-session -t $SessionName 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        tmux attach-session -t $SessionName
-        exit 0
-    }
-    $cmd = "if ! claude $claudeFlags --resume $sessionUuid; then claude $claudeFlags --session-id $sessionUuid; fi; exec bash"
-    tmux new-session -s $SessionName $cmd
-} else {
+$env:TAVILY_API_KEY             = Get-VaultSecret $items "tavily"
+$env:ADO_MCP_AUTH_TOKEN         = Get-VaultSecret $items "azure-devops-pat"
+$env:AZURE_DEVOPS_ORGANIZATION  = Get-VaultSecret $items "azure-devops-org"
+$env:POSTMAN_API_KEY            = Get-VaultSecret $items "postman"
+$env:NEW_RELIC_API_KEY          = Get-VaultSecret $items "new-relic"
+
+& bw logout 2>&1 | Out-Null
+Remove-Variable s, items
+
+$claudeFlags = if ($FullAutomatic) { "--dangerously-skip-permissions" } else { $null }
+
+if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
+    Write-Error "Python launcher 'py' not found. Install Python from python.org."
+    exit 1
+}
+
+$sessionUuid = & py -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1]))' $SessionName
+if (-not $sessionUuid) {
+    Write-Error "Failed to generate session UUID."
+    exit 1
+}
+
+if ($claudeFlags) {
     & claude $claudeFlags --resume $sessionUuid
     if ($LASTEXITCODE -ne 0) {
         & claude $claudeFlags --session-id $sessionUuid
+    }
+} else {
+    & claude --resume $sessionUuid
+    if ($LASTEXITCODE -ne 0) {
+        & claude --session-id $sessionUuid
     }
 }

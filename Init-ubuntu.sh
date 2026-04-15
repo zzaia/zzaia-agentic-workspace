@@ -31,12 +31,13 @@ echo ''
 echo '         ⚡  Agentic Workspace  ⚡'
 echo ''
 BW_SESSION=$(bw login --raw)
-export TAVILY_API_KEY=$(bw get password tavily --session "$BW_SESSION")
-export ADO_MCP_AUTH_TOKEN=$(bw get password azure-devops-pat --session "$BW_SESSION")
-export AZURE_DEVOPS_ORGANIZATION=$(bw get password azure-devops-org --session "$BW_SESSION")
-export POSTMAN_API_KEY=$(bw get password postman --session "$BW_SESSION")
-export NEW_RELIC_API_KEY=$(bw get password new-relic --session "$BW_SESSION")
-bw logout 2>/dev/null; unset BW_SESSION
+BW_ITEMS=$(bw list items --session "$BW_SESSION")
+export TAVILY_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="tavily") | .login.password')
+export ADO_MCP_AUTH_TOKEN=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="azure-devops-pat") | .login.password')
+export AZURE_DEVOPS_ORGANIZATION=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="azure-devops-org") | .login.password')
+export POSTMAN_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="postman") | .login.password')
+export NEW_RELIC_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="new-relic") | .login.password')
+bw logout 2>/dev/null; unset BW_SESSION BW_ITEMS
 
 CLAUDE_FLAGS="--enable-auto-mode"
 [[ "$FULL_AUTOMATIC" == true ]] && CLAUDE_FLAGS="--dangerously-skip-permissions"
