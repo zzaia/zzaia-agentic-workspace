@@ -97,7 +97,9 @@ Apply the appropriate rule file before any code review:
 
 **C#/.NET**: @commands/behavior/development/rules/dotnet-coding-rules.md
 **Python**: @commands/behavior/development/rules/python-coding-rules.md
+**Jupyter/Python Notebook**: @commands/behavior/development/rules/python-notebook-rules.md
 **JavaScript/TypeScript**: @commands/behavior/development/rules/javascript-coding-rules.md
+**TypeScript/Node.js**: @commands/behavior/development/rules/typescript-coding-rules.md — always TypeScript, never plain JavaScript
 
 ## ACCEPTANCE CRITERIA
 

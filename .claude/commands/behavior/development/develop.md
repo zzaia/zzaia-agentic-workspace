@@ -105,6 +105,7 @@ Apply the appropriate rule file before any code modification:
 **Python**: @commands/behavior/development/rules/python-coding-rules.md
 **Jupyter/Python Notebook**: @commands/behavior/development/rules/python-notebook-rules.md
 **JavaScript/TypeScript**: @commands/behavior/development/rules/javascript-coding-rules.md
+**TypeScript/Node.js**: @commands/behavior/development/rules/typescript-coding-rules.md — always TypeScript, never plain JavaScript
 
 ## Acceptance Criteria
 
