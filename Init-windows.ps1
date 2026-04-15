@@ -52,7 +52,7 @@ if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-$sessionUuid = & py -c "import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1]))" $SessionName
+$sessionUuid = & py -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1]))' $SessionName
 if (-not $sessionUuid) {
     Write-Error "Failed to generate session UUID."
     exit 1
