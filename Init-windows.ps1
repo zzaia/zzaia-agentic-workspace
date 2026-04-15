@@ -16,12 +16,13 @@ Write-Host ''
 Write-Host '         ⚡  Agentic Workspace  ⚡'
 Write-Host ''
 $s = bw login --raw
-$env:TAVILY_API_KEY = bw get password tavily --session $s
-$env:ADO_MCP_AUTH_TOKEN = bw get password azure-devops-pat --session $s
-$env:AZURE_DEVOPS_ORGANIZATION = bw get password azure-devops-org --session $s
-$env:POSTMAN_API_KEY = bw get password postman --session $s
-$env:NEW_RELIC_API_KEY = bw get password new-relic --session $s
-bw logout 2>$null | Out-Null; Remove-Variable s
+$items = bw list items --session $s | ConvertFrom-Json
+$env:TAVILY_API_KEY = ($items | Where-Object { $_.name -eq "tavily" }).login.password
+$env:ADO_MCP_AUTH_TOKEN = ($items | Where-Object { $_.name -eq "azure-devops-pat" }).login.password
+$env:AZURE_DEVOPS_ORGANIZATION = ($items | Where-Object { $_.name -eq "azure-devops-org" }).login.password
+$env:POSTMAN_API_KEY = ($items | Where-Object { $_.name -eq "postman" }).login.password
+$env:NEW_RELIC_API_KEY = ($items | Where-Object { $_.name -eq "new-relic" }).login.password
+bw logout 2>$null | Out-Null; Remove-Variable s, items
 
 $claudeFlags = if ($FullAutomatic) { "--dangerously-skip-permissions" } else { "--enable-auto-mode" }
 
