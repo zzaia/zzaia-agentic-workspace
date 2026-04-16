@@ -64,6 +64,9 @@ else
     echo 'WARN op_signin_failed'
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CLAUDE_CONFIG_DIR="$SCRIPT_DIR/.claude"
+
 CLAUDE_FLAGS="--enable-auto-mode"
 [[ "$FULL_AUTOMATIC" == true ]] && CLAUDE_FLAGS="--dangerously-skip-permissions"
 
