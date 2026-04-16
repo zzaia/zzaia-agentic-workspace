@@ -1,6 +1,6 @@
 # ZZAIA Container — Docker
 
-Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessible via SSH and browser-based VS Code.
+Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessible via SSH and browser-based VS Code. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 ---
 
@@ -14,28 +14,24 @@ Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessibl
 
 ---
 
-## Run
+## Secrets
 
-**First start** — pass secrets as environment variables:
+Create `docker/.env` with your secrets (auto-loaded by docker compose, gitignored):
 
 ```bash
-docker run -d \
-  -e SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
-  -e TAVILY_API_KEY="..." \
-  -e ADO_MCP_AUTH_TOKEN="..." \
-  -e AZURE_DEVOPS_ORGANIZATION="..." \
-  -e POSTMAN_API_KEY="..." \
-  -e NEW_RELIC_API_KEY="..." \
-  -p 127.0.0.1:2222:2222 \
-  -p 127.0.0.1:8080:8080 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v ~/.config/zzaia:/secrets \
-  zzaia-workspace:latest
+SSH_PUBLIC_KEY=<your public key>
+TAVILY_API_KEY=...
+ADO_MCP_AUTH_TOKEN=...
+AZURE_DEVOPS_ORGANIZATION=...
+POSTMAN_API_KEY=...
+NEW_RELIC_API_KEY=...
 ```
 
-Secrets are saved to `~/.config/zzaia/.env` on your host.
+Only `SSH_PUBLIC_KEY` is available inside the workspace container. Each MCP service receives only its own variable.
 
-**Subsequent starts** — no env vars needed, secrets reload from volume:
+---
+
+## Run
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
@@ -47,10 +43,12 @@ docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml build --no-cache
 ```
 
-**Reset secrets:**
+**Reset SSH key:**
 
 ```bash
-rm ~/.config/zzaia/.env && docker run -d -e ... (repeat first start)
+rm ~/.config/zzaia/.env
+# Update SSH_PUBLIC_KEY in docker/.env, then restart
+docker compose -f docker/docker-compose.yml restart zzaia
 ```
 
 ---
@@ -68,8 +66,6 @@ The Claude Code extension is pre-installed. Logs:
 ```bash
 docker exec zzaia-workspace cat /tmp/code-server.log
 ```
-
-> For persistent settings, mount a volume at `/home/zzaia/.config/code-server`.
 
 ---
 
@@ -101,11 +97,27 @@ The container is headless — tools that open a browser will instead print the U
 
 ---
 
+## MCP Services
+
+Each MCP server runs as an isolated sidecar container on the internal `mcp` Docker network. Ports are not exposed to the host.
+
+| Service | Port | Secret |
+|---------|------|--------|
+| mcp-tavily | 3001 | `TAVILY_API_KEY` |
+| mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
+| mcp-postman | 3003 | `POSTMAN_API_KEY` |
+| mcp-newrelic | 3004 | `NEW_RELIC_API_KEY` |
+
+`playwright` and `aspire` run as local stdio servers inside the workspace container (no secrets required).
+
+---
+
 ## Container logs
 
 ```bash
 docker logs zzaia-workspace          # sshd logs
 docker exec zzaia-workspace cat /tmp/code-server.log  # code-server logs
+docker logs mcp-tavily               # MCP sidecar logs
 ```
 
 ---
@@ -114,13 +126,14 @@ docker exec zzaia-workspace cat /tmp/code-server.log  # code-server logs
 
 | Control | Value |
 |---------|-------|
-| Host filesystem | No mounts |
-| Host network | Bridge only, ports bound to 127.0.0.1 |
+| Workspace secrets | SSH key only — no API keys in workspace container |
+| MCP secrets | Isolated per sidecar container, internal network only |
+| Host filesystem | No mounts except docker socket and secrets volume |
+| Host network | Bridge only, workspace ports bound to 127.0.0.1 |
+| MCP ports | Internal only — not exposed to host |
 | Capabilities | Drop ALL + sshd minimum |
 | Root login | Disabled |
 | Auth | SSH key only |
-
-Minimum capabilities: `AUDIT_WRITE`, `CHOWN`, `FOWNER`, `SETGID`, `SETUID`.
 
 ---
 
@@ -128,8 +141,9 @@ Minimum capabilities: `AUDIT_WRITE`, `CHOWN`, `FOWNER`, `SETGID`, `SETUID`.
 
 ```
 docker/
-├── Dockerfile        — Image definition
-├── entrypoint.sh     — code-server + sshd startup, SSH key injection
-├── sshd_config       — Port 2222, key-auth only
-└── docker-compose.yml — Local deployment
+├── Dockerfile          — Image definition
+├── entrypoint.sh       — SSH key init + code-server + sshd startup
+├── sshd_config         — Port 2222, key-auth only
+├── docker-compose.yml  — Workspace + MCP sidecar services
+└── .env                — Local secrets (gitignored, create manually)
 ```

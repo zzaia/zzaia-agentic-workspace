@@ -1,5 +1,5 @@
 #!/bin/bash
-# entrypoint.sh — Secrets init, code-server, SSH server
+# entrypoint.sh — SSH key init, code-server, SSH server
 set -euo pipefail
 
 SECRETS_FILE=/secrets/.env
@@ -16,27 +16,17 @@ if [ -S /var/run/docker.sock ]; then
         || echo "WARNING: zzaia not in docker group" >&2
 fi
 
-# ── Warn if /secrets is not a real mount (secrets won't persist) ──────────────
+# ── Warn if /secrets is not a real mount ──────────────────────────────────────
 mountpoint -q /secrets 2>/dev/null \
-    || echo "WARNING: /secrets is not mounted — secrets will not persist across restarts" >&2
+    || echo "WARNING: /secrets is not mounted — SSH key will not persist across restarts" >&2
 
-# ── Secrets — write on first start, reload on restart ────────────────────────
+# ── Persist SSH public key on first start ─────────────────────────────────────
 if [ ! -f "$SECRETS_FILE" ]; then
-    cat > "$SECRETS_FILE" <<EOF
-SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
-TAVILY_API_KEY=${TAVILY_API_KEY:-}
-ADO_MCP_AUTH_TOKEN=${ADO_MCP_AUTH_TOKEN:-}
-AZURE_DEVOPS_ORGANIZATION=${AZURE_DEVOPS_ORGANIZATION:-}
-POSTMAN_API_KEY=${POSTMAN_API_KEY:-}
-NEW_RELIC_API_KEY=${NEW_RELIC_API_KEY:-}
-EOF
+    printf 'SSH_PUBLIC_KEY=%s\n' "${SSH_PUBLIC_KEY:-}" > "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE"
 fi
 
-# Copy to zzaia home so .bashrc sources it in terminals and SSH sessions
-install -m 600 -o zzaia -g zzaia "$SECRETS_FILE" /home/zzaia/.env
-
-# ── SSH authorized key (sourced from secrets on restart) ─────────────────────
+# ── SSH authorized key ────────────────────────────────────────────────────────
 _SSH_KEY="${SSH_PUBLIC_KEY:-}"
 if [ -z "$_SSH_KEY" ]; then
     _SSH_KEY=$(grep -m1 '^SSH_PUBLIC_KEY=' "$SECRETS_FILE" 2>/dev/null | cut -d= -f2- || true)
@@ -47,10 +37,8 @@ if [ ! -s /home/zzaia/.ssh/authorized_keys ] && [ -n "$_SSH_KEY" ]; then
     chown zzaia:zzaia /home/zzaia/.ssh/authorized_keys
 fi
 
-# ── Start code-server (extension host inherits all secrets) ───────────────────
-# /var/run/docker.sock grants full host Docker access — trusted local dev only
+# ── Start code-server ─────────────────────────────────────────────────────────
 su -s /bin/bash zzaia -c "
-    set -a; source /home/zzaia/.env; set +a
     export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
     export BROWSER=/usr/local/bin/browser-print
     code-server --bind-addr 0.0.0.0:8080 --auth none \
