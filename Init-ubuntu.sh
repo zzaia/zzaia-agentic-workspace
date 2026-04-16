@@ -39,6 +39,9 @@ export POSTMAN_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="postman"
 export NEW_RELIC_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="new-relic") | .login.password')
 bw logout 2>/dev/null; unset BW_SESSION BW_ITEMS
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CLAUDE_CONFIG_DIR="$SCRIPT_DIR/.claude"
+
 CLAUDE_FLAGS="--enable-auto-mode"
 [[ "$FULL_AUTOMATIC" == true ]] && CLAUDE_FLAGS="--dangerously-skip-permissions"
 

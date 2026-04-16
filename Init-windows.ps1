@@ -45,6 +45,8 @@ $env:NEW_RELIC_API_KEY          = Get-VaultSecret $items "new-relic"
 & bw logout 2>&1 | Out-Null
 Remove-Variable s, items
 
+$env:CLAUDE_CONFIG_DIR = "$PSScriptRoot\.claude"
+
 $claudeFlags = if ($FullAutomatic) { "--dangerously-skip-permissions" } else { $null }
 
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
