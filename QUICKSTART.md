@@ -74,9 +74,28 @@ chmod +x Init-ubuntu-op.sh
 
 ### Windows — Bitwarden (PowerShell)
 
+> **Requires PowerShell 7.** The built-in Windows PowerShell (v5) is no longer actively developed.
+> Install PowerShell 7 first:
+>
+> ```powershell
+> winget install Microsoft.PowerShell
+> ```
+>
+> Then open PowerShell 7:
+>
+> ```powershell
+> pwsh
+> ```
+>
+> Optionally verify the version:
+>
+> ```powershell
+> $PSVersionTable.PSVersion
+> ```
+
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\Init-windows.ps1 -SessionName <name> [-FullAutomatic] [-Tmux]
+.\Init-windows.ps1 -SessionName <name> [-FullAutomatic]
 ```
 
 | Flag | Script | Description |
@@ -84,7 +103,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 | `--session-name` / `-SessionName` | all | **Required.** Named session for resume across restarts |
 | `--vault-name` | `Init-ubuntu-op.sh` | **Required.** 1Password vault name |
 | `--full-automatic` / `-FullAutomatic` | all | Skip permission prompts (`--dangerously-skip-permissions`) |
-| `--tmux` / `-Tmux` | all | Wrap Claude in a tmux session (attach if exists, create if not) |
+| `--tmux` / `-Tmux` | Ubuntu/WSL only | Optional. Wrap Claude in a tmux session (attach if exists, create if not) |
 
 ---
 
