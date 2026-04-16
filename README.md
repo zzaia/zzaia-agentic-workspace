@@ -9,6 +9,21 @@
 
 > For full onboarding instructions see [QUICKSTART.md](QUICKSTART.md).
 
+Run the install script once — it fetches secrets from Bitwarden, starts the Docker Compose stack, and leaves no secrets on disk. After that, start/stop from Docker Desktop.
+
+```bash
+# Ubuntu / WSL
+./install-compose.sh
+
+# macOS
+./install-compose-mac.sh
+
+# Windows (PowerShell 7)
+.\install-compose.ps1
+```
+
+Access the workspace at `http://localhost:8080` (VS Code) or `ssh -p 2222 zzaia@localhost`.
+
 ### Use as Remote Plugin
 
 ```bash
@@ -204,9 +219,9 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 
 ## 🐳 Container
 
-The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via `mise.toml`. Deployable locally via Docker Compose or on a Kubernetes cluster, fully isolated from host resources.
+The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via `mise.toml`. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
-> See [docker/DOCKER.md](docker/DOCKER.md) for Docker and Kubernetes setup.
+> See [docker/DOCKER.md](docker/DOCKER.md) for full setup details.
 
 ## 🤖 Specialized Agents
 

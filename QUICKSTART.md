@@ -1,49 +1,38 @@
 # ZZAIA Agentic Workspace — Quick Start
 
-> Get the workspace running in Claude Code in under 15 minutes.
+> Get the workspace running in under 15 minutes.
 
 ---
 
-## Who is this for?
+## Prerequisites
 
-| Profile | Platform |
-|---------|----------|
-| Windows user | PowerShell (native) |
-| Windows user with WSL | Ubuntu terminal inside WSL |
-| Linux / macOS user | Ubuntu/bash terminal |
-
----
-
-## Step 1 — Install Prerequisites
-
-Install **Claude Code** and **Bitwarden CLI** — these are the only hard requirements.
-
-#### Claude Code CLI
-
-Requires Node.js LTS — [nodejs.org](https://nodejs.org)
-
-```bash
-npm install -g @anthropic-ai/claude-code
-```
+| Tool | Purpose | Install |
+|------|---------|---------|
+| **Docker Desktop** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
+| **Bitwarden CLI** | Fetches secrets once at install time | See below |
 
 #### Bitwarden CLI
 
 ```bash
 # Ubuntu / WSL
-sudo snap install bw
+sudo snap install bw && sudo snap install jq
 
-# Windows (PowerShell)
+# macOS
+brew install bitwarden-cli jq
+
+# Windows (PowerShell 7)
 winget install --id Bitwarden.BitwardenCLI
 ```
 
 ---
 
-## Step 2 — Create Bitwarden Items
+## Step 1 — Create Bitwarden Items
 
-Create the following items in your **Bitwarden vault** using the **Login** type. Store each secret as the item's **Password** field.
+Create the following items in your **Bitwarden vault** using the **Login** type. Store each value as the item **Password** field.
 
 | Bitwarden Item Name | Password Value | Service |
 |---------------------|----------------|---------|
+| `ssh-public-key` | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | Local SSH key |
 | `tavily` | Tavily API key | [tavily.com](https://tavily.com) |
 | `azure-devops-pat` | Azure DevOps Personal Access Token | [Azure DevOps](https://dev.azure.com) |
 | `azure-devops-org` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps |
@@ -52,64 +41,53 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 > Items you don't have credentials for can be skipped — the workspace will warn and continue without them.
 
+> Generate an SSH key if needed: `ssh-keygen -t ed25519 -f ~/.ssh/zzaia_key -N ""`
+
 ---
 
-## Step 3 — Load Secrets and Launch Claude Code
+## Step 2 — Install & Start (once per company environment)
 
-Run the init script for your platform and password manager. Secrets live only in the terminal session — never written to disk.
+Run the install script for your platform. It fetches all secrets from Bitwarden, starts the Docker Compose stack named after your Azure DevOps organization, then discards all secrets — **no .env file is left on disk**.
 
-### Ubuntu / WSL — Bitwarden
-
-```bash
-chmod +x Init-ubuntu.sh
-./Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
-```
-
-### Ubuntu / WSL — 1Password
+### Ubuntu / WSL
 
 ```bash
-chmod +x Init-ubuntu-op.sh
-./Init-ubuntu-op.sh --vault-name <vault> --session-name <name> [--full-automatic] [--tmux]
+chmod +x install-compose.sh
+./install-compose.sh
 ```
 
-### Windows — Bitwarden (PowerShell)
+### macOS
 
-> **Requires PowerShell 7.** The built-in Windows PowerShell (v5) is no longer actively developed.
-> Install PowerShell 7 first:
->
-> ```powershell
-> winget install Microsoft.PowerShell
-> ```
->
-> Then open PowerShell 7:
->
-> ```powershell
-> pwsh
-> ```
->
-> Optionally verify the version:
->
-> ```powershell
-> $PSVersionTable.PSVersion
-> ```
+```bash
+chmod +x install-compose-mac.sh
+./install-compose-mac.sh
+```
+
+### Windows (PowerShell 7)
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\Init-windows.ps1 -SessionName <name> [-FullAutomatic]
+.\install-compose.ps1
 ```
 
-| Flag | Script | Description |
-|------|--------|-------------|
-| `--session-name` / `-SessionName` | all | **Required.** Named session for resume across restarts |
-| `--vault-name` | `Init-ubuntu-op.sh` | **Required.** 1Password vault name |
-| `--full-automatic` / `-FullAutomatic` | all | Skip permission prompts (`--dangerously-skip-permissions`) |
-| `--tmux` / `-Tmux` | Ubuntu/WSL only | Optional. Wrap Claude in a tmux session (attach if exists, create if not) |
+After the first run, **start or stop the workspace from Docker Desktop** — no script needed again. To recreate containers (e.g. after a secret rotation), re-run the install script.
+
+---
+
+## Step 3 — Access the Workspace
+
+| Access | URL / Command |
+|--------|--------------|
+| **VS Code** (browser) | `http://localhost:8080` |
+| **SSH** | `ssh -p 2222 zzaia@localhost` |
+
+The Claude Code extension is pre-installed in VS Code. All MCP tools (Tavily, Azure DevOps, Postman, New Relic) connect automatically via isolated sidecar containers.
 
 ---
 
 ## Step 4 — Add the Plugin Marketplace
 
-Inside Claude Code, run the following commands to add the ZZAIA plugin:
+Inside Claude Code, run:
 
 ```
 /plugins
@@ -132,8 +110,6 @@ Then install the workspace plugin:
 
 ## Step 5 — Verify Setup
 
-Check that MCP tools and commands loaded correctly:
-
 ```
 /mcp
 ```
@@ -154,8 +130,6 @@ All configured tools should show as connected. Then verify commands are availabl
 /behavior:workspace:repo --action new --repo your-repo-url
 ```
 
-This creates the worktree structure under `./workspace/your-repo-name.worktrees/`.
-
 ### Read a work item
 
 ```
@@ -168,26 +142,10 @@ This creates the worktree structure under `./workspace/your-repo-name.worktrees/
 /workflow:remote:implement --work-item 1605 --portal azure --project my-project --repo game-service --target-branch develop --working-branch feature/implement-something --description "Additional context"
 ```
 
-Claude will implement the feature, create a Pull Request, and wait for your review.
-
-### Review and address PR comments
-
-After reviewing the PR in the portal, post your comments there and then respond to Claude's prompt — it will update the branch and PR automatically.
-
 ### Apply targeted changes
-
-At any time you can apply targeted changes to any worktree repository inside the workspace.
 
 ```
 /behavior:development:develop --repo repo-name --branch branch-name --description "What needs to change" @path/to/file
-```
-
-### Commit and push manually
-
-It is advised for a manual check in git changes in case of a target implementation, but in the need for more automation the workspace can handle the git operations.
-
-```
-/behavior:development:git --action commit-push --repo repo-name --branch branch-name --message commit-message
 ```
 
 ---
@@ -196,11 +154,51 @@ It is advised for a manual check in git changes in case of a target implementati
 
 | Symptom | Fix |
 |---------|-----|
-| MCP shows disconnected | Verify the env var was loaded: `echo $TAVILY_API_KEY` in the same terminal |
-| Commands start with `//` | Run `/reload-plugins` inside Claude Code |
-| `bw: command not found` | Re-run the init script or install manually: `sudo snap install bw` |
-| PowerShell script blocked | Run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Bitwarden item not found | Verify item name matches exactly (e.g. `tavily`) and item type is Login |
+| MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
+| `bw: command not found` | Install Bitwarden CLI — see Prerequisites |
+| `jq: command not found` | `sudo apt-get install jq` or `brew install jq` |
+| PowerShell script blocked | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| Bitwarden item not found | Verify item name matches exactly (e.g. `tavily`) and type is Login |
+| Container not starting | Check `docker logs <org>-zzaia-workspace-1` |
+
+---
+
+## Secret Rotation
+
+To rotate a single MCP secret:
+
+1. Update the item in Bitwarden
+2. Re-run the install script — it recreates only the affected container:
+
+```bash
+# Or target a single service after updating docker/.env manually
+docker compose -f docker/docker-compose.yml -p <org> up -d --force-recreate mcp-tavily
+```
+
+---
+
+## Alternative: Local CLI Mode
+
+If you prefer running Claude Code directly on your machine (without Docker), use the Init scripts. Secrets are loaded from Bitwarden into the terminal session only — never written to disk.
+
+### Ubuntu / WSL
+
+```bash
+chmod +x Init-ubuntu.sh
+./Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
+```
+
+### Windows (PowerShell 7)
+
+```powershell
+.\Init-windows.ps1 -SessionName <name> [-FullAutomatic]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--session-name` / `-SessionName` | **Required.** Named session for resume across restarts |
+| `--full-automatic` / `-FullAutomatic` | Skip permission prompts |
+| `--tmux` | Ubuntu/WSL only. Wrap in a tmux session |
 
 ---
 
