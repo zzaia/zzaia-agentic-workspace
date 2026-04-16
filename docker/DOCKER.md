@@ -16,15 +16,41 @@ Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessibl
 
 ## Run
 
+**First start** — pass secrets as environment variables:
+
 ```bash
-export SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)"
+docker run -d \
+  -e SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)" \
+  -e TAVILY_API_KEY="..." \
+  -e ADO_MCP_AUTH_TOKEN="..." \
+  -e AZURE_DEVOPS_ORGANIZATION="..." \
+  -e POSTMAN_API_KEY="..." \
+  -e NEW_RELIC_API_KEY="..." \
+  -p 127.0.0.1:2222:2222 \
+  -p 127.0.0.1:8080:8080 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v ~/.config/zzaia:/secrets \
+  zzaia-workspace:latest
+```
+
+Secrets are saved to `~/.config/zzaia/.env` on your host.
+
+**Subsequent starts** — no env vars needed, secrets reload from volume:
+
+```bash
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-To rebuild after changes:
+**Rebuild after changes:**
 
 ```bash
 docker compose -f docker/docker-compose.yml build --no-cache
+```
+
+**Reset secrets:**
+
+```bash
+rm ~/.config/zzaia/.env && docker run -d -e ... (repeat first start)
 ```
 
 ---

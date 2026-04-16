@@ -42,7 +42,8 @@ RUN useradd -m -s /bin/bash -u 1000 zzaia \
 USER zzaia
 WORKDIR /home/zzaia
 
-RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
+RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc \
+    && echo '[ -f ~/.env ] && set -a && source ~/.env && set +a' >> /home/zzaia/.bashrc
 
 ENV PATH="/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
     EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items","resourceUrlTemplate":"https://{publisher}.vscode-cdn.net/extensions/{publisher}/{name}/{version}/Microsoft.VisualStudio.Code.WebResources/{path}"}'
