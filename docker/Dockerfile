@@ -52,6 +52,7 @@ COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
 COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
 COPY --chown=zzaia:zzaia CLAUDE.md .mcp.json .claudeignore .gitignore \
     README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
+COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
 
 # ── Tools + tasks via mise.toml ──────────────────────────────────────────────
 RUN mise install \

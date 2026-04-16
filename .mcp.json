@@ -1,20 +1,40 @@
 {
   "mcpServers": {
     "tavily": {
-      "type": "http",
-      "url": "http://mcp-tavily:3001/sse"
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@latest"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      }
     },
     "azure-devops": {
-      "type": "http",
-      "url": "http://mcp-azure-devops:3002/sse"
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp@next",
+        "${AZURE_DEVOPS_ORGANIZATION}",
+        "-a",
+        "envvar"
+      ],
+      "env": {
+        "ADO_MCP_AUTH_TOKEN": "${ADO_MCP_AUTH_TOKEN}",
+        "AZURE_DEVOPS_ORGANIZATION": "${AZURE_DEVOPS_ORGANIZATION}"
+      }
     },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest"]
     },
     "postman": {
-      "type": "http",
-      "url": "http://mcp-postman:3003/sse"
+      "command": "npx",
+      "args": [
+        "@postman/postman-mcp-server",
+        "--minimal",
+        "--region us"
+      ],
+      "env": {
+        "POSTMAN_API_KEY": "${POSTMAN_API_KEY}"
+      }
     },
     "aspire": {
       "command": "aspire",
@@ -22,7 +42,10 @@
     },
     "new-relic": {
       "type": "http",
-      "url": "http://mcp-newrelic:3004/sse"
+      "url": "https://mcp.newrelic.com/mcp/",
+      "headers": {
+        "Api-Key": "${NEW_RELIC_API_KEY}"
+      }
     }
   }
 }
