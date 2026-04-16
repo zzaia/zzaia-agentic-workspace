@@ -45,7 +45,7 @@ Create the following items in your **Bitwarden vault** using the **Login** type.
 
 ---
 
-## Step 2 — Install & Start (once per company environment)
+## Step 2 — Install & Start (once per environment)
 
 Run the install script for your platform. It fetches all secrets from Bitwarden, starts the Docker Compose stack named after your Azure DevOps organization, then discards all secrets — **no .env file is left on disk**.
 
