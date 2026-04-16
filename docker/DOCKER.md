@@ -1,12 +1,12 @@
-# ZZAIA Container — Docker & Kubernetes
+# ZZAIA Container — Docker
 
-SSH-accessible Ubuntu container with all workspace tools provisioned via `mise.toml`.
+Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessible via SSH and browser-based VS Code.
 
 ---
 
 ## Prerequisites
 
-- Docker or a Kubernetes cluster
+- Docker
 - An SSH key pair — generate one if needed:
   ```bash
   ssh-keygen -t ed25519 -f zzaia_key -N ""
@@ -14,15 +14,14 @@ SSH-accessible Ubuntu container with all workspace tools provisioned via `mise.t
 
 ---
 
-## Local — Docker Compose
+## Run
 
 ```bash
 export SSH_PUBLIC_KEY="$(cat ~/.ssh/id_ed25519.pub)"
 docker compose -f docker/docker-compose.yml up -d
-ssh -p 2222 zzaia@localhost
 ```
 
-To rebuild after changes to `mise.toml`:
+To rebuild after changes:
 
 ```bash
 docker compose -f docker/docker-compose.yml build --no-cache
@@ -30,89 +29,72 @@ docker compose -f docker/docker-compose.yml build --no-cache
 
 ---
 
-## Cluster — Kubernetes
-
-### 1. Create namespace and secret
-
-```bash
-cp docker/k8s/secret-template.yaml docker/k8s/secret.yaml
-# Edit secret.yaml — paste your public key into authorized_keys
-kubectl apply -f docker/k8s/namespace.yaml
-kubectl apply -f docker/k8s/secret.yaml
-```
-
-> `secret.yaml` is in `.gitignore` — never commit it.
-
-### 2. Deploy
-
-```bash
-kubectl apply -f docker/k8s/deployment.yaml
-kubectl apply -f docker/k8s/service.yaml
-```
-
-### 3. Connect
-
-**Port-forward (recommended for internal access):**
-
-```bash
-kubectl port-forward svc/zzaia-workspace 2222:2222 -n zzaia
-ssh -i zzaia_key -p 2222 zzaia@localhost
-```
-
-**External access (change Service type to LoadBalancer):**
-
-```bash
-kubectl patch svc zzaia-workspace -n zzaia -p '{"spec":{"type":"LoadBalancer"}}'
-kubectl get svc zzaia-workspace -n zzaia  # copy EXTERNAL-IP
-ssh -i zzaia_key -p 2222 zzaia@<EXTERNAL-IP>
-```
-
----
-
-## What's installed
-
-All tools from `mise.toml` are provisioned at image build time:
-
-| Category | Tools |
-|----------|-------|
-| Runtimes | Node.js LTS, Python 3.12, .NET 8 |
-| CLI tools | Claude Code, Dapr, k6, D2 |
-| Editor | VS Code (`code-server`) — browser-based on port 8080 |
-| Data science | Miniforge3, conda envs (`venv-analytics`, `venv-development`) |
-| Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams |
-| .NET tools | Aspire workload, Aspirate |
-| System | tmux, PlantUML, git, build-essential |
-
----
-
 ## VS Code (code-server)
 
-SSH into the container and start `code-server`:
+`code-server` starts automatically at container startup. Open in browser:
 
-```bash
-ssh -p 2222 zzaia@localhost
-code-server --bind-addr 0.0.0.0:8080 --auth none
+```
+http://localhost:8080
 ```
 
-Then open `http://localhost:8080` in your browser.
+The Claude Code extension is pre-installed. Logs:
+
+```bash
+docker exec zzaia-workspace cat /tmp/code-server.log
+```
 
 > For persistent settings, mount a volume at `/home/zzaia/.config/code-server`.
 
 ---
 
+## SSH
+
+```bash
+ssh -p 2222 zzaia@localhost
+```
+
+---
+
+## Browser authentication (OAuth flows)
+
+The container is headless — tools that open a browser will instead print the URL to the terminal. Copy-paste it into your local browser.
+
+---
+
+## What's installed
+
+| Category | Tools |
+|----------|-------|
+| Runtimes | Node.js LTS, Python 3.12, .NET 8 |
+| CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid |
+| Editor | code-server + Claude Code extension — browser on port 8080 |
+| Data science | Miniforge3, conda envs (`venv-analytics`, `venv-development`) |
+| Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams |
+| .NET tools | Aspire workload, Aspirate |
+| System | tmux, PlantUML, tectonic, git, build-essential |
+
+---
+
+## Container logs
+
+```bash
+docker logs zzaia-workspace          # sshd logs
+docker exec zzaia-workspace cat /tmp/code-server.log  # code-server logs
+```
+
+---
+
 ## Security
 
-| Control | Docker | Kubernetes |
-|---------|--------|------------|
-| Host filesystem | No mounts | No hostPath volumes |
-| Host network | Bridge only | `hostNetwork: false` |
-| Host PID/IPC | Isolated | `hostPID/IPC: false` |
-| K8s API | — | `automountServiceAccountToken: false` |
-| Capabilities | Drop ALL + sshd minimum | Drop ALL + sshd minimum |
-| Root login | Disabled | Disabled |
-| Auth | SSH key only | SSH key only (Secret) |
+| Control | Value |
+|---------|-------|
+| Host filesystem | No mounts |
+| Host network | Bridge only, ports bound to 127.0.0.1 |
+| Capabilities | Drop ALL + sshd minimum |
+| Root login | Disabled |
+| Auth | SSH key only |
 
-Minimum capabilities retained for sshd: `AUDIT_WRITE`, `CHOWN`, `FOWNER`, `SETGID`, `SETUID`.
+Minimum capabilities: `AUDIT_WRITE`, `CHOWN`, `FOWNER`, `SETGID`, `SETUID`.
 
 ---
 
@@ -120,13 +102,8 @@ Minimum capabilities retained for sshd: `AUDIT_WRITE`, `CHOWN`, `FOWNER`, `SETGI
 
 ```
 docker/
-├── Dockerfile              — Image definition
-├── entrypoint.sh           — SSH key injection + sshd startup
-├── sshd_config             — Port 2222, key-auth only
-├── docker-compose.yml      — Local deployment
-└── k8s/
-    ├── namespace.yaml       — zzaia namespace
-    ├── deployment.yaml      — Pod with isolation controls
-    ├── service.yaml         — ClusterIP on port 2222
-    └── secret-template.yaml — Copy → secret.yaml, add your public key
+├── Dockerfile        — Image definition
+├── entrypoint.sh     — code-server + sshd startup, SSH key injection
+├── sshd_config       — Port 2222, key-auth only
+└── docker-compose.yml — Local deployment
 ```

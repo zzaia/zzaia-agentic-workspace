@@ -8,13 +8,14 @@ dapr = "latest"
 miniforge3 = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
 "npm:code-server" = "latest"
+"npm:@mermaid-js/mermaid-cli" = "latest"
 
 [settings]
 experimental = true
 
 [tasks.python-packages]
 description = "Install required Python packages"
-run = "pip install pypdf python-docx textual jinja2 mmdc graphviz diagrams"
+run = "pip install pypdf python-docx textual jinja2 graphviz diagrams"
 
 [tasks.conda-envs]
 description = "Create conda environments for analytics and development workflows"
@@ -27,15 +28,14 @@ conda create -n venv-development python=3.12 -y || true
 description = "Install .NET workloads and global tools"
 run = """
 dotnet workload install aspire
-dotnet tool install -g aspire 2>/dev/null || dotnet tool update -g aspire
-dotnet tool install -g aspirate 2>/dev/null || dotnet tool update -g aspirate
+dotnet tool install -g aspire || dotnet tool update -g aspire
+dotnet tool install -g aspirate || dotnet tool update -g aspirate
 """
 
 [tasks.system-packages]
-description = "Install system packages via apt and snap"
+description = "Install system packages (local dev — not needed in Docker)"
 run = """
-sudo apt-get install -y tmux plantuml
-sudo snap install tectonic
+sudo apt-get install -y tmux plantuml tectonic
 """
 
 [tasks.install]
