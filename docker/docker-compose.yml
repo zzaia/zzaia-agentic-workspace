@@ -12,8 +12,9 @@ services:
       - "127.0.0.1:2222:2222"
       - "127.0.0.1:8080:8080"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - ~/.config/zzaia:/secrets
+      - ./host:/home/zzaia/host
     network_mode: bridge
     security_opt:
       - no-new-privileges:true

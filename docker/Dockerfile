@@ -30,7 +30,6 @@ RUN printf '#!/bin/sh\necho "Open this URL in your browser: $1"\n' \
     && chmod +x /usr/local/bin/browser-print
 
 # ── SSH server ────────────────────────────────────────────────────────────────
-RUN mkdir -p /var/run/sshd
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
 
 # ── Non-root user ─────────────────────────────────────────────────────────────
@@ -52,17 +51,14 @@ ENV PATH="/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
 COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
 COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
 COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
-COPY --chown=zzaia:zzaia host/ /home/zzaia/host/
 COPY --chown=zzaia:zzaia CLAUDE.md .mcp.json .claudeignore .gitignore \
     README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
 
-# ── Tools via mise.toml ───────────────────────────────────────────────────────
-RUN mise install
-
-# ── mise tasks ────────────────────────────────────────────────────────────────
-RUN mise run python-packages
-RUN mise run conda-envs
-RUN mise run dotnet-tools
+# ── Tools + tasks via mise.toml ──────────────────────────────────────────────
+RUN mise install \
+    && mise run python-packages \
+    && mise run conda-envs \
+    && mise run dotnet-tools
 
 # ── VS Code extensions (Microsoft marketplace via EXTENSIONS_GALLERY) ─────────
 RUN for ext in \
