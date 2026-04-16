@@ -45,10 +45,10 @@ export CLAUDE_CONFIG_DIR="$SCRIPT_DIR/.claude"
 CLAUDE_FLAGS="--enable-auto-mode"
 [[ "$FULL_AUTOMATIC" == true ]] && CLAUDE_FLAGS="--dangerously-skip-permissions"
 
-SESSION_UUID=$(python3 -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1]))' "$SESSION_NAME")
+SESSION_UUID=$(python3 -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + sys.argv[2]))' "$SESSION_NAME" "$AZURE_DEVOPS_ORGANIZATION")
 
 if [[ "$USE_TMUX" == true ]]; then
-    TMUX_SESSION="$SESSION_NAME"
+    TMUX_SESSION="$SESSION_UUID"
     if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
         tmux attach-session -t "$TMUX_SESSION"; exit 0
     fi
