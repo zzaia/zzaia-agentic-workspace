@@ -5,6 +5,7 @@ set -euo pipefail
 SECRETS_FILE=/secrets/.env
 mkdir -p /secrets
 
+mkdir -p /run/sshd
 ssh-keygen -A 2>/dev/null || true
 
 # ── Docker socket group ───────────────────────────────────────────────────────
@@ -39,9 +40,8 @@ if [ -z "$_SSH_KEY" ]; then
         | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true)
 fi
 if [ ! -s /home/zzaia/.ssh/authorized_keys ] && [ -n "$_SSH_KEY" ]; then
-    printf '%s\n' "$_SSH_KEY" > /home/zzaia/.ssh/authorized_keys
-    chmod 600 /home/zzaia/.ssh/authorized_keys
-    chown zzaia:zzaia /home/zzaia/.ssh/authorized_keys
+    printf '%s\n' "$_SSH_KEY" \
+        | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
 fi
 
 # ── Start code-server ─────────────────────────────────────────────────────────
