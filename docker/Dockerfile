@@ -14,13 +14,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + mise apt repo ──────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml tectonic docker.io \
+    curl git openssh-server tmux plantuml docker.io \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
+    && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
+        | grep '"tag_name"' | sed 's/.*"tectonic@//;s/".*//') \
+    && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic@${TECTONIC_VER}/tectonic-${TECTONIC_VER}-x86_64-unknown-linux-musl.tar.gz" \
+        | tar xz -C /usr/local/bin \
     && curl -fsSL https://mise.jdx.dev/gpg-key.pub \
         | gpg --dearmor -o /usr/share/keyrings/mise-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/mise-archive-keyring.gpg arch=amd64] \
-        https://mise.jdx.dev/deb/stable/main /" > /etc/apt/sources.list.d/mise.list \
+    && echo "deb [signed-by=/usr/share/keyrings/mise-archive-keyring.gpg arch=amd64] https://mise.jdx.dev/deb stable main" \
+        > /etc/apt/sources.list.d/mise.list \
     && apt-get update && apt-get install -y --no-install-recommends mise \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,17 +37,22 @@ RUN printf '#!/bin/sh\necho "Open this URL in your browser: $1"\n' \
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
 
 # ── Non-root user ─────────────────────────────────────────────────────────────
-RUN useradd -m -s /bin/bash -u 1000 zzaia \
+RUN userdel -r ubuntu 2>/dev/null || true \
+    && useradd -m -s /bin/bash -u 1000 zzaia \
     && mkdir -p /home/zzaia/.ssh \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
+
+# ── code-server ───────────────────────────────────────────────────────────────
+RUN curl -fsSL https://code-server.dev/install.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
 
 USER zzaia
 WORKDIR /home/zzaia
 
 RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
 
-ENV PATH="/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
+ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
     EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items","resourceUrlTemplate":"https://{publisher}.vscode-cdn.net/extensions/{publisher}/{name}/{version}/Microsoft.VisualStudio.Code.WebResources/{path}"}'
 
 # ── Workspace configuration ───────────────────────────────────────────────────
@@ -54,8 +63,16 @@ COPY --chown=zzaia:zzaia CLAUDE.md .mcp.json .claudeignore .gitignore \
     README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
 
+# ── Miniforge3 (conda) ────────────────────────────────────────────────────────
+RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
+        -o /tmp/miniforge.sh \
+    && bash /tmp/miniforge.sh -b -p /home/zzaia/miniforge3 \
+    && rm /tmp/miniforge.sh \
+    && /home/zzaia/miniforge3/bin/conda init bash
+
 # ── Tools + tasks via mise.toml ──────────────────────────────────────────────
-RUN mise install \
+RUN mise trust ~/mise.toml \
+    && mise install \
     && mise run python-packages \
     && mise run conda-envs \
     && mise run dotnet-tools

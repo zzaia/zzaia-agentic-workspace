@@ -1,13 +1,11 @@
 [tools]
-node = "lts"
+node = "22"
 python = "3.12"
 dotnet = "8"
 k6 = "latest"
 d2 = "latest"
 dapr = "latest"
-miniforge3 = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
-"npm:code-server" = "latest"
 "npm:@mermaid-js/mermaid-cli" = "latest"
 
 [settings]
@@ -28,8 +26,8 @@ conda create -n venv-development python=3.12 -y || true
 description = "Install .NET workloads and global tools"
 run = """
 dotnet workload install aspire
-dotnet tool install -g aspire || dotnet tool update -g aspire
-dotnet tool install -g aspirate || dotnet tool update -g aspirate
+dotnet tool install -g aspire || dotnet tool update -g aspire || true
+dotnet tool install -g aspirate || dotnet tool update -g aspirate || true
 """
 
 [tasks.system-packages]
