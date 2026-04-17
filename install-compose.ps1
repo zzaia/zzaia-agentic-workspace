@@ -27,15 +27,23 @@ foreach ($cmd in @('bw', 'docker')) {
 
 $ScriptDir = $PSScriptRoot
 
-Write-Host "→ Logging into Bitwarden..."
-$s = bw login --raw
-if ($LASTEXITCODE -ne 0 -or -not $s) { Write-Error "Bitwarden login failed."; exit 1 }
-$items = bw list items --session $s | ConvertFrom-Json
+# ── Bitwarden — unlock if already logged in, login otherwise ──────────────────
+Write-Host "→ Unlocking Bitwarden vault..."
+$s = & bw unlock --raw 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $s = & bw login --raw
+    if ($LASTEXITCODE -ne 0 -or -not $s) { Write-Error "Bitwarden login failed."; exit 1 }
+}
+if (-not $s) { Write-Error "Failed to obtain a Bitwarden session."; exit 1 }
+
+$items = & bw list items --session $s | ConvertFrom-Json
+if (-not $items) { Write-Error "Failed to list vault items — check your session."; exit 1 }
 
 function Get-VaultSecret {
     param($items, [string]$name)
     $val = ($items | Where-Object { $_.name -eq $name }).login.password
     if (-not $val) { Write-Warning "  Bitwarden item '$name' not found — left empty." }
+    if ($val -match "`n") { Write-Error "Bitwarden item '$name' contains a newline."; exit 1 }
     return $val
 }
 
@@ -53,7 +61,6 @@ $s = $null; $items = $null
 if (-not $azureDevOpsOrg) { Write-Error "ERROR: 'azure-devops-org' is required."; exit 1 }
 
 try {
-    # Inject into process environment for docker compose to read
     $env:SSH_PUBLIC_KEY            = $sshPublicKey
     $env:TAVILY_API_KEY            = $tavilyApiKey
     $env:ADO_MCP_AUTH_TOKEN        = $adoMcpAuthToken
@@ -79,6 +86,7 @@ try {
     Write-Host "  To recreate containers: re-run this script."
 }
 finally {
+    # jq not needed on Windows — ConvertFrom-Json is built-in (intentional)
     'SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
     'POSTMAN_API_KEY','NEW_RELIC_API_KEY' | ForEach-Object {
         Remove-Item "Env:$_" -ErrorAction SilentlyContinue

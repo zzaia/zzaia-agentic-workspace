@@ -94,7 +94,7 @@ RUN for ext in \
         streetsidesoftware.code-spell-checker \
         tomblind.scm-buttons-vscode \
         vscodevim.vim \
-    ; do code-server --install-extension "$ext" || true; done
+    ; do code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 # ZZAIA Workspace — Local Docker deployment
-# First start: pass SSH_PUBLIC_KEY via env var (saved to ~/.config/zzaia/.env on host)
-# MCP secrets: set per-service vars in docker/.env or pass -e at runtime
+# First start: run install-compose.sh — secrets piped in-memory, nothing written to disk.
+# Subsequent starts: Docker Desktop or `docker compose start`.
+name: zzaia
+
 services:
   zzaia:
     build:

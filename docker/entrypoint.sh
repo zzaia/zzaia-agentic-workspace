@@ -22,14 +22,21 @@ mountpoint -q /secrets 2>/dev/null \
 
 # ── Persist SSH public key on first start ─────────────────────────────────────
 if [ ! -f "$SECRETS_FILE" ]; then
-    printf 'SSH_PUBLIC_KEY=%s\n' "${SSH_PUBLIC_KEY:-}" > "$SECRETS_FILE"
+    _KEY_TO_WRITE="${SSH_PUBLIC_KEY:-}"
+    if [[ "$_KEY_TO_WRITE" != ssh-* ]] && [[ "$_KEY_TO_WRITE" != ecdsa-* ]] && [[ "$_KEY_TO_WRITE" != sk-* ]]; then
+        echo "WARNING: SSH_PUBLIC_KEY does not look like a valid public key — skipping." >&2
+        _KEY_TO_WRITE=""
+    fi
+    printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" > "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE"
+    unset _KEY_TO_WRITE
 fi
 
 # ── SSH authorized key ────────────────────────────────────────────────────────
 _SSH_KEY="${SSH_PUBLIC_KEY:-}"
 if [ -z "$_SSH_KEY" ]; then
-    _SSH_KEY=$(grep -m1 '^SSH_PUBLIC_KEY=' "$SECRETS_FILE" 2>/dev/null | cut -d= -f2- || true)
+    _SSH_KEY=$(grep -m1 '^SSH_PUBLIC_KEY=' "$SECRETS_FILE" 2>/dev/null \
+        | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true)
 fi
 if [ ! -s /home/zzaia/.ssh/authorized_keys ] && [ -n "$_SSH_KEY" ]; then
     printf '%s\n' "$_SSH_KEY" > /home/zzaia/.ssh/authorized_keys
@@ -38,6 +45,7 @@ if [ ! -s /home/zzaia/.ssh/authorized_keys ] && [ -n "$_SSH_KEY" ]; then
 fi
 
 # ── Start code-server ─────────────────────────────────────────────────────────
+# --auth none is acceptable for local dev — host port bound to 127.0.0.1 only.
 su -s /bin/bash zzaia -c "
     export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
     export BROWSER=/usr/local/bin/browser-print
