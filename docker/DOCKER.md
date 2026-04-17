@@ -4,64 +4,52 @@ Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessibl
 
 ---
 
-## Prerequisites
+## Install & Start (once per environment)
 
-- Docker
-- An SSH key pair — generate one if needed:
-  ```bash
-  ssh-keygen -t ed25519 -f zzaia_key -N ""
-  ```
-
----
-
-## Secrets
-
-Create `docker/.env` with your secrets (auto-loaded by docker compose, gitignored):
+Run the install script for your platform from the repository root. It fetches all secrets from Bitwarden, pipes them directly into docker compose, and leaves nothing on disk.
 
 ```bash
-SSH_PUBLIC_KEY=<your public key>
-TAVILY_API_KEY=...
-ADO_MCP_AUTH_TOKEN=...
-AZURE_DEVOPS_ORGANIZATION=...
-POSTMAN_API_KEY=...
-NEW_RELIC_API_KEY=...
+# Ubuntu / Linux / WSL
+./install-compose.sh
+
+# macOS
+./install-compose-mac.sh
+
+# Windows (PowerShell 7)
+.\install-compose.ps1
 ```
 
-Only `SSH_PUBLIC_KEY` is available inside the workspace container. Each MCP service receives only its own variable.
-
----
-
-## Run
+After the first run, start and stop the workspace from **Docker Desktop** or:
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml start
+docker compose -f docker/docker-compose.yml stop
 ```
 
-**Rebuild after changes:**
+**Rebuild image after changes:**
 
 ```bash
 docker compose -f docker/docker-compose.yml build --no-cache
+# Then re-run the install script to recreate containers
 ```
 
-**Reset SSH key:**
+**Rotate a secret (single service):**
 
 ```bash
-rm ~/.config/zzaia/.env
-# Update SSH_PUBLIC_KEY in docker/.env, then restart
-docker compose -f docker/docker-compose.yml restart zzaia
+# Re-run install script to recreate all containers with fresh secrets, or target one:
+docker compose -f docker/docker-compose.yml up -d --force-recreate mcp-tavily
 ```
 
 ---
 
-## VS Code (code-server)
+## Access
 
-`code-server` starts automatically at container startup. Open in browser:
+| Method | Address |
+|--------|---------|
+| VS Code (browser) | `http://localhost:8080` |
+| SSH | `ssh -p 2222 zzaia@localhost` |
 
-```
-http://localhost:8080
-```
-
-The Claude Code extension is pre-installed. Logs:
+The Claude Code extension is pre-installed. Code-server logs:
 
 ```bash
 docker exec zzaia-workspace cat /tmp/code-server.log
@@ -69,17 +57,9 @@ docker exec zzaia-workspace cat /tmp/code-server.log
 
 ---
 
-## SSH
-
-```bash
-ssh -p 2222 zzaia@localhost
-```
-
----
-
 ## Browser authentication (OAuth flows)
 
-The container is headless — tools that open a browser will instead print the URL to the terminal. Copy-paste it into your local browser.
+The container is headless — tools that open a browser print the URL to the terminal instead. Copy-paste it into your local browser.
 
 ---
 
@@ -115,9 +95,9 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 ## Container logs
 
 ```bash
-docker logs zzaia-workspace          # sshd logs
-docker exec zzaia-workspace cat /tmp/code-server.log  # code-server logs
-docker logs mcp-tavily               # MCP sidecar logs
+docker logs zzaia-workspace                            # sshd logs
+docker exec zzaia-workspace cat /tmp/code-server.log   # code-server logs
+docker logs mcp-tavily                                 # MCP sidecar logs
 ```
 
 ---
@@ -128,6 +108,7 @@ docker logs mcp-tavily               # MCP sidecar logs
 |---------|-------|
 | Workspace secrets | SSH key only — no API keys in workspace container |
 | MCP secrets | Isolated per sidecar container, internal network only |
+| Secret handling | Piped in-memory at install time — no .env file on disk |
 | Host filesystem | No mounts except docker socket and secrets volume |
 | Host network | Bridge only, workspace ports bound to 127.0.0.1 |
 | MCP ports | Internal only — not exposed to host |
@@ -142,8 +123,8 @@ docker logs mcp-tavily               # MCP sidecar logs
 ```
 docker/
 ├── Dockerfile          — Image definition
+├── .mcp.json           — MCP HTTP sidecar config (overrides root .mcp.json in image)
 ├── entrypoint.sh       — SSH key init + code-server + sshd startup
 ├── sshd_config         — Port 2222, key-auth only
-├── docker-compose.yml  — Workspace + MCP sidecar services
-└── .env                — Local secrets (gitignored, create manually)
+└── docker-compose.yml  — Workspace + MCP sidecar services
 ```
