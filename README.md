@@ -9,27 +9,32 @@
 
 > For full onboarding instructions see [QUICKSTART.md](QUICKSTART.md).
 
-Run the install script once — it fetches secrets from Bitwarden, starts the Docker Compose stack, and leaves no secrets on disk. After that, start/stop from Docker Desktop.
+Fill in your secrets and run once — nothing is written to disk. After the first start, use Docker Desktop to start/stop.
 
 ```bash
-# Ubuntu / WSL
-./install-compose.sh
+# Ubuntu / macOS / WSL
+SSH_PUBLIC_KEY=""
+TAVILY_API_KEY=""
+ADO_MCP_AUTH_TOKEN=""
+AZURE_DEVOPS_ORGANIZATION=""
+POSTMAN_API_KEY=""
+NEW_RELIC_API_KEY=""
 
-# macOS
-./install-compose-mac.sh
-
-# Windows (PowerShell 7)
-.\install-compose.ps1
+docker compose \
+    -f "./docker/docker-compose.yml" \
+    -p "$AZURE_DEVOPS_ORGANIZATION" \
+    --env-file <(
+        printf 'SSH_PUBLIC_KEY=%s\n'            "$SSH_PUBLIC_KEY"
+        printf 'TAVILY_API_KEY=%s\n'            "$TAVILY_API_KEY"
+        printf 'ADO_MCP_AUTH_TOKEN=%s\n'        "$ADO_MCP_AUTH_TOKEN"
+        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n' "$AZURE_DEVOPS_ORGANIZATION"
+        printf 'POSTMAN_API_KEY=%s\n'           "$POSTMAN_API_KEY"
+        printf 'NEW_RELIC_API_KEY=%s\n'         "$NEW_RELIC_API_KEY"
+    ) \
+    up -d
 ```
 
 Access the workspace at `http://localhost:8080` (VS Code) or `ssh -p 2222 zzaia@localhost`.
-
-### Use as Remote Plugin
-
-```bash
-/plugin marketplace add zzaia/zzaia-agentic-workspace
-/plugin install zzaia-workspace@zzaia
-```
 
 ## 🏗️ Command Hierarchy
 
