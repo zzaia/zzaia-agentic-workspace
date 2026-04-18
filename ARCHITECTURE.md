@@ -101,9 +101,10 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ### ADR 001: Docker Compose Project Namespacing for Multi-Tenancy
 
-**Decision**: Each workspace instance is started with `docker compose -p <organization>`, giving every stack a unique container prefix (`<org>-workspace-1`, `<org>-mcp-tavily-1`, etc.) and an isolated bridge network.
+**Decision**: Each workspace instance is started with `docker compose -p $WORKSPACE_NAME`, giving every stack a unique container prefix (`<workspace>-workspace-1`, `<workspace>-mcp-tavily-1`, etc.) and an isolated bridge network.
 
-- Different organizations run simultaneously on the same Docker host
+- `WORKSPACE_NAME` is a free-form slug chosen by the developer — independent of the ADO organization name
+- Different workspaces run simultaneously on the same Docker host
 - Port conflicts avoided via `VSCODE_PORT` and `SSH_PORT` environment variables per stack
 - Container names derived from project + service, never hardcoded
 
@@ -119,6 +120,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 - Agents call tools via MCP SSE (`http://mcp-tavily:3001/sse`) — the key is used inside the sidecar and the result returned
 - Secrets are never in the agent's environment, terminal history, or context window
 - Adding a new integration = adding one sidecar service with its own secret
+- Each sidecar guards its own key at startup: if the key is empty the process exits cleanly (code 0) and does not restart — `restart: no` prevents crash loops on missing optional keys
 
 **Rationale**: Sidecar-per-secret is the minimal surface area principle applied to secrets. Even if the agent is fully autonomous (`--dangerously-skip-permissions`), it cannot exfiltrate API keys because they are not present in its container.
 

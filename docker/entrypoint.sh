@@ -4,6 +4,8 @@ set -euo pipefail
 
 SECRETS_FILE=/secrets/.env
 mkdir -p /secrets
+chown -R zzaia:zzaia /secrets 2>/dev/null || true
+chmod 700 /secrets 2>/dev/null || true
 
 mkdir -p /run/sshd
 ssh-keygen -A 2>/dev/null || true

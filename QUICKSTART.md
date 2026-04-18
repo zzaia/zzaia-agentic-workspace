@@ -16,18 +16,19 @@
 
 You will need the following values before starting:
 
-| Variable | Description | Where to Get |
-|----------|-------------|--------------|
-| `SSH_PUBLIC_KEY` | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
-| `TAVILY_API_KEY` | Tavily API key | [tavily.com](https://tavily.com) |
-| `ADO_MCP_AUTH_TOKEN` | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
-| `AZURE_DEVOPS_ORGANIZATION` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
-| `POSTMAN_API_KEY` | Postman API key | [postman.com → Account Settings → API Keys](https://postman.com) |
-| `NEW_RELIC_API_KEY` | New Relic User API key | [New Relic → API Keys](https://one.newrelic.com/admin-portal/api-keys) |
-| `VSCODE_PORT` | Host port for VS Code browser access | Default: `8080` |
-| `SSH_PORT` | Host port for SSH access | Default: `2222` |
+| Variable | Required | Description | Where to Get |
+|----------|----------|-------------|--------------|
+| `WORKSPACE_NAME` | ✅ | Unique name for this workspace instance (used as Docker Compose project name) | Choose any slug, e.g. `my-org` |
+| `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
+| `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
+| `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
+| `TAVILY_API_KEY` | Optional | Tavily API key | [tavily.com](https://tavily.com) |
+| `ADO_MCP_AUTH_TOKEN` | Optional | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
+| `AZURE_DEVOPS_ORGANIZATION` | Optional | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
+| `POSTMAN_API_KEY` | Optional | Postman API key | [postman.com → Account Settings → API Keys](https://postman.com) |
+| `NEW_RELIC_API_KEY` | Optional | New Relic User API key | [New Relic → API Keys](https://one.newrelic.com/admin-portal/api-keys) |
 
-> API keys you don't have yet can be left empty — the workspace will warn and continue without them.
+> MCP integrations are optional — leave any key empty and that sidecar exits cleanly without restarting.
 
 ---
 
@@ -38,6 +39,7 @@ Fill in your values and run the command for your platform. No files are written 
 ### Ubuntu / macOS / WSL
 
 ```bash
+WORKSPACE_NAME="my-org"
 SSH_PUBLIC_KEY=""
 TAVILY_API_KEY=""
 ADO_MCP_AUTH_TOKEN=""
@@ -49,8 +51,9 @@ SSH_PORT="2222"
 
 docker compose \
     -f "./docker/docker-compose.yml" \
-    -p "$AZURE_DEVOPS_ORGANIZATION" \
+    -p "$WORKSPACE_NAME" \
     --env-file <(
+        printf 'WORKSPACE_NAME=%s\n'            "$WORKSPACE_NAME"
         printf 'SSH_PUBLIC_KEY=%s\n'            "$SSH_PUBLIC_KEY"
         printf 'TAVILY_API_KEY=%s\n'            "$TAVILY_API_KEY"
         printf 'ADO_MCP_AUTH_TOKEN=%s\n'        "$ADO_MCP_AUTH_TOKEN"
@@ -66,6 +69,7 @@ docker compose \
 ### Windows
 
 ```powershell
+$WORKSPACE_NAME            = "my-org"
 $SSH_PUBLIC_KEY            = ""
 $TAVILY_API_KEY            = ""
 $ADO_MCP_AUTH_TOKEN        = ""
@@ -75,6 +79,7 @@ $NEW_RELIC_API_KEY         = ""
 $VSCODE_PORT               = "8080"
 $SSH_PORT                  = "2222"
 
+$env:WORKSPACE_NAME            = $WORKSPACE_NAME
 $env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
 $env:TAVILY_API_KEY            = $TAVILY_API_KEY
 $env:ADO_MCP_AUTH_TOKEN        = $ADO_MCP_AUTH_TOKEN
@@ -86,10 +91,10 @@ $env:SSH_PORT                  = $SSH_PORT
 
 docker compose `
     -f ".\docker\docker-compose.yml" `
-    -p $AZURE_DEVOPS_ORGANIZATION `
+    -p $WORKSPACE_NAME `
     up -d
 
-'SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
+'WORKSPACE_NAME','SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
 'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
@@ -157,7 +162,7 @@ All configured tools should show as connected. Then verify commands are availabl
 | Symptom | Fix |
 |---------|-----|
 | MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
-| Container not starting | Run `docker logs <org>-workspace-1` or `docker logs <org>-mcp-azure-devops-1` |
+| Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
 
@@ -165,17 +170,17 @@ All configured tools should show as connected. Then verify commands are availabl
 
 ## Running Multiple Workspaces Simultaneously
 
-Each organization gets its own isolated Docker Compose stack. Use different ports per stack so they can run at the same time:
+Each workspace gets its own isolated Docker Compose stack identified by `WORKSPACE_NAME`. Use different ports per stack so they can run at the same time:
 
 ```bash
-# Org 1 — default ports
-AZURE_DEVOPS_ORGANIZATION="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$AZURE_DEVOPS_ORGANIZATION" \
+# Workspace 1 — default ports
+WORKSPACE_NAME="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" \
     --env-file <(...) up -d
 
-# Org 2 — different ports
-AZURE_DEVOPS_ORGANIZATION="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$AZURE_DEVOPS_ORGANIZATION" \
+# Workspace 2 — different ports
+WORKSPACE_NAME="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" \
     --env-file <(...) up -d
 ```
 
@@ -204,7 +209,7 @@ NEW_VALUE="new-key-here"
 
 docker compose \
     -f "./docker/docker-compose.yml" \
-    -p "$AZURE_DEVOPS_ORGANIZATION" \
+    -p "$WORKSPACE_NAME" \
     --env-file <(
         printf 'TAVILY_API_KEY=%s\n' "$NEW_VALUE"
         # include the other vars unchanged...
@@ -219,7 +224,7 @@ $env:TAVILY_API_KEY = "new-key-here"
 
 docker compose `
     -f ".\docker\docker-compose.yml" `
-    -p $env:AZURE_DEVOPS_ORGANIZATION `
+    -p $env:WORKSPACE_NAME `
     up -d --force-recreate mcp-tavily
 ```
 
