@@ -219,9 +219,6 @@ __marimo__/
 !QUICKSTART.md
 !Init-ubuntu.sh
 !Init-windows.ps1
-!install-compose.sh
-!install-compose-mac.sh
-!install-compose.ps1
 !mise.toml
 !.claudeignore
 !.mcp.json
