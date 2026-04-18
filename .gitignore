@@ -217,6 +217,7 @@ __marimo__/
 !LICENSE
 !README.md
 !QUICKSTART.md
+!ARCHITECTURE.md
 !Init-ubuntu.sh
 !Init-windows.ps1
 !mise.toml

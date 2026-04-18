@@ -201,6 +201,7 @@ The `host/` directory contains a .NET Aspire AppHost — a template for running 
 
 The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via `mise.toml`. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
+> See [ARCHITECTURE.md](ARCHITECTURE.md) for architectural decisions and security model.
 > See [docker/DOCKER.md](docker/DOCKER.md) for full setup details.
 
 ## 🤖 Specialized Agents
@@ -311,6 +312,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
+- **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Documentation**: [CLAUDE.md](CLAUDE.md)
 - **Claude Code Docs**: [code.claude.com/docs](https://code.claude.com/docs/en/overview)
 - **Marketplace**: [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
