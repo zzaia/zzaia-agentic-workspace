@@ -1,23 +1,24 @@
 # ZZAIA Workspace — Local Docker deployment
-# First start: run install-compose.sh — secrets piped in-memory, nothing written to disk.
-# Subsequent starts: Docker Desktop or `docker compose start`.
+# First start: fill in variables and run docker compose up -d (see QUICKSTART.md).
+# Subsequent starts: Docker Desktop or `docker compose -p <org> start`.
+# Multiple orgs: set different VSCODE_PORT / SSH_PORT per stack.
 name: zzaia
 
 services:
-  zzaia:
+  workspace:
     build:
       context: ..
       dockerfile: docker/Dockerfile
     image: zzaia-workspace:latest
     ports:
-      - "127.0.0.1:2222:2222"
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${VSCODE_PORT:-8080}:8080"
+      - "127.0.0.1:${SSH_PORT:-2222}:2222"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - ~/.config/zzaia:/secrets
       - ./host:/home/zzaia/host
     environment:
-      - SSH_PUBLIC_KEY
+      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
     networks:
       - mcp
     security_opt:
@@ -43,7 +44,7 @@ services:
   mcp-tavily:
     image: node:lts-alpine
     environment:
-      - TAVILY_API_KEY
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
     command:
       - npx
       - -y
@@ -59,8 +60,8 @@ services:
   mcp-azure-devops:
     image: node:lts-alpine
     environment:
-      - ADO_MCP_AUTH_TOKEN
-      - AZURE_DEVOPS_ORGANIZATION
+      - ADO_MCP_AUTH_TOKEN=${ADO_MCP_AUTH_TOKEN:-}
+      - AZURE_DEVOPS_ORGANIZATION=${AZURE_DEVOPS_ORGANIZATION:-}
     command:
       - sh
       - -c
@@ -74,7 +75,7 @@ services:
   mcp-postman:
     image: node:lts-alpine
     environment:
-      - POSTMAN_API_KEY
+      - POSTMAN_API_KEY=${POSTMAN_API_KEY:-}
     command:
       - npx
       - -y
@@ -90,7 +91,7 @@ services:
   mcp-newrelic:
     image: node:lts-alpine
     environment:
-      - NEW_RELIC_API_KEY
+      - NEW_RELIC_API_KEY=${NEW_RELIC_API_KEY:-}
     command:
       - sh
       - -c

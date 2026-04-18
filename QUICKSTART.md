@@ -12,7 +12,7 @@
 
 ---
 
-## Step 1 — Gather Your Secrets
+## Step 1 — Gather Your Values
 
 You will need the following values before starting:
 
@@ -24,8 +24,10 @@ You will need the following values before starting:
 | `AZURE_DEVOPS_ORGANIZATION` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
 | `POSTMAN_API_KEY` | Postman API key | [postman.com → Account Settings → API Keys](https://postman.com) |
 | `NEW_RELIC_API_KEY` | New Relic User API key | [New Relic → API Keys](https://one.newrelic.com/admin-portal/api-keys) |
+| `VSCODE_PORT` | Host port for VS Code browser access | Default: `8080` |
+| `SSH_PORT` | Host port for SSH access | Default: `2222` |
 
-> Items you don't have yet can be left empty — the workspace will warn and continue without them.
+> API keys you don't have yet can be left empty — the workspace will warn and continue without them.
 
 ---
 
@@ -42,6 +44,8 @@ ADO_MCP_AUTH_TOKEN=""
 AZURE_DEVOPS_ORGANIZATION=""
 POSTMAN_API_KEY=""
 NEW_RELIC_API_KEY=""
+VSCODE_PORT="8080"
+SSH_PORT="2222"
 
 docker compose \
     -f "./docker/docker-compose.yml" \
@@ -53,6 +57,8 @@ docker compose \
         printf 'AZURE_DEVOPS_ORGANIZATION=%s\n' "$AZURE_DEVOPS_ORGANIZATION"
         printf 'POSTMAN_API_KEY=%s\n'           "$POSTMAN_API_KEY"
         printf 'NEW_RELIC_API_KEY=%s\n'         "$NEW_RELIC_API_KEY"
+        printf 'VSCODE_PORT=%s\n'               "$VSCODE_PORT"
+        printf 'SSH_PORT=%s\n'                  "$SSH_PORT"
     ) \
     up -d
 ```
@@ -66,6 +72,8 @@ $ADO_MCP_AUTH_TOKEN        = ""
 $AZURE_DEVOPS_ORGANIZATION = ""
 $POSTMAN_API_KEY           = ""
 $NEW_RELIC_API_KEY         = ""
+$VSCODE_PORT               = "8080"
+$SSH_PORT                  = "2222"
 
 $env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
 $env:TAVILY_API_KEY            = $TAVILY_API_KEY
@@ -73,6 +81,8 @@ $env:ADO_MCP_AUTH_TOKEN        = $ADO_MCP_AUTH_TOKEN
 $env:AZURE_DEVOPS_ORGANIZATION = $AZURE_DEVOPS_ORGANIZATION
 $env:POSTMAN_API_KEY           = $POSTMAN_API_KEY
 $env:NEW_RELIC_API_KEY         = $NEW_RELIC_API_KEY
+$env:VSCODE_PORT               = $VSCODE_PORT
+$env:SSH_PORT                  = $SSH_PORT
 
 docker compose `
     -f ".\docker\docker-compose.yml" `
@@ -80,7 +90,7 @@ docker compose `
     up -d
 
 'SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
-'POSTMAN_API_KEY','NEW_RELIC_API_KEY' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
 After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
@@ -91,8 +101,8 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 
 | Access | URL / Command |
 |--------|--------------|
-| **VS Code** (browser) | `http://localhost:8080` |
-| **SSH** | `ssh -p 2222 zzaia@localhost` |
+| **VS Code** (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) |
+| **SSH** | `ssh -p <SSH_PORT> zzaia@localhost` (default `2222`) |
 
 The Claude Code extension is pre-installed. All MCP tools (Tavily, Azure DevOps, Postman, New Relic) connect automatically via isolated sidecar containers.
 
@@ -147,9 +157,38 @@ All configured tools should show as connected. Then verify commands are availabl
 | Symptom | Fix |
 |---------|-----|
 | MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
-| Container not starting | Run `docker logs <org>-zzaia-1` or `docker logs <org>-mcp-azure-devops-1` |
+| Container not starting | Run `docker logs <org>-workspace-1` or `docker logs <org>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
+
+---
+
+## Running Multiple Workspaces Simultaneously
+
+Each organization gets its own isolated Docker Compose stack. Use different ports per stack so they can run at the same time:
+
+```bash
+# Org 1 — default ports
+AZURE_DEVOPS_ORGANIZATION="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$AZURE_DEVOPS_ORGANIZATION" \
+    --env-file <(...) up -d
+
+# Org 2 — different ports
+AZURE_DEVOPS_ORGANIZATION="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$AZURE_DEVOPS_ORGANIZATION" \
+    --env-file <(...) up -d
+```
+
+Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, and separate internal networks.
+
+**Recommended port assignments:**
+
+| Workspace | `VSCODE_PORT` | `SSH_PORT` |
+|-----------|--------------|------------|
+| org-one   | `8080`       | `2222`     |
+| org-two   | `8081`       | `2223`     |
+| org-three | `8082`       | `2224`     |
+| org-four  | `8083`       | `2225`     |
 
 ---
 
