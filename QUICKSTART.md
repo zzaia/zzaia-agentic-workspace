@@ -190,16 +190,22 @@ docker compose `
 
 ## Available Commands Reference
 
-| Command | Purpose |
-|---------|---------|
-| `/behavior:workspace:repo` | Clone repo or create branch worktree |
-| `/behavior:devops:work-item` | Read or manage work items |
-| `/behavior:devops:pull-request` | Manage pull requests |
-| `/workflow:remote:implement` | Full implementation from work item to PR |
-| `/workflow:remote:architect` | Generate BDD, Epic, and work items from a spec |
-| `/workflow:remote:homologate` | Run E2E BDD against a live URL |
-| `/behavior:development:develop` | Apply targeted changes to a branch |
-| `/behavior:development:git` | Git commit and push |
-| `/behavior:devops:pipeline` | Run or debug CI/CD pipelines |
+| Command | Purpose | Definition |
+|---------|---------|------------|
+| `/behavior:workspace:repo` | Clone repo or create branch worktree | [↗](.claude/commands/behavior/workspace/repo.md) |
+| `/behavior:devops:work-item` | Read or manage work items | [↗](.claude/commands/behavior/devops/work-item.md) |
+| `/behavior:devops:pull-request` | Manage pull requests | [↗](.claude/commands/behavior/devops/pull-request.md) |
+| `/behavior:devops:pipeline` | Run or debug CI/CD pipelines | [↗](.claude/commands/behavior/devops/pipeline.md) |
+| `/behavior:devops:new-relic` | New Relic log diagnostics | [↗](.claude/commands/behavior/devops/new-relic.md) |
+| `/behavior:development:develop` | Apply targeted changes to a branch | [↗](.claude/commands/behavior/development/develop.md) |
+| `/behavior:development:build` | Multi-framework builds | [↗](.claude/commands/behavior/development/build.md) |
+| `/behavior:development:test` | Comprehensive testing | [↗](.claude/commands/behavior/development/test.md) |
+| `/behavior:development:review` | Code quality review | [↗](.claude/commands/behavior/development/review.md) |
+| `/behavior:development:git` | Git commit and push | [↗](.claude/commands/behavior/development/git.md) |
+| `/workflow:remote:implement` | Full implementation from work item to PR | [↗](.claude/commands/workflow/remote/implement.md) |
+| `/workflow:remote:architect` | Generate BDD, Epic, and work items from a spec | [↗](.claude/commands/workflow/remote/architect.md) |
+| `/workflow:remote:homologate` | Run E2E BDD against a live URL | [↗](.claude/commands/workflow/remote/homologate.md) |
+| `/workflow:remote:fix-pipeline` | Iterative pipeline repair loop | [↗](.claude/commands/workflow/remote/fix-pipeline.md) |
+| `/orchestrator:implement` | Implement multiple work items in parallel | [↗](.claude/commands/orchestrator/implement/SKILL.md) |
 
-Full command reference: [README.md](README.md)
+Full reference: [README.md](README.md)
