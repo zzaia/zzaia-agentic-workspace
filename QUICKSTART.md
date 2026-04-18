@@ -1,6 +1,6 @@
 # ZZAIA Agentic Workspace — Quick Start
 
-> Get the workspace running in under 15 minutes.
+> Get the workspace running in under 5 minutes.
 
 ---
 
@@ -9,68 +9,81 @@
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Docker Desktop** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
-| **Bitwarden CLI** | Fetches secrets once at install time | See below |
-
-#### Bitwarden CLI
-
-```bash
-# Ubuntu / WSL
-sudo snap install bw && sudo snap install jq
-
-# macOS
-brew install bitwarden-cli jq
-
-# Windows (PowerShell 7)
-winget install --id Bitwarden.BitwardenCLI
-```
 
 ---
 
-## Step 1 — Create Bitwarden Items
+## Step 1 — Gather Your Secrets
 
-Create the following items in your **Bitwarden vault** using the **Login** type. Store each value as the item **Password** field.
+You will need the following values before starting:
 
-| Bitwarden Item Name | Password Value | Service |
-|---------------------|----------------|---------|
-| `ssh-public-key` | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | Local SSH key |
-| `tavily` | Tavily API key | [tavily.com](https://tavily.com) |
-| `azure-devops-pat` | Azure DevOps Personal Access Token | [Azure DevOps](https://dev.azure.com) |
-| `azure-devops-org` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps |
-| `postman` | Postman API key | [postman.com](https://postman.com) |
-| `new-relic` | New Relic API key | [newrelic.com](https://newrelic.com) |
+| Variable | Description | Where to Get |
+|----------|-------------|--------------|
+| `SSH_PUBLIC_KEY` | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
+| `TAVILY_API_KEY` | Tavily API key | [tavily.com](https://tavily.com) |
+| `ADO_MCP_AUTH_TOKEN` | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
+| `AZURE_DEVOPS_ORGANIZATION` | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
+| `POSTMAN_API_KEY` | Postman API key | [postman.com → Account Settings → API Keys](https://postman.com) |
+| `NEW_RELIC_API_KEY` | New Relic User API key | [New Relic → API Keys](https://one.newrelic.com/admin-portal/api-keys) |
 
-> Items you don't have credentials for can be skipped — the workspace will warn and continue without them.
-
-> Generate an SSH key if needed: `ssh-keygen -t ed25519 -f ~/.ssh/zzaia_key -N ""`
+> Items you don't have yet can be left empty — the workspace will warn and continue without them.
 
 ---
 
-## Step 2 — Install & Start (once per environment)
+## Step 2 — Start the Workspace
 
-Run the install script for your platform. It fetches all secrets from Bitwarden, starts the Docker Compose stack named after your Azure DevOps organization, then discards all secrets — **no .env file is left on disk**.
+Fill in your values and run the command for your platform. No files are written to disk.
 
-### Ubuntu / WSL
-
-```bash
-chmod +x install-compose.sh
-./install-compose.sh
-```
-
-### macOS
+### Ubuntu / macOS / WSL
 
 ```bash
-chmod +x install-compose-mac.sh
-./install-compose-mac.sh
+SSH_PUBLIC_KEY=""
+TAVILY_API_KEY=""
+ADO_MCP_AUTH_TOKEN=""
+AZURE_DEVOPS_ORGANIZATION=""
+POSTMAN_API_KEY=""
+NEW_RELIC_API_KEY=""
+
+docker compose \
+    -f "./docker/docker-compose.yml" \
+    -p "$AZURE_DEVOPS_ORGANIZATION" \
+    --env-file <(
+        printf 'SSH_PUBLIC_KEY=%s\n'            "$SSH_PUBLIC_KEY"
+        printf 'TAVILY_API_KEY=%s\n'            "$TAVILY_API_KEY"
+        printf 'ADO_MCP_AUTH_TOKEN=%s\n'        "$ADO_MCP_AUTH_TOKEN"
+        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n' "$AZURE_DEVOPS_ORGANIZATION"
+        printf 'POSTMAN_API_KEY=%s\n'           "$POSTMAN_API_KEY"
+        printf 'NEW_RELIC_API_KEY=%s\n'         "$NEW_RELIC_API_KEY"
+    ) \
+    up -d
 ```
 
 ### Windows (PowerShell 7)
 
 ```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-.\install-compose.ps1
+$SSH_PUBLIC_KEY            = ""
+$TAVILY_API_KEY            = ""
+$ADO_MCP_AUTH_TOKEN        = ""
+$AZURE_DEVOPS_ORGANIZATION = ""
+$POSTMAN_API_KEY           = ""
+$NEW_RELIC_API_KEY         = ""
+
+$env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
+$env:TAVILY_API_KEY            = $TAVILY_API_KEY
+$env:ADO_MCP_AUTH_TOKEN        = $ADO_MCP_AUTH_TOKEN
+$env:AZURE_DEVOPS_ORGANIZATION = $AZURE_DEVOPS_ORGANIZATION
+$env:POSTMAN_API_KEY           = $POSTMAN_API_KEY
+$env:NEW_RELIC_API_KEY         = $NEW_RELIC_API_KEY
+
+docker compose `
+    -f ".\docker\docker-compose.yml" `
+    -p $AZURE_DEVOPS_ORGANIZATION `
+    up -d
+
+'SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
+'POSTMAN_API_KEY','NEW_RELIC_API_KEY' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
-After the first run, **start or stop the workspace from Docker Desktop** — no script needed again. To recreate containers (e.g. after a secret rotation), re-run the install script.
+After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
 
 ---
 
@@ -81,34 +94,13 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 | **VS Code** (browser) | `http://localhost:8080` |
 | **SSH** | `ssh -p 2222 zzaia@localhost` |
 
-The Claude Code extension is pre-installed in VS Code. All MCP tools (Tavily, Azure DevOps, Postman, New Relic) connect automatically via isolated sidecar containers.
+The Claude Code extension is pre-installed. All MCP tools (Tavily, Azure DevOps, Postman, New Relic) connect automatically via isolated sidecar containers.
 
 ---
 
-## Step 4 — Add the Plugin Marketplace
+## Step 4 — Verify Setup
 
 Inside Claude Code, run:
-
-```
-/plugins
-```
-
-Navigate to **Marketplace → Add Marketplaces** and add:
-
-```
-https://github.com/zzaia/zzaia-agentic-workspace.git
-```
-
-Then install the workspace plugin:
-
-```
-/plugin install zzaia-workspace@zzaia
-/reload-plugins
-```
-
----
-
-## Step 5 — Verify Setup
 
 ```
 /mcp
@@ -122,7 +114,7 @@ All configured tools should show as connected. Then verify commands are availabl
 
 ---
 
-## Step 6 — Start Working
+## Step 5 — Start Working
 
 ### Clone your first repository
 
@@ -155,50 +147,44 @@ All configured tools should show as connected. Then verify commands are availabl
 | Symptom | Fix |
 |---------|-----|
 | MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
-| `bw: command not found` | Install Bitwarden CLI — see Prerequisites |
-| `jq: command not found` | `sudo apt-get install jq` or `brew install jq` |
-| PowerShell script blocked | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Bitwarden item not found | Verify item name matches exactly (e.g. `tavily`) and type is Login |
-| Container not starting | Check `docker logs <org>-zzaia-workspace-1` |
+| Container not starting | Run `docker logs <org>-zzaia-1` or `docker logs <org>-mcp-azure-devops-1` |
+| Port already in use | Stop any existing stack via Docker Desktop before re-running |
+| SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
 
 ---
 
 ## Secret Rotation
 
-To rotate a single MCP secret:
+To rotate a secret, re-run the Step 2 command with the updated value. Docker will recreate only the containers whose environment changed.
 
-1. Update the item in Bitwarden
-2. Re-run the install script — it recreates only the affected container:
-
-```bash
-# Or target a single service after updating docker/.env manually
-docker compose -f docker/docker-compose.yml -p <org> up -d --force-recreate mcp-tavily
-```
-
----
-
-## Alternative: Local CLI Mode
-
-If you prefer running Claude Code directly on your machine (without Docker), use the Init scripts. Secrets are loaded from Bitwarden into the terminal session only — never written to disk.
-
-### Ubuntu / WSL
+To recreate a single service without restarting the whole stack, set the updated variable and run:
 
 ```bash
-chmod +x Init-ubuntu.sh
-./Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]
-```
+# Ubuntu / macOS — rotate a single MCP service
+NEW_VALUE="new-key-here"
 
-### Windows (PowerShell 7)
+docker compose \
+    -f "./docker/docker-compose.yml" \
+    -p "$AZURE_DEVOPS_ORGANIZATION" \
+    --env-file <(
+        printf 'TAVILY_API_KEY=%s\n' "$NEW_VALUE"
+        # include the other vars unchanged...
+    ) \
+    up -d --force-recreate mcp-tavily
+```
 
 ```powershell
-.\Init-windows.ps1 -SessionName <name> [-FullAutomatic]
+# Windows PowerShell — rotate a single MCP service
+$env:TAVILY_API_KEY = "new-key-here"
+# set other vars as needed...
+
+docker compose `
+    -f ".\docker\docker-compose.yml" `
+    -p $env:AZURE_DEVOPS_ORGANIZATION `
+    up -d --force-recreate mcp-tavily
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--session-name` / `-SessionName` | **Required.** Named session for resume across restarts |
-| `--full-automatic` / `-FullAutomatic` | Skip permission prompts |
-| `--tmux` | Ubuntu/WSL only. Wrap in a tmux session |
+> The SSH public key is persisted to `~/.config/zzaia/.env` on first start. To rotate it, delete that file and re-run the full Step 2 command.
 
 ---
 
