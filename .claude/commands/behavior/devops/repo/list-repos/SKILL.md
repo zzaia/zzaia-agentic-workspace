@@ -21,6 +21,13 @@ metadata:
 
 Retrieve and display a list of all repositories within a specified project or organization across Azure DevOps or GitHub.
 
+## EXAMPLES
+
+```
+/capability:repo:list-repos --portal azure --project MyOrg
+/capability:repo:list-repos --portal github --project my-org
+```
+
 ## EXECUTION
 
 1. **Validate inputs**: Confirm portal and project parameters are provided
@@ -59,13 +66,6 @@ sequenceDiagram
 - Repository names are clearly displayed
 - List includes basic repository metadata (if available)
 - Graceful handling of empty projects
-
-## EXAMPLES
-
-```
-/capability:repo:list-repos --portal azure --project MyOrg
-/capability:repo:list-repos --portal github --project my-org
-```
 
 ## OUTPUT
 

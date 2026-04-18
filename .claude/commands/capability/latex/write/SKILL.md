@@ -27,6 +27,13 @@ metadata:
 
 Compile LaTeX documents to PDF using the tectonic engine. Accepts a Jinja2-templated `.tex.j2` file, auto-generates diagrams from Mermaid/Graphviz code in `--data`, renders the template, and produces a PDF output file.
 
+## EXAMPLES
+
+```
+/capability:latex:write --template ./templates/document.tex.j2 --output ~/report.pdf --data '{"title":"My Report","author":"John Doe"}'
+/capability:latex:write --template /absolute/path/template.tex.j2 --output ./output/document.pdf
+```
+
 ## EXECUTION
 
 1. **Validate Input**: Check template path and output directory
@@ -102,13 +109,6 @@ sequenceDiagram
 - Handles tectonic compilation errors with meaningful output
 - Cleans up temporary files after successful compilation
 - Reports missing tectonic dependency with installation instructions
-
-## EXAMPLES
-
-```
-/capability:latex:write --template ./templates/document.tex.j2 --output ~/report.pdf --data '{"title":"My Report","author":"John Doe"}'
-/capability:latex:write --template /absolute/path/template.tex.j2 --output ./output/document.pdf
-```
 
 ## OUTPUT
 

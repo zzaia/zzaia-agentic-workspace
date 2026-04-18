@@ -35,6 +35,14 @@ Analyze available context through a hierarchical thinking approach to produce ar
 - **Vertical Slice Architecture** — feature-focused organization
 - **Microservice Architecture** — autonomous, bounded services with independent deployability
 
+## EXAMPLES
+
+```
+/architect --work-description "Multi-tenant SaaS with microservices" --focus "service-architecture"
+/architect --work-directory ./workspace/payments.worktrees/master --context "PCI-DSS compliance required"
+/architect --work-description "Event-driven order processing" --work-directory ./workspace/orders.worktrees/feature/checkout --focus "data-model"
+/architect --work-description "Real-time notifications system" --focus "test-plan"
+```
 ## EXECUTION
 
 Output thinking through a 4-layer hierarchy (analysis only, no document generation):
@@ -130,11 +138,3 @@ Before executing the 4-layer thinking:
    - Identify conflicts or inconsistencies between layers
    - Trace trade-offs from business requirements through implementation
 
-## EXAMPLES
-
-```
-/architect --work-description "Multi-tenant SaaS with microservices" --focus "service-architecture"
-/architect --work-directory ./workspace/payments.worktrees/master --context "PCI-DSS compliance required"
-/architect --work-description "Event-driven order processing" --work-directory ./workspace/orders.worktrees/feature/checkout --focus "data-model"
-/architect --work-description "Real-time notifications system" --focus "test-plan"
-```

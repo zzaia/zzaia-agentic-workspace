@@ -25,6 +25,13 @@ orchestrator → workflow → behavior → capability → template
 
 Each command is a markdown file with YAML frontmatter inside `.claude/commands/` — Claude Code identifies them as slash commands by their location and frontmatter.
 
+## EXAMPLES
+
+```
+/<layer>:<domain>:<name> --action <action>
+/<layer>:<domain>:<name> --action <action> --description "<context>"
+```
+
 ## TASK
 
 1. **Fetch Documentation**: Get latest Claude Code slash command spec from:
@@ -89,6 +96,12 @@ parameters:
 
 <What this command does and why — single responsibility>
 
+## EXAMPLES
+
+```bash
+/<layer>:<domain>:<name> --action <action> --param <value>
+```
+
 ## EXECUTION
 
 1. **<Phase>**: <Description>
@@ -113,13 +126,6 @@ sequenceDiagram
     C->>A: Delegate with resolved parameters
     A-->>C: Result
     C-->>U: Return output
-```
-
-## EXAMPLES
-
-```
-/<layer>:<domain>:<name> --action <action>
-/<layer>:<domain>:<name> --action <action> --description "<context>"
 ```
 
 ## OUTPUT

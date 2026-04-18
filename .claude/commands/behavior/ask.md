@@ -23,6 +23,23 @@ parameters:
 
 Provide intelligent question answering, clarification or query through read-only information gathering without system modifications.
 
+## EXAMPLES
+
+```bash
+# General system question
+/behavior:ask "How does authentication work in this system?"
+
+# Specific technical question
+/behavior:ask "What are the database migration patterns used?" context="compliance-hub"
+
+# Architecture question
+/behavior:ask "Explain the microservices communication strategy"
+
+# Multiple questions
+/behavior:ask "Explain the microservices communication strategy in this repository. Also the news about the microservice architecture"
+
+```
+
 ## EXECUTION
 
 1. **Query Analysis**
@@ -78,23 +95,6 @@ sequenceDiagram
 
     C->>C: Synthesize comprehensive answer
     C-->>U: Formatted response
-```
-
-## EXAMPLES
-
-```bash
-# General system question
-/behavior:ask "How does authentication work in this system?"
-
-# Specific technical question
-/behavior:ask "What are the database migration patterns used?" context="compliance-hub"
-
-# Architecture question
-/behavior:ask "Explain the microservices communication strategy"
-
-# Multiple questions
-/behavior:ask "Explain the microservices communication strategy in this repository. Also the news about the microservice architecture"
-
 ```
 
 ## OUTPUT

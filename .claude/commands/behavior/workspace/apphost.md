@@ -26,6 +26,14 @@ parameters:
 
 Single interface for Aspire AppHost management. Routes to setup or diagnostics based on `--action`.
 
+## EXAMPLES
+
+```
+/behavior:workspace:apphost --action setup --applications "order-service payment-service:feature/checkout"
+/behavior:workspace:apphost --action debug
+/behavior:workspace:apphost --action debug --application api-service
+```
+
 ## ACTIONS
 
 | Action  | Description                                                  |
@@ -90,14 +98,6 @@ sequenceDiagram
 
 - `setup`: all worktrees valid, build passes, all services appear in Aspire resource list
 - `debug`: read-only, report includes summary table per application
-
-## EXAMPLES
-
-```
-/behavior:workspace:apphost --action setup --applications "order-service payment-service:feature/checkout"
-/behavior:workspace:apphost --action debug
-/behavior:workspace:apphost --action debug --application api-service
-```
 
 ## OUTPUT
 

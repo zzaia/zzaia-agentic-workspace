@@ -33,6 +33,14 @@ parameters:
 
 Orchestrate complete homologation (QA/acceptance testing) workflow for one or more applications simultaneously. Validates work item requirements, creates homologation branches, develops comprehensive test cases, executes tests against integrated environment, and reports bugs found.
 
+## EXAMPLES
+
+```
+/workflow:homologate --work-item 2001 --repos auth-service --target-branches develop --working-branches homolog/sprint-10 --description "Homologate authentication flow for sprint 10"
+
+/workflow:homologate --work-item 2002 --repos auth-service,payment-service --target-branches develop,develop --working-branches homolog/sprint-10,homolog/sprint-10 --description "Homologate integrated checkout flow across auth and payment services"
+```
+
 ## EXECUTION
 
 1. **Retrieve Work Item**: Fetch work item details and acceptance criteria
@@ -189,14 +197,6 @@ sequenceDiagram
 - Bug work items created for all found issues with complete details and linking
 - Pull requests created for all repositories linking to the original work item
 - All phase statuses reported with clear completion indicators
-
-## EXAMPLES
-
-```
-/workflow:homologate --work-item 2001 --repos auth-service --target-branches develop --working-branches homolog/sprint-10 --description "Homologate authentication flow for sprint 10"
-
-/workflow:homologate --work-item 2002 --repos auth-service,payment-service --target-branches develop,develop --working-branches homolog/sprint-10,homolog/sprint-10 --description "Homologate integrated checkout flow across auth and payment services"
-```
 
 ## OUTPUT
 

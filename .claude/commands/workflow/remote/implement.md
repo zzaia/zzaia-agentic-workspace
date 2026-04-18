@@ -42,6 +42,16 @@ agents:
 
 Execute a complete implementation workflow that orchestrates multiple development commands in sequence. This generic, reusable workflow enables developers to implement work items following consistent patterns from requirements retrieval through pull request creation.
 
+## EXAMPLES
+
+```
+/workflow:remote:implement --work-item 1605 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
+
+/workflow:remote:implement --work-item 1606 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+
+/workflow:remote:implement --work-item 1607 --portal github --project my-org/my-project --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
+```
+
 ## WORKFLOW PHASES
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
@@ -194,16 +204,6 @@ sequenceDiagram
 - Work item state changed to Resolved after final commit and push
 - Pull request published (draft removed) after fixes are pushed
 - Workflow execution provides clear output at each phase with status and results
-
-## EXAMPLES
-
-```
-/workflow:remote:implement --work-item 1605 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
-
-/workflow:remote:implement --work-item 1606 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
-
-/workflow:remote:implement --work-item 1607 --portal github --project my-org/my-project --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
-```
 
 ## OUTPUT
 

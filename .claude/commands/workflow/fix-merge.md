@@ -29,6 +29,13 @@ agents:
 
 Merge from a target branch into the working branch, automatically resolving merge conflicts, identifying issues that arose from the merge, fixing them systematically, and pushing the result to remote.
 
+## EXAMPLES
+
+```
+/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop
+/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop --description "Expect conflicts in schema definitions"
+```
+
 ## WORKFLOW PHASES
 
 1. **Merge from Target Branch**: Pull target branch then perform merge operation and resolve all merge conflicts
@@ -97,13 +104,6 @@ sequenceDiagram
 - All changes committed with conventional commit messages
 - Remote branch reflects all local changes
 - Working branch is clean and ready for continued development
-
-## EXAMPLES
-
-```
-/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop
-/workflow:fix-merge --repo myrepo --working-branch feature/new-api --target-branch develop --description "Expect conflicts in schema definitions"
-```
 
 ## OUTPUT
 

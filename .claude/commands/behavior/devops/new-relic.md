@@ -21,6 +21,13 @@ parameters:
 
 Single interface for New Relic observability. Routes to diagnostics based on `--action`.
 
+## EXAMPLES
+
+```
+/behavior:devops:new-relic --action debug --application-name payment-service
+/behavior:devops:new-relic --action debug --application-name api-gateway
+```
+
 ## ACTIONS
 
 | Action  | Description                                                              |
@@ -66,13 +73,6 @@ sequenceDiagram
 - Report includes distinct sections: Issues, Warnings, Error Patterns, Timeline
 - Errors deduplicated and grouped by root cause
 - Timestamps included for all critical events
-
-## EXAMPLES
-
-```
-/behavior:devops:new-relic --action debug --application-name payment-service
-/behavior:devops:new-relic --action debug --application-name api-gateway
-```
 
 ## OUTPUT
 

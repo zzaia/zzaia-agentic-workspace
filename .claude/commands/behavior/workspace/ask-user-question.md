@@ -18,12 +18,6 @@ parameters:
 
 Use **AskUserQuestion** to pause execution and request user input. Supports free-form questions or numbered option selection.
 
-## EXECUTION
-
-- If `--options` provided: split by `;`, display as numbered list, ask user to select or confirm
-- If only `--question`: ask as free-form and wait for response
-- **MANDATORY**: always use **AskUserQuestion** — never simulate or skip
-
 ## EXAMPLES
 
 ```
@@ -31,3 +25,9 @@ Use **AskUserQuestion** to pause execution and request user input. Supports free
 
 /behavior:workspace:ask-user-question --question "Select issues to fix" --options "Missing null check; Unused import; Low test coverage"
 ```
+## EXECUTION
+
+- If `--options` provided: split by `;`, display as numbered list, ask user to select or confirm
+- If only `--question`: ask as free-form and wait for response
+- **MANDATORY**: always use **AskUserQuestion** — never simulate or skip
+

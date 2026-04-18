@@ -26,6 +26,14 @@ metadata:
 
 Retrieve all work items, analyse their relationships to identify dependencies and parallelism opportunities, then orchestrate each implementation via `/workflow:remote:implement` — dispatching independent items in parallel and dependent items sequentially. The orchestrator decides execution strategy autonomously.
 
+## EXAMPLES
+
+```
+/orchestrator:implement --work-items 1605,1606,1607 --portal azure --project my-project --target-branch develop --description "Implement provider module features"
+
+/orchestrator:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --target-branch main --description "Add gateway routing features"
+```
+
 ## EXECUTION
 
 1. **Retrieve all work items**
@@ -124,14 +132,6 @@ sequenceDiagram
 - Failed items block their dependents and are reported clearly
 - Each agent result carries `work_item_id`, `branch`, `pr_url`, `status`, `error`, `group`
 - Consolidated delivery table covers all items grouped by execution wave
-
-## EXAMPLES
-
-```
-/orchestrator:implement --work-items 1605,1606,1607 --portal azure --project my-project --target-branch develop --description "Implement provider module features"
-
-/orchestrator:implement --work-items 1610,1611,1612 --portal github --project my-org/my-project --target-branch main --description "Add gateway routing features"
-```
 
 ## OUTPUT
 

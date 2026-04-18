@@ -30,6 +30,25 @@ agents:
 
 Execute Git version control operations directly with standardized branch management.
 
+## EXAMPLES
+
+```bash
+# Initialize a new repository
+/git init my-project
+
+# Create a feature branch
+/git branch feature/user-login my-project
+
+# Commit changes with conventional message
+/git commit "feat: add authentication system" my-project
+
+# Merge a feature branch
+/git merge feature/user-login my-project
+
+# Check repository status
+/git status
+```
+
 ## STANDARDIZED BRANCH PREFIXES
 
 Branch naming must follow these strict conventions:
@@ -118,25 +137,6 @@ sequenceDiagram
     else Parameters Invalid
         C-->>U: Error: Invalid parameters or branch naming
     end
-```
-
-## EXAMPLES
-
-```bash
-# Initialize a new repository
-/git init my-project
-
-# Create a feature branch
-/git branch feature/user-login my-project
-
-# Commit changes with conventional message
-/git commit "feat: add authentication system" my-project
-
-# Merge a feature branch
-/git merge feature/user-login my-project
-
-# Check repository status
-/git status
 ```
 
 ## OUTPUT

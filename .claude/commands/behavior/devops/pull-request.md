@@ -57,6 +57,20 @@ parameters:
 
 Unified pull request management across Azure DevOps and GitHub with support for creation, retrieval, and updates. Enables context-aware PR operations, work item linking, reviewer management, and code review publishing.
 
+## EXAMPLES
+
+```
+/behavior:devops:pull-request --action create --portal azure --project MyProject --repo MyRepo --source-branch feature/new-feature --target-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
+
+/behavior:devops:pull-request --action read --portal github --project MyOrg --repo my-repo --pr-id 45
+
+/behavior:devops:pull-request --action update --portal azure --project MyProject --repo MyRepo --pr-id 78 --reviewers user1@example.com,user2@example.com --labels "ready-for-review,high-priority"
+
+/behavior:devops:pull-request --action update --portal github --project MyOrg --repo my-repo --pr-id 12 --title "Updated title" --template true
+
+/behavior:devops:pull-request --action create --portal github --project MyOrg --repo my-repo --source-branch bugfix/issue-123 --target-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
+```
+
 ## EXECUTION
 
 1. **Validation Phase**: Validate parameters and portal compatibility
@@ -125,20 +139,6 @@ sequenceDiagram
 - Code review publishing executes when requested
 - Context-aware defaults applied from workspace metadata
 - All operations logged with timestamp and status indicators
-
-## EXAMPLES
-
-```
-/behavior:devops:pull-request --action create --portal azure --project MyProject --repo MyRepo --source-branch feature/new-feature --target-branch main --title "Add new feature" --description "Implements feature X" --work-item 123
-
-/behavior:devops:pull-request --action read --portal github --project MyOrg --repo my-repo --pr-id 45
-
-/behavior:devops:pull-request --action update --portal azure --project MyProject --repo MyRepo --pr-id 78 --reviewers user1@example.com,user2@example.com --labels "ready-for-review,high-priority"
-
-/behavior:devops:pull-request --action update --portal github --project MyOrg --repo my-repo --pr-id 12 --title "Updated title" --template true
-
-/behavior:devops:pull-request --action create --portal github --project MyOrg --repo my-repo --source-branch bugfix/issue-123 --target-branch develop --title "Fix critical bug" --labels "bugfix,urgent" --reviewers reviewer1,reviewer2
-```
 
 ## TEMPLATE
 

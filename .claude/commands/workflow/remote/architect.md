@@ -36,6 +36,16 @@ parameters:
 
 Orchestrate architectural documentation and work-item hierarchy creation for a selected work item using Specification Driven Design (SDD). All documentation is committed to a documentation-only branch with pull request review gates at every phase. Decomposes requirements through BDD analysis, architectural design, and agile planning into a parallelizable hierarchy of work items. Enables human and agent collaboration through Azure DevOps discussions and pull request comments, gating every structural change behind user approval.
 
+## EXAMPLES
+
+```
+/workflow:remote:architect --project MyProject --selected-work-item 2001 --selected-repo my-docs --selected-branch plan/notification-service --target-branch main --description "Multi-tenant notification service with email, SMS, and push channels"
+
+/workflow:remote:architect --project MyProject --selected-repo my-docs --doc "./docs/requirements.pdf;./docs/wireframes.png" --workspace "./workspace/payments.worktrees/master;./workspace/gateway.worktrees/master"
+
+/workflow:remote:architect --project MyProject --selected-work-item 1850 --selected-repo architecture-docs --description "Refactor payment gateway" --url "https://docs.stripe.com/api;https://docs.adyen.com/api" --workspace ./workspace/payments.worktrees/master
+```
+
 ## WORKFLOW PHASES
 
 ### Phase 1 | Gather Repository and Referenced Documentation
@@ -286,16 +296,6 @@ sequenceDiagram
 - Leaf-level tasks designed as independent, parallelizable pull requests with implementation branch suggestions
 - No implementation code stored in the documentation branch
 - All architectural decisions and risks explicitly documented
-
-## EXAMPLES
-
-```
-/workflow:remote:architect --project MyProject --selected-work-item 2001 --selected-repo my-docs --selected-branch plan/notification-service --target-branch main --description "Multi-tenant notification service with email, SMS, and push channels"
-
-/workflow:remote:architect --project MyProject --selected-repo my-docs --doc "./docs/requirements.pdf;./docs/wireframes.png" --workspace "./workspace/payments.worktrees/master;./workspace/gateway.worktrees/master"
-
-/workflow:remote:architect --project MyProject --selected-work-item 1850 --selected-repo architecture-docs --description "Refactor payment gateway" --url "https://docs.stripe.com/api;https://docs.adyen.com/api" --workspace ./workspace/payments.worktrees/master
-```
 
 ## OUTPUT
 

@@ -24,6 +24,12 @@ metadata:
 
 Execute a single BDD step as a direct API call against a live URL, resolve or create the Postman request, collect New Relic diagnostics, and return a concise step report.
 
+## EXAMPLES
+
+```
+/behavior:development:test --type e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application MyApp
+```
+
 ## EXECUTION
 
 1. **Resolve Postman Request**
@@ -80,12 +86,6 @@ sequenceDiagram
 - API call executed and response captured
 - New Relic diagnostics collected regardless of pass/fail
 - Concise step report returned with result, timing, and anomalies
-
-## EXAMPLES
-
-```
-/behavior:development:test --type e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application MyApp
-```
 
 ## OUTPUT
 

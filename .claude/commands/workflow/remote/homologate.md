@@ -45,6 +45,18 @@ Orchestrate homologation testing by retrieving work item details, generating BDD
 
 The objective of this workflow is to check for inconsistencies, quality issues, unexpected errors, accordance with the BDD flows, and possible improvements to implementations, no need to understand what was fixed or not, this workflow is meant to report the current status of the system.
 
+## EXAMPLES
+
+```
+/workflow:remote:homologate --work-item 12345 --project MyProject --url https://staging.myapp.com --application MyApp --type e2e
+
+/workflow:remote:homologate --work-item 67890 --project MyProject --url https://staging.myapp.com --application MyApp --type ui --description "Validate checkout user flow"
+
+/workflow:remote:homologate --work-item 54321 --project MyProject --url https://qa.myapp.com --application MyApp --type integration --doc /path/to/requirements.md
+
+/workflow:remote:homologate --work-item 11111 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --ref-url https://example.com/acceptance-criteria
+```
+
 ## TEST TYPES
 
 | `--type` | Scope | Tool |
@@ -193,18 +205,6 @@ sequenceDiagram
 - User explicitly reviews report and approves the final bug list with severities before any creation
 - Bug work items created only for user-approved failures with full evidence and parent link
 - All sub-command invocations delegate to designated agents
-
-## EXAMPLES
-
-```
-/workflow:remote:homologate --work-item 12345 --project MyProject --url https://staging.myapp.com --application MyApp --type e2e
-
-/workflow:remote:homologate --work-item 67890 --project MyProject --url https://staging.myapp.com --application MyApp --type ui --description "Validate checkout user flow"
-
-/workflow:remote:homologate --work-item 54321 --project MyProject --url https://qa.myapp.com --application MyApp --type integration --doc /path/to/requirements.md
-
-/workflow:remote:homologate --work-item 11111 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --ref-url https://example.com/acceptance-criteria
-```
 
 ## OUTPUT
 

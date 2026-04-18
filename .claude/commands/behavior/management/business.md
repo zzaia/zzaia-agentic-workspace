@@ -22,6 +22,18 @@ Analyze a system, feature, or domain from a pure **business and BDD (Behavior Dr
 
 Think of this as the **business analyst layer**. It grounds the system in real business value, domain language, and behavioral expectations.
 
+## EXAMPLES
+
+```
+/behavior:management:business --context "Multi-tenant notification service with email, SMS, and push channels"
+
+/behavior:management:business --work-directory ./workspace/payments.worktrees/master
+
+/behavior:management:business --context "Refactor payment gateway integration to support new providers"
+
+/behavior:management:business --context "SaaS subscription management with tiering, upgrades, downgrades, and cancellation"
+```
+
 ## EXECUTION
 
 1. **Establish Business Context**
@@ -133,18 +145,6 @@ Examples of behaviors, not exhaustive test cases.
 - Success criteria per behavior
 - Acceptance thresholds (quantified where possible)
 - Connected to business value
-
-## EXAMPLES
-
-```
-/behavior:management:business --context "Multi-tenant notification service with email, SMS, and push channels"
-
-/behavior:management:business --work-directory ./workspace/payments.worktrees/master
-
-/behavior:management:business --context "Refactor payment gateway integration to support new providers"
-
-/behavior:management:business --context "SaaS subscription management with tiering, upgrades, downgrades, and cancellation"
-```
 
 ## OUTPUT
 

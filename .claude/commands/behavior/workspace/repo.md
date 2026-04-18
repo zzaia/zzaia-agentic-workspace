@@ -27,6 +27,15 @@ parameters:
 
 Single interface for workspace repository management. Routes to clone or branch creation based on `--action` and provided parameters.
 
+## EXAMPLES
+
+```
+/behavior:workspace:repo --action new --repo https://github.com/username/repository.git
+/behavior:workspace:repo --action new --repo https://github.com/username/repo1.git https://github.com/username/repo2.git
+/behavior:workspace:repo --action new --repo my-api --branch feature/user-authentication
+/behavior:workspace:repo --action new --repo frontend --branch bugfix/header-styling --target-branch develop
+```
+
 ## ACTIONS
 
 | Action | Description                                                              |
@@ -137,15 +146,6 @@ sequenceDiagram
 - Clone mode: repos cloned in parallel; `repository-metadata.json` generated per repo
 - Branch mode: remote checked before local creation; worktree metadata updated
 - Both modes report per-operation status
-
-## EXAMPLES
-
-```
-/behavior:workspace:repo --action new --repo https://github.com/username/repository.git
-/behavior:workspace:repo --action new --repo https://github.com/username/repo1.git https://github.com/username/repo2.git
-/behavior:workspace:repo --action new --repo my-api --branch feature/user-authentication
-/behavior:workspace:repo --action new --repo frontend --branch bugfix/header-styling --target-branch develop
-```
 
 ## OUTPUT
 

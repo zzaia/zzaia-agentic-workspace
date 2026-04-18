@@ -39,6 +39,21 @@ metadata:
 
 Select a documentation template from `./templates/`, generate content from conversation context following the template structure, and deliver to the requested output target.
 
+## EXAMPLES
+
+```
+/capability:document:write architecture-overview "System Architecture" --output docs/architecture.md
+/capability:document:write service-architecture "Payment Service" --wiki
+/capability:document:write service-data-model "Order Entity" --output docs/data-model.md
+/capability:document:write event-notification "Payment Events" --pr 42 --target-field description
+/capability:document:write service-architecture "User Service SDD" --work-item 1234 --target-field discussion
+/capability:document:write integration-tests-plan "Checkout Flow Tests" --work-item 1234 --target-field acceptance-criteria
+/capability:document:write implementation-plan "Add Order Status Endpoint" --work-item 1234 --target-field discussion
+/capability:document:write test-result-report "Sprint 12 E2E Results" --work-item 2001 --target-field discussion
+/capability:document:write pull-request-review "PR #42 Review" --pr 42 --target-field comment
+/capability:document:write bdd-scenarios "Order Checkout Scenarios" --work-item 1234 --target-field acceptance-criteria
+```
+
 ## EXECUTION
 
 1. **Select Template**: Identify or ask which template to use
@@ -99,21 +114,6 @@ sequenceDiagram
     A->>A: Deliver to output target at specified field
     A-->>C: Done
     C-->>U: Document ready
-```
-
-## EXAMPLES
-
-```
-/capability:document:write architecture-overview "System Architecture" --output docs/architecture.md
-/capability:document:write service-architecture "Payment Service" --wiki
-/capability:document:write service-data-model "Order Entity" --output docs/data-model.md
-/capability:document:write event-notification "Payment Events" --pr 42 --target-field description
-/capability:document:write service-architecture "User Service SDD" --work-item 1234 --target-field discussion
-/capability:document:write integration-tests-plan "Checkout Flow Tests" --work-item 1234 --target-field acceptance-criteria
-/capability:document:write implementation-plan "Add Order Status Endpoint" --work-item 1234 --target-field discussion
-/capability:document:write test-result-report "Sprint 12 E2E Results" --work-item 2001 --target-field discussion
-/capability:document:write pull-request-review "PR #42 Review" --pr 42 --target-field comment
-/capability:document:write bdd-scenarios "Order Checkout Scenarios" --work-item 1234 --target-field acceptance-criteria
 ```
 
 ## OUTPUT

@@ -21,6 +21,19 @@ parameters:
 
 Update NuGet packages across .NET projects with comprehensive validation, safety checks, and rollback capabilities.
 
+## EXAMPLES
+
+```bash
+# Update all packages
+/update-dotnet-packages compliance-hub master
+
+# Update specific project
+/update-dotnet-packages my-project develop project MyProject
+
+# Update only outdated packages
+/update-dotnet-packages api-service main outdated
+```
+
 ## EXECUTION
 
 1. **Workspace Validation**
@@ -73,19 +86,6 @@ sequenceDiagram
   - `project <name>`: Update specific project
   - `outdated`: Update only outdated packages
   - `major`: Allow major version updates
-
-## EXAMPLES
-
-```bash
-# Update all packages
-/update-dotnet-packages compliance-hub master
-
-# Update specific project
-/update-dotnet-packages my-project develop project MyProject
-
-# Update only outdated packages
-/update-dotnet-packages api-service main outdated
-```
 
 ## OUTPUT
 

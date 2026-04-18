@@ -19,6 +19,12 @@ Expert skill architect that creates concise yet complete skill folder structures
 
 Create Claude Code skills in the standard multi-file folder structure. A skill is identified by Claude Code through a `SKILL.md` file with YAML frontmatter — it can be placed at any path inside `.claude/commands/` regardless of the hierarchy layer.
 
+## EXAMPLES
+
+```
+/<prefix>:<skill-name>:<action> --<param> <value>
+```
+
 ## TASK
 
 1. **Fetch Documentation**: Get latest Claude Code slash command spec from:
@@ -117,6 +123,12 @@ metadata:
 
 <What this sub-skill does and why>
 
+## EXAMPLES
+
+```bash
+/<prefix>:<skill-name>:<action> <params>
+```
+
 ## EXECUTION
 
 1. **<Phase>**: <Description>
@@ -141,12 +153,6 @@ sequenceDiagram
     C->>A: <operation>
     A-->>C: <result>
     C-->>U: <output>
-```
-
-## EXAMPLES
-
-```
-/<prefix>:<skill-name>:<action> --<param> <value>
 ```
 
 ## OUTPUT

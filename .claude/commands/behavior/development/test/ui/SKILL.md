@@ -24,6 +24,12 @@ metadata:
 
 Execute a single BDD step as a browser interaction via Playwright, collect New Relic and browser console diagnostics, and return a concise step report.
 
+## EXAMPLES
+
+```
+/behavior:development:test --type ui --step "User clicks checkout button and sees confirmation page" --environment https://staging.myapp.com --application MyApp
+```
+
 ## EXECUTION
 
 1. **Authentication** *(if required)*
@@ -75,12 +81,6 @@ sequenceDiagram
 - New Relic diagnostics collected regardless of pass/fail
 - Browser console logs captured regardless of pass/fail
 - Concise step report returned with result, timing, and anomalies
-
-## EXAMPLES
-
-```
-/behavior:development:test --type ui --step "User clicks checkout button and sees confirmation page" --environment https://staging.myapp.com --application MyApp
-```
 
 ## OUTPUT
 

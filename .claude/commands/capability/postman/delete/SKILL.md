@@ -21,6 +21,24 @@ metadata:
 
 Delete an existing Postman resource by ID or name. Removes the resource entirely from the workspace.
 
+## EXAMPLES
+
+```
+/capability:postman:delete --target collection --id "collection-abc123"
+```
+
+```
+/capability:postman:delete --target environment --id "staging" --description "Clean up staging environment after tests complete"
+```
+
+```
+/capability:postman:delete --target request --id "Get Users"
+```
+
+```
+/capability:postman:delete --target mock --id "mock-server-xyz"
+```
+
 ## EXECUTION
 
 1. **Identify** the resource type from `--target` and resource ID from `--id`
@@ -53,24 +71,6 @@ sequenceDiagram
 - Deletion is confirmed and irreversible
 - Deletion does not affect other resources
 - Resource is no longer accessible
-
-## EXAMPLES
-
-```
-/capability:postman:delete --target collection --id "collection-abc123"
-```
-
-```
-/capability:postman:delete --target environment --id "staging" --description "Clean up staging environment after tests complete"
-```
-
-```
-/capability:postman:delete --target request --id "Get Users"
-```
-
-```
-/capability:postman:delete --target mock --id "mock-server-xyz"
-```
 
 ## OUTPUT
 

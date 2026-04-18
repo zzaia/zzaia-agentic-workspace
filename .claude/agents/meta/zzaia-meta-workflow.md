@@ -19,6 +19,12 @@ Workflow command generator for the ZZAIA multi-agent orchestration system.
 
 Generate well-structured workflow command files that orchestrate sequences of existing commands, producing consistent `.claude/commands/workflow/<name>.md` files following ZZAIA conventions.
 
+## EXAMPLES
+
+```
+/<workflow-name> --<param1> <value> --<param2> <value>
+```
+
 ## TASK
 
 1. Gather workflow intent: name, purpose, high-level parameters, and which existing commands it orchestrates
@@ -68,6 +74,12 @@ agents:
 ## PURPOSE
 
 <One paragraph describing what this workflow achieves end-to-end.>
+
+## EXAMPLES
+
+```bash
+/<workflow-name> --param <value>
+```
 
 ## WORKFLOW PHASES
 
@@ -121,12 +133,6 @@ sequenceDiagram
 
 - <criteria description>
 - <criteria description>
-
-## EXAMPLES
-
-```
-/<workflow-name> --<param1> <value> --<param2> <value>
-```
 
 ## OUTPUT
 

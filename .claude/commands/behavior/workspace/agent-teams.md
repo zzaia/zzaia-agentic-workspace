@@ -34,6 +34,16 @@ parameters:
 
 Orchestrate teams of specialized agents to execute tasks collaboratively. Each agent runs in a dedicated tmux side pane, allowing the user to observe all agent conversations simultaneously.
 
+## EXAMPLES
+
+```
+/behavior:workspace:agent-teams --mode consensus --context "Design a REST API for managing user accounts" --description "Get architectural perspectives on API design"
+
+/behavior:workspace:agent-teams --mode parallel --context "Refactor legacy authentication module" --tasks "Update login handler, Migrate session storage, Add MFA support" --max-agents 3
+
+/behavior:workspace:agent-teams --mode consensus --context "Evaluate framework choice for real-time messaging"
+```
+
 ## EXECUTION
 
 1. **Resolve Session**: Use `--session` if provided; otherwise detect via `tmux display-message -p '#S'`
@@ -56,16 +66,6 @@ Orchestrate teams of specialized agents to execute tasks collaboratively. Each a
 - Missing `--tasks` in parallel mode fails with clear error message
 - Results include clear agent attribution for traceability
 - `zzaia-tech-leader` is always the dispatched agent; `--agents` overrides for advanced use only
-
-## EXAMPLES
-
-```
-/behavior:workspace:agent-teams --mode consensus --context "Design a REST API for managing user accounts" --description "Get architectural perspectives on API design"
-
-/behavior:workspace:agent-teams --mode parallel --context "Refactor legacy authentication module" --tasks "Update login handler, Migrate session storage, Add MFA support" --max-agents 3
-
-/behavior:workspace:agent-teams --mode consensus --context "Evaluate framework choice for real-time messaging"
-```
 
 ## OUTPUT
 

@@ -24,6 +24,20 @@ metadata:
 
 Update an existing Postman resource by ID or name. Supports partial or full updates of resource properties.
 
+## EXAMPLES
+
+```
+/capability:postman:update --target collection --id "collection-abc123" --spec '{"name":"Updated Tests","description":"New description"}'
+```
+
+```
+/capability:postman:update --target environment --id "staging" --spec '{"variables":{"api_key":"new_token"}}' --description "Rotate API key in staging environment"
+```
+
+```
+/capability:postman:update --target request --id "Get Users" --spec '{"url":"{{api_url}}/v2/users"}' --description "Update endpoint to v2 API"
+```
+
 ## EXECUTION
 
 1. **Identify** the resource type from `--target` and resource ID from `--id`
@@ -57,20 +71,6 @@ sequenceDiagram
 - Existing properties not in `--spec` are preserved
 - Updated resource is immediately usable
 - Update is reflected in Postman workspace
-
-## EXAMPLES
-
-```
-/capability:postman:update --target collection --id "collection-abc123" --spec '{"name":"Updated Tests","description":"New description"}'
-```
-
-```
-/capability:postman:update --target environment --id "staging" --spec '{"variables":{"api_key":"new_token"}}' --description "Rotate API key in staging environment"
-```
-
-```
-/capability:postman:update --target request --id "Get Users" --spec '{"url":"{{api_url}}/v2/users"}' --description "Update endpoint to v2 API"
-```
 
 ## OUTPUT
 

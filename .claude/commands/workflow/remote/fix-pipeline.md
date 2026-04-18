@@ -48,6 +48,18 @@ agents:
 
 Automate iterative pipeline repair by cycling through debug, fix, and re-run phases until the pipeline completes successfully. Each iteration collects structured issue reports from pipeline logs, implements targeted fixes, triggers a new run, and evaluates results. The loop terminates on success or when max iterations is reached.
 
+## EXAMPLES
+
+```
+/workflow:remote:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
+
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline --repo my-repo --branch feature/fix
+
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --repo my-repo --branch feature/fix --deps pipeline-templates:feature/fix,shared-lib:feature/fix --target-branch main --max-iterations 3
+
+/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline 42 --repo my-repo --branch feature/fix --run 1850
+```
+
 ## WORKFLOW PHASES
 
 1. **Initialize Loop** — Resolve parameters and set iteration counter; no pipeline calls in this phase
@@ -190,18 +202,6 @@ sequenceDiagram
 - On pipeline success, workflow reports completion with all PR links produced by `remote:implement` invocations
 - Iteration counter and safety limit are enforced; counter is never reset between iterations
 - Agents are invoked for their designated responsibilities, never skipped or simulated
-
-## EXAMPLES
-
-```
-/workflow:remote:fix-pipeline --portal azure --file /home/user/workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
-
-/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline build-pipeline --repo my-repo --branch feature/fix
-
-/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline deploy-prod --repo my-repo --branch feature/fix --deps pipeline-templates:feature/fix,shared-lib:feature/fix --target-branch main --max-iterations 3
-
-/workflow:remote:fix-pipeline --portal azure --project MyProject --pipeline 42 --repo my-repo --branch feature/fix --run 1850
-```
 
 ## OUTPUT
 

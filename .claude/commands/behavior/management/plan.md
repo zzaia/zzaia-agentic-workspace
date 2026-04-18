@@ -15,6 +15,13 @@ parameters:
 
 Decompose an architectural design or SDD context into a right-sized agile work-item hierarchy for human or agent team execution. Produces a structured plan with dependency graph, repository assignments, and parallelization map. Favors meaningful pull requests over granular tasks.
 
+## EXAMPLES
+
+```
+/plan "Payment service with checkout, refund, and webhook handling aligned to DDD bounded contexts"
+/plan "Notification microservice: email, SMS, push — event-driven, multi-tenant"
+```
+
 ## EXECUTION
 
 1. **Context Analysis**: Understand the input
@@ -88,13 +95,6 @@ sequenceDiagram
 - Parallelization map groups work items into concurrent execution waves
 - No clarifying questions — delegates to `/behavior:management:clarify` for that
 - No architectural decisions — delegates to `/behavior:management:architect` for that
-
-## EXAMPLES
-
-```
-/plan "Payment service with checkout, refund, and webhook handling aligned to DDD bounded contexts"
-/plan "Notification microservice: email, SMS, push — event-driven, multi-tenant"
-```
 
 ## OUTPUT
 

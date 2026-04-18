@@ -18,6 +18,16 @@ metadata:
 
 Execute an HTTP call via Postman runner. Sends requests with full support for methods, URLs, headers, and body payloads.
 
+## EXAMPLES
+
+```
+/capability:postman:request --spec '{"method":"GET","url":"https://api.example.com/data","headers":{"Authorization":"Bearer token"}}'
+```
+
+```
+/capability:postman:request --spec '{"method":"POST","url":"https://api.example.com/data","headers":{"Content-Type":"application/json"},"body":{"name":"test"}}' --description "Create new user in test environment"
+```
+
 ## EXECUTION
 
 1. **Parse** the request specification from `--spec`
@@ -50,16 +60,6 @@ sequenceDiagram
 - Response includes status code, headers, and body
 - Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.)
 - Handles request headers and body payload
-
-## EXAMPLES
-
-```
-/capability:postman:request --spec '{"method":"GET","url":"https://api.example.com/data","headers":{"Authorization":"Bearer token"}}'
-```
-
-```
-/capability:postman:request --spec '{"method":"POST","url":"https://api.example.com/data","headers":{"Content-Type":"application/json"},"body":{"name":"test"}}' --description "Create new user in test environment"
-```
 
 ## OUTPUT
 

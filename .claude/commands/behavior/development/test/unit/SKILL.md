@@ -31,6 +31,13 @@ metadata:
 
 Auto-detect the testing framework and run unit tests for a specific project within a repository.
 
+## EXAMPLES
+
+```
+/behavior:development:test --type unit --repo backend-hub --branch master --project api
+/behavior:development:test --type unit --repo compliance-hub --branch feature/new-module --project core --action implement
+```
+
 ## EXECUTION
 
 1. **Project Validation**
@@ -90,13 +97,6 @@ sequenceDiagram
 - Build executed before test run when required
 - Only unit tests executed
 - Coverage report generated
-
-## EXAMPLES
-
-```
-/behavior:development:test --type unit --repo backend-hub --branch master --project api
-/behavior:development:test --type unit --repo compliance-hub --branch feature/new-module --project core --action implement
-```
 
 ## OUTPUT
 

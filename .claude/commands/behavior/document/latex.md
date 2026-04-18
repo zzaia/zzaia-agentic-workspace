@@ -24,6 +24,43 @@ parameters:
 
 Orchestrate full LaTeX PDF generation: load data from JSON, a markdown file, or a collection of markdown files — extract Mermaid/Graphviz diagram blocks, generate PNGs via `capability:diagram:generate`, then compile the PDF via `capability:latex:write`.
 
+## EXAMPLES
+
+```
+# From JSON data
+/behavior:document:latex \
+  --template architecture-overview \
+  --output ./docs/architecture.pdf \
+  --data '{"project_name":"MySystem","diagram_context":"C4Context\n  Person(u,\"User\")\n  System(s,\"System\")\n  Rel(u,s,\"Uses\")"}'
+
+# From a single markdown file (front matter + mermaid blocks extracted)
+/behavior:document:latex \
+  --template service-architecture \
+  --output ./docs/service.pdf \
+  --data ./docs/service-architecture.md
+
+# From a collection directory (all .md files merged)
+/behavior:document:latex \
+  --template architecture-overview \
+  --output ./docs/full-architecture.pdf \
+  --data ./docs/architecture/
+
+# With pre-existing diagram images
+/behavior:document:latex \
+  --template service-data-model \
+  --output ./docs/model.pdf \
+  --data '{"service_name":"Payment","diagram_er":"./diagrams/er.png"}'
+```
+
+### Markdown File Format
+
+```markdown
+---
+service_name: OrderService
+author: Team
+date: 2026-03-26
+---
+
 ## EXECUTION
 
 1. **Resolve Data Source**
@@ -118,43 +155,6 @@ sequenceDiagram
     L-->>B: PDF compiled
     B-->>U: PDF ready + diagrams listed
 ```
-
-## EXAMPLES
-
-```
-# From JSON data
-/behavior:document:latex \
-  --template architecture-overview \
-  --output ./docs/architecture.pdf \
-  --data '{"project_name":"MySystem","diagram_context":"C4Context\n  Person(u,\"User\")\n  System(s,\"System\")\n  Rel(u,s,\"Uses\")"}'
-
-# From a single markdown file (front matter + mermaid blocks extracted)
-/behavior:document:latex \
-  --template service-architecture \
-  --output ./docs/service.pdf \
-  --data ./docs/service-architecture.md
-
-# From a collection directory (all .md files merged)
-/behavior:document:latex \
-  --template architecture-overview \
-  --output ./docs/full-architecture.pdf \
-  --data ./docs/architecture/
-
-# With pre-existing diagram images
-/behavior:document:latex \
-  --template service-data-model \
-  --output ./docs/model.pdf \
-  --data '{"service_name":"Payment","diagram_er":"./diagrams/er.png"}'
-```
-
-### Markdown File Format
-
-```markdown
----
-service_name: OrderService
-author: Team
-date: 2026-03-26
----
 
 ## Overview
 Brief service description here.
