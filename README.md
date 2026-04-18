@@ -7,34 +7,9 @@
 
 ## 🚀 Quick Start
 
-> For full onboarding instructions see [QUICKSTART.md](QUICKSTART.md).
+Supported on **Ubuntu / WSL**, **macOS**, and **Windows (PowerShell 7)**. Requires Docker Desktop.
 
-Fill in your secrets and run once — nothing is written to disk. After the first start, use Docker Desktop to start/stop.
-
-```bash
-# Ubuntu / macOS / WSL
-SSH_PUBLIC_KEY=""
-TAVILY_API_KEY=""
-ADO_MCP_AUTH_TOKEN=""
-AZURE_DEVOPS_ORGANIZATION=""
-POSTMAN_API_KEY=""
-NEW_RELIC_API_KEY=""
-
-docker compose \
-    -f "./docker/docker-compose.yml" \
-    -p "$AZURE_DEVOPS_ORGANIZATION" \
-    --env-file <(
-        printf 'SSH_PUBLIC_KEY=%s\n'            "$SSH_PUBLIC_KEY"
-        printf 'TAVILY_API_KEY=%s\n'            "$TAVILY_API_KEY"
-        printf 'ADO_MCP_AUTH_TOKEN=%s\n'        "$ADO_MCP_AUTH_TOKEN"
-        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n' "$AZURE_DEVOPS_ORGANIZATION"
-        printf 'POSTMAN_API_KEY=%s\n'           "$POSTMAN_API_KEY"
-        printf 'NEW_RELIC_API_KEY=%s\n'         "$NEW_RELIC_API_KEY"
-    ) \
-    up -d
-```
-
-Access the workspace at `http://localhost:8080` (VS Code) or `ssh -p 2222 zzaia@localhost`.
+> See [QUICKSTART.md](QUICKSTART.md) for step-by-step setup instructions.
 
 ## 🏗️ Command Hierarchy
 
