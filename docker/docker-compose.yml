@@ -9,7 +9,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: zzaia-workspace:latest
-    container_name: zzaia-workspace
     ports:
       - "127.0.0.1:2222:2222"
       - "127.0.0.1:8080:8080"
