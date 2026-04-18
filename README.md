@@ -7,7 +7,7 @@
 
 ## 🚀 Quick Start
 
-Supported on **Ubuntu / WSL**, **macOS**, and **Windows (PowerShell 7)**. Requires Docker Desktop.
+Supported on **Ubuntu / WSL**, **macOS**, and **Windows**. Requires Docker Desktop.
 
 > See [QUICKSTART.md](QUICKSTART.md) for step-by-step setup instructions.
 

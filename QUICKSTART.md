@@ -57,7 +57,7 @@ docker compose \
     up -d
 ```
 
-### Windows (PowerShell 7)
+### Windows
 
 ```powershell
 $SSH_PUBLIC_KEY            = ""
@@ -174,7 +174,7 @@ docker compose \
 ```
 
 ```powershell
-# Windows PowerShell — rotate a single MCP service
+# Windows — rotate a single MCP service
 $env:TAVILY_API_KEY = "new-key-here"
 # set other vars as needed...
 
