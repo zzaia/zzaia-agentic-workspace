@@ -22,6 +22,8 @@ You will need the following values before starting:
 | `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
+| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `zzaia` user | Any string; leave empty to disable sudo entirely |
+| `ANTHROPIC_API_KEY` | Optional | Claude API key (alternative to browser auth) | [console.anthropic.com](https://console.anthropic.com) |
 | `TAVILY_API_KEY` | Optional | Tavily API key | [tavily.com](https://tavily.com) |
 | `ADO_MCP_AUTH_TOKEN` | Optional | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
 | `AZURE_DEVOPS_ORGANIZATION` | Optional | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
@@ -41,6 +43,12 @@ Fill in your values and run the command for your platform. No files are written 
 ```bash
 WORKSPACE_NAME="my-org"
 SSH_PUBLIC_KEY=""
+ADMIN_PASSWORD=""
+ANTHROPIC_API_KEY=""
+AWS_ACCESS_KEY_ID=""
+AWS_SECRET_ACCESS_KEY=""
+AWS_REGION=""
+ANTHROPIC_BEDROCK_BASE_URL=""
 TAVILY_API_KEY=""
 ADO_MCP_AUTH_TOKEN=""
 AZURE_DEVOPS_ORGANIZATION=""
@@ -53,15 +61,21 @@ docker compose \
     -f "./docker/docker-compose.yml" \
     -p "$WORKSPACE_NAME" \
     --env-file <(
-        printf 'WORKSPACE_NAME=%s\n'            "$WORKSPACE_NAME"
-        printf 'SSH_PUBLIC_KEY=%s\n'            "$SSH_PUBLIC_KEY"
-        printf 'TAVILY_API_KEY=%s\n'            "$TAVILY_API_KEY"
-        printf 'ADO_MCP_AUTH_TOKEN=%s\n'        "$ADO_MCP_AUTH_TOKEN"
-        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n' "$AZURE_DEVOPS_ORGANIZATION"
-        printf 'POSTMAN_API_KEY=%s\n'           "$POSTMAN_API_KEY"
-        printf 'NEW_RELIC_API_KEY=%s\n'         "$NEW_RELIC_API_KEY"
-        printf 'VSCODE_PORT=%s\n'               "$VSCODE_PORT"
-        printf 'SSH_PORT=%s\n'                  "$SSH_PORT"
+        printf 'WORKSPACE_NAME=%s\n'              "$WORKSPACE_NAME"
+        printf 'SSH_PUBLIC_KEY=%s\n'              "$SSH_PUBLIC_KEY"
+        printf 'ADMIN_PASSWORD=%s\n'               "$ADMIN_PASSWORD"
+        printf 'ANTHROPIC_API_KEY=%s\n'           "$ANTHROPIC_API_KEY"
+        printf 'AWS_ACCESS_KEY_ID=%s\n'           "$AWS_ACCESS_KEY_ID"
+        printf 'AWS_SECRET_ACCESS_KEY=%s\n'       "$AWS_SECRET_ACCESS_KEY"
+        printf 'AWS_REGION=%s\n'                  "$AWS_REGION"
+        printf 'ANTHROPIC_BEDROCK_BASE_URL=%s\n'  "$ANTHROPIC_BEDROCK_BASE_URL"
+        printf 'TAVILY_API_KEY=%s\n'              "$TAVILY_API_KEY"
+        printf 'ADO_MCP_AUTH_TOKEN=%s\n'          "$ADO_MCP_AUTH_TOKEN"
+        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n'   "$AZURE_DEVOPS_ORGANIZATION"
+        printf 'POSTMAN_API_KEY=%s\n'             "$POSTMAN_API_KEY"
+        printf 'NEW_RELIC_API_KEY=%s\n'           "$NEW_RELIC_API_KEY"
+        printf 'VSCODE_PORT=%s\n'                 "$VSCODE_PORT"
+        printf 'SSH_PORT=%s\n'                    "$SSH_PORT"
     ) \
     up -d
 ```
@@ -71,6 +85,12 @@ docker compose \
 ```powershell
 $WORKSPACE_NAME            = "my-org"
 $SSH_PUBLIC_KEY            = ""
+$ADMIN_PASSWORD            = ""
+$ANTHROPIC_API_KEY         = ""
+$AWS_ACCESS_KEY_ID         = ""
+$AWS_SECRET_ACCESS_KEY     = ""
+$AWS_REGION                = ""
+$ANTHROPIC_BEDROCK_BASE_URL = ""
 $TAVILY_API_KEY            = ""
 $ADO_MCP_AUTH_TOKEN        = ""
 $AZURE_DEVOPS_ORGANIZATION = ""
@@ -79,22 +99,30 @@ $NEW_RELIC_API_KEY         = ""
 $VSCODE_PORT               = "8080"
 $SSH_PORT                  = "2222"
 
-$env:WORKSPACE_NAME            = $WORKSPACE_NAME
-$env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
-$env:TAVILY_API_KEY            = $TAVILY_API_KEY
-$env:ADO_MCP_AUTH_TOKEN        = $ADO_MCP_AUTH_TOKEN
-$env:AZURE_DEVOPS_ORGANIZATION = $AZURE_DEVOPS_ORGANIZATION
-$env:POSTMAN_API_KEY           = $POSTMAN_API_KEY
-$env:NEW_RELIC_API_KEY         = $NEW_RELIC_API_KEY
-$env:VSCODE_PORT               = $VSCODE_PORT
-$env:SSH_PORT                  = $SSH_PORT
+$env:WORKSPACE_NAME             = $WORKSPACE_NAME
+$env:SSH_PUBLIC_KEY             = $SSH_PUBLIC_KEY
+$env:ADMIN_PASSWORD             = $ADMIN_PASSWORD
+$env:ANTHROPIC_API_KEY          = $ANTHROPIC_API_KEY
+$env:AWS_ACCESS_KEY_ID          = $AWS_ACCESS_KEY_ID
+$env:AWS_SECRET_ACCESS_KEY      = $AWS_SECRET_ACCESS_KEY
+$env:AWS_REGION                 = $AWS_REGION
+$env:ANTHROPIC_BEDROCK_BASE_URL = $ANTHROPIC_BEDROCK_BASE_URL
+$env:TAVILY_API_KEY             = $TAVILY_API_KEY
+$env:ADO_MCP_AUTH_TOKEN         = $ADO_MCP_AUTH_TOKEN
+$env:AZURE_DEVOPS_ORGANIZATION  = $AZURE_DEVOPS_ORGANIZATION
+$env:POSTMAN_API_KEY            = $POSTMAN_API_KEY
+$env:NEW_RELIC_API_KEY          = $NEW_RELIC_API_KEY
+$env:VSCODE_PORT                = $VSCODE_PORT
+$env:SSH_PORT                   = $SSH_PORT
 
 docker compose `
     -f ".\docker\docker-compose.yml" `
     -p $WORKSPACE_NAME `
     up -d
 
-'WORKSPACE_NAME','SSH_PUBLIC_KEY','TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
+'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD','ANTHROPIC_API_KEY','AWS_ACCESS_KEY_ID',
+'AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
+'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
 'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
@@ -102,7 +130,21 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 
 ---
 
-## Step 3 — Access the Workspace
+## Step 3 — Authenticate Claude Code
+
+Inside the workspace terminal, run:
+
+```bash
+claude auth login
+```
+
+Open the URL printed in the terminal in your browser. Auth tokens persist in the home volume across restarts.
+
+**Alternative** — API key or AWS Bedrock: set `ANTHROPIC_API_KEY` (or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION`) in your env-file before `docker compose up`.
+
+---
+
+## Step 4 — Access the Workspace
 
 | Access | URL / Command |
 |--------|--------------|
@@ -113,7 +155,7 @@ The Claude Code extension is pre-installed. All MCP tools (Tavily, Azure DevOps,
 
 ---
 
-## Step 4 — Verify Setup
+## Step 5 — Verify Setup
 
 Inside Claude Code, run:
 
@@ -129,7 +171,7 @@ All configured tools should show as connected. Then verify commands are availabl
 
 ---
 
-## Step 5 — Start Working
+## Step 6 — Start Working
 
 ### Clone your first repository
 
@@ -228,9 +270,23 @@ docker compose `
     up -d --force-recreate mcp-tavily
 ```
 
-> The SSH public key is persisted in the Docker volume `<WORKSPACE_NAME>-secrets`. To rotate it, remove the volume and re-run the full Step 2 command:
+> Three volumes exist per workspace, each with an independent lifecycle:
+>
+> | Volume | Contains | Delete to… |
+> |--------|----------|-----------|
+> | `<WORKSPACE_NAME>-secrets` | SSH public key | Rotate SSH key |
+> | `<WORKSPACE_NAME>-home` | Tools, configs, auth tokens | Reset system / pick up image updates |
+> | `<WORKSPACE_NAME>-workspace` | Cloned repos | Wipe all repositories |
+>
 > ```bash
+> # Rotate SSH key only
 > docker volume rm <WORKSPACE_NAME>-secrets
+>
+> # Reset system (keeps secrets and repos)
+> docker volume rm <WORKSPACE_NAME>-home
+>
+> # Full decommission
+> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-workspace
 > ```
 
 ---

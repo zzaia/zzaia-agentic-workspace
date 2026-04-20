@@ -16,9 +16,17 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - workspace-secrets:/secrets
+      - workspace-home:/home/zzaia
+      - workspace-repos:/home/zzaia/workspace
       - ./host:/home/zzaia/host
     environment:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+      - ANTHROPIC_BEDROCK_BASE_URL=${ANTHROPIC_BEDROCK_BASE_URL:-}
     networks:
       - mcp
     security_opt:
@@ -110,6 +118,10 @@ services:
 volumes:
   workspace-secrets:
     name: ${WORKSPACE_NAME:-zzaia}-secrets
+  workspace-home:
+    name: ${WORKSPACE_NAME:-zzaia}-home
+  workspace-repos:
+    name: ${WORKSPACE_NAME:-zzaia}-workspace
 
 networks:
   mcp:

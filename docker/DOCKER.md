@@ -47,55 +47,55 @@ docker exec <WORKSPACE_NAME>-workspace-1 cat /tmp/code-server.log
 
 ---
 
-## Storage — Bind Mounts vs Named Volumes
+## Storage — Named Volumes
 
-### Why this matters
+The workspace uses two named Docker volumes per stack. Named volumes live entirely inside Docker's storage layer — no host filesystem ownership issues, no `sudo` required, no Docker Desktop VM permission pass-through problems.
 
-The workspace container uses a `/secrets` mount to persist the SSH public key across container restarts. Two approaches exist: bind mounts (host directory) and Docker named volumes.
+### Volume layout
 
-### Bind mount (old approach — `~/.config/zzaia:/secrets`)
+| Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
+|---|---|---|---|---|
+| `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` | SSH public key (persisted once at first start) | Independent — survives home deletion |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/zzaia` | System files, tools, configs, auth tokens, Claude settings | Reset to pick up image updates |
+| `workspace-repos` | `<WORKSPACE_NAME>-workspace` | `/home/zzaia/workspace` | Cloned repositories and worktrees | **Independent** — survives home volume deletion |
 
-A bind mount maps a **host directory** directly into the container.
+`workspace-repos` overlays inside `workspace-home` at `/home/zzaia/workspace`. Docker supports named-volume overlay correctly.
 
+### Home volume seeding
+
+On the **first container start with an empty home volume**, Docker copies the image's `/home/zzaia` content into the volume. This means:
+
+- All tools installed in the image (mise, miniforge3, VS Code extensions, conda envs, claude-code CLI) are available immediately on first start.
+- Tool installations and configs persist across restarts and container recreation.
+- Claude auth tokens (`~/.config/claude/`) persist — `claude auth login` needs to be run only once.
+
+**After image updates:** the volume is NOT automatically updated from the new image. To pick up new tool versions, delete the home volume and recreate:
+
+```bash
+docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
+docker volume rm <WORKSPACE_NAME>-home
+docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
 ```
-Host filesystem                  Container
-~/.config/zzaia/   ──────────▶  /secrets/
-    .env (root:root 600)             .env  ← inaccessible!
-```
 
-**Problem on Docker Desktop for Linux:** Docker Desktop runs containers inside a lightweight Linux VM (linuxkit). When a host directory is mounted into this VM and then into the container, file ownership passes through two layers. Host files owned by root (UID 0) appear as an unmapped/inaccessible UID inside the container — even to the container's own root user. This is compounded by `cap_drop: ALL` removing `CAP_DAC_OVERRIDE`, which would normally let root bypass permission checks.
+The repos volume is unaffected — your cloned repositories survive.
 
-Docker Desktop auto-creates bind mount directories as root when they don't exist, which is how `~/.config/zzaia` ended up root-owned in the first place. The result: the entrypoint cannot read or write the directory, causing a permanent crash loop.
-
-### Named volume (current approach — `${WORKSPACE_NAME}-secrets:/secrets`)
-
-A named Docker volume is managed entirely **inside Docker's storage layer** within the VM — it never passes through the host filesystem.
-
-```
-Docker volume store (inside VM)    Container
-zzaia-tech-secrets/   ──────────▶  /secrets/
-    (Docker-managed)                   .env  ← zzaia owns it ✓
-```
-
-**Advantages:**
-- No host filesystem ownership issue — Docker creates volumes with proper Linux semantics inside the VM
-- The entrypoint's `chown -R zzaia:zzaia /secrets` works correctly on first start
-- Volume persists across container deletions — `docker rm` does not delete volumes
-- Volume name is `<WORKSPACE_NAME>-secrets`, giving each workspace its own isolated secret store
-- No `sudo` required on the host, ever
-- Cleaner security boundary — secrets are not browsable from the host filesystem
-
-**Volume lifecycle:**
+### Volume lifecycle
 
 ```bash
 # List volumes for a workspace
 docker volume ls --filter name=my-org
 
-# Inspect contents
-docker run --rm -v my-org-secrets:/s alpine ls -la /s
+# Inspect home volume
+docker run --rm -v my-org-home:/h alpine ls -la /h
 
-# Remove (when decommissioning a workspace)
-docker volume rm my-org-secrets
+# Inspect repos volume
+docker run --rm -v my-org-workspace:/w alpine ls -la /w
+
+# Reset system only (keeps secrets and repos)
+docker volume rm my-org-home
+
+# Full decommission (removes everything)
+docker volume rm my-org-secrets my-org-home my-org-workspace
 ```
 
 ---
@@ -137,11 +137,12 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | MCP secrets | Isolated per sidecar container, internal network only |
 | Secret handling | Injected in-memory at startup — no cleartext on host disk |
 | Host filesystem | No host directory mounts except docker socket |
-| Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-secrets`), not host path |
+| Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-home`), not host path |
 | Host network | Bridge only, workspace ports bound to `127.0.0.1` |
 | MCP ports | Internal only — not exposed to host |
 | Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
 | Root login | Disabled |
+| Sudo access | Disabled by default; set `ADMIN_PASSWORD` to enable password-based sudo |
 
 ---
 

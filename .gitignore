@@ -218,14 +218,14 @@ __marimo__/
 !README.md
 !QUICKSTART.md
 !ARCHITECTURE.md
-!Init-ubuntu.sh
+!WELCOME.md
+!zzaia-main.code-workspace
 !Init-windows.ps1
 !mise.toml
 !.claudeignore
 !.mcp.json
 !.claude-plugin/
 !.gitignore
-!Init-ubuntu-op.sh
 !.vscode
 
 # Allow traversal into .claude/ but re-ignore its contents

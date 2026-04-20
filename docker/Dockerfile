@@ -39,7 +39,7 @@ COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
 # ── Non-root user ─────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 zzaia \
-    && mkdir -p /home/zzaia/.ssh \
+    && mkdir -p /home/zzaia/.ssh /home/zzaia/.config/zzaia /home/zzaia/welcome \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
 
@@ -59,9 +59,10 @@ ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/z
 COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
 COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
 COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
-COPY --chown=zzaia:zzaia CLAUDE.md .mcp.json .claudeignore .gitignore \
+COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
     README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
+COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/welcome/README.md
 
 # ── Miniforge3 (conda) ────────────────────────────────────────────────────────
 RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
@@ -113,6 +114,7 @@ RUN for ext in \
         vscodevim.vim \
     ; do code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done
 
+RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

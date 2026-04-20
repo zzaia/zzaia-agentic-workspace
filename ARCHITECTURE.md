@@ -51,8 +51,8 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 **Decision**: Agents running in full-automatic mode (e.g. `--dangerously-skip-permissions`) must execute inside an isolated container that limits their access to the host machine.
 
 - The container's Linux capabilities are reduced to the minimum required
-- The agent cannot read host files outside explicitly mounted volumes
-- The agent cannot escalate privileges beyond the container boundary
+- The agent cannot read host files outside explicitly mounted volumes (`/home/zzaia` home volume, `/home/zzaia/workspace` repos volume, `/host` bind mount)
+- The agent cannot escalate privileges beyond the container boundary (unless `ADMIN_PASSWORD` is set, enabling password-based sudo)
 - The blast radius of an autonomous agent is confined to the workspace container
 
 **Rationale**: Full-automatic agent execution is a necessary productivity feature. Without isolation, it is also a security risk. Containerized segregation enables autonomy without exposing the host.
@@ -107,6 +107,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 - Different workspaces run simultaneously on the same Docker host
 - Port conflicts avoided via `VSCODE_PORT` and `SSH_PORT` environment variables per stack
 - Container names derived from project + service, never hardcoded
+- Three named Docker volumes scoped per workspace: `<WORKSPACE_NAME>-secrets` (SSH public key at `/secrets` — independent lifecycle), `<WORKSPACE_NAME>-home` (entire `/home/zzaia` — tools, configs, auth tokens, Claude settings; seeded from image on first empty-volume start), and `<WORKSPACE_NAME>-workspace` (cloned repositories at `/home/zzaia/workspace` — independent lifecycle, survives home deletion)
 
 **Rationale**: Compose project namespacing is native Docker isolation with zero extra infrastructure. It supports the objective of multiple concurrent workspace instances without requiring orchestration layers like Kubernetes.
 
@@ -131,7 +132,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 **Decision**: The `workspace` container drops all Linux capabilities and adds back only the minimum required: `CHOWN`, `FOWNER`, `SETGID`, `SETUID`, `AUDIT_WRITE`.
 
 - `DAC_OVERRIDE` and `DAC_READ_SEARCH` are intentionally absent — root inside the container cannot bypass file permission checks on files it does not own
-- The secrets directory is `chown`'d to `zzaia` at startup (using `CAP_CHOWN`); all subsequent access is as the non-root `zzaia` user
+- The config directory (`~/.config/zzaia/`) is `chown`'d to `zzaia` at startup (using `CAP_CHOWN`); all subsequent access is as the non-root `zzaia` user
 - `--dangerously-skip-permissions` agents operate within these capability boundaries
 
 **Rationale**: Reducing capabilities limits the blast radius of an autonomous agent. An agent with full automation cannot escape the container's capability set, protecting the host and sibling containers.
@@ -143,7 +144,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 **Decision**: Secrets are passed via `--env-file <(printf ...)` at `docker compose up` time. On first start, the workspace entrypoint writes only the SSH public key to `/secrets/.env` (owned by `zzaia`, mode 600, directory mode 700). On all subsequent starts, the file already exists and env vars are ignored.
 
 - Secrets exist only in the process environment during the first startup, never written to disk in cleartext elsewhere
-- `/secrets` maps to `~/.config/zzaia` on the host — a user-controlled path outside the container image
+- The SSH public key is persisted to `/home/zzaia/.config/zzaia/.env` (mode 600) inside the named home volume on first start
 - The running container cannot re-read API keys after startup completes
 - SSH terminal, vscode-server terminal, and agent shell have no access to API keys
 
@@ -189,6 +190,20 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ---
 
+### ADR 008: Claude Code Authentication and Sudo Access
+
+**Decision**: The workspace container accepts five optional environment variables for Claude Code's own authentication: `ANTHROPIC_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL`. An optional `ADMIN_PASSWORD` variable enables sudo access with that password.
+
+- Claude Code's auth credentials must exist in its process environment by design — the agent cannot function otherwise
+- Unlike MCP sidecar secrets (which serve external APIs and are fully isolated), agent auth cannot be moved to a sidecar
+- The preferred auth path is browser OAuth: `claude auth login` prints a URL to the terminal; tokens are stored in `~/.config/claude/` inside the home volume and persist across restarts without any env vars
+- API key / Bedrock credentials are provided as an alternative for CI and server deployments where browser auth is not possible
+- `ADMIN_PASSWORD` — if set, the entrypoint calls `chpasswd` to set the `zzaia` user password and writes a sudoers entry (`zzaia ALL=(ALL) ALL`); if empty, no sudoers file is written and sudo is unavailable
+
+**Rationale**: The exception is narrow — only Claude Code's own credentials and the user password are permitted in the workspace container environment. All other API keys remain in MCP sidecars.
+
+---
+
 ## C4 Context Diagram
 
 ```mermaid
@@ -230,7 +245,8 @@ C4Container
     }
 
     System_Boundary(host, "Docker Host") {
-        ContainerDb(secrets, "~/.config/zzaia", "Host filesystem", "SSH public key only, owned by UID 1000")
+        ContainerDb(home, "<workspace>-home", "Docker named volume", "Home dir — tools, configs, auth tokens, Claude settings")
+        ContainerDb(repos, "<workspace>-workspace", "Docker named volume", "Cloned repositories and worktrees")
         Container(dockersock, "/var/run/docker.sock", "Unix socket", "Docker API access for agent-initiated ops")
     }
 
@@ -239,7 +255,8 @@ C4Container
     Rel(ws, ado, "MCP tool calls", "SSE internal network")
     Rel(ws, postman, "MCP tool calls", "SSE internal network")
     Rel(ws, newrelic, "MCP tool calls", "SSE internal network")
-    Rel(ws, secrets, "SSH key read/write", "bind mount /secrets")
+    Rel(ws, home, "Persistent home", "named volume /home/zzaia")
+    Rel(ws, repos, "Repository storage", "named volume /home/zzaia/workspace")
     Rel(ws, dockersock, "Docker API", "bind mount")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
@@ -306,7 +323,7 @@ zzaia/
 | Agent exfiltrates API keys | Keys never in workspace container env after startup |
 | Agent modifies host filesystem | Only `/secrets` and `/host` volumes mounted; cap_drop ALL |
 | Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
-| Secret visible in terminal | Env vars ephemeral; `/secrets/.env` owned by zzaia, mode 600 |
+| Secret visible in terminal | Env vars ephemeral; `/home/zzaia/.config/zzaia/.env` owned by zzaia, mode 600 |
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
 | Port scanning from container | MCP ports bound to internal network only |
 

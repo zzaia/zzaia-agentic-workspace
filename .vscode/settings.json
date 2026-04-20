@@ -1,4 +1,5 @@
 {
+  "workbench.startupEditor": "readme",
   "workbench.colorTheme": "Night Owlet (No Italics)",
   "workbench.iconTheme": "ayu",
   "workbench.activityBar.location": "bottom",

@@ -7,6 +7,10 @@ mkdir -p /secrets
 chown -R zzaia:zzaia /secrets 2>/dev/null || true
 chmod 700 /secrets 2>/dev/null || true
 
+mkdir -p /home/zzaia/welcome /home/zzaia/workspace /home/zzaia/.ssh
+chown -R zzaia:zzaia /home/zzaia/welcome /home/zzaia/workspace /home/zzaia/.ssh 2>/dev/null || true
+chmod 700 /home/zzaia/.ssh 2>/dev/null || true
+
 mkdir -p /run/sshd
 ssh-keygen -A 2>/dev/null || true
 
@@ -19,9 +23,12 @@ if [ -S /var/run/docker.sock ]; then
         || echo "WARNING: zzaia not in docker group" >&2
 fi
 
-# ── Warn if /secrets is not a real mount ──────────────────────────────────────
-mountpoint -q /secrets 2>/dev/null \
-    || echo "WARNING: /secrets is not mounted — SSH key will not persist across restarts" >&2
+# ── Sudo access — enabled when ADMIN_PASSWORD is set ─────────────────────────
+if [ -n "${ADMIN_PASSWORD:-}" ]; then
+    echo "zzaia:${ADMIN_PASSWORD}" | chpasswd
+    echo "zzaia ALL=(ALL) ALL" > /etc/sudoers.d/zzaia-admin
+    chmod 440 /etc/sudoers.d/zzaia-admin
+fi
 
 # ── Persist SSH public key on first start ─────────────────────────────────────
 if [ ! -f "$SECRETS_FILE" ]; then

@@ -10,6 +10,7 @@
 Supported on **Ubuntu / WSL**, **macOS**, and **Windows**. Requires Docker Desktop.
 
 > See [QUICKSTART.md](QUICKSTART.md) for step-by-step setup instructions.
+> First time inside the workspace? Open [WELCOME.md](WELCOME.md) for a guided start.
 
 ## 🏗️ Command Hierarchy
 
