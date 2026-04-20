@@ -136,7 +136,6 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | Workspace secrets | SSH key only — no API keys in workspace container |
 | MCP secrets | Isolated per sidecar container, internal network only |
 | Secret handling | Injected in-memory at startup — no cleartext on host disk |
-| Host filesystem | No host directory mounts except docker socket |
 | Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-secrets`), not host path |
 | Host network | Bridge only, workspace ports bound to `127.0.0.1` |
 | MCP ports | Internal only — not exposed to host |

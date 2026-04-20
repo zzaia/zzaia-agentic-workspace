@@ -2,16 +2,10 @@
 # entrypoint.sh — SSH key init, code-server, SSH server
 set -euo pipefail
 
+# /secrets stays root-owned so root can always read/write it
 SECRETS_FILE=/secrets/.env
 mkdir -p /secrets
-chown -R zzaia:zzaia /secrets 2>/dev/null || true
 chmod 700 /secrets 2>/dev/null || true
-
-mkdir -p /home/zzaia/welcome /home/zzaia/workspace \
-         /home/zzaia/.ssh /home/zzaia/.local/share/code-server
-chown -R zzaia:zzaia /home/zzaia/welcome /home/zzaia/workspace \
-         /home/zzaia/.ssh /home/zzaia/.local 2>/dev/null || true
-chmod 700 /home/zzaia/.ssh 2>/dev/null || true
 
 mkdir -p /run/sshd
 
@@ -21,7 +15,7 @@ if compgen -G "/secrets/ssh_host_*" > /dev/null 2>&1; then
     chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
     chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
 else
-    ssh-keygen -A 2>/dev/null || true
+    ssh-keygen -A
     cp /etc/ssh/ssh_host_* /secrets/ 2>/dev/null || true
     chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
     chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
@@ -52,14 +46,14 @@ if [ ! -f "$SECRETS_FILE" ]; then
         _KEY_TO_WRITE=""
     fi
     if [ -n "$_KEY_TO_WRITE" ]; then
+        # Write as root — /secrets is root-owned so root can write here
         printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" > "$SECRETS_FILE"
         chmod 600 "$SECRETS_FILE"
-        chown zzaia:zzaia "$SECRETS_FILE"
     fi
     unset _KEY_TO_WRITE
 fi
 
-# ── SSH authorized key ────────────────────────────────────────────────────────
+# ── SSH authorized key — write as zzaia (.ssh is zzaia-owned 700) ─────────────
 _SSH_KEY="${SSH_PUBLIC_KEY:-}"
 unset SSH_PUBLIC_KEY
 if [ -z "$_SSH_KEY" ]; then
@@ -67,9 +61,8 @@ if [ -z "$_SSH_KEY" ]; then
         | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true)
 fi
 if [ -n "$_SSH_KEY" ]; then
-    printf '%s\n' "$_SSH_KEY" > /home/zzaia/.ssh/authorized_keys
-    chmod 600 /home/zzaia/.ssh/authorized_keys
-    chown zzaia:zzaia /home/zzaia/.ssh/authorized_keys
+    printf '%s\n' "$_SSH_KEY" \
+        | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
 fi
 
 # ── Start code-server ─────────────────────────────────────────────────────────
