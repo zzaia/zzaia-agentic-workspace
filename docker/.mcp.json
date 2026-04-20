@@ -1,11 +1,11 @@
 {
   "mcpServers": {
     "tavily": {
-      "type": "http",
+      "type": "sse",
       "url": "http://mcp-tavily:3001/sse"
     },
     "azure-devops": {
-      "type": "http",
+      "type": "sse",
       "url": "http://mcp-azure-devops:3002/sse"
     },
     "playwright": {
@@ -13,7 +13,7 @@
       "args": ["-y", "@playwright/mcp@latest"]
     },
     "postman": {
-      "type": "http",
+      "type": "sse",
       "url": "http://mcp-postman:3003/sse"
     },
     "aspire": {
@@ -21,7 +21,7 @@
       "args": ["mcp", "start"]
     },
     "new-relic": {
-      "type": "http",
+      "type": "sse",
       "url": "http://mcp-newrelic:3004/sse"
     }
   }
