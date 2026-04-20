@@ -37,8 +37,10 @@ if [ ! -f "$SECRETS_FILE" ]; then
         echo "WARNING: SSH_PUBLIC_KEY does not look like a valid public key — skipping." >&2
         _KEY_TO_WRITE=""
     fi
-    printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" \
-        | su -s /bin/bash zzaia -c "cat > '$SECRETS_FILE' && chmod 600 '$SECRETS_FILE'"
+    if [ -n "$_KEY_TO_WRITE" ]; then
+        printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" \
+            | su -s /bin/bash zzaia -c "cat > '$SECRETS_FILE' && chmod 600 '$SECRETS_FILE'"
+    fi
     unset _KEY_TO_WRITE
 fi
 
