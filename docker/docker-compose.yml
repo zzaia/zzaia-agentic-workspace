@@ -15,7 +15,7 @@ services:
       - "127.0.0.1:${SSH_PORT:-2222}:2222"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
-      - ~/.config/zzaia:/secrets
+      - workspace-secrets:/secrets
       - ./host:/home/zzaia/host
     environment:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
@@ -106,6 +106,10 @@ services:
     networks:
       - mcp
     restart: "no"
+
+volumes:
+  workspace-secrets:
+    name: ${WORKSPACE_NAME:-zzaia}-secrets
 
 networks:
   mcp:

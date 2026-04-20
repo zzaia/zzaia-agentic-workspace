@@ -228,7 +228,10 @@ docker compose `
     up -d --force-recreate mcp-tavily
 ```
 
-> The SSH public key is persisted to `~/.config/zzaia/.env` on first start. To rotate it, delete that file and re-run the full Step 2 command.
+> The SSH public key is persisted in the Docker volume `<WORKSPACE_NAME>-secrets`. To rotate it, remove the volume and re-run the full Step 2 command:
+> ```bash
+> docker volume rm <WORKSPACE_NAME>-secrets
+> ```
 
 ---
 
