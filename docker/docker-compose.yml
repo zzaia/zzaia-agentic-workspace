@@ -18,7 +18,7 @@ services:
       - workspace-secrets:/secrets
       - workspace-home:/home/zzaia
       - workspace-repos:/home/zzaia/workspace
-      - ./host:/home/zzaia/host
+      - ../host:/home/zzaia/host
     environment:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}

@@ -7,12 +7,25 @@ mkdir -p /secrets
 chown -R zzaia:zzaia /secrets 2>/dev/null || true
 chmod 700 /secrets 2>/dev/null || true
 
-mkdir -p /home/zzaia/welcome /home/zzaia/workspace /home/zzaia/.ssh
-chown -R zzaia:zzaia /home/zzaia/welcome /home/zzaia/workspace /home/zzaia/.ssh 2>/dev/null || true
+mkdir -p /home/zzaia/welcome /home/zzaia/workspace \
+         /home/zzaia/.ssh /home/zzaia/.local/share/code-server
+chown -R zzaia:zzaia /home/zzaia/welcome /home/zzaia/workspace \
+         /home/zzaia/.ssh /home/zzaia/.local 2>/dev/null || true
 chmod 700 /home/zzaia/.ssh 2>/dev/null || true
 
 mkdir -p /run/sshd
-ssh-keygen -A 2>/dev/null || true
+
+# ── SSH host keys — persist in secrets volume to avoid client fingerprint changes
+if compgen -G "/secrets/ssh_host_*" > /dev/null 2>&1; then
+    cp /secrets/ssh_host_* /etc/ssh/
+    chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
+    chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
+else
+    ssh-keygen -A 2>/dev/null || true
+    cp /etc/ssh/ssh_host_* /secrets/ 2>/dev/null || true
+    chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
+    chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
+fi
 
 # ── Docker socket group ───────────────────────────────────────────────────────
 if [ -S /var/run/docker.sock ]; then
@@ -29,30 +42,34 @@ if [ -n "${ADMIN_PASSWORD:-}" ]; then
     echo "zzaia ALL=(ALL) ALL" > /etc/sudoers.d/zzaia-admin
     chmod 440 /etc/sudoers.d/zzaia-admin
 fi
+unset ADMIN_PASSWORD
 
 # ── Persist SSH public key on first start ─────────────────────────────────────
 if [ ! -f "$SECRETS_FILE" ]; then
     _KEY_TO_WRITE="${SSH_PUBLIC_KEY:-}"
     if [[ "$_KEY_TO_WRITE" != ssh-* ]] && [[ "$_KEY_TO_WRITE" != ecdsa-* ]] && [[ "$_KEY_TO_WRITE" != sk-* ]]; then
-        echo "WARNING: SSH_PUBLIC_KEY does not look like a valid public key — skipping." >&2
+        echo "WARNING: SSH_PUBLIC_KEY is not a valid public key (must start with ssh-*, ecdsa-*, or sk-*; keys with an options prefix are not supported) — skipping." >&2
         _KEY_TO_WRITE=""
     fi
     if [ -n "$_KEY_TO_WRITE" ]; then
-        printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" \
-            | su -s /bin/bash zzaia -c "cat > '$SECRETS_FILE' && chmod 600 '$SECRETS_FILE'"
+        printf 'SSH_PUBLIC_KEY=%s\n' "$_KEY_TO_WRITE" > "$SECRETS_FILE"
+        chmod 600 "$SECRETS_FILE"
+        chown zzaia:zzaia "$SECRETS_FILE"
     fi
     unset _KEY_TO_WRITE
 fi
 
 # ── SSH authorized key ────────────────────────────────────────────────────────
 _SSH_KEY="${SSH_PUBLIC_KEY:-}"
+unset SSH_PUBLIC_KEY
 if [ -z "$_SSH_KEY" ]; then
     _SSH_KEY=$(grep -m1 '^SSH_PUBLIC_KEY=' "$SECRETS_FILE" 2>/dev/null \
         | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true)
 fi
 if [ -n "$_SSH_KEY" ]; then
-    printf '%s\n' "$_SSH_KEY" \
-        | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
+    printf '%s\n' "$_SSH_KEY" > /home/zzaia/.ssh/authorized_keys
+    chmod 600 /home/zzaia/.ssh/authorized_keys
+    chown zzaia:zzaia /home/zzaia/.ssh/authorized_keys
 fi
 
 # ── Start code-server ─────────────────────────────────────────────────────────
@@ -61,7 +78,8 @@ su -s /bin/bash zzaia -c "
     export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
     export BROWSER=/usr/local/bin/browser-print
     code-server --bind-addr 0.0.0.0:8080 --auth none \
-        /home/zzaia/zzaia-main.code-workspace >> /tmp/code-server.log 2>&1 &
+        /home/zzaia/zzaia-main.code-workspace \
+        >> /home/zzaia/.local/share/code-server/code-server.log 2>&1 &
 "
 
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config

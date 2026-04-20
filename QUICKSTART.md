@@ -41,43 +41,32 @@ Fill in your values and run the command for your platform. No files are written 
 ### Ubuntu / macOS / WSL
 
 ```bash
-WORKSPACE_NAME="my-org"
-SSH_PUBLIC_KEY=""
-ADMIN_PASSWORD=""
-ANTHROPIC_API_KEY=""
-AWS_ACCESS_KEY_ID=""
-AWS_SECRET_ACCESS_KEY=""
-AWS_REGION=""
-ANTHROPIC_BEDROCK_BASE_URL=""
-TAVILY_API_KEY=""
-ADO_MCP_AUTH_TOKEN=""
-AZURE_DEVOPS_ORGANIZATION=""
-POSTMAN_API_KEY=""
-NEW_RELIC_API_KEY=""
-VSCODE_PORT="8080"
-SSH_PORT="2222"
+export WORKSPACE_NAME="my-org"
+export SSH_PUBLIC_KEY=""
+export ADMIN_PASSWORD=""
+export ANTHROPIC_API_KEY=""
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+export AWS_REGION=""
+export ANTHROPIC_BEDROCK_BASE_URL=""
+export TAVILY_API_KEY=""
+export ADO_MCP_AUTH_TOKEN=""
+export AZURE_DEVOPS_ORGANIZATION=""
+export POSTMAN_API_KEY=""
+export NEW_RELIC_API_KEY=""
+export VSCODE_PORT="8080"
+export SSH_PORT="2222"
 
 docker compose \
     -f "./docker/docker-compose.yml" \
     -p "$WORKSPACE_NAME" \
-    --env-file <(
-        printf 'WORKSPACE_NAME=%s\n'              "$WORKSPACE_NAME"
-        printf 'SSH_PUBLIC_KEY=%s\n'              "$SSH_PUBLIC_KEY"
-        printf 'ADMIN_PASSWORD=%s\n'               "$ADMIN_PASSWORD"
-        printf 'ANTHROPIC_API_KEY=%s\n'           "$ANTHROPIC_API_KEY"
-        printf 'AWS_ACCESS_KEY_ID=%s\n'           "$AWS_ACCESS_KEY_ID"
-        printf 'AWS_SECRET_ACCESS_KEY=%s\n'       "$AWS_SECRET_ACCESS_KEY"
-        printf 'AWS_REGION=%s\n'                  "$AWS_REGION"
-        printf 'ANTHROPIC_BEDROCK_BASE_URL=%s\n'  "$ANTHROPIC_BEDROCK_BASE_URL"
-        printf 'TAVILY_API_KEY=%s\n'              "$TAVILY_API_KEY"
-        printf 'ADO_MCP_AUTH_TOKEN=%s\n'          "$ADO_MCP_AUTH_TOKEN"
-        printf 'AZURE_DEVOPS_ORGANIZATION=%s\n'   "$AZURE_DEVOPS_ORGANIZATION"
-        printf 'POSTMAN_API_KEY=%s\n'             "$POSTMAN_API_KEY"
-        printf 'NEW_RELIC_API_KEY=%s\n'           "$NEW_RELIC_API_KEY"
-        printf 'VSCODE_PORT=%s\n'                 "$VSCODE_PORT"
-        printf 'SSH_PORT=%s\n'                    "$SSH_PORT"
-    ) \
     up -d
+
+unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
+      ANTHROPIC_API_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
+      AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
+      TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
+      POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT
 ```
 
 ### Windows
@@ -216,14 +205,12 @@ Each workspace gets its own isolated Docker Compose stack identified by `WORKSPA
 
 ```bash
 # Workspace 1 — default ports
-WORKSPACE_NAME="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" \
-    --env-file <(...) up -d
+export WORKSPACE_NAME="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d
 
 # Workspace 2 — different ports
-WORKSPACE_NAME="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" \
-    --env-file <(...) up -d
+export WORKSPACE_NAME="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
+docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d
 ```
 
 Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, and separate internal networks.
@@ -249,14 +236,12 @@ To recreate a single service without restarting the whole stack, set the updated
 # Ubuntu / macOS — rotate a single MCP service
 NEW_VALUE="new-key-here"
 
+export TAVILY_API_KEY="$NEW_VALUE"
 docker compose \
     -f "./docker/docker-compose.yml" \
     -p "$WORKSPACE_NAME" \
-    --env-file <(
-        printf 'TAVILY_API_KEY=%s\n' "$NEW_VALUE"
-        # include the other vars unchanged...
-    ) \
     up -d --force-recreate mcp-tavily
+unset TAVILY_API_KEY
 ```
 
 ```powershell

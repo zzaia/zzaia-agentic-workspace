@@ -12,20 +12,24 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=en_US.UTF-8 \
     BROWSER=/usr/local/bin/browser-print
 
-# ── System packages + mise apt repo ──────────────────────────────────────────
+# ── System packages + Docker CE CLI (no daemon) + mise ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml docker.io sudo \
+    curl git openssh-server tmux plantuml sudo \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
     && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
         | grep '"tag_name"' | sed 's/.*"tectonic@//;s/".*//') \
     && curl -fsSL "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic@${TECTONIC_VER}/tectonic-${TECTONIC_VER}-x86_64-unknown-linux-musl.tar.gz" \
         | tar xz -C /usr/local/bin \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu noble stable" \
+        > /etc/apt/sources.list.d/docker.list \
     && curl -fsSL https://mise.jdx.dev/gpg-key.pub \
         | gpg --dearmor -o /usr/share/keyrings/mise-archive-keyring.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/mise-archive-keyring.gpg arch=amd64] https://mise.jdx.dev/deb stable main" \
         > /etc/apt/sources.list.d/mise.list \
-    && apt-get update && apt-get install -y --no-install-recommends mise \
+    && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli mise \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
@@ -35,12 +39,12 @@ RUN printf '#!/bin/sh\necho "Open this URL in your browser: $1"\n' \
 
 # ── SSH server ────────────────────────────────────────────────────────────────
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
+RUN grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
+    || echo 'Include /etc/ssh/sshd_config.d/*.conf' >> /etc/ssh/sshd_config
 
 # ── Non-root user ─────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 zzaia \
-    && mkdir -p /home/zzaia/.ssh /home/zzaia/.config/zzaia /home/zzaia/welcome \
-    && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
 
 # ── code-server ───────────────────────────────────────────────────────────────
@@ -55,23 +59,15 @@ RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
 ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
     EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items","resourceUrlTemplate":"https://{publisher}.vscode-cdn.net/extensions/{publisher}/{name}/{version}/Microsoft.VisualStudio.Code.WebResources/{path}"}'
 
-# ── Workspace configuration ───────────────────────────────────────────────────
-COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
-COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
-COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
-COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
-    README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
-COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
-COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/welcome/README.md
-
-# ── Miniforge3 (conda) ────────────────────────────────────────────────────────
+# ── Miniforge3 (conda) — no config dependency, cache-stable ──────────────────
 RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
         -o /tmp/miniforge.sh \
     && bash /tmp/miniforge.sh -b -p /home/zzaia/miniforge3 \
     && rm /tmp/miniforge.sh \
     && /home/zzaia/miniforge3/bin/conda init bash
 
-# ── Tools + tasks via mise.toml ──────────────────────────────────────────────
+# ── Tools via mise.toml — COPY immediately before use to isolate cache misses ─
+COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
 RUN mise trust ~/mise.toml \
     && mise install \
     && mise run python-packages \
@@ -113,6 +109,14 @@ RUN for ext in \
         tomblind.scm-buttons-vscode \
         vscodevim.vim \
     ; do code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done
+
+# ── Workspace configuration — after expensive layers for better cache ─────────
+COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
+COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
+COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
+    README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
+COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
+COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/welcome/README.md
 
 RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
 
