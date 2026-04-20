@@ -29,8 +29,6 @@ services:
       - ANTHROPIC_BEDROCK_BASE_URL=${ANTHROPIC_BEDROCK_BASE_URL:-}
     networks:
       - mcp
-    security_opt:
-      - no-new-privileges:true
     cap_drop:
       - ALL
     cap_add:

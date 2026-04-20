@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + mise apt repo ──────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml docker.io \
+    curl git openssh-server tmux plantuml docker.io sudo \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
     && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \

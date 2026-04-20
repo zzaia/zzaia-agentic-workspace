@@ -48,7 +48,7 @@ if [ -z "$_SSH_KEY" ]; then
     _SSH_KEY=$(grep -m1 '^SSH_PUBLIC_KEY=' "$SECRETS_FILE" 2>/dev/null \
         | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true)
 fi
-if [ ! -s /home/zzaia/.ssh/authorized_keys ] && [ -n "$_SSH_KEY" ]; then
+if [ -n "$_SSH_KEY" ]; then
     printf '%s\n' "$_SSH_KEY" \
         | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
 fi
