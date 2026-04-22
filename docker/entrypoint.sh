@@ -24,10 +24,14 @@ fi
 # ── Docker socket group ───────────────────────────────────────────────────────
 if [ -S /var/run/docker.sock ]; then
     DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
-    groupadd -f -g "$DOCKER_GID" docker 2>/dev/null || true
-    usermod -aG docker zzaia 2>/dev/null || true
-    id zzaia | grep -q "docker" \
-        || echo "WARNING: zzaia not in docker group" >&2
+    if [ "$DOCKER_GID" = "0" ]; then
+        # Socket owned by root group — make it accessible to zzaia directly
+        chmod 660 /var/run/docker.sock 2>/dev/null || true
+        usermod -aG root zzaia 2>/dev/null || true
+    else
+        groupadd -f -g "$DOCKER_GID" docker 2>/dev/null || true
+        usermod -aG docker zzaia 2>/dev/null || true
+    fi
 fi
 
 # ── Sudo access — enabled when ADMIN_PASSWORD is set ─────────────────────────
