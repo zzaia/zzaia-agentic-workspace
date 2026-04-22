@@ -1,11 +1,11 @@
 {
   "folders": [
     {
-        "name": "zzaia",
+        "name": "home",
         "path": "."
     },
     {
-        "path": "host/Zzaia.AppHost"
+        "path": ".claude/workspace/host/Zzaia.AppHost"
     }
 ],
   "settings": {

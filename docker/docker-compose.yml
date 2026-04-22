@@ -13,10 +13,10 @@ services:
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:8080"
       - "127.0.0.1:${SSH_PORT:-2222}:2222"
+      - "127.0.0.1:43279:43279"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - workspace-secrets:/secrets
-      - workspace-home:/home/zzaia
       - workspace-repos:/home/zzaia/workspace
     environment:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
@@ -59,7 +59,13 @@ services:
         npx -y supergateway@latest --port 3001 --stdio "npx -y tavily-mcp@latest"
     networks:
       - mcp
-    restart: "no"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mcp-azure-devops:
     image: node:lts-alpine
@@ -78,7 +84,13 @@ services:
         --stdio "npx -y @azure-devops/mcp@next $$AZURE_DEVOPS_ORGANIZATION -a envvar"
     networks:
       - mcp
-    restart: "no"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mcp-postman:
     image: node:lts-alpine
@@ -94,7 +106,13 @@ services:
         --stdio "npx -y @postman/postman-mcp-server --minimal --region us"
     networks:
       - mcp
-    restart: "no"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mcp-newrelic:
     image: node:lts-alpine
@@ -107,16 +125,20 @@ services:
         [ -z "$$NEW_RELIC_API_KEY" ]
         && echo "NEW_RELIC_API_KEY not set — mcp-newrelic disabled." && exit 0 ;
         npx -y supergateway@latest --port 3004
-        --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --transport http-only --header \"Api-Key: $$NEW_RELIC_API_KEY\""
+        --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --header \"Api-Key: $$NEW_RELIC_API_KEY\""
     networks:
       - mcp
-    restart: "no"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3004/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
 volumes:
   workspace-secrets:
     name: ${WORKSPACE_NAME:-zzaia}-secrets
-  workspace-home:
-    name: ${WORKSPACE_NAME:-zzaia}-home
   workspace-repos:
     name: ${WORKSPACE_NAME:-zzaia}-workspace
 

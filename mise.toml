@@ -1,7 +1,7 @@
 [tools]
 node = "22"
 python = "3.12"
-dotnet = "8"
+dotnet = "10"
 k6 = "latest"
 d2 = "latest"
 dapr = "latest"

@@ -47,7 +47,7 @@ Single interface for Aspire AppHost management. Routes to setup or diagnostics b
 
 1. **Discover Projects** — Parse `--applications` as `name` or `name:branch` (defaults to `master`); glob `workspace/{name}.worktrees/{branch}/src/**/*.csproj`
 2. **Ensure Docker** — Check `docker info`; start Docker if not running
-3. **Read Documentation** — Read `host/README.md` for configuration patterns
+3. **Read Documentation** — Read `workspace/host/README.md` for configuration patterns
 4. **Generate Configurations** — Delegate to `zzaia-developer-specialist` to implement settings, registrations, project references, and appsettings
 5. **Validate Build** — Run `dotnet build`; fix compilation errors
 6. **Verify with Aspire MCP** — Discover AppHost, select it, and list resources to confirm all services appear

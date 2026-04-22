@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
-RUN printf '#!/bin/sh\necho "Open this URL in your browser: $1"\n' \
+RUN printf '#!/bin/sh\nurl="$1"\necho ""\necho "Open this URL in your browser:"\necho "  $url"\necho ""\necho "After authentication, the browser will redirect to localhost:43279."\necho "This port is forwarded from the container — ensure docker-compose port 43279 is mapped."\necho ""\n' \
         > /usr/local/bin/browser-print \
     && chmod +x /usr/local/bin/browser-print
 
@@ -59,7 +59,7 @@ WORKDIR /home/zzaia
 
 RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
 
-ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH" \
+ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:/home/zzaia/.dotnet/tools:$PATH" \
     EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items","resourceUrlTemplate":"https://{publisher}.vscode-cdn.net/extensions/{publisher}/{name}/{version}/Microsoft.VisualStudio.Code.WebResources/{path}"}'
 
 # ── Miniforge3 (conda) — no config dependency, cache-stable ──────────────────
@@ -119,8 +119,8 @@ COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
 COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
     README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
-COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/welcome/README.md
-COPY --chown=zzaia:zzaia host/ /home/zzaia/host/
+COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/README.md
+COPY --chown=zzaia:zzaia .claude/workspace/host/ /home/zzaia/.claude/workspace/host/
 
 RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
 

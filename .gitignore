@@ -237,6 +237,8 @@ __marimo__/
 !.claude/marketplace.json
 !.claude/settings.json
 !.claude/settings.local.json
+!.claude/workspace/
+!.claude/workspace/**
 
 # Docker — container configuration (local only)
 docker/
