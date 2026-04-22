@@ -37,21 +37,26 @@ RUN cat > /usr/local/bin/browser-print << 'EOF'
 #!/bin/sh
 url="$1"
 
-# Extract dynamic OAuth callback port from percent-encoded redirect_uri
-port=$(printf '%s' "$url" | sed 's/.*localhost%3A//;s/%2F.*//' | grep -E '^[0-9]+$' || true)
+# URL-encoded form: Claude Code — localhost%3APORT%2F
+port=$(printf '%s' "$url" | sed 's/.*localhost%3A//;s/%2F.*//' | grep -E '^[0-9]+$' 2>/dev/null || true)
+# Plain form: az login and others — localhost:PORT
+[ -z "$port" ] && port=$(printf '%s' "$url" | grep -oE 'localhost:[0-9]+' | grep -oE '[0-9]+$' | head -1 || true)
 
 if [ -n "$port" ]; then
     cid=$(hostname)
-    net=$(docker inspect "$cid" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{break}}{{end}}' 2>/dev/null)
-    ip=$(docker inspect "$cid" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{break}}{{end}}' 2>/dev/null)
-    if [ -n "$ip" ] && [ -n "$net" ]; then
+    net=$(docker inspect "$cid" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null | awk '{print $1}')
+    ip=$(docker inspect  "$cid" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' 2>/dev/null | awk '{print $1}')
+    image=$(docker inspect "$cid" --format '{{.Config.Image}}' 2>/dev/null)
+    if [ -n "$ip" ] && [ -n "$net" ] && [ -n "$image" ]; then
         docker rm -f "oauth-${port}" 2>/dev/null || true
         docker run --rm -d \
             --name "oauth-${port}" \
             --network "$net" \
             -p "127.0.0.1:${port}:${port}" \
-            node:lts-alpine \
-            sh -c "apk add -q --no-cache socat && socat TCP-LISTEN:${port},reuseaddr,fork TCP:${ip}:${port}"
+            --entrypoint socat \
+            "$image" \
+            "TCP-LISTEN:${port},reuseaddr,fork" "TCP:${ip}:${port}" 2>/dev/null \
+        && sleep 1
     fi
 fi
 
@@ -118,7 +123,6 @@ RUN for ext in \
         kreativ-software.csharpextensions \
         mermaidchart.vscode-mermaid-chart \
         ms-azure-devops.azure-pipelines \
-        ms-dotnettools.csdevkit \
         ms-dotnettools.csharp \
         ms-dotnettools.vscode-dotnet-runtime \
         ms-python.debugpy \
