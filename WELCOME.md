@@ -1,85 +1,88 @@
 # ZZAIA Agentic Workspace
 
-Multi-language development environment with Claude Code, MCP tools, and integrated workspace repositories.
+Multi-language agentic development environment — architecture, implementation, and delivery from a single Claude Code session.
 
-## Getting Started
+---
 
-### Step 1: Access the Workspace
+## 1. Authenticate
 
-Open the code-server URL in your browser (default: `http://localhost:8080`) to access VS Code.
+Open the Claude Code terminal or the Claude Code extension and run:
 
-### Step 2: Authenticate Claude Code
-
-Option A: Use environment variables (recommended for automation)
-```bash
-export ANTHROPIC_API_KEY="your-api-key"
-# or AWS Bedrock
-export ANTHROPIC_BEDROCK_BASE_URL="your-bedrock-url"
-export AWS_ACCESS_KEY_ID="your-key-id"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_REGION="your-region"
+```
+/login
 ```
 
-Option B: Use interactive login
-```bash
-claude auth login
+After login, verify your MCP tools are available:
+
+```
+/mcp
 ```
 
-When prompted, open the OAuth URL in your browser. If the callback fails:
-- Manual token: paste the token printed in the terminal
-- Port forward: expose port 10000 or use code-server proxy at `localhost:8080/proxy/10000/`
+---
 
-### Step 3: Clone Repositories
+## 2. Add a Repository
 
-Clone workspace repositories with the repository management command:
-```bash
+Clone any repository into the workspace worktree structure:
+
+```
 /behavior:workspace:repo --action new --repo https://github.com/org/repo.git
 ```
 
-### Step 4: Start Developing
+Once cloned, create a working branch:
 
-Common development tasks:
-
-```bash
-# Full task clarification and implementation
-/develop implement user authentication
-
-# Ask questions about the codebase
-/behavior:ask how does the authentication work?
-
-# Manage Azure DevOps work items
-/behavior:devops:work-item --action list --project MyProject
-
-# Complete implementation workflow from work item to PR
-/workflow:remote:implement
-
-# Set up Aspire AppHost with services
-/behavior:workspace:apphost --action setup --applications "my-service"
-
-# Build and test
-/build my-repo main
-/test my-repo main
+```
+/behavior:workspace:repo --action new --repo my-repo --branch feature/my-feature
 ```
 
-## MCP Tools
+→ Definition: [behavior/workspace/repo.md](.claude/commands/behavior/workspace/repo.md)
 
-External tools require API keys. Provide them via environment variables or add to `docker/docker-compose.yml` before starting.
+---
 
-| Tool | Environment Variable | Purpose |
-|------|----------------------|---------|
-| Tavily Search | `TAVILY_API_KEY` | Web research and crawling |
-| Azure DevOps | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` | Work items, repositories, pipelines |
-| Postman | `POSTMAN_API_KEY` | API testing and documentation |
-| New Relic | `NEW_RELIC_API_KEY` | Application monitoring and diagnostics |
+## 3. Architect a System
 
-Services without keys exit cleanly and disable their tools. Provide keys at next restart:
-```bash
-docker compose up --force-recreate
+Generate architectural documentation — BDD scenarios, solution design, implementation plan, and Azure DevOps work items — all from a description or existing work item:
+
 ```
+/workflow:remote:architect --project MyProject --description "event-driven order processing service"
+```
+
+With an existing work item:
+
+```
+/workflow:remote:architect --project MyProject --selected-work-item 1042 --selected-repo my-repo
+```
+
+→ Definition: [workflow/remote/architect.md](.claude/commands/workflow/remote/architect.md)
+
+---
+
+## 4. Implement a Feature
+
+Implement a work item end-to-end — from worktree creation to pull request:
+
+```
+/workflow:remote:implement --work-item 1605 --portal azure --project MyProject --repo my-repo --target-branch develop --working-branch feature/my-feature --description "implement order service with event sourcing"
+```
+
+→ Definition: [workflow/remote/implement.md](.claude/commands/workflow/remote/implement.md)
+
+---
+
+## 5. Other Useful Commands
+
+| Command | Purpose | Definition |
+|---------|---------|------------|
+| `/behavior:ask <question>` | Ask anything about the codebase or architecture | [ask.md](.claude/commands/behavior/ask.md) |
+| `/behavior:devops:work-item` | Read and manage Azure DevOps work items | [work-item.md](.claude/commands/behavior/devops/work-item.md) |
+| `/workflow:remote:fix-pipeline` | Diagnose and repair failing pipelines | [fix-pipeline.md](.claude/commands/workflow/remote/fix-pipeline.md) |
+| `/workflow:remote:homologate` | Run homologation tests before release | [homologate.md](.claude/commands/workflow/remote/homologate.md) |
+| `/behavior:workspace:apphost --action setup` | Configure Aspire AppHost with workspace services | [apphost.md](.claude/commands/behavior/workspace/apphost.md) |
+
+---
 
 ## Documentation
 
-- [QUICKSTART.md](QUICKSTART.md) — step-by-step setup and configuration
-- [ARCHITECTURE.md](ARCHITECTURE.md) — system design, ADRs, and patterns
-- [CLAUDE.md](CLAUDE.md) — command hierarchy, agent structure, and development standards
-- [CLAUDE.md - Development Workflow](CLAUDE.md#development-workflow) — task execution pipeline
+- [README.md](README.md) — repository overview
+- [CLAUDE.md](CLAUDE.md) — command hierarchy, agent structure, development standards
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system design and ADRs
+- [QUICKSTART.md](QUICKSTART.md) — setup and configuration reference
