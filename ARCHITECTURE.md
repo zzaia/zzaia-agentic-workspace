@@ -51,7 +51,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 **Decision**: Agents running in full-automatic mode (e.g. `--dangerously-skip-permissions`) must execute inside an isolated container that limits their access to the host machine.
 
 - The container's Linux capabilities are reduced to the minimum required
-- The agent cannot read host files outside explicitly mounted volumes (`/home/zzaia` home volume, `/home/zzaia/workspace` repos volume, `/host` bind mount)
+- The agent cannot read host files outside explicitly mounted volumes (`/home/zzaia/workspace` repos volume, `/secrets` secrets volume, `/var/run/docker.sock` socket)
 - The agent cannot escalate privileges beyond the container boundary (unless `ADMIN_PASSWORD` is set, enabling password-based sudo)
 - The blast radius of an autonomous agent is confined to the workspace container
 
@@ -107,7 +107,8 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 - Different workspaces run simultaneously on the same Docker host
 - Port conflicts avoided via `VSCODE_PORT` and `SSH_PORT` environment variables per stack
 - Container names derived from project + service, never hardcoded
-- Three named Docker volumes scoped per workspace: `<WORKSPACE_NAME>-secrets` (SSH public key at `/secrets` — independent lifecycle), `<WORKSPACE_NAME>-home` (entire `/home/zzaia` — tools, configs, auth tokens, Claude settings; seeded from image on first empty-volume start), and `<WORKSPACE_NAME>-workspace` (cloned repositories at `/home/zzaia/workspace` — independent lifecycle, survives home deletion)
+- Two named Docker volumes scoped per workspace: `<WORKSPACE_NAME>-secrets` (SSH public key at `/secrets` — independent lifecycle) and `<WORKSPACE_NAME>-workspace` (cloned repositories at `/home/zzaia/workspace` — independent lifecycle)
+- The home directory (`/home/zzaia`) is not persisted — it is seeded from the image on every container start. Claude Code auth tokens, configs, and installed tools are baked into the image
 
 **Rationale**: Compose project namespacing is native Docker isolation with zero extra infrastructure. It supports the objective of multiple concurrent workspace instances without requiring orchestration layers like Kubernetes.
 
@@ -121,7 +122,8 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 - Agents call tools via MCP SSE (`http://mcp-tavily:3001/sse`) — the key is used inside the sidecar and the result returned
 - Secrets are never in the agent's environment, terminal history, or context window
 - Adding a new integration = adding one sidecar service with its own secret
-- Each sidecar guards its own key at startup: if the key is empty the process exits cleanly (code 0) and does not restart — `restart: no` prevents crash loops on missing optional keys
+- Each sidecar guards its own key at startup: if the key is empty the process exits cleanly (code 0)
+- Sidecars use `restart: unless-stopped` with a healthcheck (`wget` on their SSE port every 30s) so they recover automatically after idle disconnects — services without a key stay exited and are not restarted by Docker
 
 **Rationale**: Sidecar-per-secret is the minimal surface area principle applied to secrets. Even if the agent is fully autonomous (`--dangerously-skip-permissions`), it cannot exfiltrate API keys because they are not present in its container.
 
@@ -171,6 +173,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 - Browser access (`http://localhost:<VSCODE_PORT>`) with the Claude Code extension pre-installed
 - SSH access (`ssh -p <SSH_PORT> zzaia@localhost`) for terminal workflows and VS Code Remote-SSH
+- Port `43279` forwarded from the workspace container for Claude Code OAuth callback (`claude auth login`) — only one workspace instance can use this port at a time; multi-instance setups should use `ANTHROPIC_API_KEY` instead
 - Both access modes are auth-free within the local 127.0.0.1 boundary — Docker Desktop provides the isolation layer
 - Remote machine deployments: replace `127.0.0.1` with the server address or use SSH tunneling
 
@@ -245,7 +248,6 @@ C4Container
     }
 
     System_Boundary(host, "Docker Host") {
-        ContainerDb(home, "<workspace>-home", "Docker named volume", "Home dir — tools, configs, auth tokens, Claude settings")
         ContainerDb(repos, "<workspace>-workspace", "Docker named volume", "Cloned repositories and worktrees")
         Container(dockersock, "/var/run/docker.sock", "Unix socket", "Docker API access for agent-initiated ops")
     }
@@ -255,7 +257,6 @@ C4Container
     Rel(ws, ado, "MCP tool calls", "SSE internal network")
     Rel(ws, postman, "MCP tool calls", "SSE internal network")
     Rel(ws, newrelic, "MCP tool calls", "SSE internal network")
-    Rel(ws, home, "Persistent home", "named volume /home/zzaia")
     Rel(ws, repos, "Repository storage", "named volume /home/zzaia/workspace")
     Rel(ws, dockersock, "Docker API", "bind mount")
 
@@ -275,7 +276,7 @@ zzaia/
 │   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + code-server + sshd
 │   ├── docker-compose.yml  # Stack definition — workspace + 4 MCP sidecars
 │   └── entrypoint.sh    # One-time secret init, Docker group, code-server, sshd
-├── host/                # .NET Aspire AppHost for integrated local testing
+├── .claude/workspace/host/  # .NET Aspire AppHost for integrated local testing
 ├── workspace/           # Multi-repository git worktrees
 ├── mise.toml            # Tool versions (node, python, dotnet, go, rust, java…)
 ├── .mcp.json            # MCP server endpoints (SSE to internal sidecars)
@@ -321,7 +322,7 @@ zzaia/
 | Threat | Mitigation |
 |--------|-----------|
 | Agent exfiltrates API keys | Keys never in workspace container env after startup |
-| Agent modifies host filesystem | Only `/secrets` and `/host` volumes mounted; cap_drop ALL |
+| Agent modifies host filesystem | Only `/secrets` and `/home/zzaia/workspace` volumes mounted; cap_drop ALL |
 | Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
 | Secret visible in terminal | Env vars ephemeral; `/home/zzaia/.config/zzaia/.env` owned by zzaia, mode 600 |
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |

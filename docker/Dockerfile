@@ -117,9 +117,9 @@ RUN for ext in \
 COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
 COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
 COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
-    README.md QUICKSTART.md LICENSE zzaia-main.code-workspace /home/zzaia/
+    README.md QUICKSTART.md ARCHITECTURE.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
-COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/README.md
+COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/WELCOME.md
 COPY --chown=zzaia:zzaia .claude/workspace/host/ /home/zzaia/.claude/workspace/host/
 
 RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
