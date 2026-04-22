@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + Docker CE CLI (no daemon) + mise ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml sudo \
+    curl git openssh-server tmux plantuml sudo socat psmisc \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
     && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
@@ -32,10 +32,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli mise \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
-RUN printf '#!/bin/sh\nurl="$1"\necho ""\necho "Open this URL in your browser:"\necho "  $url"\necho ""\necho "After authentication, the browser will redirect to localhost:43279."\necho "This port is forwarded from the container — ensure docker-compose port 43279 is mapped."\necho ""\n' \
-        > /usr/local/bin/browser-print \
-    && chmod +x /usr/local/bin/browser-print
+# ── Browser-print: prints OAuth URLs and bridges dynamic callback port ───────
+RUN cat > /usr/local/bin/browser-print << 'EOF'
+#!/bin/sh
+url="$1"
+fixed_port=43279
+
+# Extract dynamic OAuth callback port from percent-encoded redirect_uri
+port=$(printf '%s' "$url" | sed 's/.*localhost%3A//;s/%2F.*//' | grep -E '^[0-9]+$' || true)
+
+echo ""
+echo "Open this URL in your browser:"
+echo "  $url"
+echo ""
+
+if [ -n "$port" ]; then
+    fuser -k ${fixed_port}/tcp 2>/dev/null || true
+    sleep 0.2
+    socat TCP-LISTEN:${fixed_port},reuseaddr,fork TCP:127.0.0.1:${port} &
+    echo "OAuth callback: host port ${fixed_port} → container port ${port}"
+fi
+echo ""
+EOF
+RUN chmod +x /usr/local/bin/browser-print
 
 # ── SSH server ────────────────────────────────────────────────────────────────
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
