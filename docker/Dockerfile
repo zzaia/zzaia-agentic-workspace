@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + Docker CE CLI (no daemon) + mise ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml sudo socat psmisc \
+    curl git openssh-server tmux plantuml sudo \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
     && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
@@ -32,40 +32,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli mise \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Browser-print: dynamically exposes OAuth callback port to host via Docker ──
-RUN cat > /usr/local/bin/browser-print << 'EOF'
-#!/bin/sh
-url="$1"
-
-# URL-encoded form: Claude Code — localhost%3APORT%2F
-port=$(printf '%s' "$url" | sed 's/.*localhost%3A//;s/%2F.*//' | grep -E '^[0-9]+$' 2>/dev/null || true)
-# Plain form: az login and others — localhost:PORT
-[ -z "$port" ] && port=$(printf '%s' "$url" | grep -oE 'localhost:[0-9]+' | grep -oE '[0-9]+$' | head -1 || true)
-
-if [ -n "$port" ]; then
-    cid=$(hostname)
-    net=$(docker inspect "$cid" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}' 2>/dev/null | awk '{print $1}')
-    ip=$(docker inspect  "$cid" --format '{{range .NetworkSettings.Networks}}{{.IPAddress}} {{end}}' 2>/dev/null | awk '{print $1}')
-    image=$(docker inspect "$cid" --format '{{.Config.Image}}' 2>/dev/null)
-    if [ -n "$ip" ] && [ -n "$net" ] && [ -n "$image" ]; then
-        docker rm -f "oauth-${port}" 2>/dev/null || true
-        docker run --rm -d \
-            --name "oauth-${port}" \
-            --network "$net" \
-            -p "127.0.0.1:${port}:${port}" \
-            --entrypoint socat \
-            "$image" \
-            "TCP-LISTEN:${port},reuseaddr,fork" "TCP:${ip}:${port}" 2>/dev/null \
-        && sleep 1
-    fi
-fi
-
-echo ""
-echo "Open this URL in your browser:"
-echo "  $url"
-echo ""
-EOF
-RUN chmod +x /usr/local/bin/browser-print
+# ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
+RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
+        > /usr/local/bin/browser-print \
+    && chmod +x /usr/local/bin/browser-print
 
 # ── SSH server ────────────────────────────────────────────────────────────────
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
