@@ -107,8 +107,8 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 - Different workspaces run simultaneously on the same Docker host
 - Port conflicts avoided via `VSCODE_PORT` and `SSH_PORT` environment variables per stack
 - Container names derived from project + service, never hardcoded
-- Two named Docker volumes scoped per workspace: `<WORKSPACE_NAME>-secrets` (SSH public key at `/secrets` — independent lifecycle) and `<WORKSPACE_NAME>-workspace` (cloned repositories at `/home/zzaia/workspace` — independent lifecycle)
-- The home directory (`/home/zzaia`) is not persisted — it is seeded from the image on every container start. Claude Code auth tokens, configs, and installed tools are baked into the image
+- Three named Docker volumes scoped per workspace: `<WORKSPACE_NAME>-secrets` (SSH host keys and public key at `/secrets`), `<WORKSPACE_NAME>-home` (persisted home directory at `/home/zzaia` — Claude Code auth tokens, configs, and tool state), and `<WORKSPACE_NAME>-workspace` (cloned repositories at `/home/zzaia/workspace`) — each with an independent lifecycle
+- The home directory (`/home/zzaia`) is persisted via the `<WORKSPACE_NAME>-home` named volume; auth tokens and configs written during the session survive container restarts
 
 **Rationale**: Compose project namespacing is native Docker isolation with zero extra infrastructure. It supports the objective of multiple concurrent workspace instances without requiring orchestration layers like Kubernetes.
 
@@ -146,7 +146,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 **Decision**: Secrets are passed via `--env-file <(printf ...)` at `docker compose up` time. On first start, the workspace entrypoint writes only the SSH public key to `/secrets/.env` (owned by `zzaia`, mode 600, directory mode 700). On all subsequent starts, the file already exists and env vars are ignored.
 
 - Secrets exist only in the process environment during the first startup, never written to disk in cleartext elsewhere
-- The SSH public key is persisted to `/home/zzaia/.config/zzaia/.env` (mode 600) inside the named home volume on first start
+- The SSH public key is persisted to `/secrets/.env` (owned by root, mode 600) inside the `<WORKSPACE_NAME>-secrets` volume on first start
 - The running container cannot re-read API keys after startup completes
 - SSH terminal, vscode-server terminal, and agent shell have no access to API keys
 
@@ -173,7 +173,7 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 - Browser access (`http://localhost:<VSCODE_PORT>`) with the Claude Code extension pre-installed
 - SSH access (`ssh -p <SSH_PORT> zzaia@localhost`) for terminal workflows and VS Code Remote-SSH
-- Port `43279` forwarded from the workspace container for Claude Code OAuth callback (`claude auth login`) — only one workspace instance can use this port at a time; multi-instance setups should use `ANTHROPIC_API_KEY` instead
+- Claude Code OAuth authentication is handled non-interactively at startup via `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` — no port forwarding is required; browser-based `claude auth login` is not supported inside the container due to callback reachability constraints
 - Both access modes are auth-free within the local 127.0.0.1 boundary — Docker Desktop provides the isolation layer
 - Remote machine deployments: replace `127.0.0.1` with the server address or use SSH tunneling
 
@@ -195,13 +195,19 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ### ADR 008: Claude Code Authentication and Sudo Access
 
-**Decision**: The workspace container accepts five optional environment variables for Claude Code's own authentication: `ANTHROPIC_API_KEY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL`. An optional `ADMIN_PASSWORD` variable enables sudo access with that password.
+**Decision**: The workspace container accepts environment variables for Claude Code authentication across four provider options (only one is needed), plus an optional admin password.
 
-- Claude Code's auth credentials must exist in its process environment by design — the agent cannot function otherwise
-- Unlike MCP sidecar secrets (which serve external APIs and are fully isolated), agent auth cannot be moved to a sidecar
-- The preferred auth path is browser OAuth: `claude auth login` prints a URL to the terminal; tokens are stored in `~/.config/claude/` inside the home volume and persist across restarts without any env vars
-- API key / Bedrock credentials are provided as an alternative for CI and server deployments where browser auth is not possible
-- `ADMIN_PASSWORD` — if set, the entrypoint calls `chpasswd` to set the `zzaia` user password and writes a sudoers entry (`zzaia ALL=(ALL) ALL`); if empty, no sudoers file is written and sudo is unavailable
+| Priority | Provider | Variables |
+|----------|----------|-----------|
+| 1 | **AWS Bedrock** | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL` |
+| 2 | **Anthropic API Key** | `ANTHROPIC_API_KEY` |
+| 3 | **Pro / Max OAuth** | `CLAUDE_CODE_OAUTH_REFRESH_TOKEN`, `CLAUDE_CODE_OAUTH_SCOPES` |
+| 4 | **Google Vertex AI** | `CLAUDE_CODE_USE_VERTEX`, `ANTHROPIC_VERTEX_PROJECT_ID`, `CLOUD_ML_REGION` |
+| 5 | **Azure AI Foundry** | `CLAUDE_CODE_USE_FOUNDRY`, `AZURE_FOUNDRY_BASE_URL` |
+
+- Claude Code's auth credentials must exist in its process environment — unlike MCP sidecar secrets, agent auth cannot be moved to a sidecar
+- For Pro/Max OAuth: the entrypoint runs `claude auth login` non-interactively at startup when `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` is set, exchanging the refresh token for an access token; tokens are stored in `~/.claude/` inside the `<WORKSPACE_NAME>-home` volume and persist across restarts
+- `ADMIN_PASSWORD` — if set, the entrypoint calls `chpasswd` and writes a sudoers entry (`zzaia ALL=(ALL) ALL`); if empty, no sudoers entry is written and sudo is unavailable
 
 **Rationale**: The exception is narrow — only Claude Code's own credentials and the user password are permitted in the workspace container environment. All other API keys remain in MCP sidecars.
 
@@ -248,7 +254,9 @@ C4Container
     }
 
     System_Boundary(host, "Docker Host") {
+        ContainerDb(home, "<workspace>-home", "Docker named volume", "Persisted home dir — auth tokens, configs, tool state")
         ContainerDb(repos, "<workspace>-workspace", "Docker named volume", "Cloned repositories and worktrees")
+        ContainerDb(secrets, "<workspace>-secrets", "Docker named volume", "SSH host keys and public key")
         Container(dockersock, "/var/run/docker.sock", "Unix socket", "Docker API access for agent-initiated ops")
     }
 
@@ -257,7 +265,9 @@ C4Container
     Rel(ws, ado, "MCP tool calls", "SSE internal network")
     Rel(ws, postman, "MCP tool calls", "SSE internal network")
     Rel(ws, newrelic, "MCP tool calls", "SSE internal network")
+    Rel(ws, home, "Home directory", "named volume /home/zzaia")
     Rel(ws, repos, "Repository storage", "named volume /home/zzaia/workspace")
+    Rel(ws, secrets, "SSH keys", "named volume /secrets")
     Rel(ws, dockersock, "Docker API", "bind mount")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
@@ -276,7 +286,7 @@ zzaia/
 │   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + code-server + sshd
 │   ├── docker-compose.yml  # Stack definition — workspace + 4 MCP sidecars
 │   └── entrypoint.sh    # One-time secret init, Docker group, code-server, sshd
-├── .claude/workspace/host/  # .NET Aspire AppHost for integrated local testing
+├── workspace/host/  # .NET Aspire AppHost for integrated local testing
 ├── workspace/           # Multi-repository git worktrees
 ├── mise.toml            # Tool versions (node, python, dotnet, go, rust, java…)
 ├── .mcp.json            # MCP server endpoints (SSE to internal sidecars)
@@ -324,7 +334,7 @@ zzaia/
 | Agent exfiltrates API keys | Keys never in workspace container env after startup |
 | Agent modifies host filesystem | Only `/secrets` and `/home/zzaia/workspace` volumes mounted; cap_drop ALL |
 | Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
-| Secret visible in terminal | Env vars ephemeral; `/home/zzaia/.config/zzaia/.env` owned by zzaia, mode 600 |
+| Secret visible in terminal | Env vars ephemeral after startup; SSH key persisted at `/secrets/.env` (root-owned, mode 600) inside isolated secrets volume |
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
 | Port scanning from container | MCP ports bound to internal network only |
 

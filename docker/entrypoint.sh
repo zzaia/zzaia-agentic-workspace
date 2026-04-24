@@ -31,6 +31,7 @@ fi
 # ── Sudo access — enabled when ADMIN_PASSWORD is set ─────────────────────────
 if [ -n "${ADMIN_PASSWORD:-}" ]; then
     echo "zzaia:${ADMIN_PASSWORD}" | chpasswd
+    chmod u+w /etc/sudoers.d/zzaia-admin 2>/dev/null || true
     echo "zzaia ALL=(ALL) ALL" > /etc/sudoers.d/zzaia-admin
     chmod 440 /etc/sudoers.d/zzaia-admin
 fi

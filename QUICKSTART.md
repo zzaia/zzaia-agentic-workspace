@@ -8,7 +8,7 @@
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **Docker Desktop** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
+| **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
 
 ---
 
@@ -38,7 +38,23 @@ Set `ANTHROPIC_API_KEY` — obtain from [console.anthropic.com](https://console.
 
 ### Pro / Max (OAuth)
 
-Run `claude auth login` on your **host machine** first, then open `~/.claude/.credentials.json` and copy the `claudeAiOauth.refreshToken` value into `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` in Step 2.
+**Option A — Refresh token at startup (recommended for automated / headless use):**
+
+Run `claude auth login` on your **host machine**, then open `~/.claude/.credentials.json` and copy the `claudeAiOauth.refreshToken` value into `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` in Step 2. The container exchanges the token automatically on startup — no manual login step inside the container.
+
+> **Important:** Always use the token from `~/.claude/.credentials.json` **immediately after login**. Refresh tokens are single-use — each successful exchange consumes the token and issues a new one. If you have run the container previously with the same token, it is already invalid; re-read the file after a fresh `claude auth login` to get the current token.
+
+**Option B — Interactive login (inside the container):**
+
+Start the container first (Step 3), then open a terminal inside VS Code and run:
+
+```bash
+claude setup-token
+```
+
+The URL is printed to the terminal (no browser opens automatically). Open the URL in a browser tab on your host, complete authentication, then copy the code displayed back into the terminal when prompted. Claude Code exchanges the code for both an access token and a refresh token, which are stored in `~/.claude/.credentials.json` — the session is long-running with automatic renewal, equivalent to Option A.
+
+> Use Option B when you prefer to authenticate interactively after the container is already running, rather than passing a token at startup.
 
 ---
 
