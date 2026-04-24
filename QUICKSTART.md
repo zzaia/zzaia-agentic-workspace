@@ -12,7 +12,37 @@
 
 ---
 
-## Step 1 — Gather Your Values
+## Step 1 — Choose Authentication
+
+Only **one** method is needed. Claude Code checks them in this priority order:
+
+| Priority | Method | Best For |
+|----------|--------|---------|
+| 1 | **Cloud Provider** (Bedrock / Vertex / Foundry) | Enterprise / no token expiry |
+| 2 | **API Key** | Pay-per-token / simplest setup |
+| 3 | **Pro / Max (OAuth)** | Subscription accounts |
+
+> If multiple methods are configured, the highest-priority one wins.
+
+### Cloud Provider variables
+
+| Provider | Variables to Set |
+|----------|-----------------|
+| **AWS Bedrock** | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION` (+ optional `ANTHROPIC_BEDROCK_BASE_URL`) |
+| **Google Vertex AI** | `CLAUDE_CODE_USE_VERTEX=1` + `ANTHROPIC_VERTEX_PROJECT_ID` + `CLOUD_ML_REGION` |
+| **Azure AI Foundry** | `CLAUDE_CODE_USE_FOUNDRY=1` + `AZURE_FOUNDRY_BASE_URL` |
+
+### API Key
+
+Set `ANTHROPIC_API_KEY` — obtain from [console.anthropic.com](https://console.anthropic.com).
+
+### Pro / Max (OAuth)
+
+Run `claude auth login` on your **host machine** first, then open `~/.claude/.credentials.json` and copy the `claudeAiOauth.refreshToken` value into `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` in Step 2.
+
+---
+
+## Step 2 — Gather Your Values
 
 You will need the following values before starting:
 
@@ -23,7 +53,13 @@ You will need the following values before starting:
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `zzaia` user | Any string; leave empty to disable sudo entirely |
-| `ANTHROPIC_API_KEY` | Optional | Claude API key (alternative to browser auth) | [console.anthropic.com](https://console.anthropic.com) |
+| `ANTHROPIC_API_KEY` | Optional | Claude API key — see Step 1 | [console.anthropic.com](https://console.anthropic.com) |
+| `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` | Optional | OAuth refresh token — see Step 1 | `~/.claude/.credentials.json` → `claudeAiOauth.refreshToken` |
+| `CLAUDE_CODE_OAUTH_SCOPES` | Optional | OAuth scopes (leave default if unsure) | Default: `user:profile user:inference user:sessions:claude_code` |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | Optional | AWS Bedrock auth — see Step 1 | AWS IAM credentials |
+| `ANTHROPIC_BEDROCK_BASE_URL` | Optional | Custom Bedrock endpoint | AWS console |
+| `CLAUDE_CODE_USE_VERTEX` / `ANTHROPIC_VERTEX_PROJECT_ID` / `CLOUD_ML_REGION` | Optional | Google Vertex AI auth — see Step 1 | GCP console |
+| `CLAUDE_CODE_USE_FOUNDRY` / `AZURE_FOUNDRY_BASE_URL` | Optional | Azure AI Foundry auth — see Step 1 | Azure portal |
 | `TAVILY_API_KEY` | Optional | Tavily API key | [tavily.com](https://tavily.com) |
 | `ADO_MCP_AUTH_TOKEN` | Optional | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
 | `AZURE_DEVOPS_ORGANIZATION` | Optional | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
@@ -34,7 +70,7 @@ You will need the following values before starting:
 
 ---
 
-## Step 2 — Start the Workspace
+## Step 3 — Start the Workspace
 
 Fill in your values and run the command for your platform. No files are written to disk.
 
@@ -45,10 +81,17 @@ export WORKSPACE_NAME="my-org"
 export SSH_PUBLIC_KEY=""
 export ADMIN_PASSWORD=""
 export ANTHROPIC_API_KEY=""
+export CLAUDE_CODE_OAUTH_REFRESH_TOKEN=""
+export CLAUDE_CODE_OAUTH_SCOPES=""
 export AWS_ACCESS_KEY_ID=""
 export AWS_SECRET_ACCESS_KEY=""
 export AWS_REGION=""
 export ANTHROPIC_BEDROCK_BASE_URL=""
+export CLAUDE_CODE_USE_VERTEX=""
+export ANTHROPIC_VERTEX_PROJECT_ID=""
+export CLOUD_ML_REGION=""
+export CLAUDE_CODE_USE_FOUNDRY=""
+export AZURE_FOUNDRY_BASE_URL=""
 export TAVILY_API_KEY=""
 export ADO_MCP_AUTH_TOKEN=""
 export AZURE_DEVOPS_ORGANIZATION=""
@@ -63,8 +106,10 @@ docker compose \
     up -d
 
 unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
-      ANTHROPIC_API_KEY AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY \
-      AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
+      ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_REFRESH_TOKEN CLAUDE_CODE_OAUTH_SCOPES \
+      AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
+      CLAUDE_CODE_USE_VERTEX ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
+      CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
       TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
       POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT
 ```
@@ -72,64 +117,67 @@ unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
 ### Windows
 
 ```powershell
-$WORKSPACE_NAME            = "my-org"
-$SSH_PUBLIC_KEY            = ""
-$ADMIN_PASSWORD            = ""
-$ANTHROPIC_API_KEY         = ""
-$AWS_ACCESS_KEY_ID         = ""
-$AWS_SECRET_ACCESS_KEY     = ""
-$AWS_REGION                = ""
-$ANTHROPIC_BEDROCK_BASE_URL = ""
-$TAVILY_API_KEY            = ""
-$ADO_MCP_AUTH_TOKEN        = ""
-$AZURE_DEVOPS_ORGANIZATION = ""
-$POSTMAN_API_KEY           = ""
-$NEW_RELIC_API_KEY         = ""
-$VSCODE_PORT               = "8080"
-$SSH_PORT                  = "2222"
+$WORKSPACE_NAME                    = "my-org"
+$SSH_PUBLIC_KEY                    = ""
+$ADMIN_PASSWORD                    = ""
+$ANTHROPIC_API_KEY                 = ""
+$CLAUDE_CODE_OAUTH_REFRESH_TOKEN   = ""
+$CLAUDE_CODE_OAUTH_SCOPES          = ""
+$AWS_ACCESS_KEY_ID                 = ""
+$AWS_SECRET_ACCESS_KEY             = ""
+$AWS_REGION                        = ""
+$ANTHROPIC_BEDROCK_BASE_URL        = ""
+$CLAUDE_CODE_USE_VERTEX            = ""
+$ANTHROPIC_VERTEX_PROJECT_ID       = ""
+$CLOUD_ML_REGION                   = ""
+$CLAUDE_CODE_USE_FOUNDRY           = ""
+$AZURE_FOUNDRY_BASE_URL            = ""
+$TAVILY_API_KEY                    = ""
+$ADO_MCP_AUTH_TOKEN                = ""
+$AZURE_DEVOPS_ORGANIZATION         = ""
+$POSTMAN_API_KEY                   = ""
+$NEW_RELIC_API_KEY                 = ""
+$VSCODE_PORT                       = "8080"
+$SSH_PORT                          = "2222"
 
-$env:WORKSPACE_NAME             = $WORKSPACE_NAME
-$env:SSH_PUBLIC_KEY             = $SSH_PUBLIC_KEY
-$env:ADMIN_PASSWORD             = $ADMIN_PASSWORD
-$env:ANTHROPIC_API_KEY          = $ANTHROPIC_API_KEY
-$env:AWS_ACCESS_KEY_ID          = $AWS_ACCESS_KEY_ID
-$env:AWS_SECRET_ACCESS_KEY      = $AWS_SECRET_ACCESS_KEY
-$env:AWS_REGION                 = $AWS_REGION
-$env:ANTHROPIC_BEDROCK_BASE_URL = $ANTHROPIC_BEDROCK_BASE_URL
-$env:TAVILY_API_KEY             = $TAVILY_API_KEY
-$env:ADO_MCP_AUTH_TOKEN         = $ADO_MCP_AUTH_TOKEN
-$env:AZURE_DEVOPS_ORGANIZATION  = $AZURE_DEVOPS_ORGANIZATION
-$env:POSTMAN_API_KEY            = $POSTMAN_API_KEY
-$env:NEW_RELIC_API_KEY          = $NEW_RELIC_API_KEY
-$env:VSCODE_PORT                = $VSCODE_PORT
-$env:SSH_PORT                   = $SSH_PORT
+$env:WORKSPACE_NAME                    = $WORKSPACE_NAME
+$env:SSH_PUBLIC_KEY                    = $SSH_PUBLIC_KEY
+$env:ADMIN_PASSWORD                    = $ADMIN_PASSWORD
+$env:ANTHROPIC_API_KEY                 = $ANTHROPIC_API_KEY
+$env:CLAUDE_CODE_OAUTH_REFRESH_TOKEN   = $CLAUDE_CODE_OAUTH_REFRESH_TOKEN
+$env:CLAUDE_CODE_OAUTH_SCOPES          = $CLAUDE_CODE_OAUTH_SCOPES
+$env:AWS_ACCESS_KEY_ID                 = $AWS_ACCESS_KEY_ID
+$env:AWS_SECRET_ACCESS_KEY             = $AWS_SECRET_ACCESS_KEY
+$env:AWS_REGION                        = $AWS_REGION
+$env:ANTHROPIC_BEDROCK_BASE_URL        = $ANTHROPIC_BEDROCK_BASE_URL
+$env:CLAUDE_CODE_USE_VERTEX            = $CLAUDE_CODE_USE_VERTEX
+$env:ANTHROPIC_VERTEX_PROJECT_ID       = $ANTHROPIC_VERTEX_PROJECT_ID
+$env:CLOUD_ML_REGION                   = $CLOUD_ML_REGION
+$env:CLAUDE_CODE_USE_FOUNDRY           = $CLAUDE_CODE_USE_FOUNDRY
+$env:AZURE_FOUNDRY_BASE_URL            = $AZURE_FOUNDRY_BASE_URL
+$env:TAVILY_API_KEY                    = $TAVILY_API_KEY
+$env:ADO_MCP_AUTH_TOKEN                = $ADO_MCP_AUTH_TOKEN
+$env:AZURE_DEVOPS_ORGANIZATION         = $AZURE_DEVOPS_ORGANIZATION
+$env:POSTMAN_API_KEY                   = $POSTMAN_API_KEY
+$env:NEW_RELIC_API_KEY                 = $NEW_RELIC_API_KEY
+$env:VSCODE_PORT                       = $VSCODE_PORT
+$env:SSH_PORT                          = $SSH_PORT
 
 docker compose `
     -f ".\docker\docker-compose.yml" `
     -p $WORKSPACE_NAME `
     up -d
 
-'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD','ANTHROPIC_API_KEY','AWS_ACCESS_KEY_ID',
-'AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
+'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD',
+'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_REFRESH_TOKEN','CLAUDE_CODE_OAUTH_SCOPES',
+'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
+'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
+'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL',
 'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
 'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
 After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
-
----
-
-## Step 3 — Authenticate Claude Code
-
-Inside the workspace terminal, run:
-
-```bash
-claude auth login
-```
-
-Open the URL printed in the terminal in your browser. Auth tokens persist in the home volume across restarts.
-
-**Alternative** — API key or AWS Bedrock: set `ANTHROPIC_API_KEY` (or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION`) in your env-file before `docker compose up`.
 
 ---
 
