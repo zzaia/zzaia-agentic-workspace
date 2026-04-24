@@ -78,6 +78,7 @@ su -s /bin/bash zzaia -c "
     export BROWSER=/usr/local/bin/browser-print
     code-server --bind-addr 0.0.0.0:8080 --auth none \
         /home/zzaia/zzaia-main.code-workspace \
+        /home/zzaia/WELCOME.md \
         >> /home/zzaia/.local/share/code-server/code-server.log 2>&1 &
 "
 

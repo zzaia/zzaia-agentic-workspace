@@ -2,8 +2,25 @@
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 [![Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-blue.svg)](https://claude.ai/code)
+[![Azure DevOps](https://img.shields.io/badge/Integrates%20with-Azure%20DevOps-0078D7.svg)](https://azure.microsoft.com/products/devops)
 
-> Multi-agent orchestration system for software engineering workflows across analytics, development, documentation, and management.
+> Multi-agent orchestration system for software engineering workflows across analytics, development, documentation, and management, over Azure DevOps integrations.
+
+## Why ZZAIA Workspace?
+
+| # | Benefit |
+|---|---------|
+| 1 | **Minimal setup time** — a single `docker compose up` installs every package, language runtime, and tool automatically. After the first pull, starting the workspace on a new machine requires no manual configuration — just fill in your secrets and go. |
+| 2 | **Standardized Ubuntu environment** — the workspace runs inside a container on Ubuntu regardless of whether the host machine is Linux, macOS, or Windows. Every developer gets an identical, reproducible environment with no "works on my machine" surprises. |
+| 3 | **Local and remote access** — access the full VS Code IDE from a browser tab (no local installation required), connect over SSH, or deploy remotely and reach it from any device. Supports WASM-based browser access for fully server-side execution. |
+| 4 | **Long-lived authentication** — authenticate Claude Code once at deployment time using an OAuth refresh token, API key, or cloud provider credentials. Tokens auto-refresh across container restarts; you never see another login prompt during daily use. |
+| 5 | **Secret isolation** — each MCP server (Tavily, Azure DevOps, Postman, New Relic) runs as its own isolated sidecar container and receives only the secret it needs. The AI agent context never has access to credentials, eliminating a whole class of accidental secret leakage. |
+| 6 | **Confident agentic YOLO mode** — container isolation from the host system makes it genuinely safe to run Claude Code with `--dangerously-skip-permissions`. Autonomous agentic workflows execute without fear of unintended changes to the host or other projects. |
+| 7 | **Familiar VS Code experience** — the full VS Code feature set works in-browser: extensions marketplace, profiles, themes, keybindings, and other AI coding assistants such as GitHub Copilot, Gemini, and Codex run side-by-side with Claude Code. |
+| 8 | **Persistent customization** — optional admin access lets you install additional tools and change configurations inside the running container. All changes survive restarts because the home directory is backed by a persistent Docker volume. |
+| 9 | **Cost-effective Pro and Max subscription support** — Claude Code works with Anthropic Pro and Max subscriptions, not only pay-per-token API keys. Teams can maximize the value of existing plans rather than paying separately for every token consumed by automation. |
+| 10 | **Full development lifecycle automation** — the workspace ships with pre-composed commands and skills that cover the entire lifecycle: repository management, implementation, testing, code review, architecture documentation, and release — all in a semi-automated, agent-driven workflow. |
+| 11 | **Deep Azure DevOps integration** — built-in remote commands connect directly to Azure DevOps for reading and updating work items, triggering and diagnosing pipelines, creating and reviewing pull requests, and navigating wikis — all without leaving the workspace terminal. |
 
 ## 🚀 Quick Start
 

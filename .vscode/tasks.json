@@ -23,7 +23,7 @@
       "type": "process",
       "args": [
         "clean",
-        "${workspaceFolder}/Zzaia.AppHost/Zzaia.AppHost.csproj"
+        "${workspaceFolder}/host/Zzaia.AppHost/Zzaia.AppHost.csproj"
       ],
       "problemMatcher": "$msCompile"
     }

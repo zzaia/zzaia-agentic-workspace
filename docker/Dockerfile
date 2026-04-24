@@ -46,7 +46,7 @@ RUN grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 zzaia \
     && mkdir -p /home/zzaia/.ssh /home/zzaia/welcome /home/zzaia/workspace \
-               /home/zzaia/.local/share/code-server \
+               /home/zzaia/host /home/zzaia/.local/share/code-server \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
 
@@ -119,7 +119,7 @@ COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
     README.md QUICKSTART.md ARCHITECTURE.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia docker/.mcp.json /home/zzaia/.mcp.json
 COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/WELCOME.md
-COPY --chown=zzaia:zzaia .claude/workspace/host/ /home/zzaia/.claude/workspace/host/
+COPY --chown=zzaia:zzaia .claude/workspace/host/ /home/zzaia/host/
 
 RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
 
