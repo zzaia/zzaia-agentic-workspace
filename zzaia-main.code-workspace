@@ -5,7 +5,7 @@
         "path": "."
     },
     {
-        "path": "host/Zzaia.AppHost"
+        "path": "workspace/host/Zzaia.AppHost"
     }
 ],
   "settings": {

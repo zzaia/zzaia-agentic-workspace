@@ -207,13 +207,13 @@ System utilities and information.
 
 ## 🖥️ AppHost Template
 
-The `host/` directory contains a .NET Aspire AppHost — a template for running workspace applications alongside shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing during development.
+The `workspace/host/` directory contains a .NET Aspire AppHost — a template for running workspace applications alongside shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing during development.
 
 - Add workspace service project references to `.csproj` pointing to worktree paths
 - Configure `Applications/ApplicationInjection.cs` extension methods per service
 - All infrastructure settings are driven by `appsettings.json`
 
-> See [host/README.md](host/README.md) for full setup details.
+> See [workspace/host/README.md](workspace/host/README.md) for full setup details.
 
 ## 🐳 Container
 
