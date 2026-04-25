@@ -64,16 +64,6 @@ if [ -n "$_SSH_KEY" ]; then
         | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
 fi
 
-# ── Pre-authenticate Claude Code (non-interactive when CLAUDE_CODE_OAUTH_REFRESH_TOKEN is set) ──
-if [ -n "${CLAUDE_CODE_OAUTH_REFRESH_TOKEN:-}" ]; then
-    su -s /bin/bash zzaia -c "
-        export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-        export CLAUDE_CODE_OAUTH_REFRESH_TOKEN='${CLAUDE_CODE_OAUTH_REFRESH_TOKEN}'
-        export CLAUDE_CODE_OAUTH_SCOPES='${CLAUDE_CODE_OAUTH_SCOPES:-}'
-        claude auth login
-    " || echo "WARNING: claude auth login failed — check CLAUDE_CODE_OAUTH_REFRESH_TOKEN" >&2
-fi
-
 # ── Start code-server ─────────────────────────────────────────────────────────
 # --auth none is acceptable for local dev — host port bound to 127.0.0.1 only.
 su -s /bin/bash zzaia -c "

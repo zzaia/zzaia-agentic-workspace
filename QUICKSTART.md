@@ -38,11 +38,15 @@ Set `ANTHROPIC_API_KEY` — obtain from [console.anthropic.com](https://console.
 
 ### Pro / Max (OAuth)
 
-**Option A — Refresh token at startup (recommended for automated / headless use):**
+**Option A — Long-lived token via env var (recommended):**
 
-Run `claude auth login` on your **host machine**, then open `~/.claude/.credentials.json` and copy the `claudeAiOauth.refreshToken` value into `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` in Step 2. The container exchanges the token automatically on startup — no manual login step inside the container.
+On your **host machine**, run:
 
-> **Important:** Always use the token from `~/.claude/.credentials.json` **immediately after login**. Refresh tokens are single-use — each successful exchange consumes the token and issues a new one. If you have run the container previously with the same token, it is already invalid; re-read the file after a fresh `claude auth login` to get the current token.
+```bash
+claude setup-token
+```
+
+Copy the printed token and set it as `CLAUDE_CODE_OAUTH_TOKEN` in Step 2. The token is valid for ~1 year and is passed directly to the container — no login step required inside the container.
 
 **Option B — Interactive login (inside the container):**
 
@@ -52,9 +56,9 @@ Start the container first (Step 3), then open a terminal inside VS Code and run:
 claude setup-token
 ```
 
-The URL is printed to the terminal (no browser opens automatically). Open the URL in a browser tab on your host, complete authentication, then copy the code displayed back into the terminal when prompted. Claude Code exchanges the code for both an access token and a refresh token, which are stored in `~/.claude/.credentials.json` — the session is long-running with automatic renewal, equivalent to Option A.
+The URL is printed to the terminal (no browser opens automatically). Open the URL in a browser tab on your host, complete authentication, then copy the code displayed back into the terminal when prompted. Claude Code stores the session in `~/.claude/.credentials.json` inside the home volume — persists across container restarts.
 
-> Use Option B when you prefer to authenticate interactively after the container is already running, rather than passing a token at startup.
+> Use Option B when you prefer to authenticate interactively after the container is already running, or when you do not want to pass credentials via environment variables.
 
 ---
 
@@ -70,8 +74,7 @@ You will need the following values before starting:
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `zzaia` user | Any string; leave empty to disable sudo entirely |
 | `ANTHROPIC_API_KEY` | Optional | Claude API key — see Step 1 | [console.anthropic.com](https://console.anthropic.com) |
-| `CLAUDE_CODE_OAUTH_REFRESH_TOKEN` | Optional | OAuth refresh token — see Step 1 | `~/.claude/.credentials.json` → `claudeAiOauth.refreshToken` |
-| `CLAUDE_CODE_OAUTH_SCOPES` | Optional | OAuth scopes (leave default if unsure) | Default: `user:profile user:inference user:sessions:claude_code` |
+| `CLAUDE_CODE_OAUTH_TOKEN` | Optional | Long-lived OAuth token for Pro/Max — see Step 1 Option A | `claude setup-token` on host |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | Optional | AWS Bedrock auth — see Step 1 | AWS IAM credentials |
 | `ANTHROPIC_BEDROCK_BASE_URL` | Optional | Custom Bedrock endpoint | AWS console |
 | `CLAUDE_CODE_USE_VERTEX` / `ANTHROPIC_VERTEX_PROJECT_ID` / `CLOUD_ML_REGION` | Optional | Google Vertex AI auth — see Step 1 | GCP console |
@@ -97,8 +100,7 @@ export WORKSPACE_NAME="my-org"
 export SSH_PUBLIC_KEY=""
 export ADMIN_PASSWORD=""
 export ANTHROPIC_API_KEY=""
-export CLAUDE_CODE_OAUTH_REFRESH_TOKEN=""
-export CLAUDE_CODE_OAUTH_SCOPES=""
+export CLAUDE_CODE_OAUTH_TOKEN=""
 export AWS_ACCESS_KEY_ID=""
 export AWS_SECRET_ACCESS_KEY=""
 export AWS_REGION=""
@@ -122,7 +124,7 @@ docker compose \
     up -d
 
 unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
-      ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_REFRESH_TOKEN CLAUDE_CODE_OAUTH_SCOPES \
+      ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
       AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
       CLAUDE_CODE_USE_VERTEX ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
       CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
@@ -137,8 +139,7 @@ $WORKSPACE_NAME                    = "my-org"
 $SSH_PUBLIC_KEY                    = ""
 $ADMIN_PASSWORD                    = ""
 $ANTHROPIC_API_KEY                 = ""
-$CLAUDE_CODE_OAUTH_REFRESH_TOKEN   = ""
-$CLAUDE_CODE_OAUTH_SCOPES          = ""
+$CLAUDE_CODE_OAUTH_TOKEN           = ""
 $AWS_ACCESS_KEY_ID                 = ""
 $AWS_SECRET_ACCESS_KEY             = ""
 $AWS_REGION                        = ""
@@ -160,8 +161,7 @@ $env:WORKSPACE_NAME                    = $WORKSPACE_NAME
 $env:SSH_PUBLIC_KEY                    = $SSH_PUBLIC_KEY
 $env:ADMIN_PASSWORD                    = $ADMIN_PASSWORD
 $env:ANTHROPIC_API_KEY                 = $ANTHROPIC_API_KEY
-$env:CLAUDE_CODE_OAUTH_REFRESH_TOKEN   = $CLAUDE_CODE_OAUTH_REFRESH_TOKEN
-$env:CLAUDE_CODE_OAUTH_SCOPES          = $CLAUDE_CODE_OAUTH_SCOPES
+$env:CLAUDE_CODE_OAUTH_TOKEN           = $CLAUDE_CODE_OAUTH_TOKEN
 $env:AWS_ACCESS_KEY_ID                 = $AWS_ACCESS_KEY_ID
 $env:AWS_SECRET_ACCESS_KEY             = $AWS_SECRET_ACCESS_KEY
 $env:AWS_REGION                        = $AWS_REGION
@@ -185,7 +185,7 @@ docker compose `
     up -d
 
 'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD',
-'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_REFRESH_TOKEN','CLAUDE_CODE_OAUTH_SCOPES',
+'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN',
 'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
 'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
 'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL',
