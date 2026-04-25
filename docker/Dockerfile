@@ -118,6 +118,7 @@ COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
 COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
     README.md QUICKSTART.md ARCHITECTURE.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia .mcp.json /home/zzaia/.mcp.json
+COPY --chown=zzaia:zzaia .claude.json /home/zzaia/.claude.json
 COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/WELCOME.md
 COPY --chown=zzaia:zzaia workspace/host/ /home/zzaia/workspace/host/
 

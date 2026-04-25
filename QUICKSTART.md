@@ -38,7 +38,12 @@ Set `ANTHROPIC_API_KEY` — obtain from [console.anthropic.com](https://console.
 
 ### Pro / Max (OAuth)
 
-**Option A — Long-lived token via env var (recommended):**
+| | Extension | Terminal `claude` REPL |
+|---|---|---|
+| **Option A** (`CLAUDE_CODE_OAUTH_TOKEN` env var) | ✅ | ✅ after one-time `.claude.json` seed |
+| **Option B** (`claude setup-token` inside container) | ✅ | ✅ fully self-contained |
+
+**Option A — Long-lived env var token:**
 
 On your **host machine**, run:
 
@@ -46,19 +51,30 @@ On your **host machine**, run:
 claude setup-token
 ```
 
-Copy the printed token and set it as `CLAUDE_CODE_OAUTH_TOKEN` in Step 2. The token is valid for ~1 year and is passed directly to the container — no login step required inside the container.
+Copy the printed token and set it as `CLAUDE_CODE_OAUTH_TOKEN` in Step 2. Valid for ~1 year. The extension picks it up immediately.
 
-**Option B — Interactive login (inside the container):**
+> **Important:** The token must be a single unbroken line. Terminal output may wrap it across multiple lines — copy the full token and remove any line breaks. A token with an embedded newline causes an `invalid header value` error.
 
-Start the container first (Step 3), then open a terminal inside VS Code and run:
+The onboarding wizard is automatically suppressed — the image ships a `.claude.json` with `hasCompletedOnboarding: true` that seeds the home volume on first start.
+
+**Option B — Interactive session inside the container (simplest, fully self-contained):**
+
+Start the container first (Step 3), open a terminal inside VS Code, and run:
 
 ```bash
 claude setup-token
 ```
 
-The URL is printed to the terminal (no browser opens automatically). Open the URL in a browser tab on your host, complete authentication, then copy the code displayed back into the terminal when prompted. Claude Code stores the session in `~/.claude/.credentials.json` inside the home volume — persists across container restarts.
+Claude Code prints a URL. **Do not expect a browser to open automatically** — the container has no display. Instead:
 
-> Use Option B when you prefer to authenticate interactively after the container is already running, or when you do not want to pass credentials via environment variables.
+1. Copy the URL from the terminal
+2. Open it in a browser **on your host machine**
+3. Complete authentication
+4. Copy the authorization code shown in the browser back into the terminal when prompted
+
+> **Important:** The OAuth callback URL is not reachable from inside the container — you must manually copy the URL and open it on the host, then copy the code back.
+
+Claude Code stores the full session (credentials + account info) in the home volume — the onboarding wizard is permanently suppressed and the session persists across all container restarts. No env var is needed.
 
 ---
 
@@ -260,6 +276,8 @@ All configured tools should show as connected. Then verify commands are availabl
 | Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
+| Terminal `claude` shows onboarding wizard | Home volume was created before the fix — delete `<WORKSPACE_NAME>-home` volume and restart, or run `claude setup-token` inside the container |
+| Extension auth error: `invalid header value` | `CLAUDE_CODE_OAUTH_TOKEN` contains a newline from terminal line-wrap — remove all line breaks from the token and recreate the container |
 
 ---
 
