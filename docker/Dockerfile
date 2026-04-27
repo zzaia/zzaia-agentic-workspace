@@ -115,7 +115,7 @@ RUN for ext in \
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=zzaia:zzaia .gitignore README.md QUICKSTART.md ARCHITECTURE.md \
     LICENSE WELCOME.md /home/zzaia/
-COPY --chown=zzaia:zzaia workspace/host/ /home/zzaia/workspace/host/
+COPY --chown=zzaia:zzaia workspace/ /home/zzaia/workspace/
 
 # ── Agent configs — flat merge into HOME (repo uses agents/ for organisation) ─
 COPY --chown=zzaia:zzaia agents/claude/  /home/zzaia/
@@ -124,8 +124,22 @@ COPY --chown=zzaia:zzaia agents/codex/   /home/zzaia/
 COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/
 COPY --chown=zzaia:zzaia vscode/ /home/zzaia/
 
-# ── Claude onboarding flag ────────────────────────────────────────────────────
-RUN echo '{"hasCompletedOnboarding":true}' > /home/zzaia/.claude.json
+# ── Navigation symlinks — mirrors repo agents/ structure for doc link resolution ─
+RUN mkdir -p /home/zzaia/agents/claude /home/zzaia/agents/gemini \
+             /home/zzaia/agents/codex  /home/zzaia/agents/copilot \
+             /home/zzaia/vscode \
+    && ln -sf /home/zzaia/.claude       /home/zzaia/agents/claude/.claude \
+    && ln -sf /home/zzaia/CLAUDE.md     /home/zzaia/agents/claude/CLAUDE.md \
+    && ln -sf /home/zzaia/.mcp.json     /home/zzaia/agents/claude/.mcp.json \
+    && ln -sf /home/zzaia/.claudeignore /home/zzaia/agents/claude/.claudeignore \
+    && ln -sf /home/zzaia/.claude.json  /home/zzaia/agents/claude/.claude.json \
+    && ln -sf /home/zzaia/.gemini       /home/zzaia/agents/gemini/.gemini \
+    && ln -sf /home/zzaia/GEMINI.md     /home/zzaia/agents/gemini/GEMINI.md \
+    && ln -sf /home/zzaia/.codex        /home/zzaia/agents/codex/.codex \
+    && ln -sf /home/zzaia/AGENTS.md     /home/zzaia/agents/codex/AGENTS.md \
+    && ln -sf /home/zzaia/.github       /home/zzaia/agents/copilot/.github \
+    && ln -sf /home/zzaia/.vscode       /home/zzaia/vscode/.vscode \
+    && ln -sf /home/zzaia/zzaia-main.code-workspace /home/zzaia/vscode/zzaia-main.code-workspace
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

@@ -381,20 +381,20 @@ docker compose `
 
 | Command | Purpose | Definition |
 |---------|---------|------------|
-| `/behavior:workspace:repo` | Clone repo or create branch worktree | [↗](.claude/commands/behavior/workspace/repo.md) |
-| `/behavior:devops:work-item` | Read or manage work items | [↗](.claude/commands/behavior/devops/work-item.md) |
-| `/behavior:devops:pull-request` | Manage pull requests | [↗](.claude/commands/behavior/devops/pull-request.md) |
-| `/behavior:devops:pipeline` | Run or debug CI/CD pipelines | [↗](.claude/commands/behavior/devops/pipeline.md) |
-| `/behavior:devops:new-relic` | New Relic log diagnostics | [↗](.claude/commands/behavior/devops/new-relic.md) |
-| `/behavior:development:develop` | Apply targeted changes to a branch | [↗](.claude/commands/behavior/development/develop.md) |
-| `/behavior:development:build` | Multi-framework builds | [↗](.claude/commands/behavior/development/build.md) |
-| `/behavior:development:test` | Comprehensive testing | [↗](.claude/commands/behavior/development/test.md) |
-| `/behavior:development:review` | Code quality review | [↗](.claude/commands/behavior/development/review.md) |
-| `/behavior:development:git` | Git commit and push | [↗](.claude/commands/behavior/development/git.md) |
-| `/workflow:remote:implement` | Full implementation from work item to PR | [↗](.claude/commands/workflow/remote/implement.md) |
-| `/workflow:remote:architect` | Generate BDD, Epic, and work items from a spec | [↗](.claude/commands/workflow/remote/architect.md) |
-| `/workflow:remote:homologate` | Run E2E BDD against a live URL | [↗](.claude/commands/workflow/remote/homologate.md) |
-| `/workflow:remote:fix-pipeline` | Iterative pipeline repair loop | [↗](.claude/commands/workflow/remote/fix-pipeline.md) |
-| `/orchestrator:implement` | Implement multiple work items in parallel | [↗](.claude/commands/orchestrator/implement/SKILL.md) |
+| `/behavior:workspace:repo` | Clone repo or create branch worktree | [↗](agents/claude/.claude/commands/behavior/workspace/repo.md) |
+| `/behavior:devops:work-item` | Read or manage work items | [↗](agents/claude/.claude/commands/behavior/devops/work-item.md) |
+| `/behavior:devops:pull-request` | Manage pull requests | [↗](agents/claude/.claude/commands/behavior/devops/pull-request.md) |
+| `/behavior:devops:pipeline` | Run or debug CI/CD pipelines | [↗](agents/claude/.claude/commands/behavior/devops/pipeline.md) |
+| `/behavior:devops:new-relic` | New Relic log diagnostics | [↗](agents/claude/.claude/commands/behavior/devops/new-relic.md) |
+| `/behavior:development:develop` | Apply targeted changes to a branch | [↗](agents/claude/.claude/commands/behavior/development/develop.md) |
+| `/behavior:development:build` | Multi-framework builds | [↗](agents/claude/.claude/commands/behavior/development/build.md) |
+| `/behavior:development:test` | Comprehensive testing | [↗](agents/claude/.claude/commands/behavior/development/test.md) |
+| `/behavior:development:review` | Code quality review | [↗](agents/claude/.claude/commands/behavior/development/review.md) |
+| `/behavior:development:git` | Git commit and push | [↗](agents/claude/.claude/commands/behavior/development/git.md) |
+| `/workflow:remote:implement` | Full implementation from work item to PR | [↗](agents/claude/.claude/commands/workflow/remote/implement.md) |
+| `/workflow:remote:architect` | Generate BDD, Epic, and work items from a spec | [↗](agents/claude/.claude/commands/workflow/remote/architect.md) |
+| `/workflow:remote:homologate` | Run E2E BDD against a live URL | [↗](agents/claude/.claude/commands/workflow/remote/homologate.md) |
+| `/workflow:remote:fix-pipeline` | Iterative pipeline repair loop | [↗](agents/claude/.claude/commands/workflow/remote/fix-pipeline.md) |
+| `/orchestrator:implement` | Implement multiple work items in parallel | [↗](agents/claude/.claude/commands/orchestrator/implement/SKILL.md) |
 
 Full reference: [README.md](README.md)

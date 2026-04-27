@@ -122,92 +122,92 @@ All individual commands can be called by users for standalone operations; workfl
 
 Machine learning dataset discovery and analysis workflows.
 
-- [**`/workflow:analytics:explorate`**](.claude/commands/workflow/analytics/explorate.md) - Domain and dataset exploration
-- [**`/workflow:analytics:analyze`**](.claude/commands/workflow/analytics/analyze.md) - Dataset analysis and visualization
+- [**`/workflow:analytics:explorate`**](agents/claude/.claude/commands/workflow/analytics/explorate.md) - Domain and dataset exploration
+- [**`/workflow:analytics:analyze`**](agents/claude/.claude/commands/workflow/analytics/analyze.md) - Dataset analysis and visualization
 
 ### Development
 
 Software development lifecycle operations.
 
-- [**`/behavior:development:develop`**](.claude/commands/behavior/development/develop.md) - Full development workflow
-- [**`/behavior:development:build`**](.claude/commands/behavior/development/build.md) - Multi-framework builds
-- [**`/behavior:development:test`**](.claude/commands/behavior/development/test.md) - Comprehensive testing
-- [**`/behavior:development:review`**](.claude/commands/behavior/development/review.md) - Code quality review
-- [**`/behavior:development:migrations`**](.claude/commands/behavior/development/migrations.md) - Database migrations
-- [**`/behavior:development:git`**](.claude/commands/behavior/development/git.md) - Git operations
-- [**`/behavior:development:update-dotnet-packages`**](.claude/commands/behavior/development/update-dotnet-packages.md) - Package management
+- [**`/behavior:development:develop`**](agents/claude/.claude/commands/behavior/development/develop.md) - Full development workflow
+- [**`/behavior:development:build`**](agents/claude/.claude/commands/behavior/development/build.md) - Multi-framework builds
+- [**`/behavior:development:test`**](agents/claude/.claude/commands/behavior/development/test.md) - Comprehensive testing
+- [**`/behavior:development:review`**](agents/claude/.claude/commands/behavior/development/review.md) - Code quality review
+- [**`/behavior:development:migrations`**](agents/claude/.claude/commands/behavior/development/migrations.md) - Database migrations
+- [**`/behavior:development:git`**](agents/claude/.claude/commands/behavior/development/git.md) - Git operations
+- [**`/behavior:development:update-dotnet-packages`**](agents/claude/.claude/commands/behavior/development/update-dotnet-packages.md) - Package management
 
 ### Management
 
 Project management and architecture coordination.
 
-- [**`/behavior:management:business`**](.claude/commands/behavior/management/business.md) - Business and BDD analysis
-- [**`/behavior:management:plan`**](.claude/commands/behavior/management/plan.md) - Project planning
-- [**`/behavior:management:architect`**](.claude/commands/behavior/management/architect.md) - Architecture specifications
-- [**`/behavior:management:clarify`**](.claude/commands/behavior/management/clarify.md) - Requirements clarification
+- [**`/behavior:management:business`**](agents/claude/.claude/commands/behavior/management/business.md) - Business and BDD analysis
+- [**`/behavior:management:plan`**](agents/claude/.claude/commands/behavior/management/plan.md) - Project planning
+- [**`/behavior:management:architect`**](agents/claude/.claude/commands/behavior/management/architect.md) - Architecture specifications
+- [**`/behavior:management:clarify`**](agents/claude/.claude/commands/behavior/management/clarify.md) - Requirements clarification
 
 ### Document
 
 Document generation operations.
 
-- [**`/behavior:document:latex`**](.claude/commands/behavior/document/latex.md) - Generate PDF from markdown or JSON data via LaTeX templates with diagram auto-generation
+- [**`/behavior:document:latex`**](agents/claude/.claude/commands/behavior/document/latex.md) - Generate PDF from markdown or JSON data via LaTeX templates with diagram auto-generation
 
 ### DevOps
 
 DevOps platform operations across Azure DevOps and GitHub.
 
-- [**`/behavior:devops:work-item`**](.claude/commands/behavior/devops/work-item.md) - Work item retrieval and management
-- [**`/behavior:devops:pull-request`**](.claude/commands/behavior/devops/pull-request.md) - Pull request management
-- [**`/behavior:devops:pipeline`**](.claude/commands/behavior/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
-- [**`/behavior:devops:new-relic`**](.claude/commands/behavior/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
+- [**`/behavior:devops:work-item`**](agents/claude/.claude/commands/behavior/devops/work-item.md) - Work item retrieval and management
+- [**`/behavior:devops:pull-request`**](agents/claude/.claude/commands/behavior/devops/pull-request.md) - Pull request management
+- [**`/behavior:devops:pipeline`**](agents/claude/.claude/commands/behavior/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
+- [**`/behavior:devops:new-relic`**](agents/claude/.claude/commands/behavior/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
 
 ### Workspace
 
 Multi-repository workspace configuration.
 
-- [**`/behavior:workspace:repo`**](.claude/commands/behavior/workspace/repo.md) - Clone repos or create branches (`--action new`)
-- [**`/behavior:workspace:apphost`**](.claude/commands/behavior/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
-- [**`/behavior:workspace:vscode`**](.claude/commands/behavior/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
-- [**`/behavior:workspace:agent-teams`**](.claude/commands/behavior/workspace/agent-teams.md) - Orchestrate teams of specialized agents in consensus or parallel mode
-- [**`/behavior:workspace:ask-user-question`**](.claude/commands/behavior/workspace/ask-user-question.md) - Prompt user for free-form or selection input
+- [**`/behavior:workspace:repo`**](agents/claude/.claude/commands/behavior/workspace/repo.md) - Clone repos or create branches (`--action new`)
+- [**`/behavior:workspace:apphost`**](agents/claude/.claude/commands/behavior/workspace/apphost.md) - Aspire AppHost setup or diagnostics (`--action setup|debug`)
+- [**`/behavior:workspace:vscode`**](agents/claude/.claude/commands/behavior/workspace/vscode.md) - VS Code configuration (`--action setup|validate|update`)
+- [**`/behavior:workspace:agent-teams`**](agents/claude/.claude/commands/behavior/workspace/agent-teams.md) - Orchestrate teams of specialized agents in consensus or parallel mode
+- [**`/behavior:workspace:ask-user-question`**](agents/claude/.claude/commands/behavior/workspace/ask-user-question.md) - Prompt user for free-form or selection input
 
 ### Capabilities
 
 Reusable capabilities invoked by behaviors and workflows.
 
-- [**`/capability:document:read`**](.claude/commands/capability/document/read/SKILL.md) - Extract PDF and Word document content
-- [**`/capability:document:write`**](.claude/commands/capability/document/write/SKILL.md) - Write markdown documentation to targets
-- [**`/capability:document:scrap`**](.claude/commands/capability/document/scrap/SKILL.md) - Search and download documents from web
-- [**`/capability:latex:write`**](.claude/commands/capability/latex/write/SKILL.md) - Generate PDF from Jinja2 LaTeX templates
-- [**`/capability:diagram:generate`**](.claude/commands/capability/diagram/generate/SKILL.md) - Render Mermaid or Graphviz diagrams to PNG
-- [**`/capability:playwright`**](.claude/commands/capability/playwright/SKILL.md) - Browser session management, diagnostics, and screenshots
-- [**`/capability:postman`**](.claude/commands/capability/postman/SKILL.md) - Postman workspace operations (`request|create|read|update|delete`)
+- [**`/capability:document:read`**](agents/claude/.claude/commands/capability/document/read/SKILL.md) - Extract PDF and Word document content
+- [**`/capability:document:write`**](agents/claude/.claude/commands/capability/document/write/SKILL.md) - Write markdown documentation to targets
+- [**`/capability:document:scrap`**](agents/claude/.claude/commands/capability/document/scrap/SKILL.md) - Search and download documents from web
+- [**`/capability:latex:write`**](agents/claude/.claude/commands/capability/latex/write/SKILL.md) - Generate PDF from Jinja2 LaTeX templates
+- [**`/capability:diagram:generate`**](agents/claude/.claude/commands/capability/diagram/generate/SKILL.md) - Render Mermaid or Graphviz diagrams to PNG
+- [**`/capability:playwright`**](agents/claude/.claude/commands/capability/playwright/SKILL.md) - Browser session management, diagnostics, and screenshots
+- [**`/capability:postman`**](agents/claude/.claude/commands/capability/postman/SKILL.md) - Postman workspace operations (`request|create|read|update|delete`)
 
 ### Workflow
 
 End-to-end workflows that sequence behaviors and capabilities into complete automated tasks.
 
-- [**`/workflow:implement`**](.claude/commands/workflow/implement.md) - Full implementation from work item to PR
-- [**`/workflow:homologate`**](.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
-- [**`/workflow:fix-merge`**](.claude/commands/workflow/fix-merge.md) - Merge conflict resolution
-- [**`/workflow:remote:fix-pipeline`**](.claude/commands/workflow/remote/fix-pipeline.md) - Iterative pipeline repair loop
-- [**`/workflow:remote:architect`**](.claude/commands/workflow/remote/architect.md) - Specification Driven Design orchestration with AGILE Azure DevOps integration
-- [**`/workflow:remote:implement`**](.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
-- [**`/workflow:remote:homologate`**](.claude/commands/workflow/remote/homologate.md) - Homologation testing workflow with BDD, live URL testing, diagnostics, and bug reporting
+- [**`/workflow:implement`**](agents/claude/.claude/commands/workflow/implement.md) - Full implementation from work item to PR
+- [**`/workflow:homologate`**](agents/claude/.claude/commands/workflow/homologate.md) - Multi-app acceptance testing workflow
+- [**`/workflow:fix-merge`**](agents/claude/.claude/commands/workflow/fix-merge.md) - Merge conflict resolution
+- [**`/workflow:remote:fix-pipeline`**](agents/claude/.claude/commands/workflow/remote/fix-pipeline.md) - Iterative pipeline repair loop
+- [**`/workflow:remote:architect`**](agents/claude/.claude/commands/workflow/remote/architect.md) - Specification Driven Design orchestration with AGILE Azure DevOps integration
+- [**`/workflow:remote:implement`**](agents/claude/.claude/commands/workflow/remote/implement.md) - Remote work item to PR implementation with AGILE Azure DevOps integration
+- [**`/workflow:remote:homologate`**](agents/claude/.claude/commands/workflow/remote/homologate.md) - Homologation testing workflow with BDD, live URL testing, diagnostics, and bug reporting
 
 ### Orchestrator
 
 Multi-item coordination commands that dispatch workflows in parallel or sequentially based on dependency analysis.
 
-- [**`/orchestrator:implement`**](.claude/commands/orchestrator/implement/SKILL.md) - Implement multiple work items with dependency-aware parallel or sequential dispatch
+- [**`/orchestrator:implement`**](agents/claude/.claude/commands/orchestrator/implement/SKILL.md) - Implement multiple work items with dependency-aware parallel or sequential dispatch
 
 ### Utils 
 
 System utilities and information.
 
-- [**`/behavior:warmup`**](.claude/commands/behavior/warmup.md) - Context-aware focus
-- [**`/behavior:ask`**](.claude/commands/behavior/ask.md) - Context-aware Q&A
-- [**`/behavior:websearch`**](.claude/commands/behavior/websearch.md) - Web search integration
+- [**`/behavior:warmup`**](agents/claude/.claude/commands/behavior/warmup.md) - Context-aware focus
+- [**`/behavior:ask`**](agents/claude/.claude/commands/behavior/ask.md) - Context-aware Q&A
+- [**`/behavior:websearch`**](agents/claude/.claude/commands/behavior/websearch.md) - Web search integration
 
 ## 🖥️ AppHost Template
 
@@ -228,7 +228,7 @@ The `docker/` directory provides an SSH-accessible Ubuntu container with all wor
 
 ## 🤖 Specialized Agents
 
-Agents are organized in `.claude/agents/` by type, each with a distinct role in the system:
+Agents are organized in `agents/claude/.claude/agents/` by type, each with a distinct role in the system:
 
 ### `analytics/` — Analytics Agents
 
@@ -236,9 +236,9 @@ Specialized agents for domain research, problem exploration, and dataset discove
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-problem-exploration**](.claude/agents/analytics/zzaia-problem-exploration.md) | Transform problem statements into technical research reports |
-| [**zzaia-domain-exploration**](.claude/agents/analytics/zzaia-domain-exploration.md) | Uncover commercially viable problems across domains |
-| [**zzaia-dataset-exploration**](.claude/agents/analytics/zzaia-dataset-exploration.md) | Discover and evaluate ML datasets from authoritative repositories |
+| [**zzaia-problem-exploration**](agents/claude/.claude/agents/analytics/zzaia-problem-exploration.md) | Transform problem statements into technical research reports |
+| [**zzaia-domain-exploration**](agents/claude/.claude/agents/analytics/zzaia-domain-exploration.md) | Uncover commercially viable problems across domains |
+| [**zzaia-dataset-exploration**](agents/claude/.claude/agents/analytics/zzaia-dataset-exploration.md) | Discover and evaluate ML datasets from authoritative repositories |
 
 ### `meta/` — System Self-Improvement
 
@@ -246,10 +246,10 @@ Generate new components in standardized patterns. Used to extend the agentic sys
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-meta-agent**](.claude/agents/meta/zzaia-meta-agent.md) | Agent definition generation |
-| [**zzaia-meta-command**](.claude/agents/meta/zzaia-meta-command.md) | Command generation for any hierarchy layer |
-| [**zzaia-meta-skill**](.claude/agents/meta/zzaia-meta-skill.md) | Capability generation |
-| [**zzaia-meta-workflow**](.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation |
+| [**zzaia-meta-agent**](agents/claude/.claude/agents/meta/zzaia-meta-agent.md) | Agent definition generation |
+| [**zzaia-meta-command**](agents/claude/.claude/agents/meta/zzaia-meta-command.md) | Command generation for any hierarchy layer |
+| [**zzaia-meta-skill**](agents/claude/.claude/agents/meta/zzaia-meta-skill.md) | Capability generation |
+| [**zzaia-meta-workflow**](agents/claude/.claude/agents/meta/zzaia-meta-workflow.md) | Workflow command generation |
 
 ### `sub/` — Specialist Working Agents
 
@@ -257,14 +257,14 @@ Highly specialized agents invoked by commands and workflows to perform focused t
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-task-clarifier**](.claude/agents/sub/zzaia-task-clarifier.md) | Requirements analysis |
-| [**zzaia-developer-specialist**](.claude/agents/sub/zzaia-developer-specialist.md) | Multi-language implementation |
-| [**zzaia-tester-specialist**](.claude/agents/sub/zzaia-tester-specialist.md) | Build and test validation |
-| [**zzaia-code-reviewer**](.claude/agents/sub/zzaia-code-reviewer.md) | Code quality and static analysis |
-| [**zzaia-workspace-manager**](.claude/agents/sub/zzaia-workspace-manager.md) | Multi-repository worktree coordination |
-| [**zzaia-devops-specialist**](.claude/agents/sub/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
-| [**zzaia-web-searcher**](.claude/agents/sub/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
-| [**zzaia-document-specialist**](.claude/agents/sub/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
+| [**zzaia-task-clarifier**](agents/claude/.claude/agents/sub/zzaia-task-clarifier.md) | Requirements analysis |
+| [**zzaia-developer-specialist**](agents/claude/.claude/agents/sub/zzaia-developer-specialist.md) | Multi-language implementation |
+| [**zzaia-tester-specialist**](agents/claude/.claude/agents/sub/zzaia-tester-specialist.md) | Build and test validation |
+| [**zzaia-code-reviewer**](agents/claude/.claude/agents/sub/zzaia-code-reviewer.md) | Code quality and static analysis |
+| [**zzaia-workspace-manager**](agents/claude/.claude/agents/sub/zzaia-workspace-manager.md) | Multi-repository worktree coordination |
+| [**zzaia-devops-specialist**](agents/claude/.claude/agents/sub/zzaia-devops-specialist.md) | Azure DevOps and GitHub DevOps operations |
+| [**zzaia-web-searcher**](agents/claude/.claude/agents/sub/zzaia-web-searcher.md) | Tavily-powered web search and content extraction |
+| [**zzaia-document-specialist**](agents/claude/.claude/agents/sub/zzaia-document-specialist.md) | PDF/Word extraction, documentation writing, and web document scraping |
 
 ### `team/` — Macro Agents for Agent Teams
 
@@ -272,34 +272,26 @@ High-level agents dispatched inside agent-teams sessions to lead and coordinate 
 
 | Agent | Role |
 | ----- | ---- |
-| [**zzaia-tech-leader**](.claude/agents/team/zzaia-tech-leader.md) | Leads task execution through a workflow using sub-agents; coordinates and returns structured results to the orchestrator |
+| [**zzaia-tech-leader**](agents/claude/.claude/agents/team/zzaia-tech-leader.md) | Leads task execution through a workflow using sub-agents; coordinates and returns structured results to the orchestrator |
 
 ## 📁 Structure
 
 ```
-.claude/
-├── agents/              # AI agent definitions
-│   ├── analytics/       # Analytics research agents
-│   ├── meta/            # System self-improvement agents
-│   ├── sub/             # Specialist working agents
-│   └── team/            # Macro agents for agent-teams sessions
-├── commands/            # Command configurations
-│   ├── orchestrator/
-│   ├── behavior/
-│   ├── capability/
-│   └── workflow/
-│       ├── analytics/
-│       └── remote/
-├── output-styles/       # Claude output format definitions
-├── rules/               # Language-specific standards
-CLAUDE.md                # System guidance
+agents/
+├── claude/              # Claude Code
+│   ├── .claude/         # Commands, agents, output-styles
+│   └── CLAUDE.md        # System guidance
+├── gemini/              # Gemini CLI — .gemini/, GEMINI.md
+├── codex/               # OpenAI Codex — .codex/, AGENTS.md
+└── copilot/             # GitHub Copilot — .github/copilot-instructions.md
+vscode/                  # VS Code workspace settings and .code-workspace
 workspace/               # Multi-repository workspace
 ```
 
 
 ## 🔌 MCP Tools Integration
 
-External service integrations via Model Context Protocol servers configured in [`.mcp.json`](.mcp.json).
+External service integrations via Model Context Protocol servers configured in [`.mcp.json`](agents/claude/.mcp.json).
 
 | Tool | Purpose | Env Var |
 |------|---------|---------|
@@ -337,7 +329,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 - **Architecture**: [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Documentation**: [CLAUDE.md](CLAUDE.md)
+- **Documentation**: [CLAUDE.md](agents/claude/CLAUDE.md)
 - **Claude Code Docs**: [code.claude.com/docs](https://code.claude.com/docs/en/overview)
 - **Marketplace**: [.claude-plugin/marketplace.json](.claude-plugin/marketplace.json)
 - **Issues**: [GitHub Issues](https://github.com/zzaia/zzaia-agentic-workspace/issues)
