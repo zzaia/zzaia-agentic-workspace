@@ -1,6 +1,8 @@
 [tools]
 node = "22"
 dotnet = "10"
+gh = "latest"
+"pipx:azure-cli" = "latest"
 k6 = "latest"
 d2 = "latest"
 dapr = "latest"

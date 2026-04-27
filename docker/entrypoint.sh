@@ -64,11 +64,29 @@ if [ -n "$_SSH_KEY" ]; then
         | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
 fi
 
-# ── GitHub Copilot CLI ────────────────────────────────────────────────────────
-su -s /bin/bash zzaia -c "
-    export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-    gh extension install github/gh-copilot 2>/dev/null || true
-"
+# ── GitHub auth + Copilot CLI ────────────────────────────────────────────────
+if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
+    su -s /bin/bash zzaia -c "
+        export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
+        echo '${GITHUB_PERSONAL_ACCESS_TOKEN}' | gh auth login --with-token 2>/dev/null || true
+        gh extension install github/gh-copilot 2>/dev/null || true
+    "
+else
+    su -s /bin/bash zzaia -c "
+        export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
+        gh extension install github/gh-copilot 2>/dev/null || true
+    "
+fi
+
+# ── Git credentials — Azure DevOps ───────────────────────────────────────────
+if [ -n "${ADO_MCP_AUTH_TOKEN:-}" ]; then
+    su -s /bin/bash zzaia -c "
+        git config --global credential.https://dev.azure.com.helper store
+        printf 'https://anything:%s@dev.azure.com\n' '${ADO_MCP_AUTH_TOKEN}' \
+            >> /home/zzaia/.git-credentials
+        chmod 600 /home/zzaia/.git-credentials
+    "
+fi
 
 # ── Aspire MCP — single shared instance for all agents ───────────────────────
 su -s /bin/bash zzaia -c "
