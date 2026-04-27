@@ -50,10 +50,6 @@ RUN userdel -r ubuntu 2>/dev/null || true \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
 
-# ── code-server ───────────────────────────────────────────────────────────────
-RUN curl -fsSL https://code-server.dev/install.sh | sh \
-    && rm -rf /var/lib/apt/lists/*
-
 USER zzaia
 WORKDIR /home/zzaia
 
@@ -84,11 +80,15 @@ RUN for ext in \
         anthropic.claude-code \
         alefragnani.project-manager \
         codeinklingon.git-worktree-menu \
+        continue.continue \
         eamodio.gitlens \
         editorconfig.editorconfig \
         esbenp.prettier-vscode \
         fullstackspider.visual-nuget \
         gaoshan0621.csharp-format-usings \
+        github.copilot \
+        github.copilot-chat \
+        google.gemini-code-assist \
         gruntfuggly.todo-tree \
         kreativ-software.csharpextensions \
         mermaidchart.vscode-mermaid-chart \
@@ -115,11 +115,14 @@ RUN for ext in \
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
 COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
-COPY --chown=zzaia:zzaia CLAUDE.md .claudeignore .gitignore \
+COPY --chown=zzaia:zzaia .gemini/ /home/zzaia/.gemini/
+COPY --chown=zzaia:zzaia .codex/ /home/zzaia/.codex/
+COPY --chown=zzaia:zzaia CLAUDE.md GEMINI.md AGENTS.md .claudeignore .gitignore \
     README.md QUICKSTART.md ARCHITECTURE.md LICENSE zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia .mcp.json /home/zzaia/.mcp.json
 COPY --chown=zzaia:zzaia .claude.json /home/zzaia/.claude.json
 COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/WELCOME.md
+COPY --chown=zzaia:zzaia .github/ /home/zzaia/.github/
 COPY --chown=zzaia:zzaia workspace/host/ /home/zzaia/workspace/host/
 
 RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc

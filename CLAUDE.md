@@ -38,8 +38,7 @@ workspace/
 │   ├── master/              # Reference branch
 │   ├── feature/{name}/      # Feature branches
 │   └── repository-metadata.json
-├── host/                    # Aspire AppHost template
-└── tasks/                   # Task specifications
+└── host/                    # Aspire AppHost template
 ```
 
 ## AppHost Template
@@ -56,7 +55,7 @@ workspace/
 
 ## Development Standards
 
-Language-specific coding standards are defined in `.claude/rules/` directory:
+Language-specific coding standards are defined in `.claude/commands/behavior/development/rules/` directory:
 
 - Reference appropriate rule files based on project language/framework
 - Follow established architectural patterns per language

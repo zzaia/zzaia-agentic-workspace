@@ -95,6 +95,10 @@ You will need the following values before starting:
 | `ANTHROPIC_BEDROCK_BASE_URL` | Optional | Custom Bedrock endpoint | AWS console |
 | `CLAUDE_CODE_USE_VERTEX` / `ANTHROPIC_VERTEX_PROJECT_ID` / `CLOUD_ML_REGION` | Optional | Google Vertex AI auth — see Step 1 | GCP console |
 | `CLAUDE_CODE_USE_FOUNDRY` / `AZURE_FOUNDRY_BASE_URL` | Optional | Azure AI Foundry auth — see Step 1 | Azure portal |
+| `OPENAI_API_KEY` | Optional | OpenAI API key for Codex CLI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `GEMINI_API_KEY` | Optional | Google Gemini API key for Gemini CLI | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | Optional | GitHub PAT for GitHub MCP + Copilot CLI | [GitHub → Settings → Personal Access Tokens](https://github.com/settings/tokens) |
+| `ASPIRE_DASHBOARD_PORT` | Optional | Host port for Aspire telemetry dashboard | Default: `18888` |
 | `TAVILY_API_KEY` | Optional | Tavily API key | [tavily.com](https://tavily.com) |
 | `ADO_MCP_AUTH_TOKEN` | Optional | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
 | `AZURE_DEVOPS_ORGANIZATION` | Optional | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
@@ -126,6 +130,10 @@ export ANTHROPIC_VERTEX_PROJECT_ID=""
 export CLOUD_ML_REGION=""
 export CLAUDE_CODE_USE_FOUNDRY=""
 export AZURE_FOUNDRY_BASE_URL=""
+export OPENAI_API_KEY=""
+export GEMINI_API_KEY=""
+export GITHUB_PERSONAL_ACCESS_TOKEN=""
+export ASPIRE_DASHBOARD_PORT="18888"
 export TAVILY_API_KEY=""
 export ADO_MCP_AUTH_TOKEN=""
 export AZURE_DEVOPS_ORGANIZATION=""
@@ -144,6 +152,7 @@ unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
       AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
       CLAUDE_CODE_USE_VERTEX ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
       CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
+      OPENAI_API_KEY GEMINI_API_KEY GITHUB_PERSONAL_ACCESS_TOKEN ASPIRE_DASHBOARD_PORT \
       TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
       POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT
 ```
@@ -165,6 +174,10 @@ $ANTHROPIC_VERTEX_PROJECT_ID       = ""
 $CLOUD_ML_REGION                   = ""
 $CLAUDE_CODE_USE_FOUNDRY           = ""
 $AZURE_FOUNDRY_BASE_URL            = ""
+$OPENAI_API_KEY                    = ""
+$GEMINI_API_KEY                    = ""
+$GITHUB_PERSONAL_ACCESS_TOKEN      = ""
+$ASPIRE_DASHBOARD_PORT             = "18888"
 $TAVILY_API_KEY                    = ""
 $ADO_MCP_AUTH_TOKEN                = ""
 $AZURE_DEVOPS_ORGANIZATION         = ""
@@ -187,6 +200,10 @@ $env:ANTHROPIC_VERTEX_PROJECT_ID       = $ANTHROPIC_VERTEX_PROJECT_ID
 $env:CLOUD_ML_REGION                   = $CLOUD_ML_REGION
 $env:CLAUDE_CODE_USE_FOUNDRY           = $CLAUDE_CODE_USE_FOUNDRY
 $env:AZURE_FOUNDRY_BASE_URL            = $AZURE_FOUNDRY_BASE_URL
+$env:OPENAI_API_KEY                    = $OPENAI_API_KEY
+$env:GEMINI_API_KEY                    = $GEMINI_API_KEY
+$env:GITHUB_PERSONAL_ACCESS_TOKEN      = $GITHUB_PERSONAL_ACCESS_TOKEN
+$env:ASPIRE_DASHBOARD_PORT             = $ASPIRE_DASHBOARD_PORT
 $env:TAVILY_API_KEY                    = $TAVILY_API_KEY
 $env:ADO_MCP_AUTH_TOKEN                = $ADO_MCP_AUTH_TOKEN
 $env:AZURE_DEVOPS_ORGANIZATION         = $AZURE_DEVOPS_ORGANIZATION
@@ -205,6 +222,7 @@ docker compose `
 'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
 'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
 'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL',
+'OPENAI_API_KEY','GEMINI_API_KEY','GITHUB_PERSONAL_ACCESS_TOKEN','ASPIRE_DASHBOARD_PORT',
 'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
 'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
@@ -219,8 +237,9 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 |--------|--------------|
 | **VS Code** (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) |
 | **SSH** | `ssh -p <SSH_PORT> zzaia@localhost` (default `2222`) |
+| **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
 
-The Claude Code extension is pre-installed. All MCP tools (Tavily, Azure DevOps, Postman, New Relic) connect automatically via isolated sidecar containers.
+Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running.
 
 ---
 

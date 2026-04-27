@@ -227,6 +227,11 @@ __marimo__/
 !.claude-plugin/
 !.gitignore
 !.vscode
+!.gemini/
+!.codex/
+!.github/
+!GEMINI.md
+!AGENTS.md
 
 # Allow traversal into .claude/ but re-ignore its contents
 !.claude/

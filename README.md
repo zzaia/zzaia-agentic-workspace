@@ -1,10 +1,14 @@
 # ZZAIA Agentic Workspace
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-blue.svg)](https://claude.ai/code)
+[![Claude Code](https://img.shields.io/badge/Agent-Claude%20Code-blue.svg)](https://claude.ai/code)
+[![Gemini CLI](https://img.shields.io/badge/Agent-Gemini%20CLI-4285F4.svg)](https://ai.google.dev/gemini-api/docs/gemini-cli)
+[![OpenAI Codex](https://img.shields.io/badge/Agent-OpenAI%20Codex-412991.svg)](https://openai.com/codex)
+[![GitHub Copilot](https://img.shields.io/badge/Agent-GitHub%20Copilot-24292e.svg)](https://github.com/features/copilot)
+[![VS Code Server](https://img.shields.io/badge/IDE-VS%20Code%20Server-007ACC.svg)](https://coder.com/docs/code-server)
 [![Azure DevOps](https://img.shields.io/badge/Integrates%20with-Azure%20DevOps-0078D7.svg)](https://azure.microsoft.com/products/devops)
 
-> Multi-agent orchestration system for software engineering workflows across analytics, development, documentation, and management, over Azure DevOps integrations.
+> Multi-agent agentic workspace running Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot inside an isolated Docker container with browser-accessible VS Code Server, secret-isolated MCP integrations, and full software development lifecycle automation.
 
 ## Why ZZAIA Workspace?
 
@@ -303,8 +307,10 @@ External service integrations via Model Context Protocol servers configured in [
 | **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` |
 | **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` |
-| **Playwright** | Browser automation, screenshots | None (local) |
-| **Aspire** | AppHost resource inspection and control | None (local) |
+| **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| **Playwright** | Browser automation, screenshots | None (always-on sidecar) |
+| **Aspire** | AppHost resource inspection and control | None (workspace process) |
+| **Aspire Dashboard** | Distributed telemetry, traces, logs | None (always-on sidecar, port 18888) |
 
 ## 🛡️ Quality Standards
 

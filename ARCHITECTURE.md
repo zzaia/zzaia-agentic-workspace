@@ -1,6 +1,6 @@
 # ZZAIA Agentic Workspace — Architecture Overview
 
-Multi-tenant agentic workspace that runs Claude Code (and future agents) inside isolated Docker containers, with secrets segregated into independent MCP sidecar containers so no secret is ever accessible from the agent's terminal, filesystem, or context.
+Multi-tenant agentic workspace that runs multiple AI coding agents (Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot) inside isolated Docker containers, with secrets segregated into independent MCP sidecar containers so no secret is ever accessible from any agent's terminal, filesystem, or context.
 
 ---
 
@@ -12,13 +12,14 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ### PADR 001: Extensible Agent Runtime
 
-**Decision**: This workspace is built around the Claude Code terminal agent but must not be permanently coupled to it. The agent runtime is a swappable component.
+**Decision**: This workspace supports multiple AI coding agent runtimes simultaneously. The environment is not coupled to any single agent vendor.
 
-- The workspace environment (OS, tools, extensions, MCP integrations) is provisioned independently of which agent CLI is installed
-- Adopting a new agent means replacing the CLI binary and updating `.mcp.json` — nothing else changes
-- All capabilities (tool integrations, command hierarchy, workspace layout) remain usable across agent runtimes
+- Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot are all installed and configured
+- Each agent has its own native config folder (`.claude/`, `.gemini/`, `.codex/`, `.github/`) and project instruction file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `copilot-instructions.md`)
+- All agents share the same MCP tool surface via SSE endpoints — adding a new MCP sidecar makes it available to every agent simultaneously
+- Adopting a new agent means adding its CLI binary and native config — nothing else changes
 
-**Rationale**: Locking the workspace to a single agent vendor would make every future migration a full rebuild. Treating the agent as a replaceable boundary preserves the investment in tooling and integrations.
+**Rationale**: Multi-agent workspaces maximize optionality. Teams can choose the best agent for each task without reconfiguring the environment.
 
 ---
 
@@ -116,16 +117,25 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ### ADR 002: MCP Sidecar Pattern for Secret Segregation
 
-**Decision**: Every external API integration runs as a dedicated sidecar container (`mcp-tavily`, `mcp-azure-devops`, `mcp-postman`, `mcp-newrelic`). Each sidecar receives exactly one secret via environment variable and exposes a `supergateway` SSE endpoint on the internal `mcp` bridge network only — never on the host.
+**Decision**: Every external API integration runs as a dedicated sidecar container. Each sidecar receives exactly one secret via environment variable and exposes a `supergateway` SSE endpoint on the internal `mcp` bridge network only — never on the host.
 
-- The `workspace` container holds **zero API key environment variables**
-- Agents call tools via MCP SSE (`http://mcp-tavily:3001/sse`) — the key is used inside the sidecar and the result returned
+| Sidecar | Port | Secret | Notes |
+|---------|------|--------|-------|
+| `mcp-tavily` | 3001 | `TAVILY_API_KEY` | Opt-in |
+| `mcp-azure-devops` | 3002 | `ADO_MCP_AUTH_TOKEN` | Opt-in |
+| `mcp-postman` | 3003 | `POSTMAN_API_KEY` | Opt-in |
+| `mcp-newrelic` | 3004 | `NEW_RELIC_API_KEY` | Opt-in |
+| `mcp-github` | 3005 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Opt-in |
+| `mcp-playwright` | 3006 | None | Always-on, headless Chromium |
+| `aspire-dashboard` | 18888 | None | Always-on, OTLP telemetry receiver |
+
+- The `workspace` container holds **zero API key environment variables** for MCP integrations
+- Agents call tools via MCP SSE — the key is used inside the sidecar and the result returned
 - Secrets are never in the agent's environment, terminal history, or context window
-- Adding a new integration = adding one sidecar service with its own secret
-- Each sidecar guards its own key at startup: if the key is empty the process exits cleanly (code 0)
-- Sidecars use `restart: unless-stopped` with a healthcheck (`wget` on their SSE port every 30s) so they recover automatically after idle disconnects — services without a key stay exited and are not restarted by Docker
+- `aspire mcp start` runs inside the workspace container via supergateway on port 3007 — one shared process for all agents
+- Each opt-in sidecar guards its own key at startup: if the key is empty the process exits cleanly (code 0)
 
-**Rationale**: Sidecar-per-secret is the minimal surface area principle applied to secrets. Even if the agent is fully autonomous (`--dangerously-skip-permissions`), it cannot exfiltrate API keys because they are not present in its container.
+**Rationale**: Sidecar-per-secret is the minimal surface area principle applied to secrets. Even fully autonomous agents cannot exfiltrate API keys because they are not present in the workspace container.
 
 ---
 
@@ -156,14 +166,20 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 ### ADR 005: Extensible Agent Runtime Interface
 
-**Decision**: The agent runtime (currently Claude Code CLI) is treated as a swappable component. It runs as the `zzaia` user inside the workspace container and communicates with MCP servers via the `.mcp.json` configuration pointing to internal sidecar SSE endpoints.
+**Decision**: Multiple agent runtimes are installed and configured simultaneously. Each agent communicates with MCP servers via SSE endpoints and has its own native configuration folder.
 
-- No coupling between the container image and a specific agent version beyond the CLI binary
-- `.mcp.json` defines the tool surface available to the agent
-- The container runtime (OS, tools, extensions) is provisioned independently of which agent CLI is installed
-- Future agents (other CLI tools, different AI providers) replace only the agent binary and `.mcp.json` entries
+| Agent | CLI Binary | Config Folder | Instruction File |
+|-------|-----------|---------------|-----------------|
+| Claude Code | `claude` (mise) | `.claude/` | `CLAUDE.md` |
+| Gemini CLI | `gemini` (mise) | `.gemini/` | `GEMINI.md` |
+| OpenAI Codex | `codex` (mise) | `.codex/` | `AGENTS.md` |
+| GitHub Copilot | `gh copilot` (entrypoint) | `.github/` | `copilot-instructions.md` |
 
-**Rationale**: Decoupling the agent runtime from the workspace environment preserves investment in tooling, workspace configuration, and the MCP integration layer when adopting new agent technologies.
+- All agents share the same 7 MCP SSE endpoints — no per-agent configuration of tool endpoints
+- Each agent's native config folder is committed to the repository and COPY'd into the container image
+- Adding a new agent = adding its binary to `mise.toml` + its native config folder
+
+**Rationale**: Multi-agent support preserves team optionality. The shared MCP surface means integrations are configured once and available everywhere.
 
 ---
 
@@ -185,8 +201,8 @@ Multi-tenant agentic workspace that runs Claude Code (and future agents) inside 
 
 **Decision**: All workspace tools (Node.js, Python, .NET, Go, Rust, Java, etc.) are provisioned inside the Docker image via `mise.toml` and direct install steps in the Dockerfile. No tool installation is required on the host beyond Docker Desktop.
 
-- `mise` manages language runtimes and CLI tools reproducibly
-- Code-server, miniforge3, and other tools not in the mise registry are installed via their official scripts during image build
+- `mise` manages language runtimes and CLI tools reproducibly — including `code-server` (`github:coder/code-server`), all agent CLIs, and npm tools
+- Miniforge3 (conda) is installed via its official script during image build; it is the sole Python provider
 - The image is self-contained: any developer on Ubuntu, macOS, or Windows can run the workspace identically
 
 **Rationale**: Zero-dependency host setup is the primary usability objective. A single `docker compose up` command delivers a fully provisioned development environment regardless of the host OS.
@@ -225,13 +241,15 @@ C4Context
     System_Ext(tavily, "Tavily", "Web search and extract")
     System_Ext(postman, "Postman", "API collections and environments")
     System_Ext(newrelic, "New Relic", "Observability and log diagnostics")
+    System_Ext(github, "GitHub", "Repositories, issues, actions")
     System_Ext(docker, "Docker Desktop", "Container runtime on host OS")
 
-    Rel(dev, workspace, "Accesses", "HTTP :8080 / SSH :2222")
+    Rel(dev, workspace, "Accesses", "HTTP :8080 / SSH :2222 / Aspire :18888")
     Rel(workspace, ado, "DevOps operations", "HTTPS via MCP sidecar")
     Rel(workspace, tavily, "Web search", "HTTPS via MCP sidecar")
     Rel(workspace, postman, "API management", "HTTPS via MCP sidecar")
     Rel(workspace, newrelic, "Log diagnostics", "HTTPS via MCP sidecar")
+    Rel(workspace, github, "GitHub operations", "HTTPS via MCP sidecar")
     Rel(docker, workspace, "Hosts", "Docker Compose")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
@@ -246,11 +264,14 @@ C4Container
     Person(dev, "Developer", "Browser or SSH")
 
     System_Boundary(stack, "<org> Compose Stack") {
-        Container(ws, "workspace", "Ubuntu 24.04 + code-server + sshd", "Agent runtime, developer UI, zero API key env vars")
+        Container(ws, "workspace", "Ubuntu 24.04 + code-server + sshd", "Multi-agent runtime (Claude/Gemini/Codex/Copilot), developer UI, aspire mcp :3007")
         Container(tavily, "mcp-tavily", "node:alpine + supergateway", "Holds TAVILY_API_KEY, exposes SSE :3001")
         Container(ado, "mcp-azure-devops", "node:alpine + supergateway", "Holds ADO_MCP_AUTH_TOKEN, exposes SSE :3002")
         Container(postman, "mcp-postman", "node:alpine + supergateway", "Holds POSTMAN_API_KEY, exposes SSE :3003")
         Container(newrelic, "mcp-newrelic", "node:alpine + supergateway", "Holds NEW_RELIC_API_KEY, exposes SSE :3004")
+        Container(ghsidecar, "mcp-github", "node:alpine + supergateway", "Holds GITHUB_PERSONAL_ACCESS_TOKEN, exposes SSE :3005")
+        Container(playwright, "mcp-playwright", "playwright/mcp", "Headless Chromium, always-on, exposes SSE :3006")
+        Container(aspireds, "aspire-dashboard", "dotnet/aspire-dashboard", "OTLP receiver + telemetry UI, always-on, :18888")
     }
 
     System_Boundary(host, "Docker Host") {
@@ -265,6 +286,9 @@ C4Container
     Rel(ws, ado, "MCP tool calls", "SSE internal network")
     Rel(ws, postman, "MCP tool calls", "SSE internal network")
     Rel(ws, newrelic, "MCP tool calls", "SSE internal network")
+    Rel(ws, ghsidecar, "MCP tool calls", "SSE internal network")
+    Rel(ws, playwright, "MCP tool calls", "SSE internal network")
+    Rel(ws, aspireds, "OTLP telemetry", "AppHost → :18889")
     Rel(ws, home, "Home directory", "named volume /home/zzaia")
     Rel(ws, repos, "Repository storage", "named volume /home/zzaia/workspace")
     Rel(ws, secrets, "SSH keys", "named volume /secrets")
@@ -277,20 +301,22 @@ C4Container
 
 ```
 zzaia/
-├── .claude/
-│   ├── agents/          # Agent definitions (meta, sub, team, analytics)
-│   ├── commands/        # Command hierarchy (orchestrator → workflow → behavior → capability)
-│   ├── output-styles/   # Claude response format definitions
-│   └── rules/           # Language-specific coding standards
+├── .claude/             # Claude Code — agents, commands, output-styles
+├── .gemini/             # Gemini CLI — settings.json (MCP config)
+├── .codex/              # OpenAI Codex — config.toml (MCP config)
+├── .github/             # GitHub Copilot — copilot-instructions.md
+├── .vscode/             # VS Code / Copilot MCP + workspace settings
 ├── docker/
-│   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + code-server + sshd
-│   ├── docker-compose.yml  # Stack definition — workspace + 4 MCP sidecars
-│   └── entrypoint.sh    # One-time secret init, Docker group, code-server, sshd
-├── workspace/host/  # .NET Aspire AppHost for integrated local testing
+│   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + sshd
+│   ├── docker-compose.yml  # Stack — workspace + 7 sidecars
+│   └── entrypoint.sh    # Secret init, Docker group, aspire mcp, code-server, sshd
+├── workspace/host/      # .NET Aspire AppHost for integrated local testing
 ├── workspace/           # Multi-repository git worktrees
-├── mise.toml            # Tool versions (node, python, dotnet, go, rust, java…)
-├── .mcp.json            # MCP server endpoints (SSE to internal sidecars)
-├── CLAUDE.md            # System guidance for Claude Code
+├── mise.toml            # Tool versions + agent CLIs (node, dotnet, claude, gemini, codex, code-server…)
+├── .mcp.json            # MCP server endpoints for Claude Code
+├── CLAUDE.md            # Project instructions for Claude Code
+├── GEMINI.md            # Project instructions for Gemini CLI
+├── AGENTS.md            # Project instructions for OpenAI Codex
 ├── QUICKSTART.md        # Setup instructions
 └── ARCHITECTURE.md      # This document
 ```
@@ -298,11 +324,11 @@ zzaia/
 ## Architecture Components
 
 ### Workspace Container
-- **code-server**: Browser-accessible VS Code (Coder fork) with Claude Code extension pre-installed
+- **code-server**: Browser-accessible VS Code with all agent extensions pre-installed (Claude Code, Gemini, Copilot, Continue)
 - **sshd**: SSH server for VS Code Remote-SSH and terminal access
-- **Claude Code CLI**: Agent runtime, extensible to other agent CLIs
-- **mise**: Language runtime and tool version manager
-- **miniforge3**: Conda environment management for Python/ML workflows
+- **Agent CLIs**: Claude Code, Gemini CLI, OpenAI Codex (via mise); GitHub Copilot CLI (via gh extension)
+- **mise**: Language runtime and tool version manager — including code-server, agent CLIs, Node.js, .NET
+- **miniforge3**: Conda environment management — sole Python provider
 
 ### MCP Sidecar Pattern
 - **supergateway**: stdio-to-SSE bridge — wraps any stdio MCP server and exposes it over HTTP SSE
@@ -320,12 +346,13 @@ zzaia/
 |-------|-----------|
 | Container runtime | Docker Desktop (Linux / macOS / Windows) |
 | Workspace OS | Ubuntu 24.04 LTS |
-| Agent runtime | Claude Code CLI |
+| Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | code-server (Coder) + OpenSSH |
-| Tool provisioning | mise + Dockerfile direct installs |
+| Tool provisioning | mise (code-server, agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
 | MCP bridge | supergateway (stdio → SSE) |
 | Multi-tenancy | Docker Compose project namespacing |
 | Secret lifecycle | Process env → one-time file write → sealed |
+| Telemetry | .NET Aspire Standalone Dashboard (OTLP receiver) |
 
 ## Security Model
 

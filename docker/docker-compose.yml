@@ -23,6 +23,9 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - AWS_REGION=${AWS_REGION:-}
@@ -32,6 +35,7 @@ services:
       - CLOUD_ML_REGION=${CLOUD_ML_REGION:-}
       - CLAUDE_CODE_USE_FOUNDRY=${CLAUDE_CODE_USE_FOUNDRY:-}
       - AZURE_FOUNDRY_BASE_URL=${AZURE_FOUNDRY_BASE_URL:-}
+      - ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
     networks:
       - mcp
     cap_drop:
@@ -51,6 +55,17 @@ services:
       - mcp-azure-devops
       - mcp-postman
       - mcp-newrelic
+      - mcp-github
+      - mcp-playwright
+      - aspire-dashboard
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    ports:
+      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
+    networks:
+      - mcp
+    restart: unless-stopped
 
   mcp-tavily:
     image: node:lts-alpine
@@ -137,6 +152,41 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3004/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  mcp-github:
+    image: node:lts-alpine
+    environment:
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+    command:
+      - sh
+      - -c
+      - >-
+        [ -z "$$GITHUB_PERSONAL_ACCESS_TOKEN" ]
+        && echo "GITHUB_PERSONAL_ACCESS_TOKEN not set — mcp-github disabled." && exit 0 ;
+        npx -y supergateway@latest --port 3005 --stdio "npx -y @github/mcp-server"
+    networks:
+      - mcp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3005/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  mcp-playwright:
+    image: mcr.microsoft.com/playwright/mcp:latest
+    ports:
+      - "127.0.0.1:3006:8931"
+    networks:
+      - mcp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8931/"]
       interval: 30s
       timeout: 5s
       retries: 3

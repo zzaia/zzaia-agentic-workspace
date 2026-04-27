@@ -1,5 +1,10 @@
 {
+  "theme": "Default",
   "mcpServers": {
+    "aspire": {
+      "type": "sse",
+      "url": "http://localhost:3007/sse"
+    },
     "tavily": {
       "type": "sse",
       "url": "http://mcp-tavily:3001/sse"
@@ -8,17 +13,9 @@
       "type": "sse",
       "url": "http://mcp-azure-devops:3002/sse"
     },
-    "playwright": {
-      "type": "sse",
-      "url": "http://mcp-playwright:3006/sse"
-    },
     "postman": {
       "type": "sse",
       "url": "http://mcp-postman:3003/sse"
-    },
-    "aspire": {
-      "type": "sse",
-      "url": "http://localhost:3007/sse"
     },
     "new-relic": {
       "type": "sse",
@@ -27,6 +24,10 @@
     "github": {
       "type": "sse",
       "url": "http://mcp-github:3005/sse"
+    },
+    "playwright": {
+      "type": "sse",
+      "url": "http://mcp-playwright:3006/sse"
     }
   }
 }
