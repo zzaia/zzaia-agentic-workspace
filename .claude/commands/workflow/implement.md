@@ -1,16 +1,16 @@
 ---
 name: workflow:implement
 description: Orchestrate complete implementation workflow for work items from creation to pull request
-argument-hint: "--work-item <id> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text>"
+argument-hint: "--work-item <id> --portal <azure|github> --project <name> --repo <name> --target-branch <branch> --working-branch <feature/name> --description <text> [--repo-portal <azure|github>] [--repo-project <name>]"
 parameters:
   - name: work-item
     description: Work item ID to implement (e.g., 1605)
     required: true
   - name: portal
-    description: DevOps portal to use (azure or github)
+    description: DevOps portal for work item tracking (azure or github)
     required: true
   - name: project
-    description: Project name in the DevOps portal (e.g., my-project)
+    description: Project name in the work item portal (e.g., my-project)
     required: true
   - name: repo
     description: Repository name to work on
@@ -24,6 +24,12 @@ parameters:
   - name: description
     description: Implementation description/details for the developer
     required: true
+  - name: repo-portal
+    description: DevOps portal for repository and PR operations (azure or github). Defaults to --portal value when omitted.
+    required: false
+  - name: repo-project
+    description: Project or organization name in the repo portal (e.g., my-org). Defaults to --project value when omitted.
+    required: false
 agents:
   - name: zzaia-task-clarifier
     description: Analyze work item requirements and clarify acceptance criteria
@@ -39,15 +45,25 @@ agents:
 
 Execute a complete implementation workflow that orchestrates multiple development commands in sequence. This generic, reusable workflow enables developers to implement work items following consistent patterns from requirements retrieval through pull request creation.
 
+## PORTAL RESOLUTION
+
+Before executing any phase, resolve the effective portals:
+
+- **Work item portal** (`wi-portal`): always `--portal`. Used for work item read/update operations.
+- **Repo portal** (`rp-portal`): `--repo-portal` if provided, otherwise falls back to `--portal`.
+- **Repo project** (`rp-project`): `--repo-project` if provided, otherwise falls back to `--project`.
+
+This separation supports transition scenarios where work items live in one portal (e.g., Azure DevOps) while the code repository is hosted on another (e.g., GitHub).
+
 ## WORKFLOW PHASES
 
 1. **Retrieve Work Item**: Fetch work item details and requirements
 
-   - Call `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project>`
+   - Call `/behavior:devops:work-item --work-item <work-item> --portal <wi-portal> --project <project>`
    - Obtain title, description, type (Bug or other), and acceptance criteria
    - Pass retrieved context to implementation phase
    - **MANDATORY** Work item description must not be empty
-   - Change work item state to **Active** via `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Active`
+   - Change work item state to **Active** via `/behavior:devops:work-item --work-item <work-item> --portal <wi-portal> --project <project> --action update --state Active`
 
 2. **Create Feature Branch**: Setup feature branch from target branch
 
@@ -91,11 +107,11 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/behavior:development:git --repo <repo> --branch <working-branch> --action commit-push --message "feat: <description> [#<work-item>]"`
    - Push changes to remote origin
-   - Change work item state to **Resolved** via `/behavior:devops:work-item --work-item <work-item> --portal <portal> --project <project> --action update --state Resolved`
+   - Change work item state to **Resolved** via `/behavior:devops:work-item --work-item <work-item> --portal <wi-portal> --project <project> --action update --state Resolved`
 
 9. **Create Draft Pull Request**: Open pull request
 
-   - Call `/behavior:devops:pull-request --portal <portal> --project <project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
+   - Call `/behavior:devops:pull-request --portal <rp-portal> --project <rp-project> --repo <repo> --source-branch <working-branch> --target-branch <target-branch> --work-item <work-item> --draft`
    - Link PR to original work item
 
 ## DELEGATION
@@ -124,9 +140,11 @@ sequenceDiagram
 
     U->>P: /workflow:implement <params>
 
-    P->>WI: Retrieve work item
+    note over P: Resolve portals:<br/>wi-portal = --portal<br/>rp-portal = --repo-portal ?? --portal<br/>rp-project = --repo-project ?? --project
+
+    P->>WI: Retrieve work item (wi-portal)
     WI-->>P: Work item details (title, type)
-    P->>WI: Update state to Active
+    P->>WI: Update state to Active (wi-portal)
     WI-->>P: State updated
 
     P->>WN: Create feature branch
@@ -155,10 +173,10 @@ sequenceDiagram
 
     P->>DG: Commit and push
     DG-->>P: Changes pushed
-    P->>WI: Update state to Resolved
+    P->>WI: Update state to Resolved (wi-portal)
     WI-->>P: State updated
 
-    P->>PR: Create draft pull request
+    P->>PR: Create draft pull request (rp-portal)
     PR-->>P: PR created
 
     P-->>U: Workflow complete — PR link & summary
@@ -174,15 +192,20 @@ sequenceDiagram
 - All code changes committed with conventional format referencing work item
 - Work item state changed to Resolved after final commit and push
 - Pull request created linking feature branch to target branch with work item reference
+- When `--repo-portal` is omitted, `--portal` is used for all operations (backwards compatible)
+- When `--repo-portal` is provided, work item operations use `--portal` and repo/PR operations use `--repo-portal`
 - Workflow execution provides clear output at each phase with status and results
 
 ## EXAMPLES
 
 ```
+# All operations on Azure DevOps (original behaviour, unchanged)
 /workflow:implement --work-item 1605 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/implement-providers-entities --description "Implement provider entities following order-service pattern with repository pattern and comprehensive unit tests"
 
-/workflow:implement --work-item 1606 --portal azure --project my-project --repo order-service --target-branch develop --working-branch feature/add-provider-api --description "Add provider API endpoints with CRUD operations, validation, and integration tests"
+# Work items on Azure DevOps, repo and PR on GitHub (transition scenario)
+/workflow:implement --work-item 2249 --portal azure --project my-project --repo bloquo-platform-monorepo --repo-portal github --repo-project my-org --target-branch develop --working-branch feature/BGX-2249-some-feature --description "Implement feature following monorepo conventions"
 
+# All operations on GitHub
 /workflow:implement --work-item 1607 --portal github --project my-org/my-project --repo order-service --target-branch main --working-branch feature/fix-authentication-bug --description "Fix authentication token refresh issue and add regression tests"
 ```
 
