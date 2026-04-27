@@ -117,32 +117,15 @@ COPY --chown=zzaia:zzaia .gitignore README.md QUICKSTART.md ARCHITECTURE.md \
     LICENSE WELCOME.md /home/zzaia/
 COPY --chown=zzaia:zzaia workspace/host/ /home/zzaia/workspace/host/
 
-# ── Agent homes — each agent gets its own subdirectory ───────────────────────
-COPY --chown=zzaia:zzaia agents/claude/ /home/zzaia/claude/
-COPY --chown=zzaia:zzaia agents/gemini/ /home/zzaia/gemini/
-COPY --chown=zzaia:zzaia agents/codex/ /home/zzaia/codex/
-COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/copilot/
-COPY --chown=zzaia:zzaia vscode/ /home/zzaia/vscode/
+# ── Agent configs — flat merge into HOME (repo uses agents/ for organisation) ─
+COPY --chown=zzaia:zzaia agents/claude/  /home/zzaia/
+COPY --chown=zzaia:zzaia agents/gemini/  /home/zzaia/
+COPY --chown=zzaia:zzaia agents/codex/   /home/zzaia/
+COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/
+COPY --chown=zzaia:zzaia vscode/ /home/zzaia/
 
-# ── Symlinks — VS Code Server uses ~/.claude, ~/.gemini etc from main HOME ────
-RUN ln -sf /home/zzaia/claude/.claude /home/zzaia/.claude \
-    && ln -sf /home/zzaia/gemini/.gemini /home/zzaia/.gemini \
-    && ln -sf /home/zzaia/codex/.codex /home/zzaia/.codex \
-    && ln -sf /home/zzaia/copilot/.github /home/zzaia/.github \
-    && ln -sf /home/zzaia/vscode/.vscode /home/zzaia/.vscode \
-    && ln -sf /home/zzaia/vscode/zzaia-main.code-workspace /home/zzaia/zzaia-main.code-workspace \
-    && ln -sf /home/zzaia/claude/.mcp.json /home/zzaia/.mcp.json \
-    && ln -sf /home/zzaia/claude/CLAUDE.md /home/zzaia/CLAUDE.md \
-    && ln -sf /home/zzaia/gemini/GEMINI.md /home/zzaia/GEMINI.md \
-    && ln -sf /home/zzaia/codex/AGENTS.md /home/zzaia/AGENTS.md \
-    && ln -sf /home/zzaia/claude/.claudeignore /home/zzaia/.claudeignore \
-    && echo '{"hasCompletedOnboarding":true}' > /home/zzaia/claude/.claude.json \
-    && ln -sf /home/zzaia/claude/.claude.json /home/zzaia/.claude.json
-
-# ── Agent aliases — use per-agent HOME for correct config isolation ────────────
-RUN echo 'alias claude="HOME=/home/zzaia/claude claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc \
-    && echo 'alias gemini="HOME=/home/zzaia/gemini gemini"' >> /home/zzaia/.bashrc \
-    && echo 'alias codex="HOME=/home/zzaia/codex codex"' >> /home/zzaia/.bashrc
+# ── Claude onboarding flag ────────────────────────────────────────────────────
+RUN echo '{"hasCompletedOnboarding":true}' > /home/zzaia/.claude.json
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

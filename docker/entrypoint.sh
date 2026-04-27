@@ -68,13 +68,13 @@ fi
 if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
     su -s /bin/bash zzaia -c "
         export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-        echo '${GITHUB_PERSONAL_ACCESS_TOKEN}' | HOME=/home/zzaia/claude gh auth login --with-token 2>/dev/null || true
-        HOME=/home/zzaia/claude gh extension install github/gh-copilot 2>/dev/null || true
+        echo '${GITHUB_PERSONAL_ACCESS_TOKEN}' | gh auth login --with-token 2>/dev/null || true
+        gh extension install github/gh-copilot 2>/dev/null || true
     "
 else
     su -s /bin/bash zzaia -c "
         export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-        HOME=/home/zzaia/claude gh extension install github/gh-copilot 2>/dev/null || true
+        gh extension install github/gh-copilot 2>/dev/null || true
     "
 fi
 
