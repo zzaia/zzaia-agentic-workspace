@@ -218,16 +218,10 @@ __marimo__/
 !QUICKSTART.md
 !ARCHITECTURE.md
 !WELCOME.md
-!zzaia-main.code-workspace
+!vscode/
 !Init-windows.ps1
 !.claude-plugin/
 !.gitignore
-!CLAUDE.md
-!GEMINI.md
-!AGENTS.md
-!.mcp.json
-!.claudeignore
-!.vscode
 
 # Docker — container configuration (local only)
 docker/

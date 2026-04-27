@@ -15,7 +15,7 @@ Multi-tenant agentic workspace that runs multiple AI coding agents (Claude Code,
 **Decision**: This workspace supports multiple AI coding agent runtimes simultaneously. The environment is not coupled to any single agent vendor.
 
 - Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot are all installed and configured
-- Each agent has its own native config folder (`.claude/`, `.gemini/`, `.codex/`, `.github/`) organized under `agents/` and project instruction file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `copilot-instructions.md`) at root
+- Each agent has its own native config folder (`.claude/`, `.gemini/`, `.codex/`, `.github/`) and project instruction file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `copilot-instructions.md`) organized under `agents/<agent>/`
 - All agents share the same MCP tool surface via SSE endpoints — adding a new MCP sidecar makes it available to every agent simultaneously
 - Adopting a new agent means adding its CLI binary and native config — nothing else changes
 
@@ -170,10 +170,10 @@ Multi-tenant agentic workspace that runs multiple AI coding agents (Claude Code,
 
 | Agent | CLI Binary | Config Folder | Instruction File |
 |-------|-----------|---------------|-----------------|
-| Claude Code | `claude` (mise) | `agents/claude/.claude/` | `CLAUDE.md` |
-| Gemini CLI | `gemini` (mise) | `agents/gemini/.gemini/` | `GEMINI.md` |
-| OpenAI Codex | `codex` (mise) | `agents/codex/.codex/` | `AGENTS.md` |
-| GitHub Copilot | `gh copilot` (entrypoint) | `agents/copilot/.github/` | `copilot-instructions.md` |
+| Claude Code | `claude` (mise) | `agents/claude/.claude/` | `agents/claude/CLAUDE.md` |
+| Gemini CLI | `gemini` (mise) | `agents/gemini/.gemini/` | `agents/gemini/GEMINI.md` |
+| OpenAI Codex | `codex` (mise) | `agents/codex/.codex/` | `agents/codex/AGENTS.md` |
+| GitHub Copilot | `gh copilot` (entrypoint) | `agents/copilot/.github/` | `agents/copilot/.github/copilot-instructions.md` |
 
 - All agents share the same 7 MCP SSE endpoints — no per-agent configuration of tool endpoints
 - Each agent's native config folder is committed to the repository and COPY'd into the container image
@@ -302,22 +302,20 @@ C4Container
 ```
 zzaia/
 ├── agents/              # Per-agent configuration directories
-│   ├── claude/          # Claude Code — .claude/ (agents, commands, output-styles)
-│   ├── gemini/          # Gemini CLI — .gemini/ (settings.json, MCP config)
-│   ├── codex/           # OpenAI Codex — .codex/ (config.toml, MCP config)
-│   └── copilot/         # GitHub Copilot — .github/ (copilot-instructions.md)
-├── .vscode/             # VS Code / Copilot MCP + workspace settings
+│   ├── claude/          # Claude Code — CLAUDE.md, .mcp.json, .claudeignore, .claude/
+│   ├── gemini/          # Gemini CLI — GEMINI.md, .gemini/
+│   ├── codex/           # OpenAI Codex — AGENTS.md, .codex/
+│   └── copilot/         # GitHub Copilot — .github/copilot-instructions.md
+├── vscode/
+│   ├── .vscode/         # VS Code workspace settings, launch configs, tasks
+│   └── zzaia-main.code-workspace
 ├── docker/
 │   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + sshd
 │   ├── docker-compose.yml  # Stack — workspace + 7 sidecars
-│   └── entrypoint.sh    # Secret init, Docker group, aspire mcp, code-server, sshd
+│   ├── entrypoint.sh    # Secret init, Docker group, aspire mcp, code-server, sshd
+│   └── mise.toml        # Tool versions + agent CLIs (node, dotnet, claude, gemini, codex, code-server…)
 ├── workspace/host/      # .NET Aspire AppHost for integrated local testing
 ├── workspace/           # Multi-repository git worktrees
-├── mise.toml            # Tool versions + agent CLIs (node, dotnet, claude, gemini, codex, code-server…)
-├── .mcp.json            # MCP server endpoints for Claude Code
-├── CLAUDE.md            # Project instructions for Claude Code
-├── GEMINI.md            # Project instructions for Gemini CLI
-├── AGENTS.md            # Project instructions for OpenAI Codex
 ├── QUICKSTART.md        # Setup instructions
 └── ARCHITECTURE.md      # This document
 ```
@@ -369,6 +367,6 @@ zzaia/
 ## Related Documentation
 
 - [QUICKSTART.md](QUICKSTART.md) — Step-by-step setup instructions
-- [CLAUDE.md](CLAUDE.md) — Command hierarchy and development standards
+- [agents/claude/CLAUDE.md](agents/claude/CLAUDE.md) — Command hierarchy and development standards
 - [docker/](docker/) — Dockerfile, Compose, and entrypoint
-- [.mcp.json](.mcp.json) — MCP server configuration
+- [agents/claude/.mcp.json](agents/claude/.mcp.json) — MCP server configuration
