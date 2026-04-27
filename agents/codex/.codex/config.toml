@@ -1,6 +1,8 @@
 [mcp]
 enabled = true
 
+approval_policy = "auto"
+
 [[mcp.servers]]
 name = "aspire"
 url = "http://localhost:3007/sse"

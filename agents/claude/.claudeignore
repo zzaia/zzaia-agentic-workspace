@@ -100,3 +100,17 @@ Thumbs.db
 
 # Claude specific
 .claude/plugins/marketplaces/
+
+# Other agent configs — not Claude Code context
+agents/gemini/
+agents/codex/
+agents/copilot/
+vscode/
+
+# Other agent files — flat-merged in container
+.gemini/
+.codex/
+.github/
+.vscode/
+GEMINI.md
+AGENTS.md

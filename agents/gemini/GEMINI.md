@@ -26,6 +26,20 @@ Seven MCP servers are provisioned for workspace development:
 4. **Documentation** - Automated documentation updates
 5. **Version Control** - Conventional commits across repositories
 
+## Commands
+
+Gemini must read and follow command definitions from `~/.claude/commands/` before execution. All agents share the same command patterns:
+
+- `/develop [task]` - Full task clarification and development workflow
+- `/build <repo> <branch>` - Multi-framework build with error reporting
+- `/test <repo> <branch>` - Comprehensive testing with coverage analysis
+- `/migrations <repo> <branch> <action> [name]` - EF Core migrations management
+- `/behavior:*` - Execute single domain operations
+- `/workflow:*` - Orchestrate end-to-end tasks
+- `/orchestrator:*` - Multi-item coordination
+
+Read command file EXECUTION/WORKFLOW/DELEGATION instructions and apply them exactly as written.
+
 ## Development Standards
 
 Language-specific coding standards are defined in `.claude/commands/behavior/development/rules/` directory:
