@@ -15,7 +15,7 @@ Multi-tenant agentic workspace that runs multiple AI coding agents (Claude Code,
 **Decision**: This workspace supports multiple AI coding agent runtimes simultaneously. The environment is not coupled to any single agent vendor.
 
 - Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot are all installed and configured
-- Each agent has its own native config folder (`.claude/`, `.gemini/`, `.codex/`, `.github/`) and project instruction file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `copilot-instructions.md`)
+- Each agent has its own native config folder (`.claude/`, `.gemini/`, `.codex/`, `.github/`) organized under `agents/` and project instruction file (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`, `copilot-instructions.md`) at root
 - All agents share the same MCP tool surface via SSE endpoints — adding a new MCP sidecar makes it available to every agent simultaneously
 - Adopting a new agent means adding its CLI binary and native config — nothing else changes
 
@@ -170,10 +170,10 @@ Multi-tenant agentic workspace that runs multiple AI coding agents (Claude Code,
 
 | Agent | CLI Binary | Config Folder | Instruction File |
 |-------|-----------|---------------|-----------------|
-| Claude Code | `claude` (mise) | `.claude/` | `CLAUDE.md` |
-| Gemini CLI | `gemini` (mise) | `.gemini/` | `GEMINI.md` |
-| OpenAI Codex | `codex` (mise) | `.codex/` | `AGENTS.md` |
-| GitHub Copilot | `gh copilot` (entrypoint) | `.github/` | `copilot-instructions.md` |
+| Claude Code | `claude` (mise) | `agents/claude/.claude/` | `CLAUDE.md` |
+| Gemini CLI | `gemini` (mise) | `agents/gemini/.gemini/` | `GEMINI.md` |
+| OpenAI Codex | `codex` (mise) | `agents/codex/.codex/` | `AGENTS.md` |
+| GitHub Copilot | `gh copilot` (entrypoint) | `agents/copilot/.github/` | `copilot-instructions.md` |
 
 - All agents share the same 7 MCP SSE endpoints — no per-agent configuration of tool endpoints
 - Each agent's native config folder is committed to the repository and COPY'd into the container image
@@ -301,10 +301,11 @@ C4Container
 
 ```
 zzaia/
-├── .claude/             # Claude Code — agents, commands, output-styles
-├── .gemini/             # Gemini CLI — settings.json (MCP config)
-├── .codex/              # OpenAI Codex — config.toml (MCP config)
-├── .github/             # GitHub Copilot — copilot-instructions.md
+├── agents/              # Per-agent configuration directories
+│   ├── claude/          # Claude Code — .claude/ (agents, commands, output-styles)
+│   ├── gemini/          # Gemini CLI — .gemini/ (settings.json, MCP config)
+│   ├── codex/           # OpenAI Codex — .codex/ (config.toml, MCP config)
+│   └── copilot/         # GitHub Copilot — .github/ (copilot-instructions.md)
 ├── .vscode/             # VS Code / Copilot MCP + workspace settings
 ├── docker/
 │   ├── Dockerfile       # Workspace image — Ubuntu 24.04 + mise + sshd

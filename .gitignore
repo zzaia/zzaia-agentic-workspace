@@ -213,7 +213,6 @@ __marimo__/
 !settings.local.json
 !agents/
 !commands/
-!CLAUDE.md
 !LICENSE
 !README.md
 !QUICKSTART.md
@@ -221,38 +220,18 @@ __marimo__/
 !WELCOME.md
 !zzaia-main.code-workspace
 !Init-windows.ps1
-!mise.toml
-!.claudeignore
-!.mcp.json
 !.claude-plugin/
 !.gitignore
-!.vscode
-!.gemini/
-!.codex/
-!.github/
+!CLAUDE.md
 !GEMINI.md
 !AGENTS.md
-
-# Allow traversal into .claude/ but re-ignore its contents
-!.claude/
-.claude/*
-!.claude/agents/
-!.claude/commands/
-!.claude/output-styles/
-!.claude/marketplace.json
-!.claude/settings.json
-!.claude/settings.local.json
-!.claude/workspace/
-!.claude/workspace/**
+!.mcp.json
+!.claudeignore
+!.vscode
 
 # Docker — container configuration (local only)
 docker/
 !docker/
-
-# Allow traversal into .claude/plugins/ but re-ignore its contents
-!.claude/plugins/
-.claude/plugins/*
-!.claude/plugins/plugins.json
 
 # Ignore build output
 bin/

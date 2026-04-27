@@ -66,7 +66,7 @@ RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download
     && /home/zzaia/miniforge3/bin/conda init bash
 
 # ── Tools via mise.toml — COPY immediately before use to isolate cache misses ─
-COPY --chown=zzaia:zzaia mise.toml /home/zzaia/mise.toml
+COPY --chown=zzaia:zzaia docker/mise.toml /home/zzaia/mise.toml
 RUN mise trust ~/mise.toml \
     && mise install \
     && mise run python-packages \
@@ -113,19 +113,34 @@ RUN for ext in \
     ; do code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
-COPY --chown=zzaia:zzaia .claude/ /home/zzaia/.claude/
-COPY --chown=zzaia:zzaia .vscode/ /home/zzaia/.vscode/
-COPY --chown=zzaia:zzaia .gemini/ /home/zzaia/.gemini/
-COPY --chown=zzaia:zzaia .codex/ /home/zzaia/.codex/
-COPY --chown=zzaia:zzaia CLAUDE.md GEMINI.md AGENTS.md .claudeignore .gitignore \
-    README.md QUICKSTART.md ARCHITECTURE.md LICENSE zzaia-main.code-workspace /home/zzaia/
-COPY --chown=zzaia:zzaia .mcp.json /home/zzaia/.mcp.json
-COPY --chown=zzaia:zzaia .claude.json /home/zzaia/.claude.json
-COPY --chown=zzaia:zzaia WELCOME.md /home/zzaia/WELCOME.md
-COPY --chown=zzaia:zzaia .github/ /home/zzaia/.github/
+COPY --chown=zzaia:zzaia .gitignore README.md QUICKSTART.md ARCHITECTURE.md \
+    LICENSE WELCOME.md zzaia-main.code-workspace /home/zzaia/
 COPY --chown=zzaia:zzaia workspace/host/ /home/zzaia/workspace/host/
 
-RUN echo 'alias claude="claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc
+# ── Agent homes — each agent gets its own subdirectory ───────────────────────
+COPY --chown=zzaia:zzaia agents/claude/ /home/zzaia/claude/
+COPY --chown=zzaia:zzaia agents/gemini/ /home/zzaia/gemini/
+COPY --chown=zzaia:zzaia agents/codex/ /home/zzaia/codex/
+COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/copilot/
+
+# ── Symlinks — VS Code Server uses ~/.claude, ~/.gemini etc from main HOME ────
+RUN ln -sf /home/zzaia/claude/.claude /home/zzaia/.claude \
+    && ln -sf /home/zzaia/gemini/.gemini /home/zzaia/.gemini \
+    && ln -sf /home/zzaia/codex/.codex /home/zzaia/.codex \
+    && ln -sf /home/zzaia/copilot/.github /home/zzaia/.github \
+    && ln -sf /home/zzaia/copilot/.vscode /home/zzaia/.vscode \
+    && ln -sf /home/zzaia/claude/.mcp.json /home/zzaia/.mcp.json \
+    && ln -sf /home/zzaia/claude/CLAUDE.md /home/zzaia/CLAUDE.md \
+    && ln -sf /home/zzaia/gemini/GEMINI.md /home/zzaia/GEMINI.md \
+    && ln -sf /home/zzaia/codex/AGENTS.md /home/zzaia/AGENTS.md \
+    && ln -sf /home/zzaia/claude/.claudeignore /home/zzaia/.claudeignore \
+    && echo '{"hasCompletedOnboarding":true}' > /home/zzaia/claude/.claude.json \
+    && ln -sf /home/zzaia/claude/.claude.json /home/zzaia/.claude.json
+
+# ── Agent aliases — use per-agent HOME for correct config isolation ────────────
+RUN echo 'alias claude="HOME=/home/zzaia/claude claude --dangerously-skip-permissions"' >> /home/zzaia/.bashrc \
+    && echo 'alias gemini="HOME=/home/zzaia/gemini gemini"' >> /home/zzaia/.bashrc \
+    && echo 'alias codex="HOME=/home/zzaia/codex codex"' >> /home/zzaia/.bashrc
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

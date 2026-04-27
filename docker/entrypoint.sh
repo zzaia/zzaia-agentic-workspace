@@ -68,17 +68,17 @@ fi
 if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
     su -s /bin/bash zzaia -c "
         export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-        echo '${GITHUB_PERSONAL_ACCESS_TOKEN}' | gh auth login --with-token 2>/dev/null || true
-        gh extension install github/gh-copilot 2>/dev/null || true
+        echo '${GITHUB_PERSONAL_ACCESS_TOKEN}' | HOME=/home/zzaia/claude gh auth login --with-token 2>/dev/null || true
+        HOME=/home/zzaia/claude gh extension install github/gh-copilot 2>/dev/null || true
     "
 else
     su -s /bin/bash zzaia -c "
         export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-        gh extension install github/gh-copilot 2>/dev/null || true
+        HOME=/home/zzaia/claude gh extension install github/gh-copilot 2>/dev/null || true
     "
 fi
 
-# ── Git credentials — Azure DevOps ───────────────────────────────────────────
+# ── Git credentials — Azure DevOps (shared across all agent HOMs) ────────────
 if [ -n "${ADO_MCP_AUTH_TOKEN:-}" ]; then
     su -s /bin/bash zzaia -c "
         git config --global credential.https://dev.azure.com.helper store
@@ -87,6 +87,9 @@ if [ -n "${ADO_MCP_AUTH_TOKEN:-}" ]; then
         chmod 600 /home/zzaia/.git-credentials
     "
 fi
+
+unset GITHUB_PERSONAL_ACCESS_TOKEN
+unset ADO_MCP_AUTH_TOKEN
 
 # ── Aspire MCP — single shared instance for all agents ───────────────────────
 su -s /bin/bash zzaia -c "
