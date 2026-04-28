@@ -18,9 +18,14 @@ if (-not (Get-Command bw -ErrorAction SilentlyContinue)) {
 
 try {
     Write-Host "Logging in to Bitwarden..."
-    $s = bw login --raw 2>$null
+    $bwStatus = (bw status 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue).status
+    if ($bwStatus -eq "unauthenticated" -or -not $bwStatus) {
+        $s = bw login --raw
+    } else {
+        $s = bw unlock --raw
+    }
     if ($LASTEXITCODE -ne 0 -or -not $s) {
-        Write-Error "Bitwarden login failed."
+        Write-Error "Bitwarden login/unlock failed."
         exit 1
     }
 

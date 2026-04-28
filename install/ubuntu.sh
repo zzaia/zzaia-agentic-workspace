@@ -29,9 +29,14 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Logging in to Bitwarden..."
-BW_SESSION=$(bw login --raw 2>/dev/null || echo "")
+BW_STATUS=$(bw status 2>/dev/null | jq -r '.status' 2>/dev/null || echo "unauthenticated")
+if [ "$BW_STATUS" = "unauthenticated" ]; then
+    BW_SESSION=$(bw login --raw)
+else
+    BW_SESSION=$(bw unlock --raw)
+fi
 if [ -z "$BW_SESSION" ]; then
-    echo "Error: Bitwarden login failed."
+    echo "Error: Bitwarden login/unlock failed."
     exit 1
 fi
 export BW_SESSION
