@@ -58,6 +58,9 @@ try {
     $AZURE_DEVOPS_ORGANIZATION = Get-VaultSecret $items "azure-devops-org"
     $POSTMAN_API_KEY = Get-VaultSecret $items "postman"
     $NEW_RELIC_API_KEY = Get-VaultSecret $items "new-relic"
+    $DOCKER_REGISTRY = Get-VaultSecret $items "docker-registry"
+    $DOCKER_USERNAME = Get-VaultSecret $items "docker-username"
+    $DOCKER_PASSWORD = Get-VaultSecret $items "docker-password"
 
     Remove-Variable items
 
@@ -112,6 +115,10 @@ try {
     $env:CLAUDE_CODE_USE_FOUNDRY = ""
     $env:AZURE_FOUNDRY_BASE_URL = ""
 
+    if ($DOCKER_REGISTRY -and $DOCKER_USERNAME -and $DOCKER_PASSWORD) {
+        $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME --password-stdin
+    }
+
     Write-Host ""
     Write-Host "Starting workspace with docker compose..."
     docker compose `
@@ -133,7 +140,7 @@ finally {
       'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN',
       'OPENAI_API_KEY','GEMINI_API_KEY','GITHUB_PERSONAL_ACCESS_TOKEN',
       'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
-      'POSTMAN_API_KEY','NEW_RELIC_API_KEY',
+      'POSTMAN_API_KEY','NEW_RELIC_API_KEY','DOCKER_REGISTRY','DOCKER_USERNAME','DOCKER_PASSWORD',
       'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
       'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
       'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL') | ForEach-Object {

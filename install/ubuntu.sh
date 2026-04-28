@@ -24,7 +24,7 @@ fi
 
 cleanup() {
     [ -n "${BW_SESSION:-}" ] && bw logout 2>/dev/null || true
-    unset -v BW_SESSION BW_ITEMS 2>/dev/null || true
+    unset -v BW_SESSION BW_ITEMS DOCKER_REGISTRY DOCKER_USERNAME DOCKER_PASSWORD 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -65,6 +65,9 @@ ADO_MCP_AUTH_TOKEN=$(fetch_secret "azure-devops-pat")
 AZURE_DEVOPS_ORGANIZATION=$(fetch_secret "azure-devops-org")
 POSTMAN_API_KEY=$(fetch_secret "postman")
 NEW_RELIC_API_KEY=$(fetch_secret "new-relic")
+DOCKER_REGISTRY=$(fetch_secret "docker-registry")
+DOCKER_USERNAME=$(fetch_secret "docker-username")
+DOCKER_PASSWORD=$(fetch_secret "docker-password")
 
 unset BW_ITEMS
 
@@ -93,6 +96,10 @@ export POSTMAN_API_KEY NEW_RELIC_API_KEY
 export AWS_ACCESS_KEY_ID="" AWS_SECRET_ACCESS_KEY="" AWS_REGION="" ANTHROPIC_BEDROCK_BASE_URL=""
 export CLAUDE_CODE_USE_VERTEX="" ANTHROPIC_VERTEX_PROJECT_ID="" CLOUD_ML_REGION=""
 export CLAUDE_CODE_USE_FOUNDRY="" AZURE_FOUNDRY_BASE_URL=""
+
+if [ -n "$DOCKER_REGISTRY" ] && [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+    echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY" -u "$DOCKER_USERNAME" --password-stdin
+fi
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d

@@ -134,6 +134,9 @@ Pre-configure the following vault items in Bitwarden, then run the installation 
 | `azure-devops-org` | AZURE_DEVOPS_ORGANIZATION | | Azure DevOps organization name |
 | `postman` | POSTMAN_API_KEY | | Postman API key |
 | `new-relic` | NEW_RELIC_API_KEY | | New Relic API key |
+| `docker-registry` | DOCKER_REGISTRY | | Container registry hostname (e.g. `ghcr.io`) |
+| `docker-username` | DOCKER_USERNAME | | Registry login username |
+| `docker-password` | DOCKER_PASSWORD | | Registry login password or token |
 
 **Ubuntu / WSL:**
 ```bash
