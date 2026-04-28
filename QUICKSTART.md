@@ -9,6 +9,7 @@
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
+| **Bitwarden CLI** (optional) | Secret manager integration for automated setup | [bitwarden.com/help/cli](https://bitwarden.com/help/cli) |
 
 ---
 
@@ -111,9 +112,48 @@ You will need the following values before starting:
 
 ## Step 3 — Start the Workspace
 
+### Option A — Automated (Bitwarden)
+
+Pre-configure the following vault items in Bitwarden, then run the installation script:
+
+| Vault Item Name | Environment Variable | Required | Purpose |
+|---|---|---|---|
+| `workspace-name` | WORKSPACE_NAME | ✅ | Docker Compose project name |
+| `ssh-public-key` | SSH_PUBLIC_KEY | ✅ | Your SSH public key for container access |
+| `admin-password` | ADMIN_PASSWORD | | Sudo password for `zzaia` user |
+| `vscode-port` | VSCODE_PORT | | Host port for VS Code (default: 8080) |
+| `ssh-port` | SSH_PORT | | Host port for SSH (default: 2222) |
+| `aspire-dashboard-port` | ASPIRE_DASHBOARD_PORT | | Host port for Aspire dashboard (default: 18888) |
+| `anthropic-api-key` | ANTHROPIC_API_KEY | | Claude API key |
+| `claude-code-oauth-token` | CLAUDE_CODE_OAUTH_TOKEN | | Pro/Max OAuth token |
+| `openai-api-key` | OPENAI_API_KEY | | OpenAI API key |
+| `gemini-api-key` | GEMINI_API_KEY | | Google Gemini API key |
+| `github-pat` | GITHUB_PERSONAL_ACCESS_TOKEN | | GitHub Personal Access Token |
+| `tavily` | TAVILY_API_KEY | | Tavily API key |
+| `azure-devops-pat` | ADO_MCP_AUTH_TOKEN | | Azure DevOps Personal Access Token |
+| `azure-devops-org` | AZURE_DEVOPS_ORGANIZATION | | Azure DevOps organization name |
+| `postman` | POSTMAN_API_KEY | | Postman API key |
+| `new-relic` | NEW_RELIC_API_KEY | | New Relic API key |
+
+**Ubuntu / macOS / WSL:**
+```bash
+./installation/Install-ubuntu.sh
+```
+
+**Windows:**
+```powershell
+.\installation\Install-windows.ps1
+```
+
+The scripts fetch all secrets from Bitwarden and launch `docker compose`. Missing optional vault items are skipped without blocking startup.
+
+---
+
+### Option B — Manual
+
 Fill in your values and run the command for your platform. No files are written to disk.
 
-### Ubuntu / macOS / WSL
+#### Ubuntu / macOS / WSL
 
 ```bash
 export WORKSPACE_NAME="my-org"
@@ -157,7 +197,7 @@ unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
       POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT
 ```
 
-### Windows
+#### Windows
 
 ```powershell
 $WORKSPACE_NAME                    = "my-org"
