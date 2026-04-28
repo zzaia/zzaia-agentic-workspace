@@ -36,7 +36,8 @@ try {
 
     function Get-VaultSecret {
         param([Parameter(Mandatory)] $items, [Parameter(Mandatory)] [string] $name)
-        $val = ($items | Where-Object { $_.name -eq $name }).login.password
+        $item = $items | Where-Object { $_.name -eq $name }
+        $val = $item.login.password ?? $item.sshKey.publicKey ?? $item.notes ?? ""
         return $val -as [string] ?? ""
     }
 

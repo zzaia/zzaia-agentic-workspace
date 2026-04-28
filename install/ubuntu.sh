@@ -45,7 +45,7 @@ BW_ITEMS=$(bw list items 2>/dev/null || echo "[]")
 
 fetch_secret() {
     local item_name="$1"
-    echo "$BW_ITEMS" | jq -r --arg n "$item_name" '.[] | select(.name==$n) | .login.password // ""' 2>/dev/null || echo ""
+    echo "$BW_ITEMS" | jq -r --arg n "$item_name" '.[] | select(.name==$n) | (.login.password // .sshKey.publicKey // .notes // "")' 2>/dev/null || echo ""
 }
 
 WORKSPACE_NAME=$(fetch_secret "workspace-name")
