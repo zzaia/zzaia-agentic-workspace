@@ -12,7 +12,7 @@ services:
     image: zzaia-workspace:latest
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
-      - "127.0.0.1:${SSH_PORT:-2222}:2222"
+      - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - workspace-secrets:/secrets
@@ -170,7 +170,8 @@ services:
       - >-
         [ -z "$$GITHUB_PERSONAL_ACCESS_TOKEN" ]
         && echo "GITHUB_PERSONAL_ACCESS_TOKEN not set — mcp-github disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3005 --stdio "npx -y @github/mcp-server"
+        npx -y supergateway@latest --port 3005
+        --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer $$GITHUB_PERSONAL_ACCESS_TOKEN\""
     networks:
       - mcp
     restart: unless-stopped
@@ -183,6 +184,8 @@ services:
 
   mcp-playwright:
     image: mcr.microsoft.com/playwright/mcp:latest
+    entrypoint: ["node", "/app/cli.js"]
+    command: ["--headless", "--browser", "chromium", "--port", "8931"]
     ports:
       - "127.0.0.1:3006:8931"
     networks:

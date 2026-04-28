@@ -86,7 +86,6 @@ RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-t
         anthropic.claude-code \
         alefragnani.project-manager \
         codeinklingon.git-worktree-menu \
-        continue.continue \
         eamodio.gitlens \
         editorconfig.editorconfig \
         esbenp.prettier-vscode \
