@@ -135,14 +135,19 @@ Pre-configure the following vault items in Bitwarden, then run the installation 
 | `postman` | POSTMAN_API_KEY | | Postman API key |
 | `new-relic` | NEW_RELIC_API_KEY | | New Relic API key |
 
-**Ubuntu / macOS / WSL:**
+**Ubuntu / WSL:**
 ```bash
-./installation/Install-ubuntu.sh
+./install/ubuntu.sh
+```
+
+**macOS:**
+```bash
+./install/mac.sh
 ```
 
 **Windows:**
 ```powershell
-.\installation\Install-windows.ps1
+.\install\windows.ps1
 ```
 
 The scripts fetch all secrets from Bitwarden and launch `docker compose`. Missing optional vault items are skipped without blocking startup.

@@ -213,7 +213,7 @@ __marimo__/
 !settings.local.json
 !agents/
 !commands/
-!installation/
+!install/
 !LICENSE
 !README.md
 !QUICKSTART.md
