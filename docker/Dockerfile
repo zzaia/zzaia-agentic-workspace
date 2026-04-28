@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + Docker CE CLI (no daemon) + mise ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server tmux plantuml sudo \
+    curl git openssh-server tmux plantuml sudo pipx \
     ca-certificates build-essential locales gpg gpg-agent \
     && locale-gen en_US.UTF-8 \
     && TECTONIC_VER=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
@@ -67,7 +67,7 @@ RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download
 
 # ── Tools via mise.toml — COPY immediately before use to isolate cache misses ─
 COPY --chown=zzaia:zzaia docker/mise.toml /home/zzaia/mise.toml
-RUN mise trust ~/mise.toml \
+RUN mise trust /home/zzaia/mise.toml \
     && mise install \
     && mise run python-packages \
     && mise run conda-envs \
