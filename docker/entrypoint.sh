@@ -111,7 +111,7 @@ su -s /bin/bash zzaia -c "
         --without-connection-token \
         --accept-server-license-terms \
         --server-data-dir /home/zzaia/.vscode-server \
-        /home/zzaia/zzaia-main.code-workspace \
+        --default-workspace /home/zzaia/zzaia-main.code-workspace \
         >> /home/zzaia/.local/share/vscode-server/serve-web.log 2>&1 &
 "
 
