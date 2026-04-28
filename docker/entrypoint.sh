@@ -1,5 +1,5 @@
 #!/bin/bash
-# entrypoint.sh — SSH key init, code-server, SSH server
+# entrypoint.sh — SSH key init, vscode-server (code serve-web), SSH server
 set -euo pipefail
 
 # /secrets stays root-owned so root can always read/write it
@@ -98,17 +98,21 @@ unset ADO_MCP_AUTH_TOKEN
 su -s /bin/bash zzaia -c "
     export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
     npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start' \
-        >> /home/zzaia/.local/share/code-server/aspire-mcp.log 2>&1 &
+        >> /home/zzaia/.local/share/vscode-server/aspire-mcp.log 2>&1 &
 "
 
-# ── Start code-server ─────────────────────────────────────────────────────────
-# --auth none is acceptable for local dev — host port bound to 127.0.0.1 only.
+# ── Start VS Code server ──────────────────────────────────────────────────────
 su -s /bin/bash zzaia -c "
     export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
     export BROWSER=/usr/local/bin/browser-print
-    code-server --bind-addr 0.0.0.0:8080 --auth none \
+    code serve-web \
+        --host 0.0.0.0 \
+        --port ${VSCODE_PORT:-8080} \
+        --without-connection-token \
+        --accept-server-license-terms \
+        --server-data-dir /home/zzaia/.vscode-server \
         /home/zzaia/zzaia-main.code-workspace \
-        >> /home/zzaia/.local/share/code-server/code-server.log 2>&1 &
+        >> /home/zzaia/.local/share/vscode-server/serve-web.log 2>&1 &
 "
 
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config

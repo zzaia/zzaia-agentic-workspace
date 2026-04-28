@@ -1,5 +1,5 @@
 # ZZAIA Agentic Workspace — Ubuntu Container
-# All tools provisioned via mise.toml. SSH + code-server accessible.
+# All tools provisioned via mise.toml. SSH + vscode-server (code serve-web) accessible.
 FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.title="ZZAIA Agentic Workspace"
@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && echo "deb [signed-by=/usr/share/keyrings/mise-archive-keyring.gpg arch=amd64] https://mise.jdx.dev/deb stable main" \
         > /etc/apt/sources.list.d/mise.list \
     && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli mise \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C /usr/local/bin
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
@@ -38,15 +39,17 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
     && chmod +x /usr/local/bin/browser-print
 
 # ── SSH server ────────────────────────────────────────────────────────────────
+ARG SSH_PORT=2222
 COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
-RUN grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
+RUN sed -i "s/^Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config.d/zzaia.conf \
+    && grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
     || echo 'Include /etc/ssh/sshd_config.d/*.conf' >> /etc/ssh/sshd_config
 
 # ── Non-root user ─────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 zzaia \
     && mkdir -p /home/zzaia/.ssh /home/zzaia/welcome /home/zzaia/workspace \
-               /home/zzaia/workspace/host /home/zzaia/.local/share/code-server \
+               /home/zzaia/workspace/host /home/zzaia/.local/share/vscode-server \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
 
@@ -55,8 +58,7 @@ WORKDIR /home/zzaia
 
 RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
 
-ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:/home/zzaia/.dotnet/tools:$PATH" \
-    EXTENSIONS_GALLERY='{"serviceUrl":"https://marketplace.visualstudio.com/_apis/public/gallery","itemUrl":"https://marketplace.visualstudio.com/items","resourceUrlTemplate":"https://{publisher}.vscode-cdn.net/extensions/{publisher}/{name}/{version}/Microsoft.VisualStudio.Code.WebResources/{path}"}'
+ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:/home/zzaia/.dotnet/tools:$PATH"
 
 # ── Miniforge3 (conda) — no config dependency, cache-stable ──────────────────
 RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
@@ -73,8 +75,12 @@ RUN mise trust /home/zzaia/mise.toml \
     && mise run conda-envs \
     && mise run dotnet-tools
 
-# ── VS Code extensions (Microsoft marketplace via EXTENSIONS_GALLERY) ─────────
-RUN for ext in \
+# ── VS Code extensions — pre-download server and install via inner code-server ──
+ARG VSCODE_PORT=8080
+RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-token --accept-server-license-terms &
+    SERVER_PID=$! && \
+    until curl -sf http://127.0.0.1:${VSCODE_PORT} > /dev/null 2>&1; do sleep 2; done && \
+    for ext in \
         teabyii.ayu \
         coderholiclt.night-owl \
         anthropic.claude-code \
@@ -104,13 +110,16 @@ RUN for ext in \
         ms-toolsai.jupyter-renderers \
         ms-toolsai.vscode-jupyter-cell-tags \
         ms-toolsai.vscode-jupyter-slideshow \
+        ms-vsliveshare.vsliveshare \
+        ms-vsliveshare.vsliveshare-audio \
         orsenkucher.vscode-graphql \
         redhat.vscode-xml \
         redhat.vscode-yaml \
         streetsidesoftware.code-spell-checker \
         tomblind.scm-buttons-vscode \
         vscodevim.vim \
-    ; do code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done
+    ; do ~/.vscode-server/bin/*/bin/code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done && \
+    kill $SERVER_PID 2>/dev/null || true
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=zzaia:zzaia .gitignore README.md QUICKSTART.md ARCHITECTURE.md \
@@ -146,6 +155,6 @@ USER root
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 2222
-EXPOSE 8080
+EXPOSE ${SSH_PORT}
+EXPOSE ${VSCODE_PORT}
 ENTRYPOINT ["/entrypoint.sh"]
