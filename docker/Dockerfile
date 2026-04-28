@@ -77,7 +77,7 @@ RUN mise trust /home/zzaia/mise.toml \
 
 # ── VS Code extensions — pre-download server and install via inner code-server ──
 ARG VSCODE_PORT=8080
-RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-token --accept-server-license-terms &
+RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-token --accept-server-license-terms & \
     SERVER_PID=$! && \
     until curl -sf http://127.0.0.1:${VSCODE_PORT} > /dev/null 2>&1; do sleep 2; done && \
     for ext in \
