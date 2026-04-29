@@ -77,7 +77,8 @@ RUN mise trust /home/${WORKSPACE_NAME}/mise.toml \
     && mise install \
     && mise run python-packages \
     && mise run conda-envs \
-    && mise run dotnet-tools
+    && mise run dotnet-tools \
+    && mise run claude-plugins
 
 # ── VS Code extensions — pre-install during build ────────────────────────────
 RUN code serve-web \
@@ -136,8 +137,6 @@ RUN code serve-web \
     kill $SERVER_PID 2>/dev/null || true
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
-COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} README.md QUICKSTART.md ARCHITECTURE.md \
-    LICENSE WELCOME.md /home/${WORKSPACE_NAME}/
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} workspace/ /home/${WORKSPACE_NAME}/workspace/
 
 # ── VS Code server config — profile, settings, workspace tasks/launch ─────────
@@ -149,7 +148,6 @@ RUN find "/home/${WORKSPACE_NAME}/.vscode-server" "/home/${WORKSPACE_NAME}/works
        "/home/${WORKSPACE_NAME}/workspace/${WORKSPACE_NAME}.code-workspace" 2>/dev/null || true
 
 # ── Agent configs — only claude agent configs flat merge into HOME ─
-COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/claude/  /home/${WORKSPACE_NAME}/
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/gemini/  /home/${WORKSPACE_NAME}/
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/codex/   /home/${WORKSPACE_NAME}/
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/copilot/ /home/${WORKSPACE_NAME}/
