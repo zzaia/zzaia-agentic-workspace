@@ -202,11 +202,11 @@ services:
       start_period: 20s
 
 volumes:
-  workspace-secrets:
+  "${WORKSPACE_NAME:-zzaia}-secrets":
     name: ${WORKSPACE_NAME:-zzaia}-secrets
-  workspace-home:
+  "${WORKSPACE_NAME:-zzaia}-home":
     name: ${WORKSPACE_NAME:-zzaia}-home
-  workspace-repos:
+  "${WORKSPACE_NAME:-zzaia}-workspace":
     name: ${WORKSPACE_NAME:-zzaia}-workspace
 
 networks:
