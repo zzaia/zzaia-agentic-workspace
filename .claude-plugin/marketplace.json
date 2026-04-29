@@ -11,7 +11,7 @@
   },
   "plugins": [
     {
-      "name": "zzaia-workspace",
+      "name": "agentic-workspace",
       "source": "./agents/claude/",
       "description": "Multi-agent orchestration system for software engineering workflows",
       "version": "1.0.0",

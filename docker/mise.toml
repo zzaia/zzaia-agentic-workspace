@@ -43,7 +43,7 @@ sudo apt-get install -y tmux plantuml tectonic
 description = "Install Claude Code marketplace plugins"
 run = """
 claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace || true
-claude plugin install zzaia-workspace || true
+claude plugin install agentic-workspace || true
 """
 
 [tasks.install]

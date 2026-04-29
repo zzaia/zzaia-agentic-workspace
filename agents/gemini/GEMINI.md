@@ -28,7 +28,7 @@ Seven MCP servers are provisioned for workspace development:
 
 ## Commands
 
-Gemini must read and follow command definitions from `~/.claude/commands/` before execution. All agents share the same command patterns:
+Gemini must read and follow command definitions from `~/.claude/plugins/marketplaces/zzaia/.claude/commands` before execution. All agents share the same command patterns:
 
 - `/develop [task]` - Full task clarification and development workflow
 - `/build <repo> <branch>` - Multi-framework build with error reporting
@@ -42,7 +42,7 @@ Read command file EXECUTION/WORKFLOW/DELEGATION instructions and apply them exac
 
 ## Development Standards
 
-Language-specific coding standards are defined in `.claude/commands/behavior/development/rules/` directory:
+Language-specific coding standards are defined in `~/.claude/plugins/marketplaces/zzaia/.claude/commands/behavior/development/rules/` directory:
 
 - Reference appropriate rule files based on project language/framework
 - Follow established architectural patterns per language
