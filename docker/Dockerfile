@@ -48,7 +48,7 @@ RUN sed -i "s/^Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config.d/zzaia.conf \
 # ── Non-root user ─────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 zzaia \
-    && mkdir -p /home/zzaia/.ssh /home/zzaia/welcome /home/zzaia/workspace \
+    && mkdir -p /home/zzaia/.ssh \
                /home/zzaia/workspace/host /home/zzaia/.local/share/vscode-server \
     && chmod 700 /home/zzaia/.ssh \
     && chown -R zzaia:zzaia /home/zzaia
@@ -117,11 +117,11 @@ RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-t
         streetsidesoftware.code-spell-checker \
         tomblind.scm-buttons-vscode \
         vscodevim.vim \
-    ; do ~/.vscode-server/bin/*/bin/code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done && \
+    ; do ~/.vscode/cli/serve-web/*/bin/code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done && \
     kill $SERVER_PID 2>/dev/null || true
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
-COPY --chown=zzaia:zzaia .gitignore README.md QUICKSTART.md ARCHITECTURE.md \
+COPY --chown=zzaia:zzaia README.md QUICKSTART.md ARCHITECTURE.md \
     LICENSE WELCOME.md /home/zzaia/
 COPY --chown=zzaia:zzaia workspace/ /home/zzaia/workspace/
 
@@ -131,23 +131,6 @@ COPY --chown=zzaia:zzaia agents/gemini/  /home/zzaia/
 COPY --chown=zzaia:zzaia agents/codex/   /home/zzaia/
 COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/
 COPY --chown=zzaia:zzaia vscode/ /home/zzaia/
-
-# ── Navigation symlinks — mirrors repo agents/ structure for doc link resolution ─
-RUN mkdir -p /home/zzaia/agents/claude /home/zzaia/agents/gemini \
-             /home/zzaia/agents/codex  /home/zzaia/agents/copilot \
-             /home/zzaia/vscode \
-    && ln -sf /home/zzaia/.claude       /home/zzaia/agents/claude/.claude \
-    && ln -sf /home/zzaia/CLAUDE.md     /home/zzaia/agents/claude/CLAUDE.md \
-    && ln -sf /home/zzaia/.mcp.json     /home/zzaia/agents/claude/.mcp.json \
-    && ln -sf /home/zzaia/.claudeignore /home/zzaia/agents/claude/.claudeignore \
-    && ln -sf /home/zzaia/.claude.json  /home/zzaia/agents/claude/.claude.json \
-    && ln -sf /home/zzaia/.gemini       /home/zzaia/agents/gemini/.gemini \
-    && ln -sf /home/zzaia/GEMINI.md     /home/zzaia/agents/gemini/GEMINI.md \
-    && ln -sf /home/zzaia/.codex        /home/zzaia/agents/codex/.codex \
-    && ln -sf /home/zzaia/AGENTS.md     /home/zzaia/agents/codex/AGENTS.md \
-    && ln -sf /home/zzaia/.github       /home/zzaia/agents/copilot/.github \
-    && ln -sf /home/zzaia/.vscode       /home/zzaia/vscode/.vscode \
-    && ln -sf /home/zzaia/zzaia-main.code-workspace /home/zzaia/vscode/zzaia-main.code-workspace
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

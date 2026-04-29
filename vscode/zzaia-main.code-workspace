@@ -5,6 +5,7 @@
       "path": ".",
     },
     {
+      "name": "host",
       "path": "workspace/host/Zzaia.AppHost",
     },
   ],
@@ -21,36 +22,6 @@
     "claudeCode.allowDangerouslySkipPermissions": true,
     "chat.mcp.access": "all",
     "chat.agent.maxRequests": 100,
-    "chat.tools.autoApprove": true,
-    "github.copilot.advanced.mcp.servers": {
-      "aspire": {
-        "url": "http://localhost:3007/sse",
-        "type": "sse",
-      },
-      "tavily": {
-        "url": "http://mcp-tavily:3001/sse",
-        "type": "sse",
-      },
-      "azure-devops": {
-        "url": "http://mcp-azure-devops:3002/sse",
-        "type": "sse",
-      },
-      "postman": {
-        "url": "http://mcp-postman:3003/sse",
-        "type": "sse",
-      },
-      "new-relic": {
-        "url": "http://mcp-newrelic:3004/sse",
-        "type": "sse",
-      },
-      "github": {
-        "url": "http://mcp-github:3005/sse",
-        "type": "sse",
-      },
-      "playwright": {
-        "url": "http://mcp-playwright:3006/sse",
-        "type": "sse",
-      },
-    },
+    "chat.tools.autoApprove": true
   },
 }
