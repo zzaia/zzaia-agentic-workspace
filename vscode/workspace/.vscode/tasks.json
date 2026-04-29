@@ -7,7 +7,7 @@
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/workspace/host/Zzaia.AppHost/Zzaia.AppHost.csproj",
+        "${workspaceFolder}/host/Zzaia.AppHost/Zzaia.AppHost.csproj",
         "/property:GenerateFullPaths=true",
         "/consoleloggerparameters:NoSummary"
       ],
@@ -23,7 +23,7 @@
       "type": "process",
       "args": [
         "clean",
-        "${workspaceFolder}/workspace/host/Zzaia.AppHost/Zzaia.AppHost.csproj"
+        "${workspaceFolder}/host/Zzaia.AppHost/Zzaia.AppHost.csproj"
       ],
       "problemMatcher": "$msCompile"
     }

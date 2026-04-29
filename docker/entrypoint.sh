@@ -2,6 +2,8 @@
 # entrypoint.sh — SSH key init, vscode-server (code serve-web), SSH server
 set -euo pipefail
 
+WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
+
 # /secrets stays root-owned so root can always read/write it
 SECRETS_FILE=/secrets/.env
 mkdir -p /secrets
@@ -25,15 +27,15 @@ fi
 if [ -S /var/run/docker.sock ]; then
     DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
     groupadd -f -g "$DOCKER_GID" docker 2>/dev/null || true
-    usermod -aG docker zzaia 2>/dev/null || true
+    usermod -aG docker ${WORKSPACE_NAME} 2>/dev/null || true
 fi
 
 # ── Sudo access — enabled when ADMIN_PASSWORD is set ─────────────────────────
 if [ -n "${ADMIN_PASSWORD:-}" ]; then
-    echo "zzaia:${ADMIN_PASSWORD}" | chpasswd
-    chmod u+w /etc/sudoers.d/zzaia-admin 2>/dev/null || true
-    echo "zzaia ALL=(ALL) ALL" > /etc/sudoers.d/zzaia-admin
-    chmod 440 /etc/sudoers.d/zzaia-admin
+    echo "${WORKSPACE_NAME}:${ADMIN_PASSWORD}" | chpasswd
+    chmod u+w /etc/sudoers.d/${WORKSPACE_NAME}-admin 2>/dev/null || true
+    echo "${WORKSPACE_NAME} ALL=(ALL) ALL" > /etc/sudoers.d/${WORKSPACE_NAME}-admin
+    chmod 440 /etc/sudoers.d/${WORKSPACE_NAME}-admin
 fi
 unset ADMIN_PASSWORD
 
@@ -52,7 +54,7 @@ if [ ! -f "$SECRETS_FILE" ]; then
     unset _KEY_TO_WRITE
 fi
 
-# ── SSH authorized key — write as zzaia (.ssh is zzaia-owned 700) ─────────────
+# ── SSH authorized key — write as WORKSPACE_NAME (.ssh is WORKSPACE_NAME-owned 700) ─────────────
 _SSH_KEY="${SSH_PUBLIC_KEY:-}"
 unset SSH_PUBLIC_KEY
 if [ -z "$_SSH_KEY" ]; then
@@ -61,58 +63,58 @@ if [ -z "$_SSH_KEY" ]; then
 fi
 if [ -n "$_SSH_KEY" ]; then
     printf '%s\n' "$_SSH_KEY" \
-        | su -s /bin/bash zzaia -c 'cat > /home/zzaia/.ssh/authorized_keys && chmod 600 /home/zzaia/.ssh/authorized_keys'
+        | su -s /bin/bash ${WORKSPACE_NAME} -c "cat > /home/${WORKSPACE_NAME}/.ssh/authorized_keys && chmod 600 /home/${WORKSPACE_NAME}/.ssh/authorized_keys"
 fi
 
 # ── GitHub auth + Copilot CLI ────────────────────────────────────────────────
 if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
-    su -s /bin/bash zzaia -c '
-        export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH
-        echo "$GITHUB_PERSONAL_ACCESS_TOKEN" | gh auth login --with-token 2>/dev/null || true
+    su -s /bin/bash ${WORKSPACE_NAME} -c "
+        export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
+        echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
         gh extension install github/gh-copilot 2>/dev/null || true
-    '
+    "
 else
-    su -s /bin/bash zzaia -c '
-        export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:$PATH
+    su -s /bin/bash ${WORKSPACE_NAME} -c "
+        export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
         gh extension install github/gh-copilot 2>/dev/null || true
-    '
+    "
 fi
 
 # ── Git credentials — Azure DevOps (shared across all agent HOMs) ────────────
 if [ -n "${ADO_MCP_AUTH_TOKEN:-}" ]; then
     ADO_MCP_AUTH_TOKEN="$ADO_MCP_AUTH_TOKEN" \
-    su -s /bin/bash zzaia -c '
+    su -s /bin/bash ${WORKSPACE_NAME} -c "
         git config --global credential.https://dev.azure.com.helper store
-        grep -qF "dev.azure.com" /home/zzaia/.git-credentials 2>/dev/null \
-            || printf "https://anything:%s@dev.azure.com\n" "$ADO_MCP_AUTH_TOKEN" \
-               >> /home/zzaia/.git-credentials
-        chmod 600 /home/zzaia/.git-credentials
-    '
+        grep -qF \"dev.azure.com\" /home/${WORKSPACE_NAME}/.git-credentials 2>/dev/null \
+            || printf \"https://anything:%s@dev.azure.com\n\" \"\$ADO_MCP_AUTH_TOKEN\" \
+               >> /home/${WORKSPACE_NAME}/.git-credentials
+        chmod 600 /home/${WORKSPACE_NAME}/.git-credentials
+    "
 fi
 
 unset GITHUB_PERSONAL_ACCESS_TOKEN
 unset ADO_MCP_AUTH_TOKEN
 
 # ── Aspire MCP — single shared instance for all agents ───────────────────────
-su -s /bin/bash zzaia -c "
-    export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
-    npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start' \
-        >> /home/zzaia/.local/share/vscode-server/aspire-mcp.log 2>&1 &
+su -s /bin/bash ${WORKSPACE_NAME} -c "
+    export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
+    npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start --dashboard-endpoint http://aspire-dashboard:18888' \
+        >> /home/${WORKSPACE_NAME}/.local/share/vscode-server/aspire-mcp.log 2>&1 &
 "
 
 # ── Start VS Code server ──────────────────────────────────────────────────────
-su -s /bin/bash zzaia -c "
-    export PATH=/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:\$PATH
+su -s /bin/bash ${WORKSPACE_NAME} -c "
+    export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
     export BROWSER=/usr/local/bin/browser-print
     code serve-web \
         --host 0.0.0.0 \
         --port ${VSCODE_PORT:-8080} \
         --without-connection-token \
         --accept-server-license-terms \
-        --server-data-dir /home/zzaia/.vscode-server \
-        --default-workspace /home/zzaia/zzaia-main.code-workspace \
-        >> /home/zzaia/.local/share/vscode-server/serve-web.log 2>&1 &
+        --server-data-dir /home/${WORKSPACE_NAME}/.vscode-server \
+        --default-workspace /home/${WORKSPACE_NAME}/workspace/${WORKSPACE_NAME}.code-workspace \
+        >> /home/${WORKSPACE_NAME}/.local/share/vscode-server/serve-web.log 2>&1 &
 "
 
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config

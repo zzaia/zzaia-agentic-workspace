@@ -2,6 +2,8 @@
 # All tools provisioned via mise.toml. SSH + vscode-server (code serve-web) accessible.
 FROM ubuntu:24.04
 
+ARG WORKSPACE_NAME=zzaia
+
 LABEL org.opencontainers.image.title="ZZAIA Agentic Workspace"
 LABEL org.opencontainers.image.description="Ubuntu-based agentic development environment with SSH and browser VS Code access"
 
@@ -10,7 +12,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
-    BROWSER=/usr/local/bin/browser-print
+    BROWSER=/usr/local/bin/browser-print \
+    WORKSPACE_NAME=${WORKSPACE_NAME}
 
 # ── System packages + Docker CE CLI (no daemon) + mise ───────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -40,46 +43,55 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
 
 # ── SSH server ────────────────────────────────────────────────────────────────
 ARG SSH_PORT=2222
-COPY docker/sshd_config /etc/ssh/sshd_config.d/zzaia.conf
-RUN sed -i "s/^Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config.d/zzaia.conf \
+ARG VSCODE_PORT=8080
+COPY docker/sshd_config /etc/ssh/sshd_config.d/${WORKSPACE_NAME}.conf
+RUN sed -i "s/^Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config.d/${WORKSPACE_NAME}.conf \
     && grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
     || echo 'Include /etc/ssh/sshd_config.d/*.conf' >> /etc/ssh/sshd_config
 
 # ── Non-root user ─────────────────────────────────────────────────────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
-    && useradd -m -s /bin/bash -u 1000 zzaia \
-    && mkdir -p /home/zzaia/.ssh \
-               /home/zzaia/workspace/host /home/zzaia/.local/share/vscode-server \
-    && chmod 700 /home/zzaia/.ssh \
-    && chown -R zzaia:zzaia /home/zzaia
+    && useradd -m -s /bin/bash -u 1000 ${WORKSPACE_NAME} \
+    && mkdir -p /home/${WORKSPACE_NAME}/.ssh \
+               /home/${WORKSPACE_NAME}/workspace/host /home/${WORKSPACE_NAME}/.local/share/vscode-server \
+    && chmod 700 /home/${WORKSPACE_NAME}/.ssh \
+    && chown -R ${WORKSPACE_NAME}:${WORKSPACE_NAME} /home/${WORKSPACE_NAME}
 
-USER zzaia
-WORKDIR /home/zzaia
+USER ${WORKSPACE_NAME}
+WORKDIR /home/${WORKSPACE_NAME}
 
-RUN echo 'eval "$(mise activate bash)"' >> /home/zzaia/.bashrc
+RUN echo 'eval "$(mise activate bash)"' >> /home/${WORKSPACE_NAME}/.bashrc
 
-ENV PATH="/home/zzaia/miniforge3/bin:/home/zzaia/.local/share/mise/shims:/home/zzaia/.local/bin:/home/zzaia/.dotnet/tools:$PATH"
+ENV PATH="/home/${WORKSPACE_NAME}/miniforge3/bin:/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:/home/${WORKSPACE_NAME}/.dotnet/tools:$PATH"
 
 # ── Miniforge3 (conda) — no config dependency, cache-stable ──────────────────
 RUN curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
         -o /tmp/miniforge.sh \
-    && bash /tmp/miniforge.sh -b -p /home/zzaia/miniforge3 \
+    && bash /tmp/miniforge.sh -b -p /home/${WORKSPACE_NAME}/miniforge3 \
     && rm /tmp/miniforge.sh \
-    && /home/zzaia/miniforge3/bin/conda init bash
+    && /home/${WORKSPACE_NAME}/miniforge3/bin/conda init bash
 
 # ── Tools via mise.toml — COPY immediately before use to isolate cache misses ─
-COPY --chown=zzaia:zzaia docker/mise.toml /home/zzaia/mise.toml
-RUN mise trust /home/zzaia/mise.toml \
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} docker/mise.toml /home/${WORKSPACE_NAME}/mise.toml
+RUN mise trust /home/${WORKSPACE_NAME}/mise.toml \
     && mise install \
     && mise run python-packages \
     && mise run conda-envs \
     && mise run dotnet-tools
 
-# ── VS Code extensions — pre-download server and install via inner code-server ──
-ARG VSCODE_PORT=8080
-RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-token --accept-server-license-terms & \
+# ── VS Code extensions — pre-install during build ────────────────────────────
+RUN code serve-web \
+        --host 127.0.0.1 \
+        --port ${VSCODE_PORT} \
+        --without-connection-token \
+        --accept-server-license-terms \
+        --server-data-dir /home/${WORKSPACE_NAME}/.vscode-server \
+        > /tmp/vscode-build.log 2>&1 & \
     SERVER_PID=$! && \
     until curl -sf http://127.0.0.1:${VSCODE_PORT} > /dev/null 2>&1; do sleep 2; done && \
+    VSCODE_CLI=$(find /home/${WORKSPACE_NAME}/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1) && \
+    [ -n "$VSCODE_CLI" ] || { echo "ERROR: code-server binary not found in .vscode/cli/serve-web" >&2; kill $SERVER_PID 2>/dev/null; exit 1; } && \
+    EXT_DIR="/home/${WORKSPACE_NAME}/.vscode-server/extensions" && \
     for ext in \
         teabyii.ayu \
         coderholiclt.night-owl \
@@ -117,20 +129,30 @@ RUN code serve-web --host 127.0.0.1 --port ${VSCODE_PORT} --without-connection-t
         streetsidesoftware.code-spell-checker \
         tomblind.scm-buttons-vscode \
         vscodevim.vim \
-    ; do ~/.vscode/cli/serve-web/*/bin/code-server --install-extension "$ext" || echo "WARNING: failed to install extension: $ext" >&2; done && \
+    ; do \
+        "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1 \
+            | grep -v "already installed" || true; \
+    done && \
     kill $SERVER_PID 2>/dev/null || true
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
-COPY --chown=zzaia:zzaia README.md QUICKSTART.md ARCHITECTURE.md \
-    LICENSE WELCOME.md /home/zzaia/
-COPY --chown=zzaia:zzaia workspace/ /home/zzaia/workspace/
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} README.md QUICKSTART.md ARCHITECTURE.md \
+    LICENSE WELCOME.md /home/${WORKSPACE_NAME}/
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} workspace/ /home/${WORKSPACE_NAME}/workspace/
 
-# ── Agent configs — flat merge into HOME (repo uses agents/ for organisation) ─
-COPY --chown=zzaia:zzaia agents/claude/  /home/zzaia/
-COPY --chown=zzaia:zzaia agents/gemini/  /home/zzaia/
-COPY --chown=zzaia:zzaia agents/codex/   /home/zzaia/
-COPY --chown=zzaia:zzaia agents/copilot/ /home/zzaia/
-COPY --chown=zzaia:zzaia vscode/ /home/zzaia/
+# ── VS Code server config — profile, settings, workspace tasks/launch ─────────
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} vscode/ /home/${WORKSPACE_NAME}/
+RUN find "/home/${WORKSPACE_NAME}/.vscode-server" "/home/${WORKSPACE_NAME}/workspace" \
+        -name "*.json" -o -name "*.code-workspace" | \
+        xargs sed -i "s/{{WORKSPACE_NAME}}/${WORKSPACE_NAME}/g" && \
+    mv "/home/${WORKSPACE_NAME}/workspace/zzaia.code-workspace" \
+       "/home/${WORKSPACE_NAME}/workspace/${WORKSPACE_NAME}.code-workspace" 2>/dev/null || true
+
+# ── Agent configs — only claude agent configs flat merge into HOME ─
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/claude/  /home/${WORKSPACE_NAME}/
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/gemini/  /home/${WORKSPACE_NAME}/
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/codex/   /home/${WORKSPACE_NAME}/
+COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} agents/copilot/ /home/${WORKSPACE_NAME}/
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

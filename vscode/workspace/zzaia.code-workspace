@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "{{WORKSPACE_NAME}}",
+      "path": "/home/{{WORKSPACE_NAME}}"
+    },
+    {
+      "name": "workspace",
+      "path": "/home/{{WORKSPACE_NAME}}/workspace"
+    },
+    {
+      "name": "host",
+      "path": "/home/{{WORKSPACE_NAME}}/workspace/host/Zzaia.AppHost"
+    }
+  ]
+}

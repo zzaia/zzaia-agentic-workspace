@@ -9,7 +9,11 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: zzaia-workspace:latest
+      args:
+        WORKSPACE_NAME: ${WORKSPACE_NAME:-zzaia}
+        SSH_PORT: ${SSH_PORT:-2222}
+        VSCODE_PORT: ${VSCODE_PORT:-8080}
+    image: ${WORKSPACE_NAME:-zzaia}-workspace:latest
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
       - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
@@ -39,6 +43,7 @@ services:
       - CLAUDE_CODE_USE_FOUNDRY=${CLAUDE_CODE_USE_FOUNDRY:-}
       - AZURE_FOUNDRY_BASE_URL=${AZURE_FOUNDRY_BASE_URL:-}
       - ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
+      - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
     networks:
       - mcp
     cap_drop:
@@ -185,14 +190,12 @@ services:
   mcp-playwright:
     image: mcr.microsoft.com/playwright/mcp:latest
     entrypoint: ["node", "/app/cli.js"]
-    command: ["--headless", "--browser", "chromium", "--port", "8931"]
-    ports:
-      - "127.0.0.1:3006:8931"
+    command: ["--headless", "--browser", "chromium", "--port", "3006"]
     networks:
       - mcp
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8931/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3006/"]
       interval: 30s
       timeout: 5s
       retries: 3

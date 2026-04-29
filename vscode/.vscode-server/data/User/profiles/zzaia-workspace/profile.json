@@ -1,0 +1,11 @@
+{
+  "name": "zzaia-workspace",
+  "useDefaultFlags": {
+    "settings": false,
+    "keybindings": false,
+    "tasks": false,
+    "snippets": false,
+    "extensions": true,
+    "globalState": false
+  }
+}

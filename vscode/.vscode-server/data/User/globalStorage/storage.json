@@ -1,0 +1,18 @@
+{
+  "userDataProfiles": [
+    {
+      "id": "zzaia-workspace",
+      "name": "zzaia-workspace",
+      "location": "file:///home/{{WORKSPACE_NAME}}/.vscode-server/data/User/profiles/zzaia-workspace",
+      "useDefaultFlags": {
+        "settings": false,
+        "keybindings": false,
+        "tasks": false,
+        "snippets": false,
+        "extensions": true,
+        "globalState": false
+      }
+    }
+  ],
+  "currentProfile": "zzaia-workspace"
+}
