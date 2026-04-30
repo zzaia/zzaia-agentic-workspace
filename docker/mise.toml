@@ -72,6 +72,7 @@ for ext in \
     eamodio.gitlens editorconfig.editorconfig esbenp.prettier-vscode \
     fullstackspider.visual-nuget gaoshan0621.csharp-format-usings \
     github.copilot github.copilot-chat google.gemini-code-assist \
+    google.gemini-cli-vscode-ide-companion openai.chatgpt \
     gruntfuggly.todo-tree kreativ-software.csharpextensions \
     mermaidchart.vscode-mermaid-chart ms-azure-devops.azure-pipelines \
     ms-dotnettools.csharp ms-dotnettools.vscode-dotnet-runtime \
