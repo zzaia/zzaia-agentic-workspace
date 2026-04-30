@@ -1,32 +1,27 @@
-[mcp]
-enabled = true
+[mcp_servers.aspire]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://localhost:3007/sse"]
 
-approval_policy = "auto"
+[mcp_servers.tavily]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-tavily:3001/sse"]
 
-[[mcp.servers]]
-name = "aspire"
-url = "http://localhost:3007/sse"
+[mcp_servers.azure-devops]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-azure-devops:3002/sse"]
 
-[[mcp.servers]]
-name = "tavily"
-url = "http://mcp-tavily:3001/sse"
+[mcp_servers.postman]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-postman:3003/sse"]
 
-[[mcp.servers]]
-name = "azure-devops"
-url = "http://mcp-azure-devops:3002/sse"
+[mcp_servers.new-relic]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-newrelic:3004/sse"]
 
-[[mcp.servers]]
-name = "postman"
-url = "http://mcp-postman:3003/sse"
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-github:3005/sse"]
 
-[[mcp.servers]]
-name = "new-relic"
-url = "http://mcp-newrelic:3004/sse"
-
-[[mcp.servers]]
-name = "github"
-url = "http://mcp-github:3005/sse"
-
-[[mcp.servers]]
-name = "playwright"
-url = "http://mcp-playwright:3006/sse"
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://mcp-playwright:3006/sse"]

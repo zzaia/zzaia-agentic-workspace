@@ -9,6 +9,7 @@ dapr = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
 "npm:@mermaid-js/mermaid-cli" = "latest"
 "npm:@openai/codex" = "latest"
+"npm:supergateway" = "latest"
 "npm:@google/gemini-cli" = "latest"
 
 [settings]
@@ -42,8 +43,9 @@ sudo apt-get install -y tmux plantuml tectonic
 [tasks.claude-plugins]
 description = "Install Claude Code marketplace plugins"
 run = """
-claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace || true
-claude plugin install agentic-workspace || true
+claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/implement-docker-containerization || true
+claude plugin install agentic-workspace@zzaia || true
+claude plugin remove claude-plugins-official || true
 """
 
 [tasks.vscode-extensions]
