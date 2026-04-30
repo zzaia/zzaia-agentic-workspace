@@ -78,7 +78,8 @@ RUN mise trust /home/${WORKSPACE_NAME}/mise.toml \
     && mise run python-packages \
     && mise run conda-envs \
     && mise run dotnet-tools \
-    && mise run claude-plugins
+    && mise run claude-plugins \
+    && mise run gh-extensions
 
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} workspace/ /home/${WORKSPACE_NAME}/workspace/

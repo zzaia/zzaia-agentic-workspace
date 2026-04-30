@@ -48,6 +48,10 @@ claude plugin install agentic-workspace@zzaia || true
 claude plugin remove claude-plugins-official || true
 """
 
+[tasks.gh-extensions]
+description = "Install gh CLI extensions baked into the image"
+run = "gh extension install github/gh-copilot 2>/dev/null || true"
+
 [tasks.vscode-extensions]
 description = "Install VS Code extensions on first container start (runtime only)"
 run = """

@@ -66,18 +66,13 @@ if [ -n "$_SSH_KEY" ]; then
         | su -s /bin/bash ${WORKSPACE_NAME} -c "cat > /home/${WORKSPACE_NAME}/.ssh/authorized_keys && chmod 600 /home/${WORKSPACE_NAME}/.ssh/authorized_keys"
 fi
 
-# ── GitHub auth + Copilot CLI ────────────────────────────────────────────────
+# ── GitHub auth ───────────────────────────────────────────────────────────────
 if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     su -s /bin/bash ${WORKSPACE_NAME} -c "
         export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
         echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
-        gh extension install github/gh-copilot 2>/dev/null || true
-    "
-else
-    su -s /bin/bash ${WORKSPACE_NAME} -c "
-        export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
-        gh extension install github/gh-copilot 2>/dev/null || true
+        gh extension upgrade --all 2>/dev/null || true
     "
 fi
 
