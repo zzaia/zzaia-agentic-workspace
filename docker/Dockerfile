@@ -80,62 +80,6 @@ RUN mise trust /home/${WORKSPACE_NAME}/mise.toml \
     && mise run dotnet-tools \
     && mise run claude-plugins
 
-# ── VS Code extensions — pre-install during build ────────────────────────────
-RUN code serve-web \
-        --host 127.0.0.1 \
-        --port ${VSCODE_PORT} \
-        --without-connection-token \
-        --accept-server-license-terms \
-        --server-data-dir /home/${WORKSPACE_NAME}/.vscode-server \
-        > /tmp/vscode-build.log 2>&1 & \
-    SERVER_PID=$! && \
-    until curl -sf http://127.0.0.1:${VSCODE_PORT} > /dev/null 2>&1; do sleep 2; done && \
-    VSCODE_CLI=$(find /home/${WORKSPACE_NAME}/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1) && \
-    [ -n "$VSCODE_CLI" ] || { echo "ERROR: code-server binary not found in .vscode/cli/serve-web" >&2; kill $SERVER_PID 2>/dev/null; exit 1; } && \
-    EXT_DIR="/home/${WORKSPACE_NAME}/.vscode-server/extensions" && \
-    for ext in \
-        teabyii.ayu \
-        coderholiclt.night-owl \
-        anthropic.claude-code \
-        alefragnani.project-manager \
-        codeinklingon.git-worktree-menu \
-        eamodio.gitlens \
-        editorconfig.editorconfig \
-        esbenp.prettier-vscode \
-        fullstackspider.visual-nuget \
-        gaoshan0621.csharp-format-usings \
-        github.copilot \
-        github.copilot-chat \
-        google.gemini-code-assist \
-        gruntfuggly.todo-tree \
-        kreativ-software.csharpextensions \
-        mermaidchart.vscode-mermaid-chart \
-        ms-azure-devops.azure-pipelines \
-        ms-dotnettools.csharp \
-        ms-dotnettools.vscode-dotnet-runtime \
-        ms-python.debugpy \
-        ms-python.python \
-        ms-python.vscode-pylance \
-        ms-python.vscode-python-envs \
-        ms-toolsai.jupyter \
-        ms-toolsai.jupyter-keymap \
-        ms-toolsai.jupyter-renderers \
-        ms-toolsai.vscode-jupyter-cell-tags \
-        ms-toolsai.vscode-jupyter-slideshow \
-        ms-vsliveshare.vsliveshare \
-        ms-vsliveshare.vsliveshare-audio \
-        orsenkucher.vscode-graphql \
-        redhat.vscode-xml \
-        redhat.vscode-yaml \
-        streetsidesoftware.code-spell-checker \
-        tomblind.scm-buttons-vscode \
-        vscodevim.vim \
-    ; do \
-        "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1 \
-            | grep -v "already installed" || true; \
-    done && \
-    kill $SERVER_PID 2>/dev/null || true
-
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=${WORKSPACE_NAME}:${WORKSPACE_NAME} workspace/ /home/${WORKSPACE_NAME}/workspace/
 

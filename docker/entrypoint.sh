@@ -117,4 +117,10 @@ su -s /bin/bash ${WORKSPACE_NAME} -c "
         >> /home/${WORKSPACE_NAME}/.local/share/vscode-server/serve-web.log 2>&1 &
 "
 
+# ── VS Code extensions — install once on first start, persisted in home volume ─
+su -s /bin/bash ${WORKSPACE_NAME} -c "
+    export PATH=/home/${WORKSPACE_NAME}/.local/share/mise/shims:/home/${WORKSPACE_NAME}/.local/bin:\$PATH
+    mise run vscode-extensions >> /home/${WORKSPACE_NAME}/.local/share/vscode-server/extensions-install.log 2>&1 &
+"
+
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config
