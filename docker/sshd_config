@@ -1,5 +1,4 @@
 Port 2222
-UsePrivilegeSeparation no
 PermitRootLogin no
 PasswordAuthentication no
 PubkeyAuthentication yes
@@ -7,6 +6,6 @@ AuthorizedKeysFile .ssh/authorized_keys
 UsePAM no
 X11Forwarding no
 PrintMotd no
-AllowUsers zzaia
-MaxAuthTries 3
-LoginGraceTime 20
+AllowUsers user
+MaxAuthTries 6
+LoginGraceTime 60

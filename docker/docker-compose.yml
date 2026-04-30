@@ -10,19 +10,19 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        WORKSPACE_NAME: ${WORKSPACE_NAME:-zzaia}
         SSH_PORT: ${SSH_PORT:-2222}
         VSCODE_PORT: ${VSCODE_PORT:-8080}
-    image: ${WORKSPACE_NAME:-zzaia}-workspace:latest
+    image: zzaia-agentic-workspace:latest
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
       - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
       - workspace-secrets:/secrets
-      - workspace-home:/home/${WORKSPACE_NAME:-zzaia}
-      - workspace-repos:/home/${WORKSPACE_NAME:-zzaia}/workspace
+      - workspace-home:/home/user
+      - workspace-repos:/home/user/workspace
     environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
@@ -59,13 +59,20 @@ services:
       - /tmp:mode=1777
     restart: unless-stopped
     depends_on:
-      - mcp-tavily
-      - mcp-azure-devops
-      - mcp-postman
-      - mcp-newrelic
-      - mcp-github
-      - mcp-playwright
-      - aspire-dashboard
+      mcp-tavily:
+        condition: service_started
+      mcp-azure-devops:
+        condition: service_started
+      mcp-postman:
+        condition: service_started
+      mcp-newrelic:
+        condition: service_started
+      mcp-github:
+        condition: service_started
+      mcp-playwright:
+        condition: service_healthy
+      aspire-dashboard:
+        condition: service_started
 
   aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
@@ -74,6 +81,12 @@ services:
     networks:
       - mcp
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:18888/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mcp-tavily:
     image: node:lts-alpine
@@ -88,7 +101,7 @@ services:
         npx -y supergateway@latest --port 3001 --stdio "npx -y tavily-mcp@latest"
     networks:
       - mcp
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
       interval: 30s
@@ -113,7 +126,7 @@ services:
         --stdio "npx -y @azure-devops/mcp@next $$AZURE_DEVOPS_ORGANIZATION -a envvar"
     networks:
       - mcp
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3002/"]
       interval: 30s
@@ -135,7 +148,7 @@ services:
         --stdio "npx -y @postman/postman-mcp-server --minimal --region us"
     networks:
       - mcp
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3003/"]
       interval: 30s
@@ -157,7 +170,7 @@ services:
         --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --header \"Api-Key: $$NEW_RELIC_API_KEY\""
     networks:
       - mcp
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3004/"]
       interval: 30s
@@ -179,7 +192,7 @@ services:
         --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer $$GITHUB_PERSONAL_ACCESS_TOKEN\""
     networks:
       - mcp
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3005/"]
       interval: 30s
@@ -195,11 +208,11 @@ services:
       - mcp
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3006/"]
-      interval: 30s
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3006'"]
+      interval: 15s
       timeout: 5s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      start_period: 60s
 
 volumes:
   workspace-secrets:

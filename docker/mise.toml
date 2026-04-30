@@ -30,7 +30,6 @@ conda create -n venv-development python=3.12 -y || true
 description = "Install .NET workloads and global tools"
 run = """
 dotnet workload install aspire || true
-dotnet tool install -g aspire || dotnet tool update -g aspire || true
 dotnet tool install -g aspirate || dotnet tool update -g aspirate || true
 """
 
@@ -53,23 +52,19 @@ description = "Install gh CLI extensions baked into the image"
 run = "gh extension install github/gh-copilot 2>/dev/null || true"
 
 [tasks.vscode-extensions]
-description = "Install VS Code extensions on first container start (runtime only)"
+description = "Install VS Code extensions at build time (code-server must already be present)"
 run = """
-EXT_SENTINEL="${HOME}/.vscode-server/.extensions-installed"
-[ -f "$EXT_SENTINEL" ] && exit 0
-LOG="${HOME}/.local/share/vscode-server/extensions-install.log"
-mkdir -p "$(dirname $LOG)"
-VSCODE_CLI=""
-for i in $(seq 1 60); do
-    sleep 5
-    VSCODE_CLI=$(find "${HOME}/.vscode" -name code-server -type f 2>/dev/null | head -1)
-    [ -n "$VSCODE_CLI" ] && break
-done
+VSCODE_CLI=$(find "${HOME}/.vscode" -name code-server -type f 2>/dev/null | head -1)
 if [ -z "$VSCODE_CLI" ]; then
-    echo "WARNING: code-server not found, skipping extension install" >> "$LOG"
-    exit 0
+    echo "ERROR: code-server not found — VS Code server must be installed first." >&2
+    exit 1
 fi
+# Sentinel includes CLI version so it's invalidated when the image is rebuilt with a new VS Code version
+EXT_SENTINEL="${HOME}/.vscode-server/.extensions-installed"
+_CLI_VER=$("$VSCODE_CLI" --version 2>/dev/null | head -1 || echo "unknown")
+[ -f "$EXT_SENTINEL" ] && [ "$(cat "$EXT_SENTINEL")" = "$_CLI_VER" ] && exit 0
 EXT_DIR="${HOME}/.vscode-server/extensions"
+mkdir -p "$EXT_DIR"
 for ext in \
     teabyii.ayu coderholiclt.night-owl anthropic.claude-code \
     alefragnani.project-manager codeinklingon.git-worktree-menu \
@@ -83,16 +78,16 @@ for ext in \
     ms-python.debugpy ms-python.python ms-python.vscode-pylance \
     ms-python.vscode-python-envs ms-toolsai.jupyter ms-toolsai.jupyter-keymap \
     ms-toolsai.jupyter-renderers ms-toolsai.vscode-jupyter-cell-tags \
-    ms-toolsai.vscode-jupyter-slideshow  orsenkucher.vscode-graphql \
+    ms-toolsai.vscode-jupyter-slideshow orsenkucher.vscode-graphql \
     redhat.vscode-xml redhat.vscode-yaml streetsidesoftware.code-spell-checker \
     tomblind.scm-buttons-vscode vscodevim.vim; do
-    "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1 \
-        | grep -v "already installed" || true
-done >> "$LOG" 2>&1
-touch "$EXT_SENTINEL"
-echo "Extensions installed." >> "$LOG"
+    result=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1) \
+        || echo "WARN: extension $ext install failed" >&2
+    printf '%s\n' "$result" | grep -v "already installed" || true
+done
+echo "$_CLI_VER" > "$EXT_SENTINEL"
 """
 
 [tasks.install]
-description = "Full workspace setup — tools, packages, and environments"
-depends = ["python-packages", "conda-envs", "dotnet-tools", "system-packages", "claude-plugins"]
+description = "Full workspace setup — tools, packages, and environments (local dev; system-packages requires sudo)"
+depends = ["python-packages", "conda-envs", "dotnet-tools", "claude-plugins"]
