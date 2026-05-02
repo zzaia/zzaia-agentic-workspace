@@ -212,6 +212,7 @@ __marimo__/
 # Whitelist: explicitly un-ignore tracked files/directories
 !settings.local.json
 !agents/
+!docs/
 !commands/
 !install/
 !LICENSE
