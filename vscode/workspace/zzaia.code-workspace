@@ -2,11 +2,60 @@
   "folders": [
     {
       "name": "workspace",
-      "path": "/home/{{WORKSPACE_NAME}}/workspace"
+      "path": "/home/user/workspace"
     },
     {
       "name": "host",
-      "path": "/home/{{WORKSPACE_NAME}}/workspace/host/Zzaia.AppHost"
+      "path": "/home/user/workspace/host/Zzaia.AppHost"
     }
-  ]
+  ],
+  "settings": {
+    "workbench.colorTheme": "Night Owlet (No Italics)",
+    "workbench.iconTheme": "ayu",
+    "workbench.activityBar.location": "bottom",
+    "workbench.secondarySideBar.showLabels": false,
+    "workbench.statusBar.visible": false,
+    "workbench.editor.editorActionsLocation": "titleBar",
+    "workbench.editor.pinnedTabsOnSeparateRow": true,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.inlineSuggest.enabled": true,
+    "files.autoSave": "afterDelay",
+    "git.autofetch": true,
+    "claudeCode.dangerouslySkipPermissions": true,
+    "claudeCode.allowDangerouslySkipPermissions": true,
+    "chat.mcp.access": "all",
+    "chat.agent.maxRequests": 100,
+    "chat.tools.autoApprove": true,
+    "github.copilot.advanced.mcp.servers": {
+      "aspire": {
+        "url": "http://localhost:3007/sse",
+        "type": "sse"
+      },
+      "tavily": {
+        "url": "http://mcp-tavily:3001/sse",
+        "type": "sse"
+      },
+      "azure-devops": {
+        "url": "http://mcp-azure-devops:3002/sse",
+        "type": "sse"
+      },
+      "postman": {
+        "url": "http://mcp-postman:3003/sse",
+        "type": "sse"
+      },
+      "new-relic": {
+        "url": "http://mcp-newrelic:3004/sse",
+        "type": "sse"
+      },
+      "github": {
+        "url": "http://mcp-github:3005/sse",
+        "type": "sse"
+      },
+      "playwright": {
+        "url": "http://mcp-playwright:3006/sse",
+        "type": "sse"
+      }
+    }
+  }
 }

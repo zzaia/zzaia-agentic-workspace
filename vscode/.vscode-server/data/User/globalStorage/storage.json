@@ -3,7 +3,7 @@
     {
       "id": "zzaia-workspace",
       "name": "zzaia-workspace",
-      "location": "file:///home/{{WORKSPACE_NAME}}/.vscode-server/data/User/profiles/zzaia-workspace",
+      "location": "file:///home/user/.vscode-server/data/User/profiles/zzaia-workspace",
       "useDefaultFlags": {
         "settings": false,
         "keybindings": false,
@@ -14,5 +14,8 @@
       }
     }
   ],
-  "currentProfile": "zzaia-workspace"
+  "currentProfile": "zzaia-workspace",
+  "workspaceProfileAssociations": {
+    "file:///home/user/workspace/{{WORKSPACE_NAME}}.code-workspace": "zzaia-workspace"
+  }
 }
