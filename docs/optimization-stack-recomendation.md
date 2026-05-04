@@ -40,17 +40,21 @@ Research and decision record for three LLM optimization capabilities: context co
 
 ---
 
-### ADR 003: Continue.dev + LanceDB + ast-grep for Workspace Semantic Search
+### ADR 003: CodeGraphContext for Workspace Semantic Search
 
-**Decision**: Adopt Continue.dev + LanceDB for code-aware workspace semantic search, augmented with ast-grep for structural pattern matching.
+**Decision**: Adopt CodeGraphContext as the agent-agnostic MCP server for code graph indexing and workspace semantic search.
 
-- **Architecture**: LanceDB on-disk index (sub-millisecond lookups) on `workspace-repos` volume
-- **Retrieval**: Hybrid semantic (embeddings) + structural (patterns) via Reciprocal Rank Fusion
-- **Code-awareness**: AST-aware chunking, function/class definition indexing
-- **Infrastructure**: No GPU required; no additional vector database (LanceDB is embedded)
-- **MCP Integration**: FastAPI wrapper exposes `semantic_search` / `code_search` as standard MCP Tools
+- **Architecture**: Tree-sitter AST parsing → graph database (KûzuDB embedded by default, Neo4j for Docker); real-time file watching via `cgc watch`
+- **Retrieval**: Symbol resolution, call graphs, class hierarchies, import graphs, dead code detection
+- **Code-awareness**: 14 languages; resolves callers/callees, type hierarchies, cross-file references
+- **Agent-agnostic**: Exposes standard MCP tools; works with Claude Code, Gemini CLI, Codex, Cline, any MCP client — no IDE dependency
+- **MCP Integration**: `cgc mcp start` — zero config, single command, stdio transport compatible with all agents
 
-**Rationale**: Workspace semantic search cannot be automated at proxy level — the proxy has no filesystem access and cannot index files or determine which files are relevant to inject. A code-aware embeddings model, local-first deployment, and structural pattern matching are required. Continue.dev + LanceDB is purpose-built for exactly this use case and already deployed in enterprise production. ast-grep provides syntactic precision where embeddings alone fail (e.g., finding all function calls to a specific method).
+**Rationale**: Continue.dev is coupled to an IDE session (VS Code extension) and requires a custom MCP wrapper to expose indexing without an IDE running. CodeGraphContext is purpose-built as an agent-agnostic MCP server — no IDE, no coding assistant dependency. It exposes code graph queries (`find_callers`, `find_callees`, `class_hierarchy`, `call_chain`) as standard MCP tools to any MCP client. For ZZAIA's Docker Compose multi-agent stack, this is architecturally correct: agents are CLI processes, not IDE sessions.
+
+**Alternative**: `codebase-memory` (DeusData) — single static binary, 66 languages, SQLite, 14 MCP tools, 120x token reduction, peer-reviewed (arXiv 2603.27277). Preferred if token reduction at search time is the priority over call graph depth.
+
+**Rejected**: Continue.dev + LanceDB — tied to Continue.dev coding assistant; requires custom MCP wrapper; no Docker service variant; index refresh requires IDE filesystem watcher not available in CLI-only environments.
 
 ---
 
@@ -91,8 +95,7 @@ C4Container
     }
 
     System_Boundary(codeSearch, "Workspace Search Layer") {
-        Container(continue, "Continue.dev + LanceDB", "MCP Server", "Workspace semantic search, hybrid retrieval")
-        Container(astgrep, "ast-grep", "Pattern Matcher", "Structural code pattern matching")
+        Container(cgc, "CodeGraphContext", "MCP Server", "Agent-agnostic code graph: call graphs, symbols, hierarchies")
     }
 
     System_Boundary(workspace, "Workspace Layer") {
@@ -102,9 +105,8 @@ C4Container
     Rel(headroom, anthropicAPI, "Forwards compressed requests", "HTTP")
     Rel(openmemory, postgres, "Stores/queries memory", "SQL")
     Rel(openmemory, qdrant, "Semantic indexing", "gRPC")
-    Rel(continue, workspaceRepos, "Indexes files and history", "Filesystem")
-    Rel(continue, astgrep, "Structural matching", "In-process")
-    Rel(continue, qdrant, "Optional: shared vector backend", "gRPC")
+    Rel(cgc, workspaceRepos, "Indexes files and builds call graph", "Filesystem")
+    Rel(cgc, qdrant, "Optional: shared vector backend", "gRPC")
 
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
 ```
@@ -122,8 +124,7 @@ C4Container
 - **Qdrant**: Vector database for semantic similarity search (shared with workspace search layer)
 
 ### Workspace Semantic Search Layer
-- **Continue.dev + LanceDB**: Local-first code indexing with hybrid retrieval (semantic + structural)
-- **ast-grep**: In-process pattern matching for syntactic code queries (function definitions, call sites)
+- **CodeGraphContext**: Agent-agnostic MCP server for code graph queries — call graphs, symbol resolution, class hierarchies, import graphs, dead code detection. Uses KûzuDB (embedded) or Neo4j (Docker). Real-time file watching via `cgc watch`. Zero IDE dependency.
 
 ### Workspace Layer
 - **Workspace Repositories**: Volume containing all indexed source code and git history
@@ -137,7 +138,7 @@ C4Container
 | **Proxy** | Headroom (HTTP reverse proxy, multi-provider support) |
 | **Memory Storage** | PostgreSQL (metadata), Qdrant (vector index) |
 | **Memory MCP** | OpenMemory (native MCP tools) |
-| **Code Search** | Continue.dev + LanceDB (embeddings), ast-grep (AST patterns) |
+| **Code Search** | CodeGraphContext (call graphs, symbols, AST), KûzuDB / Neo4j (graph storage) |
 | **Infrastructure** | Docker Compose, shared volume for workspace indexing |
 
 ---
@@ -160,17 +161,18 @@ openmemory:
     - "5005:5005"
 ```
 
-**Continue.dev + LanceDB**:
+**CodeGraphContext** (agent-agnostic code graph MCP server):
 ```yaml
-continue-backend:
-  image: continue-dev/lancedb-server:latest
+code-graph:
+  image: python:3.12-slim
+  command: >-
+    sh -c "pip install codegraphcontext -q && cgc watch /workspace & cgc mcp start"
   environment:
-    WORKSPACE_PATH: /workspace
-    QDRANT_URL: http://qdrant:6333
+    CGC_PROJECT_ROOT: /workspace
   volumes:
     - workspace-repos:/workspace
-  ports:
-    - "8001:8001"
+    - code-graph-db:/root/.cgc
+  restart: unless-stopped
 ```
 
 **Headroom** (context compression):
@@ -184,8 +186,8 @@ headroom:
 ```
 
 ### Services to Remove
-- `neo4j` — replaced by LanceDB for code graph indexing (LanceDB is more efficient for hybrid retrieval)
-- Headroom's standalone Qdrant role — Qdrant now shared by OpenMemory and Continue.dev
+- `neo4j` — replaced by CodeGraphContext's embedded KûzuDB (no separate graph DB service needed)
+- Headroom's standalone Qdrant role — Qdrant now shared by OpenMemory and optionally CodeGraphContext
 
 ### Agent Configuration
 
@@ -195,7 +197,7 @@ ANTHROPIC_BASE_URL=http://headroom:8787
 OPENAI_BASE_URL=http://headroom:8787
 GEMINI_API_BASE=http://headroom:8787
 MEMORY_MCP_ENDPOINT=openmemory:5005
-SEARCH_MCP_ENDPOINT=continue-backend:8001
+SEARCH_MCP_ENDPOINT=code-graph:8001
 ```
 
 **Agent code changes**: None required. Agents discover MCP tools automatically via MCP server registration.
@@ -215,7 +217,7 @@ SEARCH_MCP_ENDPOINT=continue-backend:8001
 - Reduces token usage compared to always-on memory injection
 
 ### Workspace Semantic Search: MCP-Level Tool Pattern
-⚠️ **Agent-initiated search** — agents call `semantic_search` or `code_search` when they need workspace context. Proxy-level automation is impossible because:
+⚠️ **Agent-initiated search** — agents call `find_callers`, `find_callees`, `class_hierarchy`, `call_chain` via CodeGraphContext MCP tools when they need workspace context. Proxy-level automation is impossible because:
 - Proxy has no filesystem access
 - Cannot determine file relevance without intent parsing
 - Cannot index codebase without a file crawler and AST parser
@@ -244,12 +246,15 @@ SEARCH_MCP_ENDPOINT=continue-backend:8001
 
 ### Workspace Semantic Search Candidates
 
-| Tool | Approach | Docker | Code-aware | Local-first | Maturity | Selection |
-|---|---|---|---|---|---|---|
-| **Continue.dev + LanceDB** | Code embeddings + LanceDB, hybrid retrieval | ✅ | ✅ AST-aware | ✅ | OSS prod | ✅ **Selected** |
-| Greptile (self-hosted) | AST graph + embeddings | ✅ | ✅ | ⚠️ GPU needed | Prod, SOC2 | Alternative |
-| Sourcegraph Cody | Structural + semantic, BYOK | ✅ | ✅ | ⚠️ Enterprise | Enterprise | Rejected — enterprise only |
-| Headroom + Qdrant/Neo4j | Conversation embeddings (not workspace files) | ✅ | ❌ | ✅ | Community | Rejected — no file indexing |
+| Tool | Approach | Docker | Code-aware | Agent-agnostic | Local-first | Maturity | Selection |
+|---|---|---|---|---|---|---|---|
+| **CodeGraphContext** | Tree-sitter → call graph + symbol index (KûzuDB) | ✅ | ✅ | ✅ any MCP client | ✅ | OSS, 3.1k stars | ✅ **Selected** |
+| codebase-memory (DeusData) | Tree-sitter → SQLite FTS5 + vectors, single binary | ✅ | ✅ 66 langs | ✅ | ✅ | peer-reviewed (arXiv) | Alternative (token-reduction focus) |
+| CodeGraph (Rust, suatkocar) | Tree-sitter → SQLite, 44 MCP tools, PageRank | ✅ | ✅ 32 langs | ✅ | ✅ | OSS, 3.1k stars | Alternative (deeper graph analysis) |
+| Continue.dev + LanceDB | Embeddings + LanceDB, hybrid retrieval | ⚠️ custom | ✅ AST-aware | ❌ IDE-coupled | ✅ | OSS prod | Rejected — VS Code extension dependency |
+| Greptile (self-hosted) | AST graph + embeddings | ✅ | ✅ | ✅ | ⚠️ GPU needed | Prod, SOC2 | Rejected — GPU required |
+| Sourcegraph Cody | Structural + semantic | ✅ | ✅ | ✅ | ⚠️ Enterprise | Enterprise | Rejected — enterprise only |
+| Headroom + Qdrant/Neo4j | Conversation embeddings (not files) | ✅ | ❌ | ✅ | ✅ | Community | Rejected — no file indexing |
 
 ---
 
@@ -257,9 +262,9 @@ SEARCH_MCP_ENDPOINT=continue-backend:8001
 
 - [Headroom GitHub](https://github.com/chopratejas/headroom) — Transparent LLM proxy compression
 - [OpenMemory MCP Announcement](https://mem0.ai/blog/introducing-openmemory-mcp) — Session memory with MCP tools
-- [Continue.dev Docs](https://docs.continue.dev/reference) — Code-aware embeddings and search
-- [LanceDB Blog](https://lancedb.com/blog/ai-native-development-local-continue-lancedb) — Local vector database
-- [ast-grep GitHub](https://github.com/ast-grep/ast-grep) — Structural code pattern matching
+- [CodeGraphContext GitHub](https://github.com/CodeGraphContext/CodeGraphContext) — Agent-agnostic code graph MCP server
+- [codebase-memory (DeusData)](https://github.com/DeusData/codebase-memory-mcp) — Alternative: single binary, 66 languages, 14 MCP tools
+- [CodeGraph Rust (suatkocar)](https://github.com/suatkocar/codegraph) — Alternative: 44 MCP tools, PageRank, hybrid BM25+cosine
 
 ---
 
