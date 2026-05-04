@@ -89,7 +89,7 @@ You will need the following values before starting:
 | `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
-| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `zzaia` user | Any string; leave empty to disable sudo entirely |
+| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the Neo4j password for Headroom | Any string; leave empty for no sudo and default Neo4j password (`headroom`) |
 | `ANTHROPIC_API_KEY` | Optional | Claude API key — see Step 1 | [console.anthropic.com](https://console.anthropic.com) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Optional | Long-lived OAuth token for Pro/Max — see Step 1 Option A | `claude setup-token` on host |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | Optional | AWS Bedrock auth — see Step 1 | AWS IAM credentials |
@@ -120,7 +120,7 @@ Pre-configure the following vault items in Bitwarden, then run the installation 
 |---|---|---|---|
 | `workspace-name` | WORKSPACE_NAME | ✅ | Docker Compose project name |
 | `ssh-public-key` | SSH_PUBLIC_KEY | ✅ | Your SSH public key for container access |
-| `admin-password` | ADMIN_PASSWORD | | Sudo password for `zzaia` user |
+| `admin-password` | ADMIN_PASSWORD | | Sudo password for `user` account; also sets Neo4j password for Headroom |
 | `vscode-port` | VSCODE_PORT | | Host port for VS Code (default: 8080) |
 | `ssh-port` | SSH_PORT | | Host port for SSH (default: 2222) |
 | `aspire-dashboard-port` | ASPIRE_DASHBOARD_PORT | | Host port for Aspire dashboard (default: 18888) |
@@ -190,10 +190,13 @@ export NEW_RELIC_API_KEY=""
 export VSCODE_PORT="8080"
 export SSH_PORT="2222"
 
+# Default: workspace + headroom + qdrant + neo4j + all MCP sidecars
 docker compose \
     -f "./docker/docker-compose.yml" \
     -p "$WORKSPACE_NAME" \
     up -d
+
+# Add --profile vscode to also start VS Code browser access on VSCODE_PORT
 
 unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
       ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
@@ -283,8 +286,9 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 
 | Access | URL / Command |
 |--------|--------------|
-| **VS Code** (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) |
-| **SSH** | `ssh -p <SSH_PORT> zzaia@localhost` (default `2222`) |
+| **VS Code** (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) — requires `--profile vscode` at startup |
+| **SSH** | `ssh -p <SSH_PORT> user@localhost` (default `2222`) |
+| **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
 | **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
 
 Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running.
@@ -340,6 +344,8 @@ All configured tools should show as connected. Then verify commands are availabl
 | Symptom | Fix |
 |---------|-----|
 | MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
+| Workspace slow to start | Headroom waits for qdrant and neo4j healthchecks — allow up to 60s on first boot |
+| Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
 | Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |

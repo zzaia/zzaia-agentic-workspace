@@ -225,16 +225,18 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 010: Headroom AI Proxy (Opt-In)
+### ADR 010: Headroom AI Proxy (Always-On Default)
 
-**Decision**: An optional `headroom` container acts as a transparent HTTP proxy for Anthropic and OpenAI APIs, implementing context compression and a rolling memory stack.
+**Decision**: `headroom` runs as a mandatory always-on proxy for all agent AI API calls (Anthropic and OpenAI), with Qdrant (vector DB) and Neo4j (graph DB) as backing services for full semantic search and session memory.
 
-- Enabled via Compose profile `headroom`; when active, `ANTHROPIC_BASE_URL=http://headroom:8787` is injected into workspace
-- No agent code changes required — transparent proxy
-- Reduces token cost for long-running sessions (>32k tokens)
-- Agents fall back to direct API calls if headroom is unavailable
+- `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, and `GEMINI_API_BASE=http://headroom:8787` are always set in the workspace environment
+- No agent code changes required — transparent HTTP proxy; compression failure always passes through original content unchanged
+- Three active features: **context compression** (reduces tokens for long sessions), **session memory** (rolling conversation state), **semantic search** (vector + graph retrieval via Qdrant + Neo4j)
+- `workspace` depends on headroom healthy (`condition: service_healthy`) — Headroom readiness gates agent startup
+- Headroom exposes `/health`, `/livez`, `/readyz` for orchestration; `/metrics` (Prometheus) for observability via Aspire Dashboard
+- Passthrough guarantee: if compression fails, original content is forwarded unchanged — no agent call is ever dropped
 
-**Rationale**: Enables session persistence and token cost reduction without requiring code changes. Opt-in approach means agents work without it.
+**Rationale**: Compression, memory, and semantic search benefit every agent session — not just long ones. Making headroom always-on eliminates the "opt-in tax" where developers miss optimization benefits by default. Passthrough guarantee and health-gated startup preserve reliability without requiring a client-side fallback.
 
 ---
 
@@ -277,7 +279,9 @@ C4Container
     System_Boundary(stack, "<workspace> Compose Stack") {
         Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise + Aspire MCP :3007")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
-        Container(headroom, "headroom", "Headroom proxy", "HTTP proxy :8787 — context compression + memory stack [profile: headroom]")
+        Container(headroom, "headroom", "Headroom proxy", "HTTP proxy :8787 — compression + session memory + semantic search [always-on]")
+        Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic search embeddings")
+        Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph retrieval")
         Container(tavily, "mcp-tavily", "node:alpine + supergateway", "Holds TAVILY_API_KEY, exposes SSE :3001")
         Container(ado, "mcp-azure-devops", "node:alpine + supergateway", "Holds ADO_MCP_AUTH_TOKEN, exposes SSE :3002")
         Container(postman, "mcp-postman", "node:alpine + supergateway", "Holds POSTMAN_API_KEY, exposes SSE :3003")
@@ -297,7 +301,9 @@ C4Container
     Rel(dev, ws, "SSH terminal / VS Code Remote SSH / Dev Containers", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
     Rel(ws, vscode, "Shares workspace-home volume", "named volume")
-    Rel(ws, headroom, "API calls via proxy [optional]", "http://headroom:8787")
+    Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL")
+    Rel(headroom, qdrant, "Vector embeddings", "semantic search :6333")
+    Rel(headroom, neo4j, "Knowledge graph queries", "Bolt :7687")
     Rel(ws, tavily, "MCP tool calls", "SSE mcp network")
     Rel(ws, ado, "MCP tool calls", "SSE mcp network")
     Rel(ws, postman, "MCP tool calls", "SSE mcp network")
@@ -347,7 +353,9 @@ zzaia-agentic-workspace/
 |-----------|------|------|---------|
 | `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always |
 | `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` |
-| `headroom` | AI proxy — context compression + memory stack | 8787 (internal) | `headroom` |
+| `headroom` | AI proxy — compression + session memory + semantic search | 8787 (internal) | always |
+| `qdrant` | Vector DB — semantic search embeddings for headroom | 6333 (internal) | always |
+| `neo4j` | Graph DB — knowledge graph retrieval for headroom | 7687 (internal) | always |
 | `mcp-tavily` | Web search MCP adapter | 3001 (internal) | conditional |
 | `mcp-azure-devops` | Azure DevOps MCP adapter | 3002 (internal) | conditional |
 | `mcp-postman` | Postman MCP adapter | 3003 (internal) | conditional |
@@ -363,6 +371,8 @@ zzaia-agentic-workspace/
 | `<ws>-home` | `/home/user` | `.vscode-server/`, `.claude/`, agent configs, auth tokens |
 | `<ws>-workspace` | `/home/user/workspace` | Git repositories and worktrees |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
+| `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for semantic search |
+| `<ws>-headroom-neo4j` | `/data` | Knowledge graph for session memory retrieval |
 
 ### Connection Types
 
@@ -382,7 +392,9 @@ zzaia-agentic-workspace/
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | `code serve-web` (Microsoft VS Code) + OpenSSH |
 | Dev Containers | `devcontainer.json` embedded in workspace image |
-| AI proxy | Headroom (optional, transparent HTTP proxy) |
+| AI proxy | Headroom (always-on — compression, session memory, semantic search) |
+| Vector DB | Qdrant v1.17 (headroom semantic search backing store) |
+| Graph DB | Neo4j 5.15 (headroom knowledge graph retrieval) |
 | Tool provisioning | mise (agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
 | MCP bridge | supergateway (stdio → SSE) |
 | Multi-tenancy | Docker Compose project namespacing |

@@ -10,7 +10,7 @@ updated: 2026-05-02
 
 ## Overview
 
-Decouple VS Code browser UI from workspace container, add Dev Containers support, integrate optional Headroom AI proxy, and fix missing VS Code extension installations. This modernizes the Docker architecture to support multiple development modes (browser, SSH, Dev Containers) with independent failure domains and opt-in AI proxy routing.
+Decouple VS Code browser UI from workspace container, add Dev Containers support, integrate always-on Headroom AI proxy (with Qdrant vector DB and Neo4j graph DB for semantic search and session memory), and fix missing VS Code extension installations. This modernizes the Docker architecture to support multiple development modes (browser, SSH, Dev Containers) with independent failure domains and comprehensive AI proxy infrastructure.
 
 **Effort**: 34 points (parallel) | **Tech**: Docker, Docker Compose, VS Code, Headroom AI proxy, mise
 
@@ -69,19 +69,26 @@ gantt
 ### 1B: Headroom AI Proxy Container (Story 3.1) (3 points)
 
 **Acceptance Criteria**:
-- `headroom` service added to docker-compose.yml with `profiles: ["headroom"]`
-- Image: `ghcr.io/chopratejas/headroom:latest`
-- Internal port 8787 on mcp network (no host exposure)
-- `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` passed to headroom container
-- Workspace service gets `ANTHROPIC_BASE_URL=http://headroom:8787` when headroom profile active
-- Healthcheck: `wget -qO- http://localhost:8787/health` interval 15s, retries 5, start_period 30s
-- `restart: unless-stopped`
+- `headroom` service added to docker-compose.yml — always-on (no profile), `restart: unless-stopped`
+- `qdrant` service added — `qdrant/qdrant:v1.17.1`, volume `<ws>-headroom-qdrant`, healthcheck `/readyz`
+- `neo4j` service added — `neo4j:5.15.0`, volume `<ws>-headroom-neo4j`, healthcheck HTTP/7474, `NEO4J_PASSWORD` env var
+- `headroom` depends_on qdrant and neo4j (condition: service_healthy)
+- `workspace` depends_on headroom (condition: service_healthy)
+- `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` passed to headroom container
+- `QDRANT_URL=http://qdrant:6333`, `NEO4J_URI=bolt://neo4j:7687` passed to headroom
+- Workspace env always includes: `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, `GEMINI_API_BASE=http://headroom:8787`
+- Headroom healthcheck: `wget -qO- http://localhost:8787/health` interval 10s, retries 5, start_period 30s
+- Two new named volumes declared: `<ws>-headroom-qdrant`, `<ws>-headroom-neo4j`
 
 **Tasks**:
-- [ ] Add headroom service definition to docker-compose.yml (2)
-- [ ] Configure environment variable injection for ANTHROPIC_BASE_URL (1)
+- [ ] Add qdrant service with persistent volume and healthcheck (1)
+- [ ] Add neo4j service with persistent volume, auth, and healthcheck (1)
+- [ ] Add headroom service depending on qdrant + neo4j healthy (2)
+- [ ] Wire ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE into workspace env (1)
+- [ ] Add workspace depends_on headroom: service_healthy (1)
+- [ ] Declare headroom-qdrant and headroom-neo4j named volumes (1)
 
-**Outputs**: Updated `docker/docker-compose.yml` with headroom profile
+**Outputs**: Updated `docker/docker-compose.yml` with headroom (always-on), qdrant, neo4j services and volumes
 
 **Dependencies**: None
 
@@ -169,8 +176,10 @@ gantt
 - [ ] Build image with all changes and verify layer caching (1)
 - [ ] Spin up `docker-compose up -d` (default profile): workspace + 8 MCP sidecars (1)
 - [ ] Spin up with `--profile vscode`: add vscode-server, validate startup order (1)
-- [ ] Spin up with `--profile headroom`: headroom starts, ANTHROPIC_BASE_URL injection validated (1)
-- [ ] Spin up with `--profile vscode --profile headroom`: combined startup, all healthchecks pass (1)
+- [ ] Verify headroom, qdrant, neo4j start in correct dependency order (1)
+- [ ] Validate ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE all resolve to headroom (1)
+- [ ] Spin up with `--profile vscode`: workspace + vscode-server + headroom + qdrant + neo4j all healthy (1)
+- [ ] Send a test agent request and confirm headroom /stats shows intercepted request (1)
 - [ ] Attach VS Code Dev Containers: extensions install, zzaia-workspace profile active (2)
 - [ ] SSH access via workspace container: verify independent of vscode-server health (1)
 
@@ -185,6 +194,10 @@ gantt
 **Development Environments**: VS Code browser (serve-web), VS Code SSH attach, VS Code Dev Containers
 
 **AI Proxy**: Headroom (ghcr.io/chopratejas/headroom:latest) with context compression and memory
+
+**Vector DB**: Qdrant v1.17.1 (semantic search backing store for headroom)
+
+**Graph DB**: Neo4j 5.15.0 (knowledge graph retrieval for headroom)
 
 **Tool Management**: mise for VS Code extensions and tool versioning
 
@@ -225,21 +238,21 @@ gantt
 - ✅ Workspace container exposes only SSH (2222) and has TCP/2222 healthcheck
 - ✅ vscode-server container runs independently with serve-web, depends_on workspace healthy
 - ✅ devcontainer.json embedded in image with correct extension list and zzaia-workspace profile
-- ✅ Headroom AI proxy optional via `--profile headroom`, injects ANTHROPIC_BASE_URL when active
+- ✅ Headroom AI proxy always-on with qdrant and neo4j; ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE always set
+- ✅ Qdrant and Neo4j persist data in named volumes across container restarts
 - ✅ All 8 MCP sidecars start with default profile
 - ✅ Google Gemini Code Assist and OpenAI ChatGPT extensions install without build-time failures
 
 **Operational**
-- ✅ Default `docker-compose up -d` starts workspace + 8 MCPs (no vscode-server)
-- ✅ `docker-compose --profile vscode up -d` starts workspace + vscode-server + 8 MCPs
-- ✅ `docker-compose --profile headroom up -d` starts headroom on mcp network, workspace routed via HTTP proxy
+- ✅ Default `docker-compose up -d` starts headroom + qdrant + neo4j + workspace + 8 MCPs
+- ✅ `docker-compose --profile vscode up -d` additionally starts vscode-server
 - ✅ Dev Containers attach workflow: `Remote-Containers: Reopen in Container` → extensions auto-install
 - ✅ All healthchecks pass within 45s of startup
 
 **Business**
 - ✅ Decoupled VS Code browser failures (serve-web crash) do not affect SSH agent runtime
 - ✅ Developers can choose: browser UI (vscode-server), SSH attach, or Dev Containers
-- ✅ Headroom AI proxy available for long sessions without mandatory infrastructure footprint
+- ✅ Headroom AI proxy applies compression, session memory, and semantic search to all agent sessions by default
 - ✅ Extension installation no longer blocks image build
 
 ---
@@ -248,7 +261,7 @@ gantt
 
 **Healthcheck timing failures** → Start Phase 3 validation with extended timeouts (60s), then optimize down to 45s based on observed startup curves
 
-**Headroom service unavailable** → Conditional ANTHROPIC_BASE_URL defaults to direct Anthropic API if headroom profile not active; workspace container functional regardless
+**Headroom service unavailable** → Headroom's passthrough guarantee ensures compression failures never drop requests; qdrant/neo4j persistence in named volumes survives restarts; if headroom crashes, Docker restarts it via restart: unless-stopped before workspace can accept agent requests (depends_on: service_healthy)
 
 **Extension marketplace IDs incorrect** → Validate by querying `code --list-extensions` in test container before final build; maintain fallback list if marketplace IDs change
 

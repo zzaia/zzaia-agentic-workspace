@@ -113,14 +113,18 @@ Scenario: Profile consistency across all connection types
 
 ## Feature: Headroom AI Proxy
 
-Routes agent API requests through headroom proxy for context compression when enabled, with fallback to direct Anthropic API.
+Routes agent API requests through headroom proxy for context compression, with semantic search enrichment via qdrant and neo4j.
 
 ### Background
 
 ```gherkin
 Background:
-  Given ANTHROPIC_API_KEY is set in workspace environment
-  And headroom is available as optional compose profile
+  Given headroom container is running and healthy on the mcp network
+  And qdrant vector database is running and healthy
+  And neo4j graph database is running and healthy
+  And ANTHROPIC_BASE_URL=http://headroom:8787 set in workspace environment
+  And OPENAI_BASE_URL=http://headroom:8787 set in workspace environment
+  And GEMINI_API_BASE=http://headroom:8787 set in workspace environment
 ```
 
 ---
@@ -130,7 +134,6 @@ Background:
 ```gherkin
 Scenario: Agent session with context compression via headroom
   Given headroom container running on mcp network at port 8787
-  And ANTHROPIC_BASE_URL=http://headroom:8787 set in workspace environment
   When Claude Code sends a request with context exceeding 32k tokens
   Then headroom compresses context using rolling memory
   And forwards compressed request to upstream Anthropic API
@@ -140,28 +143,44 @@ Scenario: Agent session with context compression via headroom
 
 ---
 
-### Scenario: Headroom disabled — direct API fallback
+### Scenario: Gemini CLI routes through headroom proxy
 
 ```gherkin
-Scenario: Headroom disabled — direct API fallback
-  Given headroom profile not active in docker compose
-  And ANTHROPIC_BASE_URL not overridden in workspace environment
-  When agent sends an API request
-  Then request goes directly to Anthropic API
-  And no headroom container is present
+Scenario: Gemini CLI routes through headroom proxy
+  Given GEMINI_API_BASE=http://headroom:8787 set in workspace environment
+  When gemini CLI sends a request to Google Gemini API
+  Then headroom intercepts the request
+  And applies context compression if context exceeds threshold
+  And forwards to upstream Google Gemini API
+  And stores session state in headroom memory stack
 ```
 
 ---
 
-### Scenario: Headroom opt-in via compose profile
+### Scenario: Headroom passthrough on compression failure
 
 ```gherkin
-Scenario: Headroom opt-in via compose profile
-  Given .env file with ANTHROPIC_API_KEY set
-  When user runs docker compose --profile vscode --profile headroom up
-  Then headroom container starts on the mcp network
-  And workspace environment receives ANTHROPIC_BASE_URL=http://headroom:8787
-  And all agent API calls are routed through headroom proxy
+Scenario: Headroom passthrough on compression failure
+  Given headroom is running with qdrant and neo4j healthy
+  When a request cannot be compressed (format incompatible or compression error)
+  Then headroom forwards the original unmodified content to upstream API
+  And the agent receives a valid API response
+  And no agent call is dropped or errored due to compression failure
+```
+
+---
+
+### Scenario: Semantic search retrieval via qdrant and neo4j
+
+```gherkin
+Scenario: Semantic search retrieval via qdrant and neo4j
+  Given qdrant vector database contains embeddings from prior agent sessions
+  And neo4j knowledge graph contains session relationships
+  When headroom processes a new agent request
+  Then headroom queries qdrant for semantically similar prior context
+  And queries neo4j for related knowledge graph nodes
+  And enriches the request with retrieved context before compression
+  And upstream API receives enriched, compressed request
 ```
 
 ---
@@ -200,7 +219,10 @@ Scenario: SSH connection to workspace
 ```gherkin
 Scenario: Workspace startup sequence
   Given docker compose up with vscode profile
-  When workspace starts
+  When qdrant and neo4j start and become healthy
+  And headroom starts (after qdrant and neo4j healthy)
+  And headroom healthcheck passes at http://localhost:8787/health
+  When workspace starts (after headroom healthy)
   Then SSH daemon is ready (healthcheck: TCP/2222)
   And credential wiring completes (GitHub, ADO)
   And workspace-home volume is initialized with WORKSPACE_NAME templating
@@ -264,8 +286,9 @@ Scenario: WORKSPACE_NAME runtime templating
 | VS Code Remote attaches to workspace via Dev Containers | Dev Containers Attach | ✅ Covered |
 | Profile consistency across all connection types | Dev Containers Attach | ✅ Covered |
 | Agent session with context compression via headroom | Headroom AI Proxy | ✅ Covered |
-| Headroom disabled — direct API fallback | Headroom AI Proxy | ✅ Covered |
-| Headroom opt-in via compose profile | Headroom AI Proxy | ✅ Covered |
+| Gemini CLI routes through headroom proxy | Headroom AI Proxy | ✅ Covered |
+| Headroom passthrough on compression failure | Headroom AI Proxy | ✅ Covered |
+| Semantic search retrieval via qdrant and neo4j | Headroom AI Proxy | ✅ Covered |
 | SSH connection to workspace | Connection Type Matrix | ✅ Covered |
 | Workspace startup sequence | Connection Type Matrix | ✅ Covered |
 | Same image runs as workspace and vscode-server | Single Image Multi-Purpose Deployment | ✅ Covered |
