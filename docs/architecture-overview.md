@@ -240,6 +240,50 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
+### ADR 011: OpenMemory MCP for Agent Session Memory
+
+**Decision**: Deploy OpenMemory MCP service for persistent cross-session agent memory using Postgres and Qdrant backend; agents call `search_memory`, `add_memories`, and `list_memories` via MCP discovery.
+
+- OpenMemory container runs `skpassegna/openmemory-mcp:latest` on port 5005
+- Native MCP tools available to all agent CLIs and VS Code extensions without special wiring
+- Postgres backend provides relational storage; Qdrant semantic index enables memory retrieval by relevance
+- Local-first architecture — no external service dependencies; memory stays on-host
+- Agent-initiated retrieval avoids memory pollution — agents request what they need, not pushed
+- No lock-in to Headroom; works with any MCP client
+
+**Rationale**: Standard MCP interface ensures compatibility across all agent toolchains. Postgres+Qdrant provide both relational queries and semantic search without external services. Agent-initiated access prevents spurious memory pollution that would degrade context quality.
+
+---
+
+### ADR 012: CodeGraphContext for Workspace Semantic Search
+
+**Decision**: Deploy CodeGraphContext as MCP server for code graph queries across the workspace; agents call `find_callers`, `find_callees`, `class_hierarchy`, and `call_chain` via MCP.
+
+- CodeGraphContext container runs `python:3.12-slim` with codegraphcontext package on stdio/MCP
+- Tree-sitter AST parsing generates call graphs and class hierarchies in real-time
+- Stores parsed graph in local KûzuDB or Neo4j database (`code-graph-db` named volume)
+- Real-time file watching detects source changes and updates graph incrementally
+- Agent-agnostic — any MCP client can query the workspace graph; no IDE dependency
+- Replaces Headroom's undocumented `--code-graph` feature with explicit, observable MCP interface
+
+**Rationale**: Tree-sitter AST parsing is language-agnostic and requires no IDE. Real-time file watching keeps the graph current without manual triggers. MCP makes code graph queries observable and agent-independent, enabling reuse across all coding tools.
+
+---
+
+### ADR 013: Headroom as Always-On Context Compression Proxy
+
+**Decision**: Deploy Headroom as mandatory always-on HTTP reverse proxy for all agent AI API calls; all calls to Anthropic, OpenAI, and Gemini APIs route through `http://headroom:8787`.
+
+- `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, `GEMINI_API_BASE=http://headroom:8787` are always set in workspace environment
+- Achieves 34–90% token reduction on average; overhead <5ms per request
+- Passthrough guarantee on failure — if compression fails, original content is forwarded unchanged; no agent call is ever dropped
+- Covers Anthropic API, OpenAI API, Google Gemini API; transparent to agent code
+- No agent changes required — standard HTTP proxy; compression transparent to clients
+
+**Rationale**: Token reduction improves cost and latency for long-running agent sessions. Passthrough guarantee eliminates the reliability tax of adding a proxy. Making always-on defaults the optimization to all agents rather than requiring opt-in.
+
+---
+
 ## C4 Context Diagram
 
 ```mermaid
@@ -279,9 +323,11 @@ C4Container
     System_Boundary(stack, "<workspace> Compose Stack") {
         Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise + Aspire MCP :3007")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
-        Container(headroom, "headroom", "Headroom proxy", "HTTP proxy :8787 — compression + session memory + semantic search [always-on]")
-        Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic search embeddings")
-        Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph retrieval")
+        Container(headroom, "headroom", "Headroom proxy", "HTTP proxy :8787 — compression proxy for AI API calls [always-on]")
+        Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic search embeddings for headroom and openmemory")
+        Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph retrieval for headroom")
+        Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Session memory MCP server, Postgres + Qdrant backend, MCP :5005 [always-on]")
+        Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Workspace code graph MCP — tree-sitter AST parsing, KûzuDB/Neo4j index [always-on]")
         Container(tavily, "mcp-tavily", "node:alpine + supergateway", "Holds TAVILY_API_KEY, exposes SSE :3001")
         Container(ado, "mcp-azure-devops", "node:alpine + supergateway", "Holds ADO_MCP_AUTH_TOKEN, exposes SSE :3002")
         Container(postman, "mcp-postman", "node:alpine + supergateway", "Holds POSTMAN_API_KEY, exposes SSE :3003")
@@ -301,9 +347,13 @@ C4Container
     Rel(dev, ws, "SSH terminal / VS Code Remote SSH / Dev Containers", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
     Rel(ws, vscode, "Shares workspace-home volume", "named volume")
-    Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL")
-    Rel(headroom, qdrant, "Vector embeddings", "semantic search :6333")
+    Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
+    Rel(headroom, qdrant, "Vector embeddings for compression", "semantic search :6333")
     Rel(headroom, neo4j, "Knowledge graph queries", "Bolt :7687")
+    Rel(ws, openmemory, "MCP tool calls", "search_memory / add_memories / list_memories :5005")
+    Rel(openmemory, qdrant, "Semantic memory index", "vector DB :6333")
+    Rel(ws, codegraph, "MCP tool calls", "find_callers / find_callees / class_hierarchy / call_chain")
+    Rel(codegraph, repos, "Parse source files", "named volume /home/user/workspace")
     Rel(ws, tavily, "MCP tool calls", "SSE mcp network")
     Rel(ws, ado, "MCP tool calls", "SSE mcp network")
     Rel(ws, postman, "MCP tool calls", "SSE mcp network")
@@ -353,9 +403,11 @@ zzaia-agentic-workspace/
 |-----------|------|------|---------|
 | `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always |
 | `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` |
-| `headroom` | AI proxy — compression + session memory + semantic search | 8787 (internal) | always |
-| `qdrant` | Vector DB — semantic search embeddings for headroom | 6333 (internal) | always |
+| `headroom` | AI proxy — context compression for Anthropic, OpenAI, Gemini | 8787 (internal) | always |
+| `qdrant` | Vector DB — semantic embeddings for headroom and openmemory | 6333 (internal) | always |
 | `neo4j` | Graph DB — knowledge graph retrieval for headroom | 7687 (internal) | always |
+| `openmemory-mcp` | Session memory MCP server — Postgres + Qdrant backend | 5005 (MCP) | always |
+| `code-graph-mcp` | Workspace code graph MCP — tree-sitter AST parsing | stdio (MCP) | always |
 | `mcp-tavily` | Web search MCP adapter | 3001 (internal) | conditional |
 | `mcp-azure-devops` | Azure DevOps MCP adapter | 3002 (internal) | conditional |
 | `mcp-postman` | Postman MCP adapter | 3003 (internal) | conditional |
@@ -371,8 +423,10 @@ zzaia-agentic-workspace/
 | `<ws>-home` | `/home/user` | `.vscode-server/`, `.claude/`, agent configs, auth tokens |
 | `<ws>-workspace` | `/home/user/workspace` | Git repositories and worktrees |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
-| `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for semantic search |
-| `<ws>-headroom-neo4j` | `/data` | Knowledge graph for session memory retrieval |
+| `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for headroom and openmemory |
+| `<ws>-headroom-neo4j` | `/data` | Knowledge graph for headroom retrieval |
+| `<ws>-openmemory-data` | `/var/lib/postgresql/data` | OpenMemory Postgres persistent memory store |
+| `<ws>-code-graph-db` | `/data/code-graph` | CodeGraphContext graph index (KûzuDB or Neo4j) |
 
 ### Connection Types
 
@@ -392,11 +446,13 @@ zzaia-agentic-workspace/
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | `code serve-web` (Microsoft VS Code) + OpenSSH |
 | Dev Containers | `devcontainer.json` embedded in workspace image |
-| AI proxy | Headroom (always-on — compression, session memory, semantic search) |
-| Vector DB | Qdrant v1.17 (headroom semantic search backing store) |
-| Graph DB | Neo4j 5.15 (headroom knowledge graph retrieval) |
+| **AI proxy (Headroom)** | **HTTP reverse proxy — 34–90% token reduction, <5ms overhead, passthrough on failure** |
+| **Session memory (OpenMemory MCP)** | **Postgres + Qdrant backend, native MCP tools: search_memory, add_memories, list_memories** |
+| **Code graph (CodeGraphContext)** | **Tree-sitter AST → KûzuDB/Neo4j, MCP tools: find_callers, find_callees, class_hierarchy, call_chain** |
+| Vector DB | Qdrant v1.17 (headroom compression + openmemory semantic index) |
+| Graph DB | Neo4j 5.15 (headroom knowledge graph retrieval + codegraph optional backend) |
 | Tool provisioning | mise (agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
-| MCP bridge | supergateway (stdio → SSE) |
+| MCP bridge | supergateway (stdio → SSE) + native MCP servers (openmemory, codegraph) |
 | Multi-tenancy | Docker Compose project namespacing |
 | Secret lifecycle | Process env → one-time file write → sealed |
 | Telemetry | .NET Aspire Standalone Dashboard (OTLP receiver) |

@@ -296,6 +296,258 @@ Scenario: WORKSPACE_NAME runtime templating
 
 ---
 
+## Feature: Session Memory via OpenMemory MCP
+
+Stores and retrieves session memory across agent invocations using MCP tools backed by Postgres and Qdrant vector search.
+
+### Background
+
+```gherkin
+Background:
+  Given openmemory service is running on port 5005
+  And Postgres database is healthy and initialized
+  And Qdrant vector database is healthy
+  And agent has MCP tools auto-discovered (search_memory, add_memories, list_memories)
+```
+
+---
+
+### Scenario: Agent stores a memory after completing a task
+
+```gherkin
+Scenario: Agent stores a memory after completing a task
+  Given agent completes a feature implementation task
+  When add_memories MCP tool is called with key findings
+  Then memory is indexed in Qdrant with semantic embeddings
+  And metadata (timestamp, task_id, source) is stored in Postgres
+  And memory becomes available for future queries
+```
+
+---
+
+### Scenario: Agent retrieves relevant prior context at start of new session
+
+```gherkin
+Scenario: Agent retrieves relevant prior context at start of new session
+  Given memories exist from prior agent sessions
+  And agent starts a new session for related work
+  When search_memory MCP tool is called with query
+  Then Qdrant returns semantically similar memories ranked by relevance
+  And agent receives prior context to inform current task
+  And decision trace is enriched with institutional knowledge
+```
+
+---
+
+### Scenario: Memory persists across container restarts
+
+```gherkin
+Scenario: Memory persists across container restarts
+  Given memories stored in openmemory service
+  And Postgres database has persistent volume
+  When openmemory container restarts
+  Then all memories are recovered from Postgres
+  And Qdrant index is rebuilt from Postgres data
+  And agent sessions resume with full memory context
+```
+
+---
+
+### Scenario: Multiple agents share the same memory store
+
+```gherkin
+Scenario: Multiple agents share the same memory store
+  Given Claude Code and Codex agents running in parallel
+  When Claude Code adds a memory via add_memories
+  Then Codex can search and retrieve that memory immediately
+  And all agents operate on consistent memory state
+  And memory updates are atomic across the store
+```
+
+---
+
+### Scenario: Agent searches memory with specific query and gets ranked results
+
+```gherkin
+Scenario: Agent searches memory with specific query and gets ranked results
+  Given multiple memories stored from different tasks and sessions
+  When agent calls search_memory with query "database migration failure"
+  Then Qdrant returns results ranked by semantic similarity
+  And results include memory_id, content, relevance_score, and timestamp
+  And agent can rank-filter results by score threshold
+```
+
+---
+
+## Feature: Workspace Semantic Search via CodeGraphContext
+
+Analyzes workspace code structure via AST and provides semantic navigation across repositories using MCP tools backed by tree-sitter and file watching.
+
+### Background
+
+```gherkin
+Background:
+  Given code-graph service is running
+  And workspace-repos volume is mounted in code-graph container
+  And tree-sitter AST parser initialized for supported languages
+  And MCP tools auto-discovered (find_callers, find_callees, class_hierarchy, call_chain)
+  And file watcher monitors source file changes in real-time
+```
+
+---
+
+### Scenario: Agent finds all callers of a function
+
+```gherkin
+Scenario: Agent finds all callers of a function
+  Given a function exportData exists in workspace/repo/src/core/export.ts
+  When find_callers MCP tool is called with function_name=exportData
+  Then results include all call sites across the workspace
+  And each result includes file_path, line_number, and code_context
+  And cross-repository calls are included if function is exported
+```
+
+---
+
+### Scenario: Agent navigates class hierarchy for a type
+
+```gherkin
+Scenario: Agent navigates class hierarchy for a type
+  Given class UserService extends BaseService in workspace
+  When class_hierarchy MCP tool is called with class_name=UserService
+  Then results include parent classes and all child classes
+  And inheritance chain is returned in order (root → leaf)
+  And interface implementations are listed
+```
+
+---
+
+### Scenario: Agent traces call chain from entry point to implementation
+
+```gherkin
+Scenario: Agent traces call chain from entry point to implementation
+  Given entry point function processRequest in workspace/app.ts
+  When call_chain MCP tool is called with start_function=processRequest
+  And target_function=databaseQuery
+  Then results include ordered path from entry to target
+  Each step includes function_name, file_path, and line_number
+  And dead-end branches are flagged for code cleanup
+```
+
+---
+
+### Scenario: Index updates automatically when source files change
+
+```gherkin
+Scenario: Index updates automatically when source files change
+  Given code-graph service running with file watcher active
+  When developer modifies file workspace/repo/src/models/user.ts
+  Then file watcher detects change within 500ms
+  And affected AST nodes are re-parsed for modified functions
+  And semantic index is refreshed incrementally
+  And subsequent queries reflect updated code structure
+```
+
+---
+
+### Scenario: Agent queries code graph across multiple repository worktrees
+
+```gherkin
+Scenario: Agent queries code graph across multiple repository worktrees
+  Given workspace contains multiple repository worktrees
+  And code-graph service has visibility into all worktrees
+  When find_callers is called for a shared function
+  Then results include callers from all worktrees
+  And results are deduplicated and ranked by distance
+  And cross-repo dependencies are made explicit
+```
+
+---
+
+### Scenario: Agent identifies dead code via code graph analysis
+
+```gherkin
+Scenario: Agent identifies dead code via code graph analysis
+  Given function unused_helper exists in workspace/repo/src/utils/helpers.ts
+  When find_callers returns empty result set for unused_helper
+  And code graph confirms no external exports reference it
+  Then agent flags unused_helper as dead code candidate
+  And recommendation includes removal severity and audit trail
+```
+
+---
+
+## Feature: Triple-Stack Coverage Across All Clients
+
+Ensures OpenMemory MCP and CodeGraphContext MCP tools are accessible via all CLI and UI entry points with consistent credential and network configuration.
+
+### Background
+
+```gherkin
+Background:
+  Given workspace container has OpenMemory MCP service on port 5005
+  And workspace container has CodeGraphContext MCP service running
+  And GEMINI_API_BASE=http://headroom:8787 set in all CLI environments
+  And VS Code extension discovers MCP tools via stdio protocol
+```
+
+---
+
+### Scenario: VS Code extension accesses OpenMemory MCP tools automatically
+
+```gherkin
+Scenario: VS Code extension accesses OpenMemory MCP tools automatically
+  Given GitHub Copilot in Agent mode running in VS Code
+  When extension starts and autodiscovers MCP tools
+  Then search_memory, add_memories, list_memories tools are available
+  And agent can call these tools from within VS Code chat
+  And memory context enriches all agent decisions in editor
+```
+
+---
+
+### Scenario: VS Code extension accesses CodeGraphContext MCP tools automatically
+
+```gherkin
+Scenario: VS Code extension accesses CodeGraphContext MCP tools automatically
+  Given GitHub Copilot in Agent mode running in VS Code
+  And workspace folder is open with multiple repositories
+  When extension autodiscovers CodeGraphContext MCP tools
+  Then find_callers, find_callees, class_hierarchy, call_chain tools are available
+  And agent can query code structure while editing
+  And suggestions are informed by semantic workspace analysis
+```
+
+---
+
+### Scenario: Gemini CLI gets compression via GEMINI_API_BASE proxy
+
+```gherkin
+Scenario: Gemini CLI gets compression via GEMINI_API_BASE proxy
+  Given gemini CLI is configured with GEMINI_API_BASE=http://headroom:8787
+  When gemini CLI sends a request
+  Then headroom proxy intercepts the request
+  And applies context compression if context exceeds threshold
+  And forwards to upstream Google Gemini API
+  And agent receives valid response without configuration changes
+```
+
+---
+
+### Scenario: All CLIs share the same OpenMemory memory store
+
+```gherkin
+Scenario: All CLIs share the same OpenMemory memory store
+  Given Claude Code, Codex, and Gemini CLIs all configured to use port 5005
+  When Claude Code adds a memory via add_memories
+  And Codex CLI searches the same memory store in a subsequent session
+  Then Codex retrieves the memory added by Claude Code
+  And all agents operate on consistent, shared memory state
+  And no memory isolation or duplication occurs
+```
+
+---
+
 ## Out of Scope
 
 - Kubernetes deployment patterns (Docker Compose only)

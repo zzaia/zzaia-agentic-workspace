@@ -28,15 +28,14 @@ Research and decision record for three LLM optimization capabilities: context co
 
 ### ADR 002: OpenMemory MCP for Session Memory / Conversation Persistence
 
-**Decision**: Adopt OpenMemory (with Mem0 as fallback) for session memory. Agents invoke `search_memory`, `add_memories`, and `list_memories` via automatic MCP discovery.
+**Decision**: Adopt OpenMemory for session memory. Agents invoke `search_memory`, `add_memories`, and `list_memories` via automatic MCP discovery.
 
 - **Architecture**: Postgres + Qdrant (already in ZZAIA stack) backend, native MCP tools
 - **Storage**: Automatic proxy-level capture of all conversations; no agent overhead
 - **Retrieval**: Agent-initiated via MCP tool calls when prior context is needed
 - **Deployment**: Single compose service (`openmemory`) with zero additional infrastructure
-- **Fallback**: Mem0 if hybrid summarization/pruning or advanced relevance ranking needed
 
-**Rationale**: Fully automatic proxy-level injection (where the proxy enriches every request without agent action) is architecturally infeasible — it requires the proxy to have filesystem access and an intent parser, essentially rebuilding an agent kernel inside the proxy. The MCP tool pattern is accepted as correct: agents explicitly call `search_memory` when they need context, avoiding irrelevant memory pollution. OpenMemory provides explicit MCP tools, local-first deployment, and indexing quality superior to Headroom's memory stack.
+**Rationale**: Fully automatic proxy-level injection (where the proxy enriches every request without agent action) is architecturally infeasible — it requires the proxy to have filesystem access and an intent parser, essentially rebuilding an agent kernel inside the proxy. The MCP tool pattern is accepted as correct: agents explicitly call `search_memory` when they need context, avoiding irrelevant memory pollution. OpenMemory provides explicit MCP tools, local-first deployment, and indexing quality superior to Headroom's memory stack. MCP-based delivery ensures uniform access across all CLIs and VS Code extensions — unlike Headroom's `--memory` flag which only works for CLIs that support `headroom wrap`.
 
 ---
 
@@ -240,8 +239,8 @@ SEARCH_MCP_ENDPOINT=code-graph:8001
 | Tool | Storage | Retrieval | Code | Local-first | Maturity | Selection |
 |---|---|---|---|---|---|---|
 | **OpenMemory** | Postgres + Qdrant | MCP tools (`search_memory`) | ❌ | ✅ | Early prod | ✅ **Selected** |
-| Mem0 | Managed SaaS or self-hosted | MCP tools | ❌ | ⚠️ | Prod, vendor-backed | Fallback |
 | Zep / Graphiti | Postgres + Vector DB | MCP tools | ❌ | ✅ | Mature, SOC2 | Alternative |
+| Mem0 | Managed SaaS or self-hosted | MCP tools | ❌ | ⚠️ | Prod, vendor-backed | Rejected — external SaaS dependency, not local-first |
 | Headroom memory stack | Qdrant | `headroom_retrieve()` tool | ❌ | ✅ | Community | Rejected — lower retrieval quality |
 
 ### Workspace Semantic Search Candidates
