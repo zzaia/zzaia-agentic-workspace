@@ -29,6 +29,24 @@
     "playwright": {
       "type": "sse",
       "url": "http://mcp-playwright:3006/sse"
+    },
+    "headroom": {
+      "type": "sse",
+      "url": "http://headroom:8787/sse",
+      "x-headroom-user-id": "zzaia-workspace"
     }
+  },
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"
+          }
+        ]
+      }
+    ]
   }
 }

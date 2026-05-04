@@ -25,3 +25,11 @@ args = ["-y", "supergateway", "--sse", "http://mcp-github:3005/sse"]
 [mcp_servers.playwright]
 command = "npx"
 args = ["-y", "supergateway", "--sse", "http://mcp-playwright:3006/sse"]
+
+[mcp_servers.headroom]
+command = "npx"
+args = ["-y", "supergateway", "--sse", "http://headroom:8787/sse"]
+
+[hooks.before_tool_use]
+command = "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"
+matcher = "bash"

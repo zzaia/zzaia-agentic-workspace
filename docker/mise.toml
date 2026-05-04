@@ -51,6 +51,17 @@ claude plugin remove claude-plugins-official || true
 description = "Install gh CLI extensions baked into the image"
 run = "gh extension install github/gh-copilot 2>/dev/null || true"
 
+[tasks.rtk]
+description = "Install RTK (Rust Token Killer) binary for token compression"
+run = """
+_RTK_VER=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
+    | grep '"tag_name"' | sed 's/.*"v//;s/".*//') \
+&& mkdir -p "${HOME}/.local/bin" \
+&& curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/v${_RTK_VER}/rtk-x86_64-unknown-linux-musl.tar.gz" \
+    | tar xz -C "${HOME}/.local/bin" rtk \
+&& chmod +x "${HOME}/.local/bin/rtk"
+"""
+
 [tasks.vscode-extensions]
 description = "Install VS Code extensions at build time (code-server must already be present)"
 run = """

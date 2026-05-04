@@ -3,7 +3,7 @@ project: zzaia-agentic-workspace
 branch: feature/improve-agentic-system
 document-type: implementation-plan
 created: 2026-05-02
-updated: 2026-05-02
+updated: 2026-05-04
 ---
 
 # zzaia-agentic-workspace - Master Implementation Plan
@@ -26,16 +26,16 @@ gantt
     dateFormat 2026-05-02
 
     section Phase 0 (Prerequisite)
-    Story 0.1: RTK installation and hooks        :phase0, story01, 2026-05-02, 2d
+    Story 0.1: RTK installation and hooks        :done, phase0, story01, 2026-05-02, 2d
 
     section Phase 1 (Parallel)
-    Story 1.2.1: Workspace healthcheck           :active, story121, after story01, 3d
-    Story 3.1: Headroom triple-stack             :active, story31, after story01, 3d
-    Story 4.1: Fix VS Code extensions            :active, story41, after story01, 2d
+    Story 1.2.1: Workspace healthcheck           :done, story121, after story01, 3d
+    Story 3.1: Headroom triple-stack             :done, story31, after story01, 3d
+    Story 4.1: Fix VS Code extensions            :done, story41, after story01, 2d
 
     section Phase 2 (After Phase 1)
-    Story 1.1.1: vscode-server container         :crit, story111, after story121, 2d
-    Story 2.1: devcontainer.json                 :crit, story21, after story41, 3d
+    Story 1.1.1: vscode-server container         :done, story111, after story121, 2d
+    Story 2.1: devcontainer.json                 :done, story21, after story41, 3d
     Story 3.2: OpenMemory supplementary          :crit, story32, after story31, 2d
 
     section Phase 3 (After Phase 2)
@@ -66,11 +66,11 @@ gantt
 - Verify RTK works for git, cargo, docker, kubectl, ls, find, grep, pytest, jest, AWS CLI, helm in container
 
 **Tasks**:
-- [ ] Add RTK binary download to Dockerfile via curl from GitHub releases (1)
-- [ ] Add Claude Code PreToolUse hook config to workspace `.claude/settings.json` (0.5)
-- [ ] Add Gemini CLI BeforeTool hook configuration (0.5)
-- [ ] Add Codex CLI and Copilot CLI hook configs to respective config files (0.5)
-- [ ] Validate RTK works for all supported commands in container (0.5)
+- [x] Add RTK binary download to Dockerfile via curl from GitHub releases (1) — moved to `mise.toml` `[tasks.rtk]` task; installs to `~/.local/bin/rtk` as `user`; `mise run rtk` called in Dockerfile build chain
+- [x] Add Claude Code PreToolUse hook config to workspace `.claude/settings.json` (0.5)
+- [x] Add Gemini CLI BeforeTool hook configuration (0.5)
+- [x] Add Codex CLI and Copilot CLI hook configs to respective config files (0.5)
+- [ ] Validate RTK works for all supported commands in container (0.5) — pending image build
 
 **Outputs**: Updated `docker/Dockerfile` with RTK installation, updated workspace `.claude/settings.json` with PreToolUse hook, updated Gemini/Codex/Copilot CLI hook configurations
 
@@ -92,9 +92,9 @@ gantt
 - Healthcheck passes reliably before dependent services start
 
 **Tasks**:
-- [ ] Remove serve-web watchdog from entrypoint.sh (1)
-- [ ] Add TCP/2222 healthcheck to Dockerfile (1)
-- [ ] Remove EXPOSE VSCODE_PORT from Dockerfile (1)
+- [x] Remove serve-web watchdog from entrypoint.sh (1)
+- [x] Add TCP/2222 healthcheck to Dockerfile (1)
+- [x] Remove EXPOSE VSCODE_PORT from Dockerfile (1)
 
 **Outputs**: Updated `docker/entrypoint.sh`, updated `docker/Dockerfile`
 
@@ -124,14 +124,14 @@ gantt
 - Named volumes declared: `<ws>-headroom-qdrant`, `<ws>-headroom-neo4j-data`, `<ws>-headroom-neo4j-logs`
 
 **Tasks**:
-- [ ] Add qdrant service with persistent volume and healthcheck (1)
-- [ ] Add neo4j service with persistent volumes and healthcheck (1)
-- [ ] Add headroom service with --memory --code-graph flags (1)
-- [ ] Mount workspace-repos volume into headroom container (1)
-- [ ] Wire ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE into workspace env (1)
-- [ ] Configure x-headroom-user-id header in workspace agent settings (1)
-- [ ] Add workspace depends_on headroom: service_healthy (1)
-- [ ] Declare qdrant, neo4j, and headroom named volumes (1)
+- [x] Add qdrant service with persistent volume and healthcheck (1)
+- [x] Add neo4j service with persistent volumes and healthcheck (1)
+- [x] Add headroom service with --memory --code-graph flags (1)
+- [x] Mount workspace-repos volume into headroom container (1)
+- [x] Wire ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE into workspace env (1)
+- [x] Configure x-headroom-user-id header in workspace agent settings (1)
+- [x] Add workspace depends_on headroom: service_healthy (1)
+- [x] Declare qdrant, neo4j, and headroom named volumes (1)
 
 **Outputs**: Updated `docker/docker-compose.yml` with headroom (triple-stack), qdrant, neo4j services and volumes; updated workspace agent settings with x-headroom-user-id header
 
@@ -151,8 +151,8 @@ gantt
 - Both extensions confirmed installed in built image via `code --extensions-dir /tmp/test-extensions --list-extensions`
 
 **Tasks**:
-- [ ] Verify and update Gemini Code Assist extension ID (1)
-- [ ] Verify and update OpenAI ChatGPT extension ID (1)
+- [x] Verify and update Gemini Code Assist extension ID (1) — `google.gemini-code-assist` confirmed correct
+- [x] Verify and update OpenAI ChatGPT extension ID (1) — `openai.chatgpt` confirmed correct
 
 **Outputs**: Updated `docker/mise.toml` with correct extension IDs
 
@@ -179,11 +179,11 @@ gantt
 - Logs show successful serve-web startup and listening on :8080
 
 **Tasks**:
-- [ ] Add vscode-server service definition to docker-compose.yml (2)
-- [ ] Configure volume mounts for workspace-home and workspace-repos (1)
-- [ ] Add healthcheck for serve-web endpoint (1)
-- [ ] Move VSCODE_PORT exposure from workspace to vscode-server (2)
-- [ ] Test startup sequence: workspace healthy → vscode-server healthy (2)
+- [x] Add vscode-server service definition to docker-compose.yml (2)
+- [x] Configure volume mounts for workspace-home and workspace-repos (1)
+- [x] Add healthcheck for serve-web endpoint (1)
+- [x] Move VSCODE_PORT exposure from workspace to vscode-server (2)
+- [ ] Test startup sequence: workspace healthy → vscode-server healthy (2) — pending image build
 
 **Outputs**: Updated `docker/docker-compose.yml` with vscode-server service and profile
 
@@ -203,12 +203,12 @@ gantt
 - Settings apply from devcontainer configuration
 
 **Tasks**:
-- [ ] Create devcontainer.json with remoteUser and extensions list (2)
-- [ ] Extract full extension list from mise.toml (1)
-- [ ] Configure VS Code settings customization block (1)
-- [ ] COPY devcontainer.json into Dockerfile at build time (1)
-- [ ] Test Dev Containers attachment workflow (3)
-- [ ] Validate extension auto-installation on attach (2)
+- [x] Create devcontainer.json with remoteUser and extensions list (2)
+- [x] Extract full extension list from mise.toml (1)
+- [x] Configure VS Code settings customization block (1)
+- [x] COPY devcontainer.json into Dockerfile at build time (1)
+- [ ] Test Dev Containers attachment workflow (3) — pending image build
+- [ ] Validate extension auto-installation on attach (2) — pending image build
 
 **Outputs**: New `docker/devcontainer.json`, updated `docker/Dockerfile`
 
@@ -432,50 +432,38 @@ gantt
 
 ## Next Steps
 
-1. **Start Phase 0 (prerequisite)**:
-   - Assign Story 0.1 (RTK installation and hooks) to DevOps lead
-   - Add RTK binary curl to Dockerfile
-   - Configure Claude Code PreToolUse hook, Gemini CLI BeforeTool hook
-   - Validate RTK compression on git status and cargo test
-   - Target completion: 2 days
+1. ~~**Phase 0** (RTK installation and hooks)~~ — ✅ **COMPLETE**
 
-2. **After Phase 0 complete, start Phase 1 (parallel)**:
-   - Assign Story 1.2.1 (healthcheck) to DevOps lead
-   - Assign Story 3.1 (Headroom triple-stack) to same lead (parallel work)
-   - Assign Story 4.1 (extensions) to same lead (parallel work)
-   - Target completion: 3 days
+2. ~~**Phase 1** (Workspace healthcheck + Headroom triple-stack + VS Code extensions)~~ — ✅ **COMPLETE**
 
-3. **After Phase 1 complete, start Phase 2 (sequential)**:
-   - Assign Story 1.1.1 (vscode-server) — blocking dependency on Story 1.2.1
-   - Assign Story 2.1 (devcontainer.json) — blocking dependency on Story 4.1
-   - Assign Story 3.2 (OpenMemory supplementary) — blocking dependency on Story 3.1
-   - Target completion: 5 days
+3. ~~**Phase 2A** (vscode-server container)~~ — ✅ **COMPLETE**
 
-4. **After Phase 2 complete, start Phase 3 (sequential)**:
-   - Assign Story 3.3 (CodeGraphContext supplementary) — blocking dependency on Story 3.2
-   - Target completion: 2 days
+4. ~~**Phase 2B** (devcontainer.json)~~ — ✅ **COMPLETE**
 
-5. **Execute Phase 4 (Integration Validation)**:
-   - Full build and profile validation
-   - Verify RTK compression works in container (git status, cargo test)
-   - Verify Headroom triple-stack memory injection via /stats endpoint
-   - Verify Headroom code-graph file watcher logs
-   - Dev Containers attachment end-to-end test
-   - Verify OpenMemory MCP tools (Phase 2 supplementary)
-   - Verify CodeGraphContext HTTP endpoint (Phase 3 supplementary)
-   - Test Gemini CLI compression via GEMINI_API_BASE alias with RTK enabled
-   - Target completion: 2 days
+5. **Additional improvements delivered** (beyond original plan):
+   - RTK installation moved from Dockerfile root `RUN` to `mise.toml` `[tasks.rtk]` (cleaner, runs as `user`)
+   - Aspire Dashboard polling loop removed from `entrypoint.sh`; replaced with `depends_on: aspire-dashboard: condition: service_healthy` in Compose
+   - Headroom MCP server added to all agent configs (Gemini, Codex, Copilot) — Claude already had it
+   - ADR 015 (GPU pass-through for workspace ML workflows and Headroom acceleration) added to architecture documentation
 
-6. **Create feature branch PR** with all changes, request review on:
-   - Healthcheck TCP endpoint reliability
-   - Headroom triple-stack command flags (--memory --code-graph)
-   - workspace-repos volume mount in Headroom for code-graph
-   - x-headroom-user-id header configuration for memory scoping
-   - Neo4j persistence for knowledge graph memory
-   - Qdrant shared between Headroom and OpenMemory (Phase 2)
-   - CodeGraphContext HTTP mode (port 8045) vs MCP stdio mode
-   - Extension list completeness vs mise.toml source
-   - devcontainer.json profile settings alignment
+6. **Pending — Phase 3 (CodeGraphContext)**:
+   - Add `code-graph` service to docker-compose.yml (`mekayelanik/codegraphcontext-mcp:stable`, HTTP port 8045)
+   - Mount `workspace-repos` volume at `/workspace`
+   - Register MCP endpoint in all agent configs
+
+7. **Pending — Phase 4 (Integration Validation)**:
+   - Build image and verify layer caching (`docker build`)
+   - Spin up default profile: workspace + 8 MCP sidecars + headroom triple-stack
+   - Verify headroom triple-stack startup order (qdrant → neo4j → headroom → workspace)
+   - Validate ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE resolve to headroom
+   - Verify RTK binary in PATH: `rtk --version` in container
+   - Verify RTK compression: `rtk git status` (2,000→200 tokens), `rtk cargo test` (>90% reduction)
+   - Spin up `--profile vscode`: validate vscode-server startup order
+   - Attach VS Code Dev Containers: extensions install, zzaia-workspace profile active
+   - SSH access independent of vscode-server health
+   - Verify CodeGraphContext HTTP endpoint on port 8045
+
+8. **Create PR** on `feature/improve-agentic-system` branch.
 
 ---
 

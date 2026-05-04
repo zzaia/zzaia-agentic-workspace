@@ -2,5 +2,18 @@
   "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"
+          }
+        ]
+      }
+    ]
   }
 }

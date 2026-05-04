@@ -100,41 +100,11 @@ fi
 unset GITHUB_PERSONAL_ACCESS_TOKEN
 unset ADO_MCP_AUTH_TOKEN
 
-
-# ── Wait for Aspire Dashboard before starting Aspire MCP ─────────────────────
-_elapsed=0
-until curl -sf "http://aspire-dashboard:18888" > /dev/null 2>&1 || [ $_elapsed -ge 30 ]; do
-    sleep 2; _elapsed=$((_elapsed + 2))
-done
-[ $_elapsed -ge 30 ] && echo "WARNING: aspire-dashboard not ready after 30s — Aspire MCP may fail to connect" >&2 || true
-unset _elapsed
-
-# ── Aspire MCP — single shared instance for all agents ───────────────────────
+# ── Aspire MCP — single shared instance for all agents ───────────────────
 su -s /bin/bash user -c "
     export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
     npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start --dashboard-endpoint http://aspire-dashboard:18888' \
         >> /home/user/.local/share/vscode-server/aspire-mcp.log 2>&1 &
 "
-
-# ── Start VS Code server with watchdog — restarts on crash ───────────────────
-su -s /bin/bash user -c ': > /home/user/.local/share/vscode-server/serve-web.log 2>/dev/null || true'
-(
-    while true; do
-        su -s /bin/bash user -c "
-            export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
-            export BROWSER=/usr/local/bin/browser-print
-            code serve-web \
-                --host 0.0.0.0 \
-                --port ${VSCODE_PORT:-8080} \
-                --without-connection-token \
-                --accept-server-license-terms \
-                --server-data-dir /home/user/.vscode-server \
-                --default-workspace /home/user/workspace/${WORKSPACE_NAME}.code-workspace \
-                >> /home/user/.local/share/vscode-server/serve-web.log 2>&1
-        " || true
-        echo "WARNING: VS Code serve-web exited — restarting in 5s" >&2
-        sleep 5
-    done
-) &
 
 exec /usr/sbin/sshd -D -e -f /etc/ssh/sshd_config

@@ -14,7 +14,6 @@ services:
         VSCODE_PORT: ${VSCODE_PORT:-8080}
     image: zzaia-agentic-workspace:latest
     ports:
-      - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
       - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock  # full host Docker access — local dev only
@@ -77,10 +76,11 @@ services:
       mcp-playwright:
         condition: service_healthy
       aspire-dashboard:
-        condition: service_started
+        condition: service_healthy
 
   headroom:
     image: ghcr.io/chopratejas/headroom:latest
+    command: ["headroom", "proxy", "--memory", "--code-graph"]
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -90,6 +90,8 @@ services:
       - NEO4J_USERNAME=neo4j
       - NEO4J_PASSWORD=${ADMIN_PASSWORD:-headroom}
       - PORT=8787
+    volumes:
+      - workspace-repos:/workspace
     networks:
       - mcp
     restart: unless-stopped
@@ -274,6 +276,44 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+
+  vscode-server:
+    image: zzaia-agentic-workspace:latest
+    command:
+      - bash
+      - -c
+      - |
+        export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:$PATH
+        export BROWSER=/usr/local/bin/browser-print
+        exec code serve-web \
+          --host 0.0.0.0 \
+          --port ${VSCODE_PORT:-8080} \
+          --without-connection-token \
+          --accept-server-license-terms \
+          --server-data-dir /home/user/.vscode-server \
+          --default-workspace /home/user/workspace/${WORKSPACE_NAME:-zzaia}.code-workspace
+    ports:
+      - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
+    volumes:
+      - workspace-home:/home/user
+      - workspace-repos:/home/user/workspace
+    environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
+      - VSCODE_PORT=${VSCODE_PORT:-8080}
+    networks:
+      - mcp
+    profiles:
+      - vscode
+    restart: unless-stopped
+    depends_on:
+      workspace:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${VSCODE_PORT:-8080}/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   workspace-secrets:
