@@ -84,7 +84,7 @@ services:
       mcp-playwright:
         condition: service_healthy
       aspire-dashboard:
-        condition: service_started
+        condition: service_healthy
 
   proxy-headroom:
     image: ghcr.io/chopratejas/headroom:latest
@@ -118,14 +118,21 @@ services:
       start_period: 30s
 
   database-qdrant:
-    image: qdrant/qdrant:v1.17.1
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.qdrant
+    image: zzaia-qdrant:v1.17.1
     volumes:
       - headroom-qdrant:/qdrant/storage
     networks:
       - mcp
     restart: unless-stopped
     healthcheck:
-      disable: true
+      test: ["CMD", "wget", "-qO-", "http://localhost:6333/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   database-neo4j:
     image: neo4j:5.15.0
@@ -144,14 +151,21 @@ services:
       start_period: 45s
 
   aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.aspire
+    image: zzaia-aspire-dashboard:latest
     ports:
       - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
     networks:
       - mcp
     restart: unless-stopped
     healthcheck:
-      disable: true
+      test: ["CMD", "wget", "-qO-", "http://localhost:18888/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   mcp-tavily:
     image: node:lts-alpine
@@ -281,6 +295,8 @@ services:
 
   vscode-server:
     image: zzaia-agentic-workspace:latest
+    user: user
+    entrypoint: []
     command:
       - bash
       - -c

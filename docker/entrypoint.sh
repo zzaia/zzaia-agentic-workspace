@@ -65,6 +65,9 @@ if [ -n "$_SSH_KEY" ]; then
         | su -s /bin/bash user -c "cat > /home/user/.ssh/authorized_keys && chmod 600 /home/user/.ssh/authorized_keys"
 fi
 
+# ── mise trust — ensure mise.toml is trusted (volume may shadow image state) ──
+su -s /bin/bash user -c "mise trust /home/user/mise.toml 2>/dev/null || true"
+
 # ── WORKSPACE_NAME templating — idempotent, runs on every start ───────────────
 su -s /bin/bash user -c "
     find /home/user/.vscode-server /home/user/workspace \

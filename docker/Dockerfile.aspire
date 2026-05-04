@@ -1,0 +1,3 @@
+FROM busybox:latest AS busybox
+FROM mcr.microsoft.com/dotnet/aspire-dashboard:latest
+COPY --from=busybox /bin/wget /bin/wget
