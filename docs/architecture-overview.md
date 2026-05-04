@@ -225,62 +225,76 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 010: Headroom AI Proxy (Always-On Default)
+### ADR 010: Headroom Triple-Stack Primary Layer (Always-On Default)
 
-**Decision**: `headroom` runs as a mandatory always-on proxy for all agent AI API calls (Anthropic and OpenAI), with Qdrant (vector DB) and Neo4j (graph DB) as backing services for full semantic search and session memory.
+**Decision**: `headroom` runs as a mandatory always-on proxy implementing the primary optimization layer: context compression, automatic memory injection, and background code-graph via a proxy pipeline.
 
+- Started with `command: headroom proxy --memory --code-graph` — single command enables all three capabilities
 - `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, and `GEMINI_API_BASE=http://headroom:8787` are always set in the workspace environment
-- No agent code changes required — transparent HTTP proxy; compression failure always passes through original content unchanged
-- Three active features: **context compression** (reduces tokens for long sessions), **session memory** (rolling conversation state), **semantic search** (vector + graph retrieval via Qdrant + Neo4j)
+- No agent code changes required — transparent HTTP proxy; all three features applied automatically to every request
+- Three active features: **context compression** (reduces tokens 34–90%, <5ms overhead), **automatic memory injection** (proxy pipeline step `search_and_format_context()` runs before every LLM forward), **background code-graph** (file watcher on workspace-repos volume; exposes MCP tools)
+- Backing services: Qdrant (semantic cache + memory embeddings) + Neo4j (knowledge graph + code-graph)
 - `workspace` depends on headroom healthy (`condition: service_healthy`) — Headroom readiness gates agent startup
 - Headroom exposes `/health`, `/livez`, `/readyz` for orchestration; `/metrics` (Prometheus) for observability via Aspire Dashboard
 - Passthrough guarantee: if compression fails, original content is forwarded unchanged — no agent call is ever dropped
 
-**Rationale**: Compression, memory, and semantic search benefit every agent session — not just long ones. Making headroom always-on eliminates the "opt-in tax" where developers miss optimization benefits by default. Passthrough guarantee and health-gated startup preserve reliability without requiring a client-side fallback.
+**Rationale**: Triple-stack primary layer automatically optimizes every agent session without opt-in overhead. Automatic memory injection via proxy pipeline eliminates the need for agent instrumentation. Background code-graph file watcher keeps code context current without manual triggers. Qdrant + Neo4j shared by all three features eliminates redundant infrastructure.
 
 ---
 
-### ADR 011: OpenMemory MCP for Agent Session Memory
+### ADR 011: OpenMemory MCP — Supplementary Structured Memory (Agent-Initiated)
 
-**Decision**: Deploy OpenMemory MCP service for persistent cross-session agent memory using Postgres and Qdrant backend; agents call `search_memory`, `add_memories`, and `list_memories` via MCP discovery.
+**Decision**: Deploy OpenMemory MCP service as supplementary layer for explicit, filtered memory queries; agents call `search_memory`, `add_memories`, and `list_memories` via MCP when they need specific context.
 
 - OpenMemory container runs `skpassegna/openmemory-mcp:latest` on port 5005
+- Postgres + Qdrant backend (same Qdrant instance used by Headroom primary layer)
 - Native MCP tools available to all agent CLIs and VS Code extensions without special wiring
-- Postgres backend provides relational storage; Qdrant semantic index enables memory retrieval by relevance
 - Local-first architecture — no external service dependencies; memory stays on-host
-- Agent-initiated retrieval avoids memory pollution — agents request what they need, not pushed
+- **Supplements Headroom's automatic memory injection** — agents use explicit queries for fine-grained control
+- Agent-initiated retrieval prevents memory pollution — agents request exactly what they need, not auto-injected
 - No lock-in to Headroom; works with any MCP client
 
-**Rationale**: Standard MCP interface ensures compatibility across all agent toolchains. Postgres+Qdrant provide both relational queries and semantic search without external services. Agent-initiated access prevents spurious memory pollution that would degrade context quality.
+**Rationale**: Supplementary agent-initiated memory complements Headroom's automatic injection with explicit, filtered queries. Qdrant backend shared with Headroom eliminates redundant infrastructure. MCP interface ensures compatibility across all agent toolchains without requiring Headroom integration.
 
 ---
 
-### ADR 012: CodeGraphContext for Workspace Semantic Search
+### ADR 012: CodeGraphContext — Supplementary Code Graph (Agent-Initiated)
 
-**Decision**: Deploy CodeGraphContext as MCP server for code graph queries across the workspace; agents call `find_callers`, `find_callees`, `class_hierarchy`, and `call_chain` via MCP.
+**Decision**: Deploy CodeGraphContext as supplementary MCP server for explicit code graph queries; agents call `find_callers`, `find_callees`, `class_hierarchy`, and `call_chain` via MCP when they need structural context.
 
 - CodeGraphContext container runs `python:3.12-slim` with codegraphcontext package on stdio/MCP
-- Tree-sitter AST parsing generates call graphs and class hierarchies in real-time
+- Tree-sitter AST parsing generates call graphs and class hierarchies in real-time; file watcher integrated into Headroom's primary layer
 - Stores parsed graph in local KûzuDB or Neo4j database (`code-graph-db` named volume)
 - Real-time file watching detects source changes and updates graph incrementally
+- **Supplements Headroom's background code-graph** — agents use explicit queries for targeted analysis
 - Agent-agnostic — any MCP client can query the workspace graph; no IDE dependency
-- Replaces Headroom's undocumented `--code-graph` feature with explicit, observable MCP interface
+- MCP interface makes code graph queries observable and enables reuse across all coding tools
 
-**Rationale**: Tree-sitter AST parsing is language-agnostic and requires no IDE. Real-time file watching keeps the graph current without manual triggers. MCP makes code graph queries observable and agent-independent, enabling reuse across all coding tools.
+**Rationale**: Supplementary agent-initiated code graph complements Headroom's background file watcher with explicit, filtered queries. Tree-sitter AST parsing is language-agnostic and requires no IDE. MCP interface enables reuse across all agent toolchains without Headroom coupling.
 
 ---
 
-### ADR 013: Headroom as Always-On Context Compression Proxy
+### ADR 013: Implementation Phases — Primary Layer (Phase 1) + Supplementary Layers (Phase 2/3)
 
-**Decision**: Deploy Headroom as mandatory always-on HTTP reverse proxy for all agent AI API calls; all calls to Anthropic, OpenAI, and Gemini APIs route through `http://headroom:8787`.
+**Decision**: Implement the two-layer triple-stack architecture in three phases: Phase 1 deploys Headroom's full triple-stack primary layer, Phase 2 adds OpenMemory MCP, Phase 3 adds CodeGraphContext MCP.
 
-- `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, `GEMINI_API_BASE=http://headroom:8787` are always set in workspace environment
-- Achieves 34–90% token reduction on average; overhead <5ms per request
-- Passthrough guarantee on failure — if compression fails, original content is forwarded unchanged; no agent call is ever dropped
-- Covers Anthropic API, OpenAI API, Google Gemini API; transparent to agent code
-- No agent changes required — standard HTTP proxy; compression transparent to clients
+**Phase 1 — Primary Layer (Automatic via Headroom proxy)**:
+- `headroom proxy --memory --code-graph` starts with all three features enabled
+- Context compression: 34–90% token reduction, <5ms overhead
+- Automatic memory injection: proxy pipeline `search_and_format_context()` runs before every LLM forward
+- Background code-graph: file watcher on workspace-repos volume; Qdrant + Neo4j backing
+- All agents benefit automatically without agent instrumentation
 
-**Rationale**: Token reduction improves cost and latency for long-running agent sessions. Passthrough guarantee eliminates the reliability tax of adding a proxy. Making always-on defaults the optimization to all agents rather than requiring opt-in.
+**Phase 2 — Supplementary Layer: OpenMemory MCP**:
+- Agents explicitly call `search_memory`, `add_memories` for structured queries
+- Uses same Qdrant + Postgres as Headroom's automatic layer
+- Provides fine-grained control vs. automatic injection
+
+**Phase 3 — Supplementary Layer: CodeGraphContext MCP**:
+- Agents explicitly call `find_callers`, `class_hierarchy` for code analysis
+- Complements Headroom's background file watcher with targeted queries
+
+**Rationale**: Phased rollout enables validation of each layer independently. Primary layer (Headroom) provides automatic benefits to all agents. Supplementary layers (OpenMemory + CodeGraphContext) add explicit control for agents that need fine-grained access. Shared infrastructure (Qdrant + Neo4j) eliminates redundancy.
 
 ---
 
@@ -316,18 +330,25 @@ C4Context
 
 ```mermaid
 C4Container
-    title ZZAIA Agentic Workspace — Container Architecture
+    title ZZAIA Agentic Workspace — Two-Layer Triple-Stack Architecture
 
     Person(dev, "Developer", "Browser or SSH")
 
     System_Boundary(stack, "<workspace> Compose Stack") {
         Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise + Aspire MCP :3007")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
-        Container(headroom, "headroom", "Headroom proxy", "HTTP proxy :8787 — compression proxy for AI API calls [always-on]")
-        Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic search embeddings for headroom and openmemory")
-        Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph retrieval for headroom")
-        Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Session memory MCP server, Postgres + Qdrant backend, MCP :5005 [always-on]")
-        Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Workspace code graph MCP — tree-sitter AST parsing, KûzuDB/Neo4j index [always-on]")
+
+        System_Boundary(primary, "Layer 1 — Primary (Automatic via Headroom proxy)") {
+            Container(headroom, "headroom", "Headroom proxy --memory --code-graph", "HTTP proxy :8787 — compression + memory injection + code-graph [always-on]")
+            Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic cache + memory embeddings + code-graph")
+            Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph + code-graph")
+        }
+
+        System_Boundary(supplementary, "Layer 2 — Supplementary (Agent-initiated via MCP)") {
+            Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Structured memory queries, Postgres + Qdrant backend, MCP :5005 [Phase 2]")
+            Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Code graph queries — tree-sitter AST parsing, KûzuDB/Neo4j [Phase 3]")
+        }
+
         Container(tavily, "mcp-tavily", "node:alpine + supergateway", "Holds TAVILY_API_KEY, exposes SSE :3001")
         Container(ado, "mcp-azure-devops", "node:alpine + supergateway", "Holds ADO_MCP_AUTH_TOKEN, exposes SSE :3002")
         Container(postman, "mcp-postman", "node:alpine + supergateway", "Holds POSTMAN_API_KEY, exposes SSE :3003")
@@ -348,11 +369,12 @@ C4Container
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
     Rel(ws, vscode, "Shares workspace-home volume", "named volume")
     Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
-    Rel(headroom, qdrant, "Vector embeddings for compression", "semantic search :6333")
-    Rel(headroom, neo4j, "Knowledge graph queries", "Bolt :7687")
-    Rel(ws, openmemory, "MCP tool calls", "search_memory / add_memories / list_memories :5005")
+    Rel(headroom, qdrant, "Compression + memory + code-graph", "semantic search :6333")
+    Rel(headroom, neo4j, "Knowledge graph + code-graph", "Bolt :7687")
+    Rel(headroom, repos, "Background file watcher", "code-graph on workspace-repos volume")
+    Rel(ws, openmemory, "MCP tool calls (Phase 2)", "search_memory / add_memories :5005")
     Rel(openmemory, qdrant, "Semantic memory index", "vector DB :6333")
-    Rel(ws, codegraph, "MCP tool calls", "find_callers / find_callees / class_hierarchy / call_chain")
+    Rel(ws, codegraph, "MCP tool calls (Phase 3)", "find_callers / class_hierarchy / call_chain")
     Rel(codegraph, repos, "Parse source files", "named volume /home/user/workspace")
     Rel(ws, tavily, "MCP tool calls", "SSE mcp network")
     Rel(ws, ado, "MCP tool calls", "SSE mcp network")
@@ -403,11 +425,14 @@ zzaia-agentic-workspace/
 |-----------|------|------|---------|
 | `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always |
 | `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` |
-| `headroom` | AI proxy — context compression for Anthropic, OpenAI, Gemini | 8787 (internal) | always |
-| `qdrant` | Vector DB — semantic embeddings for headroom and openmemory | 6333 (internal) | always |
-| `neo4j` | Graph DB — knowledge graph retrieval for headroom | 7687 (internal) | always |
-| `openmemory-mcp` | Session memory MCP server — Postgres + Qdrant backend | 5005 (MCP) | always |
-| `code-graph-mcp` | Workspace code graph MCP — tree-sitter AST parsing | stdio (MCP) | always |
+| **Layer 1 — Primary** | | | |
+| `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always |
+| `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
+| `neo4j` | Knowledge graph — shared by Headroom memory and code-graph | 7687 (internal) | always |
+| **Layer 2 — Supplementary** | | | |
+| `openmemory-mcp` | Structured memory queries (Phase 2) — Postgres + Qdrant backend | 5005 (MCP) | always |
+| `code-graph-mcp` | Code graph queries (Phase 3) — tree-sitter AST parsing | stdio (MCP) | always |
+| **Other MCP Adapters** | | | |
 | `mcp-tavily` | Web search MCP adapter | 3001 (internal) | conditional |
 | `mcp-azure-devops` | Azure DevOps MCP adapter | 3002 (internal) | conditional |
 | `mcp-postman` | Postman MCP adapter | 3003 (internal) | conditional |
@@ -446,11 +471,13 @@ zzaia-agentic-workspace/
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | `code serve-web` (Microsoft VS Code) + OpenSSH |
 | Dev Containers | `devcontainer.json` embedded in workspace image |
-| **AI proxy (Headroom)** | **HTTP reverse proxy — 34–90% token reduction, <5ms overhead, passthrough on failure** |
-| **Session memory (OpenMemory MCP)** | **Postgres + Qdrant backend, native MCP tools: search_memory, add_memories, list_memories** |
-| **Code graph (CodeGraphContext)** | **Tree-sitter AST → KûzuDB/Neo4j, MCP tools: find_callers, find_callees, class_hierarchy, call_chain** |
-| Vector DB | Qdrant v1.17 (headroom compression + openmemory semantic index) |
-| Graph DB | Neo4j 5.15 (headroom knowledge graph retrieval + codegraph optional backend) |
+| **Layer 1 — Primary (Automatic)** | |
+| **Headroom proxy** | **Triple-stack: compression (34–90% tokens, <5ms) + memory injection + code-graph, passthrough guarantee** |
+| **Vector DB (Qdrant)** | **Semantic cache (compression) + memory embeddings + code-graph index** |
+| **Graph DB (Neo4j)** | **Knowledge graph (memory + code-graph), shared backing for primary layer** |
+| **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
+| **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
+| **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
 | Tool provisioning | mise (agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
 | MCP bridge | supergateway (stdio → SSE) + native MCP servers (openmemory, codegraph) |
 | Multi-tenancy | Docker Compose project namespacing |

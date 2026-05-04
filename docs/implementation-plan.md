@@ -22,29 +22,29 @@ Decouple VS Code browser UI from workspace container, add Dev Containers support
 
 ```mermaid
 gantt
-    title Implementation Timeline - Parallel vs Sequential
+    title Implementation Timeline - Phased Triple-Stack
     dateFormat 2026-05-02
 
     section Phase 1 (Parallel)
     Story 1.2.1: Workspace healthcheck           :active, story121, 2026-05-02, 3d
-    Story 3.1: Headroom proxy setup              :active, story31, 2026-05-02, 3d
-    Story 3.2: OpenMemory MCP service            :active, story32, 2026-05-02, 2d
+    Story 3.1: Headroom triple-stack             :active, story31, 2026-05-02, 3d
     Story 4.1: Fix VS Code extensions            :active, story41, 2026-05-02, 2d
 
-    section Phase 2 (Sequential - after Wave 1)
+    section Phase 2 (After Phase 1)
     Story 1.1.1: vscode-server container         :crit, story111, after story121, 2d
     Story 2.1: devcontainer.json                 :crit, story21, after story41, 3d
-    Story 3.3: CodeGraphContext service          :crit, story33, after story121, 3d
+    Story 3.2: OpenMemory supplementary          :crit, story32, after story31, 2d
 
-    section Phase 3 (Integration)
-    End-to-end validation                        :crit, e2e, after story21, 2d
+    section Phase 3 (After Phase 2)
+    Story 3.3: CodeGraphContext supplementary    :crit, story33, after story32, 3d
+    End-to-end validation                        :crit, e2e, after story33, 2d
 ```
 
-**Legend**: Green (Active) = Parallel execution | Red (Critical) = Sequential execution | **Total**: 39 points
+**Legend**: Green (Active) = Phase 1 parallel | Red (Critical) = Phase 2 & 3 sequential | **Total**: 39 points
 
 ---
 
-## Phase 1: Foundation (Wave 1 - Parallel) (10 points)
+## Phase 1: Foundation (Parallel) (8 points)
 
 **Parallel**: ✅ | **Team**: 1 DevOps Specialist
 
@@ -68,54 +68,47 @@ gantt
 
 ---
 
-### 1B: Headroom AI Proxy Container (Story 3.1) (3 points)
+### 1B: Headroom AI Proxy Triple-Stack (Story 3.1) (5 points)
+
+**Description**: Headroom proxy with automatic memory injection, code-graph file watcher, Qdrant vector storage, and Neo4j knowledge graph. Triple-stack enables compression, semantic memory, and code intelligence by default in all agent sessions.
 
 **Acceptance Criteria**:
 - `headroom` service added to docker-compose.yml — always-on (no profile), `restart: unless-stopped`
-- `qdrant` service added — `qdrant/qdrant:v1.17.1`, volume `<ws>-headroom-qdrant`, healthcheck `/readyz` (shared by OpenMemory MCP)
-- `headroom` depends_on qdrant (condition: service_healthy)
-- `workspace` depends_on headroom (condition: service_healthy)
+- `headroom` command: `headroom proxy --memory --code-graph`
+- `qdrant` service added — `qdrant/qdrant:v1.17.1`, volume `<ws>-headroom-qdrant`, healthcheck `/readyz` (shared with OpenMemory MCP Phase 2)
+- `neo4j` service added — `image: neo4j:5.24`, volumes for data + logs, BOLT port 7687, healthcheck on /browser
+- `headroom` depends_on qdrant AND neo4j (condition: service_healthy)
+- `workspace-repos` volume mounted into headroom container at `/workspace` (code-graph file watcher needs it)
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` passed to headroom container
-- `QDRANT_URL=http://qdrant:6333` passed to headroom
+- `QDRANT_URL=http://qdrant:6333`, `NEO4J_URI=bolt://neo4j:7687` passed to headroom
 - Workspace env always includes: `ANTHROPIC_BASE_URL=http://headroom:8787`, `OPENAI_BASE_URL=http://headroom:8787`, `GEMINI_API_BASE=http://headroom:8787`
+- `x-headroom-user-id` header configured in workspace agent settings (enables per-user memory scoping)
+- Proxy pipeline automatically injects memories before forwarding requests
 - Headroom healthcheck: `wget -qO- http://localhost:8787/health` interval 10s, retries 5, start_period 30s
-- Named volume declared: `<ws>-headroom-qdrant`
+- Verify via /stats endpoint: memory injections happening automatically (no agent action required)
+- code-graph file watcher logs show codebase indexed on startup
+- Named volumes declared: `<ws>-headroom-qdrant`, `<ws>-headroom-neo4j-data`, `<ws>-headroom-neo4j-logs`
 
 **Tasks**:
 - [ ] Add qdrant service with persistent volume and healthcheck (1)
-- [ ] Add headroom service depending on qdrant healthy (1)
+- [ ] Add neo4j service with persistent volumes and healthcheck (1)
+- [ ] Add headroom service with --memory --code-graph flags (1)
+- [ ] Mount workspace-repos volume into headroom container (1)
 - [ ] Wire ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE into workspace env (1)
+- [ ] Configure x-headroom-user-id header in workspace agent settings (1)
 - [ ] Add workspace depends_on headroom: service_healthy (1)
-- [ ] Declare headroom-qdrant named volume (1)
+- [ ] Declare qdrant, neo4j, and headroom named volumes (1)
 
-**Outputs**: Updated `docker/docker-compose.yml` with headroom (always-on) and qdrant services and volumes
+**Outputs**: Updated `docker/docker-compose.yml` with headroom (triple-stack), qdrant, neo4j services and volumes; updated workspace agent settings with x-headroom-user-id header
 
-**Dependencies**: None
-
----
-
-### 1B2: OpenMemory MCP for Session Memory (Story 3.2) (2 points)
-
-**Acceptance Criteria**:
-- `openmemory` service added to docker-compose.yml — `image: skpassegna/openmemory-mcp:latest`
-- Uses existing postgres and qdrant services from compose
-- Environment: `DATABASE_URL=postgresql://user:password@postgres:5432/openmemory`, `QDRANT_URL=http://qdrant:6333`
-- MCP tools auto-discoverable: `search_memory`, `add_memories`, `list_memories`, `delete_all_memories`
-- Workspace container MCP config includes openmemory endpoint
-- Memory persists in Postgres across container restarts
-- openmemory depends_on postgres and qdrant (condition: service_healthy)
-
-**Tasks**:
-- [ ] Add openmemory compose service with correct image and env vars (1)
-- [ ] Register MCP endpoint in workspace claude_desktop_config.json (1)
-
-**Outputs**: Updated `docker/docker-compose.yml` with openmemory service, updated workspace MCP config
-
-**Dependencies**: None
+**Dependencies**: None (Phase 1 parallel execution)
 
 ---
 
-### 1C: Fix Missing VS Code Extensions (Story 4.1) (2 points)
+
+---
+
+### 1B: Fix Missing VS Code Extensions (Story 4.1) (2 points)
 
 **Acceptance Criteria**:
 - Verify correct marketplace ID for `google.gemini-code-assist` (may differ from current)
@@ -133,7 +126,7 @@ gantt
 
 ---
 
-## Phase 2: Service Development (Wave 2 - Sequential after Wave 1) (21 points)
+## Phase 2: Service Development (Sequential after Phase 1) (13 points)
 
 **Parallel**: ❌ | **Team**: 1 DevOps Specialist
 
@@ -189,48 +182,78 @@ gantt
 
 ---
 
-### 2C: CodeGraphContext for Workspace Semantic Search (Story 3.3) (3 points)
+### 2B: OpenMemory MCP — Supplementary Structured Memory (Story 3.2) (2 points)
 
-**Reference**: Depends on Story 1.2.1 completion; workspace-repos volume must be confirmed
+**Description**: Supplements Headroom's automatic memory injection (Phase 1) with structured, filtered queries for agents that need explicit memory control.
 
 **Acceptance Criteria**:
-- `code-graph` service added to docker-compose.yml — `image: kuzudb/code-graph:latest`
-- Mounts `workspace-repos` volume at `/workspace`
-- Runs `cgc watch /workspace` (file watcher) + `cgc mcp start` (MCP server on port 3000)
-- MCP tools auto-discoverable: `find_callers`, `find_callees`, `class_hierarchy`, `call_chain`
-- Index rebuilds automatically on file changes (Tree-sitter scanning)
-- Persistent index stored in named volume `<ws>-code-graph-db` at `/db`
-- Workspace container MCP config includes code-graph endpoint
-- code-graph depends_on workspace (condition: service_healthy)
+- `openmemory` service added to docker-compose.yml — `image: skpassegna/openmemory-mcp:latest`
+- Depends on Phase 1B (Headroom triple-stack) completion
+- Uses existing postgres and qdrant services already deployed by Phase 1
+- Environment: `DATABASE_URL=postgresql://user:password@postgres:5432/openmemory`, `QDRANT_URL=http://qdrant:6333`
+- MCP tools auto-discoverable: `search_memory`, `add_memories`, `list_memories`, `delete_all_memories`
+- Workspace container MCP config includes openmemory endpoint
+- Memory persists in Postgres across container restarts
+- openmemory depends_on postgres and qdrant (condition: service_healthy)
+- OpenMemory structured queries return filtered results (by topic, agent, date)
 
 **Tasks**:
-- [ ] Add code-graph service definition to docker-compose.yml (1)
-- [ ] Configure workspace-repos volume mount and persistent db volume (1)
+- [ ] Add openmemory compose service with correct image and env vars (1)
 - [ ] Register MCP endpoint in workspace claude_desktop_config.json (1)
-- [ ] Test index build on startup (file presence detection) (1)
 
-**Outputs**: Updated `docker/docker-compose.yml` with code-graph service and volume, updated workspace MCP config
+**Outputs**: Updated `docker/docker-compose.yml` with openmemory service, updated workspace MCP config
 
-**Dependencies**: Story 1.2.1 (workspace healthcheck)
+**Dependencies**: Story 3.1 (Headroom triple-stack Phase 1B complete)
 
 ---
 
-## Phase 3: Integration Validation (4 points)
+## Phase 3: Code Graph Context (Sequential after Phase 2) (3 points)
+
+**Sequential**: ✅ | **Team**: 1 DevOps Specialist
+
+### 3A: CodeGraphContext MCP — Supplementary Code Graph Queries (Story 3.3) (3 points)
+
+**Description**: Supplements Headroom's background --code-graph file watcher (Phase 1) with structured MCP query tools for agents that need explicit code graph navigation.
+
+**Acceptance Criteria**:
+- Depends on Phase 2 (OpenMemory) completion
+- `code-graph` service added to docker-compose.yml — `image: mekayelanik/codegraphcontext-mcp:stable`
+- HTTP mode on port 8045 (not stdio)
+- Mounts `workspace-repos` volume at `/workspace`
+- MCP tools auto-discoverable: `find_callers`, `find_callees`, `class_hierarchy`, `call_chain`
+- Workspace container MCP config includes code-graph endpoint
+- code-graph depends_on headroom (condition: service_healthy)
+- CodeGraphContext HTTP endpoint responds on port 8045
+
+**Tasks**:
+- [ ] Add code-graph service definition to docker-compose.yml with mekayelanik image (1)
+- [ ] Configure workspace-repos volume mount and HTTP port 8045 (1)
+- [ ] Register MCP endpoint in workspace claude_desktop_config.json (1)
+
+**Outputs**: Updated `docker/docker-compose.yml` with code-graph service, updated workspace MCP config
+
+**Dependencies**: Story 3.2 (OpenMemory Phase 2 complete)
+
+---
+
+## Phase 4: Integration Validation (4 points)
 
 **Sequential**: ✅ | **Team**: 1 QA/DevOps Specialist
 
 **Tasks**:
 - [ ] Build image with all changes and verify layer caching (1)
-- [ ] Spin up `docker-compose up -d` (default profile): workspace + 8 MCP sidecars (1)
-- [ ] Spin up with `--profile vscode`: add vscode-server, validate startup order (1)
-- [ ] Verify headroom, qdrant, neo4j start in correct dependency order (1)
+- [ ] Spin up `docker-compose up -d` (default profile): workspace + 8 MCP sidecars + headroom triple-stack (1)
+- [ ] Verify headroom triple-stack (headroom, qdrant, neo4j) start in correct dependency order (1)
 - [ ] Validate ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE all resolve to headroom (1)
-- [ ] Spin up with `--profile vscode`: workspace + vscode-server + headroom + qdrant + neo4j all healthy (1)
-- [ ] Send a test agent request and confirm headroom /stats shows intercepted request (1)
+- [ ] Send a test agent request and confirm headroom /stats shows memory injections happening (1)
+- [ ] Confirm headroom code-graph file watcher logs show codebase indexed on startup (1)
+- [ ] Spin up with `--profile vscode`: add vscode-server, validate startup order (1)
+- [ ] Verify OpenMemory MCP structured queries return filtered results (by topic, agent, date) (1)
+- [ ] Verify CodeGraphContext HTTP endpoint responds on port 8045 (1)
 - [ ] Attach VS Code Dev Containers: extensions install, zzaia-workspace profile active (2)
 - [ ] SSH access via workspace container: verify independent of vscode-server health (1)
 
-**Outputs**: Test report validating all profiles, healthchecks, and Dev Containers workflow
+**Outputs**: Test report validating phased triple-stack, all profiles, healthchecks, memory injection, code-graph indexing, and Dev Containers workflow
 
 ---
 
@@ -242,11 +265,13 @@ gantt
 
 **AI Proxy**: Headroom (ghcr.io/chopratejas/headroom:latest) with context compression
 
-**Vector DB**: Qdrant v1.17.1 (shared by Headroom compression and OpenMemory session memory)
+**Vector DB**: Qdrant v1.17.1 (Phase 1: used by Headroom; Phase 2: shared with OpenMemory session memory)
 
-**Session Memory**: OpenMemory MCP (skpassegna/openmemory-mcp:latest) with Postgres + Qdrant backing
+**Knowledge Graph**: Neo4j 5.24 (Phase 1: used by Headroom for knowledge graph memory)
 
-**Workspace Search**: CodeGraphContext (kuzudb/code-graph:latest) with Tree-sitter + KûzuDB for semantic code search
+**Session Memory**: OpenMemory MCP (Phase 2: skpassegna/openmemory-mcp:latest) with Postgres + Qdrant backing
+
+**Workspace Search**: CodeGraphContext MCP (Phase 3: mekayelanik/codegraphcontext-mcp:stable) HTTP endpoint on port 8045
 
 **Tool Management**: mise for VS Code extensions and tool versioning
 
@@ -256,25 +281,30 @@ gantt
 
 ## Effort Summary
 
-**Parallel Execution (Phase 1 Wave 1)**: 10 points (all 4 stories in parallel)
+**Phase 1 (Parallel)**: 8 points (stories 1.2.1, 3.1, 4.1 execute in parallel)
 
-**Sequential Execution (Phase 2 Wave 2)**: 21 points (after Wave 1 complete)
+**Phase 2 (Sequential)**: 10 points (story 1.1.1 + 2.1 + 3.2 after Phase 1 complete)
 
-**Integration (Phase 3)**: 4 points
+**Phase 3 (Sequential)**: 3 points (story 3.3 after Phase 2 complete)
 
-**Total**: 39 points
+**Phase 4 (Integration)**: 4 points
 
-**Efficiency Gain**: 12 points (24% reduction vs sequential)
-- Wave 1 stories (1.2.1, 3.1, 3.2, 4.1) execute in parallel → saves ~7 days
-- Wave 2 stories (1.1.1, 2.1, 3.3) can start after Wave 1 → saves ~5 days
+**Total**: 25 points (simplified from 39 by removing redundant OpenMemory task and code-graph bloat from Phase 1)
+
+**Phasing Strategy**: 
+- Phase 1 deploys complete Headroom triple-stack (proxy + memory + code-graph) in parallel
+- Phase 2 adds supplementary OpenMemory for explicit memory control (optional)
+- Phase 3 adds supplementary CodeGraphContext for explicit code-graph queries (optional)
+- Efficiency: All 3 capabilities available after Phase 1 validation; Phases 2-3 enhance with optional structured tools
 
 ---
 
 ## Team Structure
 
-### Recommended (Parallel Execution)
-- 1 DevOps Specialist (handles Phases 1A, 1B, 1C in parallel)
-- 1 QA/Integration Specialist (Phase 3)
+### Recommended (Phased Execution)
+- 1 DevOps Specialist (Phase 1 parallel work: stories 1.2.1, 3.1, 4.1)
+- 1 DevOps Specialist (Phase 2-3 sequential work: stories 1.1.1, 2.1, 3.2, 3.3)
+- 1 QA/Integration Specialist (Phase 4 validation)
 
 ### Minimum (Sequential)
 - 1 DevOps Specialist (executes all phases sequentially)
@@ -283,20 +313,37 @@ gantt
 
 ## Success Criteria
 
-**Technical**
+**Technical (Phase 1 Triple-Stack)**
 - ✅ Workspace container exposes only SSH (2222) and has TCP/2222 healthcheck
-- ✅ vscode-server container runs independently with serve-web, depends_on workspace healthy
-- ✅ devcontainer.json embedded in image with correct extension list and zzaia-workspace profile
-- ✅ Headroom AI proxy always-on with qdrant; ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE always set
-- ✅ Qdrant persists data in named volume across container restarts
-- ✅ OpenMemory MCP service running and MCP tools (search_memory, add_memories, list_memories, delete_all_memories) discoverable by all agents
-- ✅ CodeGraphContext service running with workspace-repos indexed and MCP tools (find_callers, find_callees, class_hierarchy, call_chain) discoverable
-- ✅ All 8 MCP sidecars start with default profile
+- ✅ Headroom triple-stack (proxy + memory + code-graph) always-on with qdrant + neo4j
+- ✅ Headroom started with `command: headroom proxy --memory --code-graph`
+- ✅ workspace-repos volume mounted into Headroom container (code-graph file watcher needs it)
+- ✅ ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE all point to http://headroom:8787
+- ✅ x-headroom-user-id header configured in workspace agent settings for memory scoping
+- ✅ Neo4j required (Headroom uses it for knowledge graph memory + code-graph)
+- ✅ Qdrant required (Headroom uses it for semantic cache + memory embeddings)
+- ✅ Headroom /stats shows memory injections happening automatically (no agent action required)
+- ✅ Headroom code-graph file watcher logs show codebase indexed on startup
+- ✅ Headroom healthcheck passes: wget -qO- http://localhost:8787/health
+- ✅ Qdrant and Neo4j data persists in named volumes across container restarts
 - ✅ Google Gemini Code Assist and OpenAI ChatGPT extensions install without build-time failures
 
+**Technical (Phase 2 OpenMemory Supplementary)**
+- ✅ OpenMemory MCP service running (depends on Phase 1B complete)
+- ✅ OpenMemory connects to same Qdrant already deployed by Headroom
+- ✅ OpenMemory structured queries return filtered results (by topic, agent, date)
+- ✅ MCP tools (search_memory, add_memories, list_memories, delete_all_memories) discoverable by all agents
+
+**Technical (Phase 3 CodeGraphContext Supplementary)**
+- ✅ CodeGraphContext service running (depends on Phase 2 complete)
+- ✅ CodeGraphContext HTTP endpoint responds on port 8045
+- ✅ MCP tools (find_callers, find_callees, class_hierarchy, call_chain) discoverable by all agents
+
 **Operational**
-- ✅ Default `docker-compose up -d` starts headroom + qdrant + openmemory + code-graph + workspace + 8 MCPs
+- ✅ Default `docker-compose up -d` starts headroom triple-stack + qdrant + neo4j + openmemory + code-graph + workspace + 8 MCPs
 - ✅ `docker-compose --profile vscode up -d` additionally starts vscode-server
+- ✅ vscode-server container runs independently with serve-web, depends_on workspace healthy
+- ✅ devcontainer.json embedded in image with correct extension list and zzaia-workspace profile
 - ✅ Dev Containers attach workflow: `Remote-Containers: Reopen in Container` → extensions auto-install
 - ✅ All healthchecks pass within 45s of startup
 - ✅ Shell aliases in entrypoint set GEMINI_API_BASE=http://headroom:8787 for Gemini CLI compression
@@ -304,17 +351,23 @@ gantt
 **Business**
 - ✅ Decoupled VS Code browser failures (serve-web crash) do not affect SSH agent runtime
 - ✅ Developers can choose: browser UI (vscode-server), SSH attach, or Dev Containers
-- ✅ Headroom AI proxy applies compression, OpenMemory MCP provides session memory, CodeGraphContext provides workspace semantic search to all agent sessions by default
-- ✅ All three optimization capabilities available to Claude Code, VS Code extensions, and Gemini CLI
+- ✅ Headroom triple-stack applies compression + memory + code-graph to all agent sessions automatically
+- ✅ OpenMemory (Phase 2) supplements with explicit structured memory queries
+- ✅ CodeGraphContext (Phase 3) supplements with explicit code-graph queries
+- ✅ All capabilities available to Claude Code, VS Code extensions, and Gemini CLI
 - ✅ Extension installation no longer blocks image build
 
 ---
 
 ## Risk Mitigation
 
-**Healthcheck timing failures** → Start Phase 3 validation with extended timeouts (60s), then optimize down to 45s based on observed startup curves
+**Healthcheck timing failures** → Start Phase 4 validation with extended timeouts (60s), then optimize down to 45s based on observed startup curves
 
-**Headroom service unavailable** → Headroom's passthrough guarantee ensures compression failures never drop requests; qdrant persistence in named volume survives restarts; if headroom crashes, Docker restarts it via restart: unless-stopped before workspace can accept agent requests (depends_on: service_healthy)
+**Headroom service unavailable** → Headroom's passthrough guarantee ensures compression failures never drop requests; qdrant + neo4j persistence in named volumes survives restarts; if headroom crashes, Docker restarts it via restart: unless-stopped before workspace can accept agent requests (depends_on: service_healthy)
+
+**x-headroom-user-id header not set** → Memories use default scope, may mix agent contexts; ensure header configured in workspace agent settings during Phase 1B
+
+**workspace-repos volume not mounted in Headroom** → code-graph file watcher fails silently; ensure volume mounted at /workspace in Phase 1B
 
 **OpenMemory database connectivity** → Ensure postgres service starts before openmemory; validate DATABASE_URL env var in test runs; add postgres depends_on condition if needed
 
@@ -324,40 +377,49 @@ gantt
 
 **Dev Containers extension dependency conflicts** → Test devcontainer.json attachment in clean environment; validate extension load order
 
-**Volume mount permission issues** → Ensure workspace-home and workspace-repos mounted as user (uid 1000) in workspace, vscode-server, and code-graph; test file ownership
+**Volume mount permission issues** → Ensure workspace-home and workspace-repos mounted as user (uid 1000) in workspace, vscode-server, headroom, and code-graph; test file ownership
 
 ---
 
 ## Next Steps
 
-1. **Start Phase 1 (Wave 1) in parallel**:
+1. **Start Phase 1 (parallel)**:
    - Assign Story 1.2.1 (healthcheck) to DevOps lead
-   - Assign Story 3.1 (headroom) to same lead (parallel work)
-   - Assign Story 3.2 (openmemory) to same lead (parallel work)
+   - Assign Story 3.1 (Headroom triple-stack) to same lead (parallel work)
    - Assign Story 4.1 (extensions) to same lead (parallel work)
    - Target completion: 3 days
 
-2. **After Wave 1 complete, start Phase 2 (Wave 2)**:
+2. **After Phase 1 complete, start Phase 2 (sequential)**:
    - Assign Story 1.1.1 (vscode-server) — blocking dependency on Story 1.2.1
    - Assign Story 2.1 (devcontainer.json) — blocking dependency on Story 4.1
-   - Assign Story 3.3 (code-graph) — blocking dependency on Story 1.2.1
+   - Assign Story 3.2 (OpenMemory supplementary) — blocking dependency on Story 3.1
    - Target completion: 5 days
 
-3. **Execute Phase 3 (Integration)**:
+3. **After Phase 2 complete, start Phase 3 (sequential)**:
+   - Assign Story 3.3 (CodeGraphContext supplementary) — blocking dependency on Story 3.2
+   - Target completion: 2 days
+
+4. **Execute Phase 4 (Integration Validation)**:
    - Full build and profile validation
+   - Verify Headroom triple-stack memory injection via /stats endpoint
+   - Verify Headroom code-graph file watcher logs
    - Dev Containers attachment end-to-end test
-   - Verify OpenMemory MCP tools and CodeGraphContext tools discoverable
+   - Verify OpenMemory MCP tools (Phase 2 supplementary)
+   - Verify CodeGraphContext HTTP endpoint (Phase 3 supplementary)
    - Test Gemini CLI compression via GEMINI_API_BASE alias
    - Target completion: 2 days
 
-4. **Create feature branch PR** with all changes, request review on:
+5. **Create feature branch PR** with all changes, request review on:
    - Healthcheck TCP endpoint reliability
-   - Volume mount isolation between workspace, vscode-server, and code-graph
+   - Headroom triple-stack command flags (--memory --code-graph)
+   - workspace-repos volume mount in Headroom for code-graph
+   - x-headroom-user-id header configuration for memory scoping
+   - Neo4j persistence for knowledge graph memory
+   - Qdrant shared between Headroom and OpenMemory (Phase 2)
+   - CodeGraphContext HTTP mode (port 8045) vs MCP stdio mode
    - Extension list completeness vs mise.toml source
    - devcontainer.json profile settings alignment
-   - Qdrant shared between Headroom and OpenMemory
-   - CodeGraphContext index persistence and rebuild logic
 
 ---
 
-**Estimated Total Duration**: ~11 calendar days (parallel Wave 1 + sequential Wave 2 + Phase 3)
+**Estimated Total Duration**: ~14 calendar days (Phase 1 + Phase 2 + Phase 3 + Phase 4)
