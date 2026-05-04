@@ -225,7 +225,23 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 010: Headroom Triple-Stack Primary Layer (Always-On Default)
+### ADR 010: RTK for Shell Command Output Compression (Layer 0)
+
+**Decision**: Install RTK (Rust Token Killer) binary in the workspace container image; configure per-agent hook integrations for automatic shell command output compression.
+
+- RTK installed via GitHub releases curl in Dockerfile — zero external dependencies, no Docker service needed
+- Operates at Layer 0 (shell I/O level) **before** all API requests, complementing Headroom's Layer 1 compression
+- Configured via agent hooks: Claude Code `PreToolUse`, Gemini CLI `BeforeTool`, Cursor/Windsurf/Cline via config
+- Supports 100+ commands out-of-box: git, cargo/build, docker, kubectl, ls/find/grep, pytest/jest, AWS CLI, and more
+- Achieves 81% average token reduction on command outputs; cargo test: 4,823→11 tokens (99% reduction), git status: 2,000→200 tokens (90% reduction)
+- Passthrough guarantee: if RTK fails, original output is returned unchanged — no command execution is ever blocked
+- **Stacks with Headroom**: RTK compresses raw output at shell level; Headroom compresses LLM requests at API level
+
+**Rationale**: Layer 0 shell-level compression is the first optimization gate before API-level compression. RTK's binary-only footprint and zero-dependency design fit the workspace's minimal-host-dependencies principle. Early compression at I/O level reduces Headroom's input load. All three layers (RTK→Headroom→Agent context) can stack without interference.
+
+---
+
+### ADR 011: Headroom Triple-Stack Primary Layer (Always-On Default)
 
 **Decision**: `headroom` runs as a mandatory always-on proxy implementing the primary optimization layer: context compression, automatic memory injection, and background code-graph via a proxy pipeline.
 
@@ -242,7 +258,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 011: OpenMemory MCP — Supplementary Structured Memory (Agent-Initiated)
+### ADR 012: OpenMemory MCP — Supplementary Structured Memory (Agent-Initiated)
 
 **Decision**: Deploy OpenMemory MCP service as supplementary layer for explicit, filtered memory queries; agents call `search_memory`, `add_memories`, and `list_memories` via MCP when they need specific context.
 
@@ -258,7 +274,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 012: CodeGraphContext — Supplementary Code Graph (Agent-Initiated)
+### ADR 013: CodeGraphContext — Supplementary Code Graph (Agent-Initiated)
 
 **Decision**: Deploy CodeGraphContext as supplementary MCP server for explicit code graph queries; agents call `find_callers`, `find_callees`, `class_hierarchy`, and `call_chain` via MCP when they need structural context.
 
@@ -274,7 +290,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 013: Implementation Phases — Primary Layer (Phase 1) + Supplementary Layers (Phase 2/3)
+### ADR 014: Implementation Phases — Primary Layer (Phase 1) + Supplementary Layers (Phase 2/3)
 
 **Decision**: Implement the two-layer triple-stack architecture in three phases: Phase 1 deploys Headroom's full triple-stack primary layer, Phase 2 adds OpenMemory MCP, Phase 3 adds CodeGraphContext MCP.
 
@@ -335,6 +351,10 @@ C4Container
     Person(dev, "Developer", "Browser or SSH")
 
     System_Boundary(stack, "<workspace> Compose Stack") {
+        System_Boundary(layer0, "Layer 0 — Shell I/O Compression") {
+            Container(rtk, "rtk", "Rust binary in-image", "Bash hook intercepts command outputs — 81% avg compression")
+        }
+
         Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise + Aspire MCP :3007")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
 
@@ -367,6 +387,7 @@ C4Container
 
     Rel(dev, ws, "SSH terminal / VS Code Remote SSH / Dev Containers", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
+    Rel(ws, rtk, "Bash hook intercepts outputs", "stdin/stdout at shell level")
     Rel(ws, vscode, "Shares workspace-home volume", "named volume")
     Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
     Rel(headroom, qdrant, "Compression + memory + code-graph", "semantic search :6333")
@@ -421,11 +442,12 @@ zzaia-agentic-workspace/
 
 ### Deployment Units
 
-| Container | Role | Port | Profile |
-|-----------|------|------|---------|
-| `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always |
-| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` |
-| **Layer 1 — Primary** | | | |
+| Container | Role | Port | Profile | Notes |
+|-----------|------|------|---------|-------|
+| `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
+| `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always | |
+| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | |
+| **Layer 1 — Primary** | | | | |
 | `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always |
 | `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
 | `neo4j` | Knowledge graph — shared by Headroom memory and code-graph | 7687 (internal) | always |
@@ -471,6 +493,8 @@ zzaia-agentic-workspace/
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | `code serve-web` (Microsoft VS Code) + OpenSSH |
 | Dev Containers | `devcontainer.json` embedded in workspace image |
+| **Layer 0 — Shell I/O Compression** | |
+| **RTK** | **Rust Token Killer binary (in-image) — 81% avg token reduction on command outputs via bash hook intercepts** |
 | **Layer 1 — Primary (Automatic)** | |
 | **Headroom proxy** | **Triple-stack: compression (34–90% tokens, <5ms) + memory injection + code-graph, passthrough guarantee** |
 | **Vector DB (Qdrant)** | **Semantic cache (compression) + memory embeddings + code-graph index** |

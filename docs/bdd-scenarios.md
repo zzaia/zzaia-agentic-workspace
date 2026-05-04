@@ -275,7 +275,104 @@ Scenario: VS Code extension gets automatic memory injection through proxy
 
 ---
 
+## Feature: RTK Shell Command Output Compression (Layer 0)
 
+Intercepts command outputs at shell I/O level via agent hooks before they enter agent context window, achieving 81% average token reduction across 100+ common commands.
+
+### Background
+
+```gherkin
+Background:
+  Given RTK binary is installed in workspace container image
+  And agent hooks are configured for all CLIs (PreToolUse for Claude Code, BeforeTool for Gemini CLI)
+  And RTK operates at Layer 0 before Headroom (Layer 1) and MCP tools (Layer 2)
+```
+
+---
+
+### Scenario: Agent runs git status with RTK compression
+
+```gherkin
+Scenario: Agent runs `git status` → RTK hook intercepts output → 2,000 tokens reduced to ~200 → agent receives compressed output in context
+  Given RTK hook configured for Claude Code PreToolUse
+  When agent executes bash command `git status`
+  Then RTK intercepts output at shell I/O level before agent context window
+  And output compressed: ~2,000 tokens → ~200 tokens (90% reduction)
+  And agent receives compressed output maintaining semantic meaning
+```
+
+---
+
+### Scenario: Agent runs cargo test with RTK extreme compression
+
+```gherkin
+Scenario: Agent runs `cargo test` → RTK hook → 4,823 tokens reduced to ~11 → agent continues with minimal token usage
+  Given RTK hook configured for Claude Code PreToolUse
+  When agent executes bash command `cargo test`
+  Then RTK intercepts full test output at shell I/O level
+  And output compressed: 4,823 tokens → ~11 tokens (>99% reduction)
+  And deduplication and pattern matching applied to repeated output lines
+  And agent receives actionable summary (PASSED/FAILED status)
+```
+
+---
+
+### Scenario: Docker command output filtered by RTK
+
+```gherkin
+Scenario: Agent runs `docker ps` → RTK intercepts → deduplication and filtering applied → compressed output returned
+  Given RTK hook active for container commands
+  When agent executes bash command `docker ps -a`
+  Then RTK deduplicates repeated output lines
+  And filters redundant container metadata
+  And agent receives concise container list
+```
+
+---
+
+### Scenario: RTK and Headroom stack for doubly-optimized compression
+
+```gherkin
+Scenario: RTK and Headroom stack: `cargo test` output compressed by RTK (99%) → agent forms prompt → Headroom further compresses prompt structure → LLM receives doubly optimized request
+  Given RTK hook at Layer 0 compressing shell outputs
+  And Headroom proxy at Layer 1 compressing prompt structure
+  When agent executes `cargo test` (original: 4,823 tokens)
+  Then RTK reduces output to ~11 tokens (Layer 0)
+  And agent forms prompt with RTK-compressed output
+  And Headroom further compresses prompt context via rolling memory
+  And LLM receives doubly-optimized request (stacked compression)
+```
+
+---
+
+### Scenario: Gemini CLI uses RTK via BeforeTool hook
+
+```gherkin
+Scenario: Gemini CLI executes `ls -la` → BeforeTool hook applies RTK → output filtered and grouped before entering Gemini context
+  Given Gemini CLI BeforeTool hook configured with RTK
+  When Gemini CLI runs bash command `ls -la /workspace`
+  Then RTK hook applies before tool result enters Gemini context
+  And output grouped by file type (directories, executables, data files)
+  And redundant permission lines deduplicated
+  And Gemini receives structured, compressed file listing
+```
+
+---
+
+### Scenario: All CLIs use RTK transparently via per-agent hook configuration
+
+```gherkin
+Scenario: All CLIs (Claude Code, Gemini CLI, Codex, Copilot CLI) use RTK transparently via per-agent hook configuration
+  Given RTK hooks configured in: Claude Code PreToolUse, Gemini CLI BeforeTool, Codex CLI config, Copilot CLI config
+  And RTK binary installed in workspace container image at /usr/local/bin/rtk
+  When any CLI executes bash command (git, cargo, docker, kubectl, ls, grep, pytest, etc.)
+  Then RTK hook intercepts output at shell I/O level
+  And command output compressed according to RTK rules (dedup, filter, pattern match)
+  And all CLIs benefit from compression transparently (no agent action required)
+  And token savings applied uniformly across 100+ supported commands
+```
+
+---
 
 ## Feature: Connection Type Matrix
 
@@ -372,6 +469,12 @@ Scenario: WORKSPACE_NAME runtime templating
 
 | Scenario | Domain | Layer | Status |
 |----------|--------|-------|--------|
+| Agent runs `git status` with RTK compression | RTK Shell Command Compression | Layer 0 | ✅ Covered |
+| Agent runs `cargo test` with RTK extreme compression | RTK Shell Command Compression | Layer 0 | ✅ Covered |
+| Docker command output filtered by RTK | RTK Shell Command Compression | Layer 0 | ✅ Covered |
+| RTK and Headroom stack for doubly-optimized compression | RTK Shell Command Compression | Layer 0 + 1 | ✅ Covered |
+| Gemini CLI uses RTK via BeforeTool hook | RTK Shell Command Compression | Layer 0 | ✅ Covered |
+| All CLIs use RTK transparently via per-agent hook configuration | RTK Shell Command Compression | Layer 0 | ✅ Covered |
 | VS Code browser access survives workspace restart | Decoupled VS Code Browser UI | - | ✅ Covered |
 | vscode-server disabled for SSH-only deployments | Decoupled VS Code Browser UI | - | ✅ Covered |
 | vscode-server healthcheck replaces watchdog | Decoupled VS Code Browser UI | - | ✅ Covered |

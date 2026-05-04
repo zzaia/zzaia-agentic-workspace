@@ -22,13 +22,16 @@ Decouple VS Code browser UI from workspace container, add Dev Containers support
 
 ```mermaid
 gantt
-    title Implementation Timeline - Phased Triple-Stack
+    title Implementation Timeline - RTK Layer 0 + Phased Triple-Stack
     dateFormat 2026-05-02
 
+    section Phase 0 (Prerequisite)
+    Story 0.1: RTK installation and hooks        :phase0, story01, 2026-05-02, 2d
+
     section Phase 1 (Parallel)
-    Story 1.2.1: Workspace healthcheck           :active, story121, 2026-05-02, 3d
-    Story 3.1: Headroom triple-stack             :active, story31, 2026-05-02, 3d
-    Story 4.1: Fix VS Code extensions            :active, story41, 2026-05-02, 2d
+    Story 1.2.1: Workspace healthcheck           :active, story121, after story01, 3d
+    Story 3.1: Headroom triple-stack             :active, story31, after story01, 3d
+    Story 4.1: Fix VS Code extensions            :active, story41, after story01, 2d
 
     section Phase 2 (After Phase 1)
     Story 1.1.1: vscode-server container         :crit, story111, after story121, 2d
@@ -40,7 +43,38 @@ gantt
     End-to-end validation                        :crit, e2e, after story33, 2d
 ```
 
-**Legend**: Green (Active) = Phase 1 parallel | Red (Critical) = Phase 2 & 3 sequential | **Total**: 39 points
+**Legend**: Blue (Phase 0) = Prerequisite RTK setup | Green (Active) = Phase 1 parallel | Red (Critical) = Phase 2 & 3 sequential | **Total**: 41 points
+
+---
+
+## Phase 0: RTK Installation and Hook Configuration (Prerequisite) (2 points)
+
+**Parallel**: ✅ | **Team**: 1 DevOps Specialist
+
+**Description**: Install RTK (Rust Token Killer) binary in workspace container image and configure agent hooks (Claude Code PreToolUse, Gemini CLI BeforeTool, Codex/Copilot CLI) to compress shell command outputs at Layer 0 (before Headroom Layer 1 and MCP tools Layer 2).
+
+### 0A: RTK Installation and Hook Configuration (Story 0.1) (2 points)
+
+**Acceptance Criteria**:
+- RTK binary installed in workspace container image via Dockerfile `curl` from GitHub releases (https://github.com/rtk-ai/rtk)
+- RTK available in PATH: `rtk --version` succeeds in built image
+- Claude Code PreToolUse hook configured in `.claude/settings.json` — bash commands rewritten as `rtk <command>`
+- Gemini CLI BeforeTool hook configured with RTK binary path
+- Codex CLI and Copilot CLI hook files configured for RTK
+- Test: `rtk git status` returns compressed output (2,000→200 tokens); `rtk cargo test` reduces output by >90% (4,823→11 tokens)
+- RTK telemetry optional: logs to `~/.local/share/rtk/` if enabled
+- Verify RTK works for git, cargo, docker, kubectl, ls, find, grep, pytest, jest, AWS CLI, helm in container
+
+**Tasks**:
+- [ ] Add RTK binary download to Dockerfile via curl from GitHub releases (1)
+- [ ] Add Claude Code PreToolUse hook config to workspace `.claude/settings.json` (0.5)
+- [ ] Add Gemini CLI BeforeTool hook configuration (0.5)
+- [ ] Add Codex CLI and Copilot CLI hook configs to respective config files (0.5)
+- [ ] Validate RTK works for all supported commands in container (0.5)
+
+**Outputs**: Updated `docker/Dockerfile` with RTK installation, updated workspace `.claude/settings.json` with PreToolUse hook, updated Gemini/Codex/Copilot CLI hook configurations
+
+**Dependencies**: None (Phase 0 prerequisite)
 
 ---
 
@@ -259,6 +293,8 @@ gantt
 
 ## Technology Stack
 
+**Command Output Compression**: RTK (Rust Token Killer) v1.0+ (https://github.com/rtk-ai/rtk) — Layer 0 shell I/O intercept via agent hooks; 81% average token reduction; Apache-2.0 license
+
 **Container Orchestration**: Docker, Docker Compose, Compose profiles
 
 **Development Environments**: VS Code browser (serve-web), VS Code SSH attach, VS Code Dev Containers
@@ -281,7 +317,9 @@ gantt
 
 ## Effort Summary
 
-**Phase 1 (Parallel)**: 8 points (stories 1.2.1, 3.1, 4.1 execute in parallel)
+**Phase 0 (Prerequisite)**: 2 points (story 0.1 RTK installation and hooks)
+
+**Phase 1 (Parallel)**: 8 points (stories 1.2.1, 3.1, 4.1 execute in parallel; depends on Phase 0 complete)
 
 **Phase 2 (Sequential)**: 10 points (story 1.1.1 + 2.1 + 3.2 after Phase 1 complete)
 
@@ -289,13 +327,14 @@ gantt
 
 **Phase 4 (Integration)**: 4 points
 
-**Total**: 25 points (simplified from 39 by removing redundant OpenMemory task and code-graph bloat from Phase 1)
+**Total**: 27 points (2 Phase 0 + 25 from simplified phases 1-4)
 
 **Phasing Strategy**: 
+- Phase 0 installs RTK Layer 0 output compression (prerequisite for all agents)
 - Phase 1 deploys complete Headroom triple-stack (proxy + memory + code-graph) in parallel
 - Phase 2 adds supplementary OpenMemory for explicit memory control (optional)
 - Phase 3 adds supplementary CodeGraphContext for explicit code-graph queries (optional)
-- Efficiency: All 3 capabilities available after Phase 1 validation; Phases 2-3 enhance with optional structured tools
+- Efficiency: RTK compression applies to all agent commands immediately after Phase 0; all 3 capabilities available after Phase 1 validation; Phases 2-3 enhance with optional structured tools
 
 ---
 
@@ -312,6 +351,16 @@ gantt
 ---
 
 ## Success Criteria
+
+**Technical (Phase 0 RTK)**
+- ✅ RTK binary installed in workspace container image via Dockerfile (curl from GitHub releases)
+- ✅ RTK available in PATH: `rtk --version` succeeds in built image
+- ✅ Claude Code PreToolUse hook configured in workspace `.claude/settings.json`
+- ✅ Gemini CLI BeforeTool hook configured with RTK binary path
+- ✅ Codex CLI and Copilot CLI hook configs updated for RTK
+- ✅ `rtk git status` verified to reduce output (2,000→200 tokens)
+- ✅ `rtk cargo test` verified to reduce output by >90% (4,823→11 tokens)
+- ✅ RTK works for 100+ supported commands: git, cargo, docker, kubectl, ls, find, grep, pytest, jest, AWS CLI, helm
 
 **Technical (Phase 1 Triple-Stack)**
 - ✅ Workspace container exposes only SSH (2222) and has TCP/2222 healthcheck
@@ -383,33 +432,41 @@ gantt
 
 ## Next Steps
 
-1. **Start Phase 1 (parallel)**:
+1. **Start Phase 0 (prerequisite)**:
+   - Assign Story 0.1 (RTK installation and hooks) to DevOps lead
+   - Add RTK binary curl to Dockerfile
+   - Configure Claude Code PreToolUse hook, Gemini CLI BeforeTool hook
+   - Validate RTK compression on git status and cargo test
+   - Target completion: 2 days
+
+2. **After Phase 0 complete, start Phase 1 (parallel)**:
    - Assign Story 1.2.1 (healthcheck) to DevOps lead
    - Assign Story 3.1 (Headroom triple-stack) to same lead (parallel work)
    - Assign Story 4.1 (extensions) to same lead (parallel work)
    - Target completion: 3 days
 
-2. **After Phase 1 complete, start Phase 2 (sequential)**:
+3. **After Phase 1 complete, start Phase 2 (sequential)**:
    - Assign Story 1.1.1 (vscode-server) — blocking dependency on Story 1.2.1
    - Assign Story 2.1 (devcontainer.json) — blocking dependency on Story 4.1
    - Assign Story 3.2 (OpenMemory supplementary) — blocking dependency on Story 3.1
    - Target completion: 5 days
 
-3. **After Phase 2 complete, start Phase 3 (sequential)**:
+4. **After Phase 2 complete, start Phase 3 (sequential)**:
    - Assign Story 3.3 (CodeGraphContext supplementary) — blocking dependency on Story 3.2
    - Target completion: 2 days
 
-4. **Execute Phase 4 (Integration Validation)**:
+5. **Execute Phase 4 (Integration Validation)**:
    - Full build and profile validation
+   - Verify RTK compression works in container (git status, cargo test)
    - Verify Headroom triple-stack memory injection via /stats endpoint
    - Verify Headroom code-graph file watcher logs
    - Dev Containers attachment end-to-end test
    - Verify OpenMemory MCP tools (Phase 2 supplementary)
    - Verify CodeGraphContext HTTP endpoint (Phase 3 supplementary)
-   - Test Gemini CLI compression via GEMINI_API_BASE alias
+   - Test Gemini CLI compression via GEMINI_API_BASE alias with RTK enabled
    - Target completion: 2 days
 
-5. **Create feature branch PR** with all changes, request review on:
+6. **Create feature branch PR** with all changes, request review on:
    - Healthcheck TCP endpoint reliability
    - Headroom triple-stack command flags (--memory --code-graph)
    - workspace-repos volume mount in Headroom for code-graph
@@ -422,4 +479,4 @@ gantt
 
 ---
 
-**Estimated Total Duration**: ~14 calendar days (Phase 1 + Phase 2 + Phase 3 + Phase 4)
+**Estimated Total Duration**: ~16 calendar days (Phase 0 + Phase 1 + Phase 2 + Phase 3 + Phase 4)

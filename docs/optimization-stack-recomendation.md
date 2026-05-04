@@ -14,7 +14,9 @@ Research and decision record for three LLM optimization capabilities: context co
 
 ## Architecture Overview
 
-The optimization stack operates in two complementary layers:
+The optimization stack operates in three complementary layers:
+
+**Layer 0 — Shell I/O (RTK binary in container)**: RTK (Rust Token Killer) intercepts command outputs at shell level via agent hooks BEFORE they enter the agent context window. Reduces command output tokens by 80–90% (git, cargo, docker, kubectl, ls, grep, etc.). No service needed — single binary installed in the container image, configured per-agent via hook system.
 
 **Layer 1 — Automatic (Proxy Pipeline)**: Headroom proxy started with `--memory --code-graph`. All clients routing through `http://headroom:8787` get compression, memory injection, and code-graph MCP tools without any agent code changes. Covers Claude Code, Gemini CLI, Codex, VS Code extensions — any client that respects the API base URL env vars.
 
@@ -24,11 +26,63 @@ The optimization stack operates in two complementary layers:
 
 ## Implementation Phases
 
-**Phase 1 (Implement First)**: Headroom triple-stack — compression + proxy-side memory injection + code-graph file watcher. Single service change.
+**Phase 0 (Implement First)**: RTK — install binary in Dockerfile, configure agent hooks for Claude Code, Gemini CLI, Codex, Copilot CLI. Immediate 80–90% command output token reduction.
+
+**Phase 1 (Implement After Phase 0)**: Headroom triple-stack — compression + proxy-side memory injection + code-graph file watcher. Single service change.
 
 **Phase 2 (Implement After Phase 1)**: OpenMemory MCP — supplementary structured memory queries via MCP tools.
 
 **Phase 3 (Implement After Phase 2)**: CodeGraphContext — supplementary code graph queries via MCP tools.
+
+---
+
+### ADR 000: RTK (Rust Token Killer) for Shell Command Output Compression
+
+**Decision**: Install RTK binary in the workspace container image and configure per-agent hooks to intercept command outputs before they enter agent context windows.
+
+**What it does**:
+- Intercepts command outputs at shell I/O level via agent hook system (not HTTP proxy, not MCP)
+- Applies four strategies: smart filtering, grouping, truncation, deduplication
+- Covers 100+ commands across 8 categories: git, cargo/build, docker, kubectl, ls/find/grep, pytest/jest, AWS CLI, Rust quality tools
+- **81% average token reduction**; real examples: `cargo test` 4,823 → 11 tokens (99%), `git status` 2,000 → 200 tokens (90%)
+
+**Agent integrations** (hook-based, no code changes in agents):
+- Claude Code: `PreToolUse` hook rewrites bash commands as `rtk <command>`
+- Gemini CLI: `BeforeTool` hook
+- Cursor / Windsurf / Cline: agent-specific hook config files
+- Copilot CLI: rule files
+
+**Infrastructure**: Single static Rust binary — no service, no database, no network. Memory footprint <20MB, microsecond overhead per command. Exit codes preserved.
+
+**Compression chain with Headroom**:
+```
+Agent executes: git status
+RTK hook:       2,000 tokens → 200 tokens (90% reduction at shell level)
+Agent forms prompt with compressed output
+Headroom proxy: further ~30% reduction on prompt structure
+LLM receives:   optimized prompt
+```
+
+**Installation in Dockerfile**:
+```dockerfile
+# Install RTK binary
+RUN curl -fsSL https://github.com/rtk-ai/rtk/releases/latest/download/rtk-linux-amd64 \
+    -o /usr/local/bin/rtk && chmod +x /usr/local/bin/rtk
+```
+
+**Claude Code hook configuration** (`.claude/settings.json`):
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{ "type": "command", "command": "rtk" }]
+    }]
+  }
+}
+```
+
+**Rationale**: RTK is the only tool operating at shell I/O level — Headroom compresses at HTTP API level, OpenMemory handles memory, CodeGraphContext handles code search. None of these touch raw command outputs. RTK's 41k GitHub stars, 146 releases, and 103-case benchmark suite confirm production readiness. It stacks with all other layers without conflict.
 
 ---
 
@@ -145,10 +199,15 @@ C4Container
         Container(cgc, "CodeGraphContext", "MCP Server", "Code graph queries: find_callers, class_hierarchy, call_chain")
     }
 
+    System_Boundary(shell, "Layer 0 — Shell I/O") {
+        Container(rtk, "RTK", "Rust Binary + Agent Hooks", "Intercepts command outputs before agent context; 81% avg token reduction")
+    }
+
     System_Boundary(workspace, "Workspace Layer") {
         Container(workspaceRepos, "Workspace Repositories", "Volume", "Source code indexed by Headroom code-graph and CodeGraphContext")
     }
 
+    Rel(rtk, workspaceRepos, "Reads command outputs (git, cargo, docker, kubectl)", "Bash hook")
     Rel(headroom, anthropicAPI, "Forwards compressed + memory-enriched requests", "HTTP")
     Rel(headroom, qdrant, "Semantic cache and memory search", "gRPC")
     Rel(headroom, neo4j, "Knowledge graph memory and code-graph", "Bolt")
@@ -185,11 +244,12 @@ C4Container
 
 | Layer | Technologies |
 |-------|-------------|
-| **Primary Proxy** | Headroom (HTTP reverse proxy, `--memory --code-graph`) |
+| **Shell I/O (Layer 0)** | RTK — Rust binary, bash hooks, 100+ commands, 81% avg token reduction |
+| **Primary Proxy (Layer 1)** | Headroom (HTTP reverse proxy, `--memory --code-graph`) |
 | **Primary Memory Storage** | SQLite + HNSW (in-process, Headroom) + Qdrant (semantic) + Neo4j (graph) |
-| **Supplementary Memory MCP** | OpenMemory (native MCP tools, structured queries) |
+| **Supplementary Memory MCP (Layer 2)** | OpenMemory (native MCP tools, structured queries) |
 | **Supplementary Memory Storage** | PostgreSQL (metadata) + Qdrant (shared with Headroom) |
-| **Supplementary Code Search** | CodeGraphContext (MCP tools, call graphs, AST) + KûzuDB (embedded) |
+| **Supplementary Code Search (Layer 2)** | CodeGraphContext (MCP tools, call graphs, AST) + KûzuDB (embedded) |
 | **Infrastructure** | Docker Compose, shared Qdrant and Neo4j across layers |
 
 ---
@@ -368,6 +428,7 @@ MCP endpoints registered in workspace MCP config:
 
 ## Related Documentation
 
+- [RTK GitHub](https://github.com/rtk-ai/rtk) — Shell command output compression via agent hooks (Layer 0)
 - [Headroom GitHub](https://github.com/chopratejas/headroom) — Triple-stack proxy (compression + memory + code-graph)
 - [Headroom Memory Docs](https://raw.githubusercontent.com/chopratejas/headroom/main/docs/content/docs/memory.mdx) — Proxy-side memory injection pipeline
 - [OpenMemory MCP Announcement](https://mem0.ai/blog/introducing-openmemory-mcp) — Supplementary structured memory MCP tools
