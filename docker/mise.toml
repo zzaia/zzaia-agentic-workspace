@@ -95,7 +95,7 @@ for ext in \
     redhat.vscode-xml redhat.vscode-yaml streetsidesoftware.code-spell-checker \
     tamasfe.even-better-toml ms-vscode.vscode-websearchforcopilot \
     tomblind.scm-buttons-vscode vscodevim.vim; do
-    result=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1) \
+    result=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" --target linux-x64 2>&1) \
         || echo "WARN: extension $ext install failed" >&2
     printf '%s\n' "$result" | grep -v "already installed" || true
 done
