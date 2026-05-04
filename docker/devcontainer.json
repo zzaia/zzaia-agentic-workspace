@@ -21,7 +21,7 @@
         "gaoshan0621.csharp-format-usings",
         "github.copilot",
         "github.copilot-chat",
-        "google.gemini-code-assist",
+        "google.geminicodeassist",
         "google.gemini-cli-vscode-ide-companion",
         "openai.chatgpt",
         "gruntfuggly.todo-tree",
