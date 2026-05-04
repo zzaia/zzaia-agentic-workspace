@@ -32,6 +32,7 @@ gantt
     Story 1.2.1: Workspace healthcheck           :done, story121, after story01, 3d
     Story 3.1: Headroom triple-stack             :done, story31, after story01, 3d
     Story 4.1: Fix VS Code extensions            :done, story41, after story01, 2d
+    Story 5.1: GPU pass-through                  :done, story51, after story01, 1d
 
     section Phase 2 (After Phase 1)
     Story 1.1.1: vscode-server container         :done, story111, after story121, 2d
@@ -139,6 +140,28 @@ gantt
 
 ---
 
+
+---
+
+### 1C: GPU Pass-Through — workspace and headroom (Story 5.1) (1 point)
+
+**Reference**: ADR 015
+
+**Acceptance Criteria**:
+- `deploy.resources.reservations.devices` block added to both `workspace` and `headroom` services (`driver: nvidia`, `count: all`, `capabilities: [gpu]`)
+- `NVIDIA_VISIBLE_DEVICES` env var added to both services (default `all`, overridable per-stack)
+- `NVIDIA_DRIVER_CAPABILITIES=compute,utility` env var added to both services
+- CPU-only hosts unaffected: Docker silently ignores `deploy.devices` when NVIDIA Container Toolkit is absent
+- `cap_drop: ALL` constraints on `workspace` remain unchanged
+
+**Tasks**:
+- [x] Add `deploy.resources.reservations.devices` block to `workspace` service (0.5)
+- [x] Add `deploy.resources.reservations.devices` block to `headroom` service (0.5)
+- [x] Add `NVIDIA_VISIBLE_DEVICES` and `NVIDIA_DRIVER_CAPABILITIES` env vars to both services (0.5)
+
+**Outputs**: Updated `docker/docker-compose.yml` with GPU pass-through on workspace and headroom
+
+**Dependencies**: None (Phase 1 parallel execution)
 
 ---
 

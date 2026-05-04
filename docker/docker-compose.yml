@@ -46,6 +46,15 @@ services:
       - ANTHROPIC_BASE_URL=http://headroom:8787
       - OPENAI_BASE_URL=http://headroom:8787
       - GEMINI_API_BASE=http://headroom:8787
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     networks:
       - mcp
     cap_drop:
@@ -90,6 +99,15 @@ services:
       - NEO4J_USERNAME=neo4j
       - NEO4J_PASSWORD=${ADMIN_PASSWORD:-headroom}
       - PORT=8787
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     volumes:
       - workspace-repos:/workspace
     networks:
