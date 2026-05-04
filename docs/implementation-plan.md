@@ -474,7 +474,41 @@ gantt
    - Mount `workspace-repos` volume at `/workspace`
    - Register MCP endpoint in all agent configs
 
-7. **Pending — Phase 4 (Integration Validation)**:
+7. **Static Validation — 2026-05-04** (runtime pending image build):
+
+   | Check | Result | Notes |
+   |---|---|---|
+   | `docker compose config` | ✅ Exit 0 | No syntax errors |
+   | Dockerfile: `EXPOSE ${VSCODE_PORT}` removed | ✅ | Only `EXPOSE ${SSH_PORT}` remains |
+   | Dockerfile: `HEALTHCHECK CMD bash -c '</dev/tcp/localhost/2222'` | ✅ | interval 10s, retries 5, start_period 15s |
+   | Dockerfile: `devcontainer.json` COPY'd into image | ✅ | `/home/user/.devcontainer/devcontainer.json` |
+   | entrypoint.sh: `code serve-web` watchdog removed | ✅ | Ends with `exec /usr/sbin/sshd -D` |
+   | entrypoint.sh: `{{WORKSPACE_NAME}}` templating | ✅ | find/xargs/sed on every start; .code-workspace renamed |
+   | mise.toml: `[tasks.rtk]` present | ✅ | Downloads from rtk-ai/rtk releases, installs to `~/.local/bin/rtk` |
+   | mise.toml: `mise run rtk` in Dockerfile build chain | ✅ | Listed in RUN chain |
+   | mise.toml: extension list parity with devcontainer.json | ✅ | Fixed: added `miguelsolorio.fluent-icons`, `pkief.material-product-icons`, `vscode-icons-team.vscode-icons`, `ms-dotnettools.csdevkit`, `tamasfe.even-better-toml`, `ms-vscode.vscode-websearchforcopilot` |
+   | Claude Code: `PreToolUse` RTK hook | ✅ | `exec rtk` with fallback to `cat` |
+   | Claude Code: `headroom` MCP SSE endpoint + `x-headroom-user-id` | ✅ | `http://headroom:8787/sse` |
+   | Gemini CLI: `BeforeTool` RTK hook | ✅ | Same pattern |
+   | Gemini CLI: `headroom` MCP + `x-headroom-user-id` | ✅ | Present in settings.json |
+   | Codex: `before_tool_use` RTK hook | ✅ | In config.toml |
+   | Codex: `headroom` MCP | ✅ | `[mcp_servers.headroom]` |
+   | Copilot: `headroom` MCP | ✅ | In mcp-config.json |
+   | docker-compose.yml: `vscode-server` on `profiles: [vscode]` | ✅ | Separate service, depends_on workspace healthy |
+   | docker-compose.yml: GPU `deploy.resources.reservations.devices` on workspace + headroom | ✅ | 2 nvidia entries (one per service) |
+   | docker-compose.yml: `NVIDIA_DRIVER_CAPABILITIES=compute,utility` on both | ✅ | |
+   | devcontainer.json: `workspaceFolder` + `postAttachCommand` | ✅ | Opens `zzaia.code-workspace` on attach |
+   | devcontainer.json: JSON valid | ✅ | |
+   | vscode storage.json: `location` uses `/home/user/` (not `{{WORKSPACE_NAME}}`) | ✅ | Fixed |
+   | vscode storage.json: `workspaceProfileAssociations` entry | ✅ | Maps `{{WORKSPACE_NAME}}.code-workspace` → `zzaia-workspace` |
+   | zzaia.code-workspace: settings block present (theme, iconTheme, MCP servers) | ✅ | Single source of truth for all settings |
+   | profile settings.json: empty `{}` (settings consolidated in .code-workspace) | ✅ | |
+
+   **Defects found and fixed during validation**:
+   - `vscode storage.json` had `location` using `{{WORKSPACE_NAME}}` instead of `user` — fixed
+   - `mise.toml` missing 6 extensions present in devcontainer.json (fluent-icons, material-product-icons, vscode-icons, csdevkit, even-better-toml, vscode-websearchforcopilot) — fixed
+
+8. **Pending — Phase 4 (Runtime Validation)** (requires image build):
    - Build image and verify layer caching (`docker build`)
    - Spin up default profile: workspace + 8 MCP sidecars + headroom triple-stack
    - Verify headroom triple-stack startup order (qdrant → neo4j → headroom → workspace)
@@ -486,7 +520,7 @@ gantt
    - SSH access independent of vscode-server health
    - Verify CodeGraphContext HTTP endpoint on port 8045
 
-8. **Create PR** on `feature/improve-agentic-system` branch.
+9. **Create PR** on `feature/improve-agentic-system` branch.
 
 ---
 
