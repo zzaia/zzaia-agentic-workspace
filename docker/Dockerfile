@@ -59,7 +59,8 @@ ARG VSCODE_PORT=8080
 COPY docker/sshd_config /etc/ssh/sshd_config.d/workspace.conf
 RUN sed -i "s/^Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config.d/workspace.conf \
     && grep -q 'Include.*sshd_config.d' /etc/ssh/sshd_config \
-    || echo 'Include /etc/ssh/sshd_config.d/*.conf' >> /etc/ssh/sshd_config
+    || echo 'Include /etc/ssh/sshd_config.d/*.conf' >> /etc/ssh/sshd_config \
+    && echo "${SSH_PORT}" > /etc/ssh-port
 
 # ── Non-root user (fixed: "user") + VS Code server placed in home ─────────────
 RUN userdel -r ubuntu 2>/dev/null || true \
@@ -124,6 +125,6 @@ RUN chmod +x /entrypoint.sh
 EXPOSE ${SSH_PORT}
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=5 \
-    CMD bash -c '</dev/tcp/localhost/2222'
+    CMD bash -c "</dev/tcp/localhost/$(cat /etc/ssh-port)"
 
 ENTRYPOINT ["/entrypoint.sh"]
