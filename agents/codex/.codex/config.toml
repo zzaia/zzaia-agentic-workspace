@@ -4,23 +4,23 @@ args = ["-y", "supergateway", "--sse", "http://localhost:3007/sse"]
 
 [mcp_servers.tavily]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-tavily:3001/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-tavily:3001/mcp"]
 
 [mcp_servers.azure-devops]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-azure-devops:3002/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-azure-devops:3002/mcp"]
 
 [mcp_servers.postman]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-postman:3003/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-postman:3003/mcp"]
 
 [mcp_servers.new-relic]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-newrelic:3004/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-newrelic:3004/mcp"]
 
 [mcp_servers.github]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-github:3005/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-github:3005/mcp"]
 
 [mcp_servers.playwright]
 command = "npx"
@@ -28,7 +28,7 @@ args = ["-y", "supergateway", "--sse", "http://mcp-playwright:3006/sse"]
 
 [mcp_servers.headroom]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://headroom:8787/sse"]
+args = ["-y", "supergateway", "--sse", "http://proxy-headroom:8787/sse"]
 
 [hooks.before_tool_use]
 command = "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"

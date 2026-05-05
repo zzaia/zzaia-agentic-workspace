@@ -40,10 +40,9 @@ sudo apt-get install -y tmux plantuml tectonic
 """
 
 [tasks.claude-plugins]
-description = "Install Claude Code marketplace plugins"
+description = "Register Claude Code marketplace (plugin apply happens at container start via entrypoint)"
 run = """
-claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/implement-docker-containerization || true
-claude plugin install agentic-workspace@zzaia || true
+claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
 claude plugin remove claude-plugins-official || true
 """
 

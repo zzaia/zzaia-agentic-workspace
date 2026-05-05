@@ -48,6 +48,8 @@ services:
       - GEMINI_API_BASE=http://proxy-headroom:8787
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - DOTNET_ASPIRE_LAUNCH_DASHBOARD=false
+      - DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
     networks:
       - mcp
     cap_drop:
@@ -155,6 +157,13 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.aspire
     image: zzaia-aspire-dashboard:latest
+    environment:
+      - DASHBOARD__UNSECUREDALLOWANONYMOUS=true
+      - DASHBOARD__OTLP__GRPCENDPOINTURL=http://+:18889
+      - DASHBOARD__OTLP__HTTPENDPOINTURL=http://+:18890
+      - DASHBOARD__FRONTEND__ENDPOINTURL=http://+:18888
+      - DASHBOARD__RESOURCESERVICECLIENT__RESOURCESERVICEURL=http://workspace:18300
+      - DASHBOARD__RESOURCESERVICECLIENT__AUTHMODE=Unsecured
     ports:
       - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
     networks:
@@ -177,12 +186,12 @@ services:
       - >-
         [ -z "$$TAVILY_API_KEY" ]
         && echo "TAVILY_API_KEY not set — mcp-tavily disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3001 --stdio "npx -y tavily-mcp@latest"
+        npx -y supergateway@latest --port 3001 --outputTransport streamableHttp --stateful --stdio "npx -y tavily-mcp@latest"
     networks:
       - mcp
     restart: "no"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3001,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -201,13 +210,13 @@ services:
         && echo "ADO_MCP_AUTH_TOKEN not set — mcp-azure-devops disabled." && exit 0 ;
         [ -z "$$AZURE_DEVOPS_ORGANIZATION" ]
         && echo "AZURE_DEVOPS_ORGANIZATION not set — mcp-azure-devops disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3002
+        npx -y supergateway@latest --port 3002 --outputTransport streamableHttp --stateful
         --stdio "npx -y @azure-devops/mcp@next $$AZURE_DEVOPS_ORGANIZATION -a envvar"
     networks:
       - mcp
     restart: "no"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3002/"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3002,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -223,13 +232,13 @@ services:
       - >-
         [ -z "$$POSTMAN_API_KEY" ]
         && echo "POSTMAN_API_KEY not set — mcp-postman disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3003
+        npx -y supergateway@latest --port 3003 --outputTransport streamableHttp --stateful
         --stdio "npx -y @postman/postman-mcp-server --minimal --region us"
     networks:
       - mcp
     restart: "no"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3003/"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3003,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -245,13 +254,13 @@ services:
       - >-
         [ -z "$$NEW_RELIC_API_KEY" ]
         && echo "NEW_RELIC_API_KEY not set — mcp-newrelic disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3004
+        npx -y supergateway@latest --port 3004 --outputTransport streamableHttp --stateful
         --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --header \"Api-Key: $$NEW_RELIC_API_KEY\""
     networks:
       - mcp
     restart: "no"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3004/"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3004,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -267,13 +276,13 @@ services:
       - >-
         [ -z "$$GITHUB_PERSONAL_ACCESS_TOKEN" ]
         && echo "GITHUB_PERSONAL_ACCESS_TOKEN not set — mcp-github disabled." && exit 0 ;
-        npx -y supergateway@latest --port 3005
+        npx -y supergateway@latest --port 3005 --outputTransport streamableHttp --stateful
         --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer $$GITHUB_PERSONAL_ACCESS_TOKEN\""
     networks:
       - mcp
     restart: "no"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3005/"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3005,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -282,12 +291,12 @@ services:
   mcp-playwright:
     image: mcr.microsoft.com/playwright/mcp:latest
     entrypoint: ["node", "/app/cli.js"]
-    command: ["--headless", "--browser", "chromium", "--port", "3006"]
+    command: ["--headless", "--browser", "chromium", "--port", "3006", "--host", "0.0.0.0"]
     networks:
       - mcp
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/3006'"]
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3006,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -309,7 +318,7 @@ services:
           --without-connection-token \
           --accept-server-license-terms \
           --server-data-dir /home/user/.vscode-server \
-          --default-workspace /home/user/workspace/${WORKSPACE_NAME:-zzaia}.code-workspace
+          --default-workspace /home/user/${WORKSPACE_NAME:-zzaia}.code-workspace
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
     volumes:
@@ -341,7 +350,7 @@ services:
       workspace:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:${VSCODE_PORT:-8080}/"]
+      test: ["CMD", "curl", "-sf", "http://localhost:${VSCODE_PORT:-8080}/"]
       interval: 15s
       timeout: 5s
       retries: 5

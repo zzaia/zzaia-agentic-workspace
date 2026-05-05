@@ -70,13 +70,24 @@ su -s /bin/bash user -c "mise trust /home/user/mise.toml 2>/dev/null || true"
 
 # ── WORKSPACE_NAME templating — idempotent, runs on every start ───────────────
 su -s /bin/bash user -c "
-    find /home/user/.vscode-server /home/user/workspace \
-        \( -name '*.json' -o -name '*.code-workspace' \) 2>/dev/null \
+    find /home/user /home/user/.vscode-server /home/user/workspace \
+        \( -name '*.json' -o -name '*.code-workspace' \) -maxdepth 4 2>/dev/null \
         | xargs sed -i 's/{{WORKSPACE_NAME}}/${WORKSPACE_NAME}/g' 2>/dev/null || true
-    [ -f /home/user/workspace/zzaia.code-workspace ] \
-        && mv /home/user/workspace/zzaia.code-workspace \
-              /home/user/workspace/${WORKSPACE_NAME}.code-workspace || true
+    [ -f /home/user/zzaia.code-workspace ] \
+        && mv /home/user/zzaia.code-workspace \
+              /home/user/${WORKSPACE_NAME}.code-workspace 2>/dev/null || true
 "
+
+# ── Claude CLI credentials ───────────────────────────────────────────────────
+if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+    su -s /bin/bash user -c "
+        mkdir -p /home/user/.claude
+        printf '{\"claudeAiOAuth\":{\"accessToken\":\"%s\",\"expiresAt\":9999999999,\"refreshToken\":null,\"scopes\":null,\"tokenType\":\"Bearer\"}}\n' \
+            \"\$CLAUDE_CODE_OAUTH_TOKEN\" > /home/user/.claude/.credentials.json
+        chmod 600 /home/user/.claude/.credentials.json
+    "
+fi
 
 # ── GitHub auth ───────────────────────────────────────────────────────────────
 if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
@@ -84,6 +95,8 @@ if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
     su -s /bin/bash user -c "
         export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
         echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
+
+        gh extension install github/gh-copilot 2>/dev/null || gh extension upgrade github/gh-copilot 2>/dev/null || true
         gh extension upgrade --all 2>/dev/null || true
     "
 fi
@@ -105,6 +118,7 @@ unset ADO_MCP_AUTH_TOKEN
 
 # ── Aspire MCP — single shared instance for all agents ───────────────────
 su -s /bin/bash user -c "
+    mkdir -p /home/user/.local/share/vscode-server
     export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
     npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start --dashboard-endpoint http://aspire-dashboard:18888' \
         >> /home/user/.local/share/vscode-server/aspire-mcp.log 2>&1 &

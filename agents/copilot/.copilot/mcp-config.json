@@ -5,24 +5,24 @@
       "url": "http://localhost:3007/sse"
     },
     "tavily": {
-      "type": "sse",
-      "url": "http://mcp-tavily:3001/sse"
+      "type": "http",
+      "url": "http://mcp-tavily:3001/mcp"
     },
     "azure-devops": {
-      "type": "sse",
-      "url": "http://mcp-azure-devops:3002/sse"
+      "type": "http",
+      "url": "http://mcp-azure-devops:3002/mcp"
     },
     "postman": {
-      "type": "sse",
-      "url": "http://mcp-postman:3003/sse"
+      "type": "http",
+      "url": "http://mcp-postman:3003/mcp"
     },
     "new-relic": {
-      "type": "sse",
-      "url": "http://mcp-newrelic:3004/sse"
+      "type": "http",
+      "url": "http://mcp-newrelic:3004/mcp"
     },
     "github": {
-      "type": "sse",
-      "url": "http://mcp-github:3005/sse"
+      "type": "http",
+      "url": "http://mcp-github:3005/mcp"
     },
     "playwright": {
       "type": "sse",
@@ -30,7 +30,7 @@
     },
     "headroom": {
       "type": "sse",
-      "url": "http://headroom:8787/sse"
+      "url": "http://proxy-headroom:8787/sse"
     }
   }
 }

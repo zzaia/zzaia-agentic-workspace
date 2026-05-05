@@ -103,7 +103,12 @@ RUN mise trust /home/user/mise.toml \
 # ── Workspace configuration — after expensive layers for better cache ─────────
 COPY --chown=user:user workspace/ /home/user/workspace/
 
-# ── VS Code server config — profile, settings, workspace tasks/launch ─────────
+# ── Agent configs — flat merge into HOME ──────────────────────────────────────
+COPY --chown=user:user agents/gemini/  /home/user/
+COPY --chown=user:user agents/codex/   /home/user/
+COPY --chown=user:user agents/copilot/ /home/user/
+
+# ── VS Code server config — last so it wins over agent defaults ───────────────
 # {{WORKSPACE_NAME}} templating and .code-workspace rename are deferred to entrypoint
 # so the same image works for any WORKSPACE_NAME at runtime.
 COPY --chown=user:user vscode/ /home/user/
@@ -111,11 +116,6 @@ COPY --chown=user:user vscode/ /home/user/
 # ── Dev Containers support ────────────────────────────────────────────────────
 RUN mkdir -p /home/user/.devcontainer
 COPY --chown=user:user docker/devcontainer.json /home/user/.devcontainer/devcontainer.json
-
-# ── Agent configs — flat merge into HOME ──────────────────────────────────────
-COPY --chown=user:user agents/gemini/  /home/user/
-COPY --chown=user:user agents/codex/   /home/user/
-COPY --chown=user:user agents/copilot/ /home/user/
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root
