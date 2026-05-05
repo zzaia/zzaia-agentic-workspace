@@ -27,10 +27,6 @@
     "playwright": {
       "type": "sse",
       "url": "http://mcp-playwright:3006/sse"
-    },
-    "headroom": {
-      "type": "sse",
-      "url": "http://proxy-headroom:8787/sse"
     }
   }
 }
