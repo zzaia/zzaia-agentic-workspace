@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "if command -v rtk &>/dev/null; then exec rtk; else cat; fi",
+        "powershell": "if (Get-Command rtk -ErrorAction SilentlyContinue) { rtk } else { [System.Console]::In.ReadToEnd() }",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
