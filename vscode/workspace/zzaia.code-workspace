@@ -32,6 +32,10 @@
         "url": "http://localhost:3007/sse",
         "type": "sse"
       },
+      "headroom": {
+        "url": "http://proxy-headroom:8787/sse",
+        "type": "sse"
+      },
       "tavily": {
         "url": "http://mcp-tavily:3001/mcp",
         "type": "http"

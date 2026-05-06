@@ -99,6 +99,12 @@ if [ -n "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
 
         gh extension install github/gh-copilot 2>/dev/null || gh extension upgrade github/gh-copilot 2>/dev/null || true
         gh extension upgrade --all 2>/dev/null || true
+
+        git config --global credential.https://github.com.helper store
+        grep -qF \"github.com\" /home/user/.git-credentials 2>/dev/null \
+            || printf \"https://x-access-token:%s@github.com\\n\" \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" \
+               >> /home/user/.git-credentials
+        chmod 600 /home/user/.git-credentials
     "
 fi
 
@@ -116,6 +122,13 @@ fi
 
 unset GITHUB_PERSONAL_ACCESS_TOKEN
 unset ADO_MCP_AUTH_TOKEN
+
+# ── Claude plugins and commands — ensure marketplace is available at runtime ─
+su -s /bin/bash user -c "
+    export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
+    claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system 2>/dev/null || true
+    claude plugin sync 2>/dev/null || true
+"
 
 # ── Aspire MCP — single shared instance for all agents ───────────────────
 su -s /bin/bash user -c "

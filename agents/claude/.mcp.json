@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "aspire": {
+      "type": "sse",
+      "url": "http://localhost:3007/sse"
+    },
+    "headroom": {
+      "type": "sse",
+      "url": "http://proxy-headroom:8787/sse"
+    },
     "tavily": {
       "type": "http",
       "url": "http://mcp-tavily:3001/mcp"
