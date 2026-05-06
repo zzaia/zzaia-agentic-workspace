@@ -120,7 +120,6 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `mcp-github` | 3005 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Opt-in |
 | `mcp-playwright` | 3006 | None | Always-on, headless Chromium |
 | `aspire-mcp` | 3007 | None | Always-on, internal to workspace |
-| `aspire-dashboard` | 18888 | None | Always-on, OTLP telemetry receiver |
 
 - The `workspace` container holds zero API key environment variables for MCP integrations
 - Each opt-in sidecar guards its own key: if empty, the process exits cleanly (code 0)
@@ -255,6 +254,19 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 - Passthrough guarantee: if compression fails, original content is forwarded unchanged — no agent call is ever dropped
 
 **Rationale**: Triple-stack primary layer automatically optimizes every agent session without opt-in overhead. Automatic memory injection via proxy pipeline eliminates the need for agent instrumentation. Background code-graph file watcher keeps code context current without manual triggers. Qdrant + Neo4j shared by all three features eliminates redundant infrastructure.
+
+---
+
+### ADR 011A: Single Main AppHost and On-Demand Dashboard
+
+**Decision**: The workspace uses a single main AppHost orchestrator. The dashboard is the AppHost-native local dashboard and is exposed outside the container via `vscode-server` port mapping.
+
+- No standalone `aspire-dashboard` service exists in Docker Compose
+- `vscode-server` maps `${ASPIRE_DASHBOARD_PORT}` to AppHost dashboard port `17001`
+- Dashboard is available only when the AppHost is running
+- Future applications should be integrated into the same main AppHost model instead of introducing independent dashboard control planes
+
+**Rationale**: A single AppHost keeps orchestration and control simple, avoids resource-service federation complexity, and provides a single operational dashboard endpoint for users when the AppHost is active.
 
 ---
 

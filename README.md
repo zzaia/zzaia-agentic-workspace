@@ -213,6 +213,10 @@ System utilities and information.
 
 The `workspace/host/` directory contains a .NET Aspire AppHost — a template for running workspace applications alongside shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing during development.
 
+- Single orchestrator model: one main AppHost controls workspace application orchestration
+- Dashboard endpoint: the AppHost local dashboard is exposed through `vscode-server` on `ASPIRE_DASHBOARD_PORT`
+- Availability model: the dashboard is only reachable while AppHost is running from VS Code launch settings
+
 - Add workspace service project references to `.csproj` pointing to worktree paths
 - Configure `Applications/ApplicationInjection.cs` extension methods per service
 - All infrastructure settings are driven by `appsettings.json`

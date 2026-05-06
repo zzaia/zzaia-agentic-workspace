@@ -66,6 +66,7 @@ if [ -n "$_SSH_KEY" ]; then
 fi
 
 # ── mise trust — ensure mise.toml is trusted (volume may shadow image state) ──
+mise trust /home/user/mise.toml 2>/dev/null || true
 su -s /bin/bash user -c "mise trust /home/user/mise.toml 2>/dev/null || true"
 
 # ── WORKSPACE_NAME templating — idempotent, runs on every start ───────────────
@@ -120,7 +121,7 @@ unset ADO_MCP_AUTH_TOKEN
 su -s /bin/bash user -c "
     mkdir -p /home/user/.local/share/vscode-server
     export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
-    npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start --dashboard-endpoint http://aspire-dashboard:18888' \
+    npx -y supergateway@latest --port 3007 --stdio 'aspire mcp start --dashboard-endpoint http://vscode-server:17001' \
         >> /home/user/.local/share/vscode-server/aspire-mcp.log 2>&1 &
 "
 

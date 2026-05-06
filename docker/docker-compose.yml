@@ -41,15 +41,12 @@ services:
       - CLOUD_ML_REGION=${CLOUD_ML_REGION:-}
       - CLAUDE_CODE_USE_FOUNDRY=${CLAUDE_CODE_USE_FOUNDRY:-}
       - AZURE_FOUNDRY_BASE_URL=${AZURE_FOUNDRY_BASE_URL:-}
-      - ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://proxy-headroom:8787
       - OPENAI_BASE_URL=http://proxy-headroom:8787
       - GEMINI_API_BASE=http://proxy-headroom:8787
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - DOTNET_ASPIRE_LAUNCH_DASHBOARD=false
-      - DOTNET_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
     networks:
       - mcp
     cap_drop:
@@ -84,8 +81,6 @@ services:
       mcp-github:
         condition: service_started
       mcp-playwright:
-        condition: service_healthy
-      aspire-dashboard:
         condition: service_healthy
 
   proxy-headroom:
@@ -151,30 +146,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 45s
-
-  aspire-dashboard:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.aspire
-    image: zzaia-aspire-dashboard:latest
-    environment:
-      - DASHBOARD__UNSECUREDALLOWANONYMOUS=true
-      - DASHBOARD__OTLP__GRPCENDPOINTURL=http://+:18889
-      - DASHBOARD__OTLP__HTTPENDPOINTURL=http://+:18890
-      - DASHBOARD__FRONTEND__ENDPOINTURL=http://+:18888
-      - DASHBOARD__RESOURCESERVICECLIENT__RESOURCESERVICEURL=http://workspace:18300
-      - DASHBOARD__RESOURCESERVICECLIENT__AUTHMODE=Unsecured
-    ports:
-      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18888}:18888"
-    networks:
-      - mcp
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:18888/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
 
   mcp-tavily:
     image: node:lts-alpine
@@ -304,7 +275,7 @@ services:
 
   vscode-server:
     image: zzaia-agentic-workspace:latest
-    user: user
+    user: root
     entrypoint: []
     command:
       - bash
@@ -321,7 +292,9 @@ services:
           --default-workspace /home/user/${WORKSPACE_NAME:-zzaia}.code-workspace
     ports:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
+      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18890}:17001"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - workspace-home:/home/user
       - workspace-repos:/home/user/workspace
     environment:
@@ -341,7 +314,6 @@ services:
       - ANTHROPIC_BASE_URL=http://proxy-headroom:8787
       - OPENAI_BASE_URL=http://proxy-headroom:8787
       - GEMINI_API_BASE=http://proxy-headroom:8787
-      - ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL=http://aspire-dashboard:18889
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
     networks:
       - mcp

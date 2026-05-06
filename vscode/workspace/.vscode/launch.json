@@ -17,7 +17,9 @@
         "DOTNET_ROOT": "${env:HOME}/.dotnet",
         "DOTNET_HOST_PATH": "${env:HOME}/.dotnet/dotnet",
         "DOTNET_ROLL_FORWARD": "Major",
-        "PATH": "${env:HOME}/.dotnet:${env:PATH}"
+        "PATH": "${env:HOME}/.dotnet:${env:PATH}",
+        "ASPNETCORE_URLS": "http://0.0.0.0:17001",
+        "DOTNET_ASPIRE_LAUNCH_DASHBOARD": "true"
       }
     },
     {
