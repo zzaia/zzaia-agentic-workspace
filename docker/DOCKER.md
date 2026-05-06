@@ -56,18 +56,26 @@ The workspace uses two named Docker volumes per stack. Named volumes live entire
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
 | `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` | SSH public key (persisted once at first start) | Independent — survives home deletion |
-| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/zzaia` | System files, tools, configs, auth tokens, Claude settings | Reset to pick up image updates |
-| `workspace-repos` | `<WORKSPACE_NAME>-workspace` | `/home/zzaia/workspace` | Cloned repositories and worktrees | **Independent** — survives home volume deletion |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` | System files, tools, configs, auth tokens, Claude settings | Reset to pick up image updates |
+| `workspace-repos` | `<WORKSPACE_NAME>-workspace` | `/home/user/workspace` | Cloned repositories and worktrees | **Independent** — survives home volume deletion |
 
-`workspace-repos` overlays inside `workspace-home` at `/home/zzaia/workspace`. Docker supports named-volume overlay correctly.
+The image does **not** bake files directly into `/home/user/workspace`. Instead, it ships a seed tree at `/opt/zzaia/workspace-seed`, and the entrypoint copies that seed into the `workspace-repos` volume only when the volume is empty. This avoids the common nested-volume shadowing problem where rebuilt image content disappears behind a pre-existing named volume.
 
 ### Home volume seeding
 
-On the **first container start with an empty home volume**, Docker copies the image's `/home/zzaia` content into the volume. This means:
+On the **first container start with an empty home volume**, Docker copies the image's `/home/user` content into the volume. This means:
 
 - All tools installed in the image (mise, miniforge3, VS Code extensions, conda envs, claude-code CLI) are available immediately on first start.
 - Tool installations and configs persist across restarts and container recreation.
 - Claude auth tokens (`~/.config/claude/`) persist — `claude auth login` needs to be run only once.
+
+### Repos volume seeding
+
+On the **first container start with an empty repos volume**, the entrypoint copies `/opt/zzaia/workspace-seed/*` into `/home/user/workspace`.
+
+- This keeps the initial host/AppHost template available without relying on Docker's nested copy-up behavior.
+- Rebuilding the image no longer appears to "lose" workspace files because nothing is baked into the mounted path itself.
+- If you want updated seed content, recreate only the repos volume.
 
 **After image updates:** the volume is NOT automatically updated from the new image. To pick up new tool versions, delete the home volume and recreate:
 
@@ -78,6 +86,14 @@ docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
 ```
 
 The repos volume is unaffected — your cloned repositories survive.
+
+To pick up updated seed workspace content from a rebuilt image:
+
+```bash
+docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
+docker volume rm <WORKSPACE_NAME>-workspace
+docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
+```
 
 ### Volume lifecycle
 

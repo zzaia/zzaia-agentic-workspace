@@ -100,8 +100,8 @@ RUN mise trust /home/user/mise.toml \
     && mise run gh-extensions \
     && mise run vscode-extensions
 
-# ── Workspace configuration — after expensive layers for better cache ─────────
-COPY --chown=user:user workspace/ /home/user/workspace/
+# ── Workspace seed — copied outside the mounted runtime path to avoid shadowing ─
+COPY --chown=user:user workspace/ /opt/zzaia/workspace-seed/
 
 # ── Agent configs — flat merge into HOME ──────────────────────────────────────
 COPY --chown=user:user agents/gemini/  /home/user/
@@ -116,6 +116,8 @@ COPY --chown=user:user vscode/ /home/user/
 # ── Dev Containers support ────────────────────────────────────────────────────
 RUN mkdir -p /home/user/.devcontainer
 COPY --chown=user:user docker/devcontainer.json /home/user/.devcontainer/devcontainer.json
+
+RUN chown -R user:user /opt/zzaia
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root

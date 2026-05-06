@@ -222,6 +222,16 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 **Rationale**: Profile and extension consistency across all entry points is critical for developer experience. Single-image enforces parity at build time.
 
+### ADR 009A: Explicit Workspace Volume Seeding
+
+**Decision**: Repository seed content is baked into `/opt/zzaia/workspace-seed` and copied into `/home/user/workspace` only when the `workspace-repos` volume is empty.
+
+- The image does not copy seed files directly into `/home/user/workspace`
+- This avoids nested-volume shadowing when `workspace-home` and `workspace-repos` are both mounted
+- Recreating the repos volume is the only action required to pick up updated seed workspace content from a rebuilt image
+
+**Rationale**: Named volumes mounted at runtime hide image content at the same path. Seeding from a separate immutable location keeps first-run initialization deterministic and removes ambiguity after rebuilds.
+
 ---
 
 ### ADR 010: RTK for Shell Command Output Compression (Layer 0)
@@ -497,7 +507,7 @@ zzaia-agentic-workspace/
 | Volume | Mount | Contents |
 |--------|-------|----------|
 | `<ws>-home` | `/home/user` | `.vscode-server/`, `.claude/`, agent configs, auth tokens |
-| `<ws>-workspace` | `/home/user/workspace` | Git repositories and worktrees |
+| `<ws>-workspace` | `/home/user/workspace` | Git repositories, worktrees, and first-run seed copied from `/opt/zzaia/workspace-seed` |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
 | `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for headroom and openmemory |
 | `<ws>-headroom-neo4j` | `/data` | Knowledge graph for headroom retrieval |

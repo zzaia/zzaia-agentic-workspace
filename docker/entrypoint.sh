@@ -123,6 +123,12 @@ fi
 unset GITHUB_PERSONAL_ACCESS_TOKEN
 unset ADO_MCP_AUTH_TOKEN
 
+# ── Workspace seed — initialize repos volume on first start only ─────────────
+if [ -d /opt/zzaia/workspace-seed ] && [ -z "$(find /home/user/workspace -mindepth 1 -maxdepth 1 2>/dev/null)" ]; then
+    cp -a /opt/zzaia/workspace-seed/. /home/user/workspace/
+    chown -R user:user /home/user/workspace
+fi
+
 # ── Claude plugins and commands — ensure marketplace is available at runtime ─
 su -s /bin/bash user -c "
     export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
