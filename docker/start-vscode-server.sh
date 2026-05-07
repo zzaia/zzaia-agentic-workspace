@@ -16,13 +16,19 @@ SERVER_PID=$!
 EXT_DIR=/home/user/.vscode-server/extensions
 EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
 mkdir -p "$EXT_DIR"
+chown user:user "$EXT_DIR" 2>/dev/null || true
 chmod 0775 "$EXT_DIR" || true
 
 VSCODE_CLI=""
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  VSCODE_CLI=$(find /root/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1)
+CLI_DISCOVERY_MAX_ATTEMPTS="${CLI_DISCOVERY_MAX_ATTEMPTS:-120}"
+CLI_DISCOVERY_DELAY_SECONDS="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
+for _ in $(seq 1 "$CLI_DISCOVERY_MAX_ATTEMPTS"); do
+  VSCODE_CLI=$(
+    find /root/.vscode/cli/serve-web /home/user/.vscode/cli/serve-web \
+      -name code-server -type f 2>/dev/null | head -1 || true
+  )
   [ -n "$VSCODE_CLI" ] && break
-  sleep 3
+  sleep "$CLI_DISCOVERY_DELAY_SECONDS"
 done
 
 if [ -z "$VSCODE_CLI" ]; then
@@ -34,14 +40,20 @@ fi
 _CLI_VER=$("$VSCODE_CLI" --version 2>/dev/null | head -1 || echo "unknown")
 if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_VER" ]; then
   _install_ext() {
-    local ext="$1" attempt=1 max=5 delay=10 out
+    local ext="$1" attempt=1 max=5 delay=10 out rc
     while [ "$attempt" -le "$max" ]; do
-      out=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" --target linux-x64 2>&1)
+      # Under set -e, a failing command substitution in assignment can terminate
+      # the script. Capture stdout/stderr and exit code explicitly.
+      if out=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1); then
+        rc=0
+      else
+        rc=$?
+      fi
       if echo "$out" | grep -qiE "successfully installed|already installed"; then
         echo "$out" | grep -v "already installed" || true
         return 0
       fi
-      echo "WARN: $ext attempt $attempt/$max failed; retrying in ${delay}s..." >&2
+      echo "WARN: $ext attempt $attempt/$max failed (exit=${rc}); retrying in ${delay}s..." >&2
       sleep "$delay"
       attempt=$((attempt + 1))
       delay=$((delay * 2))
@@ -56,7 +68,6 @@ if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_
     alefragnani.project-manager codeinklingon.git-worktree-menu \
     eamodio.gitlens editorconfig.editorconfig esbenp.prettier-vscode \
     fullstackspider.visual-nuget gaoshan0621.csharp-format-usings \
-    github.copilot github.copilot-chat \
     google.geminicodeassist google.gemini-cli-vscode-ide-companion openai.chatgpt \
     gruntfuggly.todo-tree kreativ-software.csharpextensions \
     mermaidchart.vscode-mermaid-chart ms-azure-devops.azure-pipelines \

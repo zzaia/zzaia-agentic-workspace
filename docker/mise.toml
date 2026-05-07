@@ -16,8 +16,8 @@ dapr = "latest"
 experimental = true
 
 [tasks.install-git]
-description = "Install git via apt"
-run = "sudo apt-get update && sudo apt-get install -y --no-install-recommends git"
+description = "Install git and unzip via apt"
+run = "sudo apt-get update && sudo apt-get install -y --no-install-recommends git unzip"
 
 [tasks.install-azure-cli]
 description = "Install Azure CLI via official Microsoft script"
