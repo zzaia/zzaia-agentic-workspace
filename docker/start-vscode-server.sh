@@ -3,8 +3,16 @@ set -euo pipefail
 
 export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:$PATH
 export BROWSER=/usr/local/bin/browser-print
+export HOME=/home/user
 
-code serve-web \
+USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER")
+
+# VS Code server data may have been created by root in previous runs.
+# Normalize ownership so the web server can watch/read/write settings and logs.
+mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
+chown -R user:user /home/user/.vscode-server 2>/dev/null || true
+
+"${USER_RUN[@]}" code serve-web \
   --host 0.0.0.0 \
   --port "${VSCODE_PORT:-8080}" \
   --without-connection-token \
@@ -24,7 +32,7 @@ CLI_DISCOVERY_MAX_ATTEMPTS="${CLI_DISCOVERY_MAX_ATTEMPTS:-120}"
 CLI_DISCOVERY_DELAY_SECONDS="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
 for _ in $(seq 1 "$CLI_DISCOVERY_MAX_ATTEMPTS"); do
   VSCODE_CLI=$(
-    find /root/.vscode/cli/serve-web /home/user/.vscode/cli/serve-web \
+    find /home/user/.vscode/cli/serve-web \
       -name code-server -type f 2>/dev/null | head -1 || true
   )
   [ -n "$VSCODE_CLI" ] && break
@@ -44,7 +52,7 @@ if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_
     while [ "$attempt" -le "$max" ]; do
       # Under set -e, a failing command substitution in assignment can terminate
       # the script. Capture stdout/stderr and exit code explicitly.
-      if out=$("$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1); then
+      if out=$("${USER_RUN[@]}" "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1); then
         rc=0
       else
         rc=$?
