@@ -30,9 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── External binaries: VS Code CLI ────────────────────────────────────────────
-# Pin CLI to a stable version to avoid runtime regressions from floating "latest".
-ARG VSCODE_CLI_VERSION=1.118.1
-RUN curl -fsSL "https://update.code.visualstudio.com/${VSCODE_CLI_VERSION}/cli-linux-x64/stable" | tar xz -C /usr/local/bin
+# VS Code server is auto-downloaded by the CLI on first connection.
+RUN curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C /usr/local/bin
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \

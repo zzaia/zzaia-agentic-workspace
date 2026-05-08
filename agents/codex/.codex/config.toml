@@ -4,7 +4,7 @@ args = ["-y", "supergateway", "--sse", "http://localhost:3007/sse"]
 
 [mcp_servers.headroom]
 command = "npx"
-args = ["-y", "supergateway", "--sse", "http://proxy-headroom:8787/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://proxy-headroom:8787/mcp"]
 
 [mcp_servers.tavily]
 command = "npx"

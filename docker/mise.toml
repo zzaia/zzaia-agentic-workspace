@@ -64,8 +64,14 @@ claude plugin remove claude-plugins-official || true
 """
 
 [tasks.gh-extensions]
-description = "Install gh CLI extensions baked into the image"
-run = "gh extension install github/gh-copilot 2>/dev/null || true"
+description = "Install GitHub Copilot CLI binary"
+run = """
+_asset_url=$(gh api repos/github/copilot-cli/releases/latest \
+    --jq ".assets[] | select(.name == \"copilot-linux-x64.tar.gz\") | .url") \
+&& mkdir -p "${HOME}/.local/bin" \
+&& gh api "$_asset_url" -H "Accept: application/octet-stream" | tar -xz -C "${HOME}/.local/bin" copilot \
+&& chmod +x "${HOME}/.local/bin/copilot"
+"""
 
 [tasks.rtk]
 description = "Install RTK (Rust Token Killer) binary for token compression"

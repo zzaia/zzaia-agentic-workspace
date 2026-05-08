@@ -5,8 +5,8 @@
       "url": "http://localhost:3007/sse"
     },
     "headroom": {
-      "type": "sse",
-      "url": "http://proxy-headroom:8787/sse"
+      "type": "http",
+      "url": "http://proxy-headroom:8787/mcp"
     },
     "tavily": {
       "type": "http",

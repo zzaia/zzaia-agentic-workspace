@@ -58,10 +58,7 @@ setup_github_credentials() {
         # Authenticate gh CLI
         echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
         
-        # Install/upgrade gh-copilot extension
-        gh extension install github/gh-copilot 2>/dev/null || gh extension upgrade github/gh-copilot 2>/dev/null || true
-        
-        # Upgrade all extensions
+        # Upgrade any existing extensions
         gh extension upgrade --all 2>/dev/null || true
         
         # Configure git credential helper

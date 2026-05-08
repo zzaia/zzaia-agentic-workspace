@@ -32,6 +32,10 @@
         "url": "http://localhost:3007/sse",
         "type": "sse"
       },
+      "headroom": {
+        "url": "http://proxy-headroom:8787/mcp",
+        "type": "http"
+      },
       "tavily": {
         "url": "http://mcp-tavily:3001/mcp",
         "type": "http"
@@ -54,10 +58,6 @@
       },
       "playwright": {
         "url": "http://mcp-playwright:3006/sse",
-        "type": "sse"
-      },
-      "headroom": {
-        "url": "http://proxy-headroom:8787/sse",
         "type": "sse"
       }
     }
