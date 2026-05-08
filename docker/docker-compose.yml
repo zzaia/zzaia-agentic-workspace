@@ -99,6 +99,7 @@ services:
       - NEO4J_USERNAME=neo4j
       - NEO4J_PASSWORD=${ADMIN_PASSWORD:-headroom}
       - PORT=8787
+      - HEADROOM_TELEMETRY=off
       - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
@@ -260,6 +261,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-headroom/Dockerfile
     image: zzaia-mcp-headroom:latest
+    environment:
+      - HEADROOM_TELEMETRY=off
     networks:
       - mcp
     restart: unless-stopped
