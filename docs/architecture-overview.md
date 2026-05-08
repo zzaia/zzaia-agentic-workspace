@@ -193,6 +193,21 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
+### ADR 007A: Claude Code Plugin — Commands, Agents, and MCP via Marketplace
+
+**Decision**: Claude Code commands, sub-agents, and MCP server configuration are distributed exclusively through the Claude Code plugin marketplace mechanism, not via Dockerfile `COPY` into the home seed.
+
+- The repo root contains a `.claude-plugin/plugin.json` manifest defining the plugin identity and component paths
+- `plugin.json` references `./agents/claude/.claude/commands/` for commands, `./agents/claude/.claude/agents/` for agents, and `./agents/claude/.mcp.json` for MCP servers — `agents/claude/.mcp.json` is the single source of truth
+- At container first startup, `setup-credentials.sh` runs `mise run claude-plugins` **after** writing `CLAUDE_CODE_OAUTH_TOKEN` to `~/.claude/.credentials.json`, so the plugin install has valid auth
+- `claude plugin marketplace add <repo>#feature/improve-agentic-system` fetches the branch and installs into the user scope (`~/.claude/settings.json`)
+- `claude plugin sync` propagates all registered components to both the Claude CLI and the Claude VS Code extension
+- Other agents (Gemini, Codex, Copilot) continue to use Dockerfile `COPY` into `/opt/zzaia/home-seed/` because they have no equivalent plugin marketplace mechanism
+
+**Rationale**: The marketplace approach decouples Claude's configuration lifecycle from Docker image rebuilds. Updating commands, agents, or MCP servers only requires pushing a new commit to the branch — users receive the update via `claude plugin update` without any image change. A Dockerfile `COPY` would hardcode the config at build time and prevent this update path.
+
+---
+
 ### ADR 008: Claude Code Authentication and Sudo Access
 
 **Decision**: The workspace accepts environment variables for Claude Code authentication across five provider options (only one required).
