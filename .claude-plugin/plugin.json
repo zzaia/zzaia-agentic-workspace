@@ -19,6 +19,7 @@
     "workspace",
     "automation"
   ],
+  "mcpServers": "./agents/claude/.mcp.json",
   "commands": ["./agents/claude/.claude/commands"],
   "agents": [
     "./agents/claude/.claude/agents/sub/zzaia-code-reviewer.md",
