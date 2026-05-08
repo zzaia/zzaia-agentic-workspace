@@ -223,6 +223,7 @@ __marimo__/
 !vscode/
 !Init-windows.ps1
 !.claude-plugin/
+!.mcp.json
 !.gitignore
 
 # Docker — container configuration (local only)

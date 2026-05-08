@@ -119,8 +119,6 @@ install_optional_tools() {
     su -s /bin/bash user -c "
         export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:/home/user/.dotnet/tools:\$PATH
         mise run rtk || log_warn 'RTK installation skipped'
-        mise run claude-plugins || log_warn 'Claude plugins installation skipped'
-        mise run gh-extensions || log_warn 'GitHub extensions installation skipped'
         mise run vscode-extensions || log_warn 'VSCode extensions installation skipped'
     "
 }

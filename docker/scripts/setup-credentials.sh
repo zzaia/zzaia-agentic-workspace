@@ -40,6 +40,13 @@ setup_claude_credentials() {
     "
     
     log_success "Claude CLI authenticated"
+
+    # Install plugins after auth so claude plugin sync can apply MCP config
+    CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
+    su -s /bin/bash user -c "
+        export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
+        mise run claude-plugins || true
+    "
 }
 
 # ── GitHub authentication and extensions ──────────────────────────────────────
@@ -60,6 +67,11 @@ setup_github_credentials() {
         
         # Upgrade any existing extensions
         gh extension upgrade --all 2>/dev/null || true
+        
+            # Install GitHub Copilot CLI binary (requires gh auth)
+            export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
+            export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
+            mise run gh-extensions || true
         
         # Configure git credential helper
         git config --global credential.https://github.com.helper store
