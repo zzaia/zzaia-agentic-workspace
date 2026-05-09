@@ -41,6 +41,16 @@ seed_home() {
     fi
 }
 
+# ── SSH port runtime override ─────────────────────────────────────────────────
+configure_ssh_port() {
+    local port="${SSH_PORT:-}"
+    [ -z "$port" ] && return 0
+    log_info "Configuring SSH port: $port"
+    sed -i "s/^Port .*/Port ${port}/" /etc/ssh/sshd_config.d/workspace.conf
+    echo "${port}" > /etc/ssh-port
+    log_success "SSH port set to $port"
+}
+
 # ── SSH host key persistence ──────────────────────────────────────────────────
 setup_ssh_host_keys() {
     log_info "Setting up SSH host keys..."
@@ -161,6 +171,7 @@ setup_mise_trust() {
 main() {
     setup_user_home
     seed_home
+    configure_ssh_port
     setup_ssh_host_keys
     setup_docker_socket
     setup_sudo

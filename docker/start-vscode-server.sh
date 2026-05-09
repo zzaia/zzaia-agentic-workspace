@@ -75,7 +75,7 @@ if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_
     _install_ext "$ext"
   done < "$EXT_LIST_FILE"
 
-  echo "$_CLI_VER" > "$EXT_SENTINEL" || true
+  "${USER_RUN[@]}" sh -c "echo '$_CLI_VER' > '$EXT_SENTINEL'" || true
 fi
 
 wait "$SERVER_PID"
