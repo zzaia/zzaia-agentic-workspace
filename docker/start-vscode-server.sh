@@ -12,7 +12,43 @@ USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER"
 "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
 chown -R user:user /home/user/.vscode-server 2>/dev/null || true
 
-"${USER_RUN[@]}" code serve-web \
+EXT_DIR=/home/user/.vscode-server/extensions
+EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
+"${USER_RUN[@]}" mkdir -p "$EXT_DIR"
+
+# ── Discover or download VS Code Server ──────────────────────────────────────
+VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
+
+if [ -z "$VSCODE_CLI" ]; then
+  echo "VS Code Server not found — downloading via code serve-web..."
+  # Run on a loopback temp port just to trigger the download, then kill it
+  "${USER_RUN[@]}" code serve-web \
+    --host 127.0.0.1 \
+    --port 19999 \
+    --without-connection-token \
+    --accept-server-license-terms \
+    --server-data-dir /home/user/.vscode-server &
+  DOWNLOAD_PID=$!
+
+  CLI_DISCOVERY_MAX="${CLI_DISCOVERY_MAX_ATTEMPTS:-120}"
+  CLI_DISCOVERY_DELAY="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
+  for _ in $(seq 1 "$CLI_DISCOVERY_MAX"); do
+    VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
+    [ -n "$VSCODE_CLI" ] && break
+    sleep "$CLI_DISCOVERY_DELAY"
+  done
+
+  kill "$DOWNLOAD_PID" 2>/dev/null || true
+  wait "$DOWNLOAD_PID" 2>/dev/null || true
+fi
+
+if [ -z "$VSCODE_CLI" ]; then
+  echo "ERROR: VS Code Server could not be downloaded." >&2
+  exit 1
+fi
+
+# ── Start VS Code Server directly on TCP (bypasses CLI proxy WebSocket issues)
+"${USER_RUN[@]}" "$VSCODE_CLI" \
   --host 0.0.0.0 \
   --port "${VSCODE_PORT:-8080}" \
   --without-connection-token \
@@ -21,37 +57,12 @@ chown -R user:user /home/user/.vscode-server 2>/dev/null || true
   --default-workspace "/home/user/${WORKSPACE_NAME:-zzaia}.code-workspace" &
 SERVER_PID=$!
 
-EXT_DIR=/home/user/.vscode-server/extensions
-EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
-"${USER_RUN[@]}" mkdir -p "$EXT_DIR"
-chown user:user "$EXT_DIR" 2>/dev/null || true
-chmod 0775 "$EXT_DIR" || true
-
-VSCODE_CLI=""
-CLI_DISCOVERY_MAX_ATTEMPTS="${CLI_DISCOVERY_MAX_ATTEMPTS:-120}"
-CLI_DISCOVERY_DELAY_SECONDS="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
-for _ in $(seq 1 "$CLI_DISCOVERY_MAX_ATTEMPTS"); do
-  VSCODE_CLI=$(
-    find /home/user/.vscode/cli/serve-web \
-      -name code-server -type f 2>/dev/null | head -1 || true
-  )
-  [ -n "$VSCODE_CLI" ] && break
-  sleep "$CLI_DISCOVERY_DELAY_SECONDS"
-done
-
-if [ -z "$VSCODE_CLI" ]; then
-  echo "WARN: code-server CLI not found; skipping extension bootstrap." >&2
-  wait "$SERVER_PID"
-  exit 0
-fi
-
+# ── Extension bootstrap ───────────────────────────────────────────────────────
 _CLI_VER=$("$VSCODE_CLI" --version 2>/dev/null | head -1 || echo "unknown")
 if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_VER" ]; then
   _install_ext() {
     local ext="$1" attempt=1 max=5 delay=10 out rc
     while [ "$attempt" -le "$max" ]; do
-      # Under set -e, a failing command substitution in assignment can terminate
-      # the script. Capture stdout/stderr and exit code explicitly.
       if out=$("${USER_RUN[@]}" "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1); then
         rc=0
       else
