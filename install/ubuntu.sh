@@ -102,7 +102,7 @@ if [ -n "$DOCKER_REGISTRY" ] && [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSW
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d
+docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" --profile vscode up -d
 
 echo ""
 echo "✓ Workspace started. Access:"

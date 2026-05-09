@@ -76,7 +76,7 @@ cleanup_secrets() {
     unset -v BW_SESSION BW_ITEMS DOCKER_REGISTRY DOCKER_USERNAME DOCKER_PASSWORD 2>/dev/null || true
     unset -v SSH_PUBLIC_KEY ADMIN_PASSWORD 2>/dev/null || true
     unset -v GITHUB_PERSONAL_ACCESS_TOKEN ADO_MCP_AUTH_TOKEN 2>/dev/null || true
-    unset -v ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY CLAUDECODE_OAUTH_TOKEN 2>/dev/null || true
+    unset -v ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
 }
 
 trap cleanup_secrets EXIT

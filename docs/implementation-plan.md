@@ -32,7 +32,6 @@ gantt
     Story 1.2.1: Workspace healthcheck           :done, story121, after story01, 3d
     Story 3.1: Headroom triple-stack             :done, story31, after story01, 3d
     Story 4.1: Fix VS Code extensions            :done, story41, after story01, 2d
-    Story 5.1: GPU pass-through                  :done, story51, after story01, 1d
 
     section Phase 2 (After Phase 1)
     Story 1.1.1: vscode-server container         :done, story111, after story121, 2d
@@ -143,29 +142,7 @@ gantt
 
 ---
 
-### 1C: GPU Pass-Through — workspace and headroom (Story 5.1) (1 point)
-
-**Reference**: ADR 015
-
-**Acceptance Criteria**:
-- `deploy.resources.reservations.devices` block added to both `workspace` and `headroom` services (`driver: nvidia`, `count: all`, `capabilities: [gpu]`)
-- `NVIDIA_VISIBLE_DEVICES` env var added to both services (default `all`, overridable per-stack)
-- `NVIDIA_DRIVER_CAPABILITIES=compute,utility` env var added to both services
-- CPU-only hosts unaffected: Docker silently ignores `deploy.devices` when NVIDIA Container Toolkit is absent
-- `cap_drop: ALL` constraints on `workspace` remain unchanged
-
-**Tasks**:
-- [x] Add `deploy.resources.reservations.devices` block to `workspace` service (0.5)
-- [x] Add `deploy.resources.reservations.devices` block to `headroom` service (0.5)
-- [x] Add `NVIDIA_VISIBLE_DEVICES` and `NVIDIA_DRIVER_CAPABILITIES` env vars to both services (0.5)
-
-**Outputs**: Updated `docker/docker-compose.yml` with GPU pass-through on workspace and headroom
-
-**Dependencies**: None (Phase 1 parallel execution)
-
----
-
-### 1B: Fix Missing VS Code Extensions (Story 4.1) (2 points)
+### 1C: Fix Missing VS Code Extensions (Story 4.1) (2 points)
 
 **Acceptance Criteria**:
 - Verify correct marketplace ID for `google.gemini-code-assist` (may differ from current)
@@ -342,7 +319,7 @@ gantt
 
 **Phase 0 (Prerequisite)**: 2 points (story 0.1 RTK installation and hooks)
 
-**Phase 1 (Parallel)**: 8 points (stories 1.2.1, 3.1, 4.1 execute in parallel; depends on Phase 0 complete)
+**Phase 1 (Parallel)**: 7 points (stories 1.2.1, 3.1, 4.1 execute in parallel; depends on Phase 0 complete)
 
 **Phase 2 (Sequential)**: 10 points (story 1.1.1 + 2.1 + 3.2 after Phase 1 complete)
 
@@ -401,6 +378,7 @@ gantt
 - ✅ Google Gemini Code Assist and OpenAI ChatGPT extensions install without build-time failures
 
 **Technical (Phase 2 OpenMemory Supplementary)**
+
 - ✅ OpenMemory MCP service running (depends on Phase 1B complete)
 - ✅ OpenMemory connects to same Qdrant already deployed by Headroom
 - ✅ OpenMemory structured queries return filtered results (by topic, agent, date)
@@ -467,7 +445,7 @@ gantt
    - RTK installation moved from Dockerfile root `RUN` to `mise.toml` `[tasks.rtk]` (cleaner, runs as `user`)
    - Aspire Dashboard polling loop removed from `entrypoint.sh`; replaced with `depends_on: aspire-dashboard: condition: service_healthy` in Compose
    - Headroom MCP server added to all agent configs (Gemini, Codex, Copilot) — Claude already had it
-   - ADR 015 (GPU pass-through for workspace ML workflows and Headroom acceleration) added to architecture documentation
+   - GPU pass-through extracted to `docker/docker-compose.gpu.yml` override (opt-in for NVIDIA hosts); removed from base compose
 
 6. **Pending — Phase 3 (CodeGraphContext)**:
    - Add `code-graph` service to docker-compose.yml (`mekayelanik/codegraphcontext-mcp:stable`, HTTP port 8045)
@@ -495,8 +473,6 @@ gantt
    | Codex: `headroom` MCP | ✅ | `[mcp_servers.headroom]` |
    | Copilot: `headroom` MCP | ✅ | In mcp-config.json |
    | docker-compose.yml: `vscode-server` on `profiles: [vscode]` | ✅ | Separate service, depends_on workspace healthy |
-   | docker-compose.yml: GPU `deploy.resources.reservations.devices` on workspace + headroom | ✅ | 2 nvidia entries (one per service) |
-   | docker-compose.yml: `NVIDIA_DRIVER_CAPABILITIES=compute,utility` on both | ✅ | |
    | devcontainer.json: `workspaceFolder` + `postAttachCommand` | ✅ | Opens `zzaia.code-workspace` on attach |
    | devcontainer.json: JSON valid | ✅ | |
    | vscode storage.json: `location` uses `/home/user/` (not `{{WORKSPACE_NAME}}`) | ✅ | Fixed |

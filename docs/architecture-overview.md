@@ -327,23 +327,6 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 015: GPU Pass-Through for ML Workflows and Headroom Acceleration
-
-**Decision**: Both `workspace` and `headroom` containers are GPU-capable when the host has an NVIDIA GPU and NVIDIA Container Toolkit installed. GPU access is opt-in via Docker Compose `deploy.resources.reservations.devices` — no changes required for CPU-only hosts.
-
-- Docker Compose GPU reservation (`driver: nvidia`, `count: all`, `capabilities: [gpu]`) enables NVIDIA pass-through for both containers
-- `NVIDIA_DRIVER_CAPABILITIES=compute,utility` scopes GPU access to compute workloads only — no display or video encoding surfaces exposed
-- `NVIDIA_VISIBLE_DEVICES=all` by default; can be scoped to specific device indices per stack on multi-GPU hosts
-- Host prerequisite: NVIDIA Container Toolkit (`nvidia-container-runtime`) must be installed on the Docker host; without it, the `deploy.devices` block is silently ignored and containers fall back to CPU
-- **ML workflows (workspace)**: PyTorch, TensorFlow, JAX, and CUDA-enabled conda environments automatically discover the GPU at runtime; no Dockerfile changes required
-- **Headroom acceleration (headroom)**: if Headroom detects CUDA at startup, AST and semantic compression models run on GPU — reduces compression latency from <5ms to <1ms on large context payloads; falls back to CPU transparently
-- GPU access is additive: all `cap_drop: ALL` constraints on the `workspace` container remain unchanged — NVIDIA driver access does not require elevated Linux capabilities (`SYS_ADMIN`, `DAC_OVERRIDE`, etc.)
-- Graceful degradation: both containers operate identically on CPU-only hosts; no agent code or workflow changes required
-
-**Rationale**: ML training and inference are primary workspace use cases for data science teams. GPU pass-through removes a hard blocker for workloads that require CUDA. Headroom's compression acceleration is a zero-cost secondary benefit on GPU-equipped hosts — faster compression means lower agent latency for all sessions. Keeping GPU access opt-in via Compose profiles preserves the zero-dependency-beyond-Docker principle for users without NVIDIA hardware.
-
----
-
 ### ADR 014: Implementation Phases — Primary Layer (Phase 1) + Supplementary Layers (Phase 2/3)
 
 **Decision**: Implement the two-layer triple-stack architecture in three phases: Phase 1 deploys Headroom's full triple-stack primary layer, Phase 2 adds OpenMemory MCP, Phase 3 adds CodeGraphContext MCP.
@@ -409,7 +392,7 @@ C4Container
             Container(rtk, "rtk", "Rust binary in-image", "Bash hook intercepts command outputs — 81% avg compression")
         }
 
-        Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise + Aspire MCP :3007")
+        Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
 
         System_Boundary(primary, "Layer 1 — Primary (Automatic via Headroom proxy)") {
@@ -499,10 +482,10 @@ zzaia-agentic-workspace/
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
 | `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
-| `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always | GPU-capable when NVIDIA Container Toolkit installed |
+| `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always | |
 | `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | |
 | **Layer 1 — Primary** | | | | |
-| `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | GPU-accelerated compression when NVIDIA runtime available |
+| `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | |
 | `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
 | `neo4j` | Knowledge graph — shared by Headroom memory and code-graph | 7687 (internal) | always |
 | **Layer 2 — Supplementary** | | | |
@@ -556,8 +539,6 @@ zzaia-agentic-workspace/
 | **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
 | **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
 | **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
-| **GPU (opt-in — NVIDIA host only)** | |
-| **NVIDIA Container Toolkit** | **GPU pass-through via `deploy.resources.reservations.devices` — workspace (ML/CUDA) + headroom (compression acceleration)** |
 | Tool provisioning | mise (agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
 | MCP bridge | supergateway (stdio → SSE) + native MCP servers (openmemory, codegraph) |
 | Multi-tenancy | Docker Compose project namespacing |
@@ -575,7 +556,6 @@ zzaia-agentic-workspace/
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
 | Port scanning from container | MCP ports bound to internal network only |
 | VS Code server compromise | `vscode-server` container has no secrets — mounts workspace-home read-only for VS Code state |
-| GPU privilege escalation | NVIDIA driver access does not require `SYS_ADMIN` or `DAC_OVERRIDE`; `cap_drop: ALL` unchanged; `NVIDIA_DRIVER_CAPABILITIES=compute,utility` limits GPU surface to compute only |
 
 ## Related Documentation
 

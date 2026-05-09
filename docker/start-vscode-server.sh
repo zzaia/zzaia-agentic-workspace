@@ -7,9 +7,9 @@ export HOME=/home/user
 
 USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER")
 
-# VS Code server data may have been created by root in previous runs.
-# Normalize ownership so the web server can watch/read/write settings and logs.
-mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
+# Create VS Code server dirs as user — root lacks DAC_OVERRIDE to write into
+# user-owned home. chown -R afterwards normalizes any root-created remnants.
+"${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
 chown -R user:user /home/user/.vscode-server 2>/dev/null || true
 
 "${USER_RUN[@]}" code serve-web \
@@ -23,7 +23,7 @@ SERVER_PID=$!
 
 EXT_DIR=/home/user/.vscode-server/extensions
 EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
-mkdir -p "$EXT_DIR"
+"${USER_RUN[@]}" mkdir -p "$EXT_DIR"
 chown user:user "$EXT_DIR" 2>/dev/null || true
 chmod 0775 "$EXT_DIR" || true
 
@@ -69,26 +69,11 @@ if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_
     echo "WARN: $ext could not be installed after $max attempts; continuing." >&2
   }
 
-  for ext in \
-    teabyii.ayu coderholiclt.night-owl miguelsolorio.fluent-icons \
-    pkief.material-product-icons vscode-icons-team.vscode-icons \
-    anthropic.claude-code \
-    alefragnani.project-manager codeinklingon.git-worktree-menu \
-    eamodio.gitlens editorconfig.editorconfig esbenp.prettier-vscode \
-    fullstackspider.visual-nuget gaoshan0621.csharp-format-usings \
-    google.geminicodeassist google.gemini-cli-vscode-ide-companion openai.chatgpt \
-    gruntfuggly.todo-tree kreativ-software.csharpextensions \
-    mermaidchart.vscode-mermaid-chart ms-azure-devops.azure-pipelines \
-    ms-dotnettools.csdevkit ms-dotnettools.csharp ms-dotnettools.vscode-dotnet-runtime \
-    ms-python.debugpy ms-python.python ms-python.vscode-pylance \
-    ms-python.vscode-python-envs ms-toolsai.jupyter ms-toolsai.jupyter-keymap \
-    ms-toolsai.jupyter-renderers ms-toolsai.vscode-jupyter-cell-tags \
-    ms-toolsai.vscode-jupyter-slideshow orsenkucher.vscode-graphql \
-    redhat.vscode-xml redhat.vscode-yaml streetsidesoftware.code-spell-checker \
-    tamasfe.even-better-toml ms-vscode.vscode-websearchforcopilot \
-    tomblind.scm-buttons-vscode vscodevim.vim; do
+  EXT_LIST_FILE="$(dirname "$0")/vscode-extensions.txt"
+  while IFS= read -r ext || [ -n "$ext" ]; do
+    [ -z "$ext" ] && continue
     _install_ext "$ext"
-  done
+  done < "$EXT_LIST_FILE"
 
   echo "$_CLI_VER" > "$EXT_SENTINEL" || true
 fi

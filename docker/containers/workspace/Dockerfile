@@ -72,6 +72,7 @@ USER root
 COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/scripts /usr/local/lib/zzaia/scripts
 COPY docker/start-vscode-server.sh /usr/local/bin/start-vscode-server.sh
+COPY docker/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
 RUN chmod +x /entrypoint.sh /usr/local/bin/start-vscode-server.sh \
     && chmod +x /usr/local/lib/zzaia/scripts/*.sh
 

@@ -8,29 +8,35 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 # ── Initialize home volume with proper ownership ──────────────────────────────
 setup_user_home() {
     log_info "Initializing user home volume..."
-    mkdir -p /home/user
-    chown user:user /home/user 2>/dev/null || true
+    # Home volume may be initialized from image as user:user 700 (default home umask).
+    # Root without DAC_READ_SEARCH cannot traverse a 700 dir it doesn't own, so the
+    # chown of workspace-repos (mounted inside home) would fail silently.
+    # FOWNER capability allows root to chmod a file it doesn't own — open traversal first.
+    chmod 755 /home/user 2>/dev/null || true
+    # Now root can traverse /home/user to reach the workspace volume mount point.
+    chown user:user /home/user /home/user/workspace 2>/dev/null || true
 }
 
 # ── Seed home directory from image template ───────────────────────────────────
 seed_home() {
     local home_seed_marker="/home/user/.bootstrap/home.seeded"
     local home_seed_dir="/opt/zzaia/home-seed"
-    
+
     if [ ! -f "$home_seed_marker" ] && [ -d "$home_seed_dir" ]; then
         log_info "Seeding home directory from template..."
-        
-        chmod a+rwx /home/user
-        tar -C "$home_seed_dir" -cf - . | tar -C /home/user -xf - --skip-old-files
-        chmod a+rwx /home/user
-        
-        mkdir -p /home/user/.ssh /home/user/workspace/host \
-                 /home/user/.local/share/vscode-server /home/user/.bootstrap
-        chmod 700 /home/user/.ssh
-        chmod 755 /home/user
-        
-        touch "$home_seed_marker"
-        chown -R user:user /home/user
+
+        # /home/user is owned by user:user — run extraction as user to avoid
+        # DAC_OVERRIDE requirement (root drops that cap in this container).
+        tar -C "$home_seed_dir" -cf - . \
+            | su -s /bin/bash user -c "tar -C /home/user -xf - --skip-old-files"
+
+        su -s /bin/bash user -c "
+            mkdir -p /home/user/.ssh /home/user/workspace/host \
+                     /home/user/.local/share/vscode-server /home/user/.bootstrap
+            chmod 700 /home/user/.ssh
+            touch /home/user/.bootstrap/home.seeded
+        "
+
         log_success "Home directory seeded"
     fi
 }

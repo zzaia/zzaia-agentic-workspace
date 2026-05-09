@@ -8,7 +8,7 @@ services:
   workspace:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: docker/containers/workspace/Dockerfile
       args:
         SSH_PORT: ${SSH_PORT:-2222}
         VSCODE_PORT: ${VSCODE_PORT:-8080}
@@ -45,8 +45,6 @@ services:
       - ANTHROPIC_BASE_URL=http://proxy-headroom:8787
       - OPENAI_BASE_URL=http://proxy-headroom:8787
       - GEMINI_API_BASE=http://proxy-headroom:8787
-      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     networks:
       - mcp
     cap_drop:
@@ -70,16 +68,6 @@ services:
     depends_on:
       proxy-headroom:
         condition: service_healthy
-      mcp-tavily:
-        condition: service_started
-      mcp-azure-devops:
-        condition: service_started
-      mcp-postman:
-        condition: service_started
-      mcp-newrelic:
-        condition: service_started
-      mcp-github:
-        condition: service_started
       mcp-playwright:
         condition: service_healthy
       mcp-headroom:
@@ -97,11 +85,9 @@ services:
       - QDRANT_URL=http://database-qdrant:6333
       - NEO4J_URI=bolt://database-neo4j:7687
       - NEO4J_USERNAME=neo4j
-      - NEO4J_PASSWORD=${ADMIN_PASSWORD:-headroom}
+      - NEO4J_PASSWORD=${ADMIN_PASSWORD:-}
       - PORT=8787
       - HEADROOM_TELEMETRY=off
-      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES:-all}
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     volumes:
       - workspace-repos:/workspace
     networks:
@@ -122,7 +108,7 @@ services:
   database-qdrant:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.qdrant
+      dockerfile: docker/containers/database-qdrant/Dockerfile
     image: zzaia-qdrant:v1.17.1
     volumes:
       - headroom-qdrant:/qdrant/storage
@@ -142,7 +128,7 @@ services:
       dockerfile: docker/containers/database-neo4j/Dockerfile
     image: zzaia-neo4j:5.15.0
     environment:
-      - NEO4J_AUTH=neo4j/${ADMIN_PASSWORD:-headroom}
+      - NEO4J_AUTH=neo4j/${ADMIN_PASSWORD:-}
     volumes:
       - headroom-neo4j:/data
     networks:
@@ -278,6 +264,7 @@ services:
 
   vscode-server:
     image: zzaia-agentic-workspace:latest
+    profiles: ["vscode"]
     user: root
     entrypoint: []
     command: ["/usr/local/bin/start-vscode-server.sh"]
@@ -308,6 +295,12 @@ services:
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
     networks:
       - mcp
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
     restart: unless-stopped
     depends_on:
       workspace:
