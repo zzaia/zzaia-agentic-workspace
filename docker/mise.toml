@@ -55,7 +55,7 @@ description = "Register Claude Code marketplace and install agentic-workspace pl
 run = """
 claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
 claude plugin install agentic-workspace@zzaia || true
-claude plugin remove claude-plugins-official || true
+claude plugin marketplace remove claude-plugins-official || true
 """
 
 [tasks.gh-extensions]
