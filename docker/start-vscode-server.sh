@@ -7,6 +7,18 @@ export HOME=/home/user
 
 USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER")
 
+# ── Credential fallback — inject OAuth token from credentials file if env var unset ─
+if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  _cred_file="/home/user/.claude/.credentials.json"
+  if [ -f "$_cred_file" ]; then
+    _token=$(grep -oP '"accessToken":"\K[^"]+' "$_cred_file" 2>/dev/null || true)
+    if [ -n "$_token" ]; then
+      export CLAUDE_CODE_OAUTH_TOKEN="$_token"
+      USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER" CLAUDE_CODE_OAUTH_TOKEN="$_token")
+    fi
+  fi
+fi
+
 # Create VS Code server dirs as user — root lacks DAC_OVERRIDE to write into
 # user-owned home. chown -R afterwards normalizes any root-created remnants.
 "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
@@ -16,12 +28,13 @@ EXT_DIR=/home/user/.vscode-server/extensions
 EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
 "${USER_RUN[@]}" mkdir -p "$EXT_DIR"
 
-# ── Discover or download VS Code Server ──────────────────────────────────────
+# ── Discover or download VS Code inner binary ─────────────────────────────────
+# Must use the inner binary directly on TCP — the code CLI proxy layer causes
+# browser WebSocket timeouts. code serve-web is only used to trigger the download.
 VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
 
 if [ -z "$VSCODE_CLI" ]; then
-  echo "VS Code Server not found — downloading via code serve-web..."
-  # Run on a loopback temp port just to trigger the download, then kill it
+  echo "VS Code inner binary not found — triggering download via code serve-web..."
   "${USER_RUN[@]}" code serve-web \
     --host 127.0.0.1 \
     --port 19999 \
@@ -30,7 +43,17 @@ if [ -z "$VSCODE_CLI" ]; then
     --server-data-dir /home/user/.vscode-server &
   DOWNLOAD_PID=$!
 
-  CLI_DISCOVERY_MAX="${CLI_DISCOVERY_MAX_ATTEMPTS:-120}"
+  # Wait for port 19999 to open (up to 60s)
+  for _ in $(seq 1 60); do
+    if curl -s http://127.0.0.1:19999 -o /dev/null 2>/dev/null; then
+      echo "Port 19999 ready — download triggered."
+      break
+    fi
+    sleep 1
+  done
+
+  # Poll for the inner binary (download only starts after HTTP connection above)
+  CLI_DISCOVERY_MAX="${CLI_DISCOVERY_MAX_ATTEMPTS:-600}"
   CLI_DISCOVERY_DELAY="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
   for _ in $(seq 1 "$CLI_DISCOVERY_MAX"); do
     VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
