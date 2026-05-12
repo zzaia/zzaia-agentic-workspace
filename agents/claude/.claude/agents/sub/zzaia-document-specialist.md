@@ -1,7 +1,7 @@
 ---
 name: zzaia-document-specialist
 description: Specialist for document operations — reads, writes, scrapes, and generates PDF/Word/markdown documents as directed by skill commands.
-tools: *
+tools: "all"
 mcpServers:
   - playwright
   - tavily

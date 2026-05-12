@@ -1,7 +1,12 @@
 {
   "hasCompletedOnboarding": true,
+  "officialMarketplaceAutoInstallAttempted": true,
+  "officialMarketplaceAutoInstalled": false,
   "projects": {
     "/home/user/workspace": {
+      "hasTrustDialogAccepted": true
+    },
+    "/home/user": {
       "hasTrustDialogAccepted": true
     }
   }

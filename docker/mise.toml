@@ -53,9 +53,9 @@ sudo apt-get install -y tmux plantuml tectonic
 [tasks.claude-plugins]
 description = "Register Claude Code marketplace and install agentic-workspace plugin"
 run = """
+claude plugin uninstall claude-plugins-official || true
 claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
 claude plugin install agentic-workspace@zzaia || true
-claude plugin marketplace remove claude-plugins-official || true
 """
 
 [tasks.gh-extensions]

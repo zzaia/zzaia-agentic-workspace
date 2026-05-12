@@ -34,7 +34,7 @@ agents:
   - name: zzaia-devops-specialist
     description: Retrieve work items, post discussions, create bug work items
   - name: zzaia-tester-specialist
-    description: Execute tests via /behavior:development:test
+    description: "Execute tests via /behavior:development:test"
   - name: zzaia-document-specialist
     description: Generate BDD and test result documentation
 ---

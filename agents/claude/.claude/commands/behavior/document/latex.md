@@ -13,7 +13,7 @@ parameters:
     description: "Data source — one of: (1) JSON string with template variables, (2) path to a .md file, (3) path to a directory of .md files (collection)"
     required: false
   - name: diagrams-dir
-    description: Directory to save generated diagram PNGs (default: <output_dir>/diagrams/)
+    description: "Directory to save generated diagram PNGs (default: <output_dir>/diagrams/)"
     required: false
   - name: description
     description: Broader context for the PDF generation

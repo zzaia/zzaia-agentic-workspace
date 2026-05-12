@@ -25,7 +25,7 @@ parameters:
     description: Base branch for pull requests (defaults to main)
     required: false
   - name: deps
-    description: Comma-separated list of additional repo:branch pairs that the primary pipeline references (e.g. template-repo:feature/fix,shared-lib:feature/fix) — each receives its own remote:implement invocation
+    description: "Comma-separated list of additional repo:branch pairs that the primary pipeline references (e.g. template-repo:feature/fix,shared-lib:feature/fix) — each receives its own remote:implement invocation"
     required: false
   - name: work-item
     description: Work item ID to link fixes to (optional; skips work-item phases in remote:implement when absent)

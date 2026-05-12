@@ -58,7 +58,7 @@ parameters:
     type: string
     format: date
   - name: --platform
-    description: Specify work item platform (default: auto-detect)
+    description: "Specify work item platform (default: auto-detect)"
     required: false
     type: string
     enum: ["azure", "github", "git-lab"]

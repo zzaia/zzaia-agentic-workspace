@@ -1,7 +1,7 @@
 ---
 name: zzaia-developer-specialist
 description: Implement features across languages and frameworks with comprehensive testing and quality assurance
-tools: *
+tools: "all"
 model: haiku
 color: red
 ---

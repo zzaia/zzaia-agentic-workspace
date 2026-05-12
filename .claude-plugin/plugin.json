@@ -20,7 +20,7 @@
     "automation"
   ],
   "mcpServers": "./.mcp.json",
-  "commands": ["./.claude/commands"],
+  "skills": ["./.claude/commands"],
   "agents": [
     "./.claude/agents/sub/zzaia-code-reviewer.md",
     "./.claude/agents/sub/zzaia-developer-specialist.md",
