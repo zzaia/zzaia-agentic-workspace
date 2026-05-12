@@ -1,1 +1,8 @@
-{ "hasCompletedOnboarding": true }
+{
+  "hasCompletedOnboarding": true,
+  "projects": {
+    "/home/user/workspace": {
+      "hasTrustDialogAccepted": true
+    }
+  }
+}

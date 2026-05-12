@@ -62,6 +62,7 @@ COPY --chown=user:user docker/mise.toml                /opt/zzaia/home-seed/mise
 COPY --chown=user:user agents/gemini/                  /opt/zzaia/home-seed/
 COPY --chown=user:user agents/codex/                   /opt/zzaia/home-seed/
 COPY --chown=user:user agents/copilot/                 /opt/zzaia/home-seed/
+COPY --chown=user:user agents/claude/.claude.json      /opt/zzaia/home-seed/.claude.json
 # {{WORKSPACE_NAME}} templating and .code-workspace rename are deferred to entrypoint
 COPY --chown=user:user vscode/                         /opt/zzaia/home-seed/
 COPY --chown=user:user docker/devcontainer.json        /opt/zzaia/home-seed/.devcontainer/devcontainer.json
@@ -69,10 +70,10 @@ COPY --chown=user:user workspace/                      /opt/zzaia/home-seed/work
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 USER root
-COPY docker/entrypoint.sh /entrypoint.sh
-COPY docker/scripts /usr/local/lib/zzaia/scripts
-COPY docker/start-vscode-server.sh /usr/local/bin/start-vscode-server.sh
-COPY docker/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
+COPY docker/containers/workspace/entrypoint.sh /entrypoint.sh
+COPY docker/containers/workspace/scripts /usr/local/lib/zzaia/scripts
+COPY docker/containers/vscode-server/start-vscode-server.sh /usr/local/bin/start-vscode-server.sh
+COPY docker/containers/vscode-server/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
 RUN chmod +x /entrypoint.sh /usr/local/bin/start-vscode-server.sh \
     && chmod +x /usr/local/lib/zzaia/scripts/*.sh
 
