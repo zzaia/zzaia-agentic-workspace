@@ -15,7 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System packages + Docker CE CLI + mise ────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl openssh-server sudo \
+    curl git openssh-server sudo unzip \
     ca-certificates locales gpg gpg-agent libicu74 \
     && locale-gen en_US.UTF-8 \
     && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \

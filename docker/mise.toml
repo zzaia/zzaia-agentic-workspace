@@ -9,15 +9,10 @@ dapr = "latest"
 "npm:@anthropic-ai/claude-code" = "latest"
 "npm:@mermaid-js/mermaid-cli" = "latest"
 "npm:@openai/codex" = "latest"
-"npm:supergateway" = "latest"
 "npm:@google/gemini-cli" = "latest"
 
 [settings]
 experimental = true
-
-[tasks.install-git]
-description = "Install git and unzip via apt"
-run = "sudo apt-get update && sudo apt-get install -y --no-install-recommends git unzip"
 
 [tasks.install-azure-cli]
 description = "Install Azure CLI via official Microsoft script"
@@ -64,14 +59,8 @@ claude plugin remove claude-plugins-official || true
 """
 
 [tasks.gh-extensions]
-description = "Install GitHub Copilot CLI binary"
-run = """
-_asset_url=$(gh api repos/github/copilot-cli/releases/latest \
-    --jq ".assets[] | select(.name == \"copilot-linux-x64.tar.gz\") | .url") \
-&& mkdir -p "${HOME}/.local/bin" \
-&& gh api "$_asset_url" -H "Accept: application/octet-stream" | tar -xz -C "${HOME}/.local/bin" copilot \
-&& chmod +x "${HOME}/.local/bin/copilot"
-"""
+description = "Install GitHub Copilot gh CLI extension"
+run = "gh extension install github/gh-copilot 2>/dev/null || gh extension upgrade gh-copilot 2>/dev/null || true"
 
 [tasks.rtk]
 description = "Install RTK (Rust Token Killer) binary for token compression"
@@ -120,7 +109,6 @@ for ext in \
     alefragnani.project-manager codeinklingon.git-worktree-menu \
     eamodio.gitlens editorconfig.editorconfig esbenp.prettier-vscode \
     fullstackspider.visual-nuget gaoshan0621.csharp-format-usings \
-    github.copilot github.copilot-chat \
     google.geminicodeassist google.gemini-cli-vscode-ide-companion openai.chatgpt \
     gruntfuggly.todo-tree kreativ-software.csharpextensions \
     mermaidchart.vscode-mermaid-chart ms-azure-devops.azure-pipelines \
@@ -135,6 +123,18 @@ for ext in \
     _install_ext "$ext"
 done
 echo "$_CLI_VER" > "$EXT_SENTINEL" || true
+"""
+
+[tasks.upgrade]
+description = "Upgrade all mise tools, Python packages, .NET tools, gh extensions, and Claude plugins in-place (no image rebuild)"
+run = """
+mise upgrade || true
+pip install --upgrade pypdf python-docx textual jinja2 graphviz diagrams || true
+dotnet workload update || true
+dotnet tool update -g aspirate || true
+gh extension upgrade --all || true
+mise run gh-extensions || true
+mise run claude-plugins || true
 """
 
 [tasks.install]

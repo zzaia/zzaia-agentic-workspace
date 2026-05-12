@@ -1,6 +1,6 @@
 [mcp_servers.aspire]
-command = "npx"
-args = ["-y", "supergateway", "--sse", "http://localhost:3007/sse"]
+command = "aspire"
+args = ["mcp", "start"]
 
 [mcp_servers.headroom]
 command = "npx"

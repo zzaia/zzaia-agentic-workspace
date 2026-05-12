@@ -26,10 +26,6 @@ bash "$SCRIPT_DIR/setup-tools.sh"
 log_info "Phase 3: Credentials and authentication"
 bash "$SCRIPT_DIR/setup-credentials.sh"
 
-# ── Phase 4: Aspire MCP service ───────────────────────────────────────────────
-log_info "Phase 4: Starting Aspire MCP"
-bash "$SCRIPT_DIR/setup-aspire.sh"
-
 # ── All done, start SSH daemon ────────────────────────────────────────────────
 log_success "All bootstrap phases complete"
 log_info "Starting SSH daemon..."

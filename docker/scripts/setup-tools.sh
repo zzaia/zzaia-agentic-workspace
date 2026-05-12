@@ -26,16 +26,15 @@ install_miniforge() {
     "
 }
 
-# ── Git and essential toolchain ───────────────────────────────────────────────
-install_git_and_essentials() {
-    log_info "Installing git and essential tools via mise..."
+# ── Essential toolchain ───────────────────────────────────────────────────────
+install_essentials() {
+    log_info "Installing essential tools via mise..."
     su -s /bin/bash user -c "
         export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:/home/user/.dotnet/tools:\$PATH
         [ -n \"${GITHUB_PERSONAL_ACCESS_TOKEN:-}\" ] && export GITHUB_TOKEN=\"${GITHUB_PERSONAL_ACCESS_TOKEN}\" || true
         [ -n \"${GITHUB_PERSONAL_ACCESS_TOKEN:-}\" ] && export AQUA_GITHUB_TOKEN=\"${GITHUB_PERSONAL_ACCESS_TOKEN}\" || true
-        
+
         mise trust /home/user/mise.toml
-        mise run install-git
         mise run install-azure-cli
         mise run install-tectonic
     "
@@ -86,7 +85,6 @@ install_npm_tools() {
         "npm:@anthropic-ai/claude-code"
         "npm:@mermaid-js/mermaid-cli"
         "npm:@openai/codex"
-        "npm:supergateway"
         "npm:@google/gemini-cli"
     )
     
@@ -134,7 +132,7 @@ bootstrap_runtime() {
     
     ensure_bootstrap_dir
     install_miniforge
-    install_git_and_essentials
+    install_essentials
     install_npm_tools
     install_environments
     install_optional_tools
