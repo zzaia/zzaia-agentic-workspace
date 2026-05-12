@@ -31,7 +31,7 @@ EXT_SENTINEL=/home/user/.vscode-server/.extensions-installed
 # ── Discover or download VS Code inner binary ─────────────────────────────────
 # Must use the inner binary directly on TCP — the code CLI proxy layer causes
 # browser WebSocket timeouts. code serve-web is only used to trigger the download.
-VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
+VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | grep -v '\.staging' | head -1 || true)
 
 if [ -z "$VSCODE_CLI" ]; then
   echo "VS Code inner binary not found — triggering download via code serve-web..."
@@ -56,7 +56,7 @@ if [ -z "$VSCODE_CLI" ]; then
   CLI_DISCOVERY_MAX="${CLI_DISCOVERY_MAX_ATTEMPTS:-600}"
   CLI_DISCOVERY_DELAY="${CLI_DISCOVERY_DELAY_SECONDS:-3}"
   for _ in $(seq 1 "$CLI_DISCOVERY_MAX"); do
-    VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | head -1 || true)
+    VSCODE_CLI=$(find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | grep -v '\.staging' | head -1 || true)
     [ -n "$VSCODE_CLI" ] && break
     sleep "$CLI_DISCOVERY_DELAY"
   done
