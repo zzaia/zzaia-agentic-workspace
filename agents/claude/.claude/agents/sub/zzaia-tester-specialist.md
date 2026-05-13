@@ -1,7 +1,7 @@
 ---
 name: zzaia-tester-specialist
 description: Specialized agent for validating application quality through build and test processes
-tools: "all"
+tools: *
 mcpServers: 
    - playwright
    - postman
