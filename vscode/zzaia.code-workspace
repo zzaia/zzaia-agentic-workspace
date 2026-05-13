@@ -30,7 +30,7 @@
     "github.copilot.advanced.mcp.servers": {
       "aspire": {
         "command": "aspire",
-        "args": ["mcp", "start"]
+        "args": ["agent", "mcp"]
       },
       "headroom": {
         "url": "http://mcp-headroom:3008/mcp",
