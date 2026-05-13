@@ -38,9 +38,9 @@ conda create -n venv-development python=3.12 -y || true
 """
 
 [tasks.dotnet-tools]
-description = "Install .NET workloads and global tools"
+description = "Install .NET global tools and Aspire CLI"
 run = """
-dotnet workload install aspire || true
+curl -sSL https://aspire.dev/install.sh | bash || true
 dotnet tool install -g aspirate || dotnet tool update -g aspirate || true
 """
 
