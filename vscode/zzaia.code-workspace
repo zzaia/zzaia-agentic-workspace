@@ -29,11 +29,11 @@
     "chat.tools.autoApprove": true,
     "github.copilot.advanced.mcp.servers": {
       "aspire": {
-        "url": "http://localhost:3007/sse",
-        "type": "sse"
+        "command": "aspire",
+        "args": ["mcp", "start"]
       },
       "headroom": {
-        "url": "http://proxy-headroom:8787/mcp",
+        "url": "http://mcp-headroom:3008/mcp",
         "type": "http"
       },
       "tavily": {

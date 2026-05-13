@@ -8,7 +8,7 @@
     },
     "headroom": {
       "type": "http",
-      "url": "http://proxy-headroom:8787/mcp"
+      "url": "http://mcp-headroom:3008/mcp"
     },
     "tavily": {
       "type": "http",
