@@ -7,4 +7,4 @@ if [ -z "${ADO_MCP_AUTH_TOKEN:-}" ] || [ -z "${AZURE_DEVOPS_ORGANIZATION:-}" ]; 
   while :; do sleep 3600; done
 fi
 
-exec npx -y supergateway@latest --port 3002 --outputTransport streamableHttp --stateful --stdio "npx -y @azure-devops/mcp@next ${AZURE_DEVOPS_ORGANIZATION} -a envvar"
+exec npx -y supergateway@latest --port 3002 --outputTransport streamableHttp --stdio "npx -y @azure-devops/mcp@next ${AZURE_DEVOPS_ORGANIZATION} -a envvar"

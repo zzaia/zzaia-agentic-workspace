@@ -7,4 +7,4 @@ if [ -z "${TAVILY_API_KEY:-}" ]; then
   while :; do sleep 3600; done
 fi
 
-exec npx -y supergateway@latest --port 3001 --outputTransport streamableHttp --stateful --stdio "npx -y tavily-mcp@latest"
+exec npx -y supergateway@latest --port 3001 --outputTransport streamableHttp --stdio "npx -y tavily-mcp@latest"
