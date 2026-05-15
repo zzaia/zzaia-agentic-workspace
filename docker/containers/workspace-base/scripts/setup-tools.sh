@@ -6,7 +6,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 main() {
-    log_info "Starting runtime tool installation..."
+    log_info "Delegating to runtime-install.sh (runs as user)..."
     su -s /bin/bash user -c "bash /usr/local/lib/zzaia/scripts/runtime-install.sh ${*}"
     log_success "Runtime tool installation complete"
 }
