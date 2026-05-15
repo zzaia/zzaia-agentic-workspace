@@ -18,6 +18,8 @@ system::install_apt_packages() {
         curl git sudo unzip \
         ca-certificates locales gpg gpg-agent \
         libicu74 plantuml tmux wget
+    locale-gen en_US.UTF-8
+    update-locale LANG=en_US.UTF-8
     rm -rf /var/lib/apt/lists/*
     log_success "$label installed"
 }

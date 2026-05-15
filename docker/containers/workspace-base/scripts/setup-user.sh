@@ -43,6 +43,7 @@ seed_home() {
 
 # ── SSH port runtime override ─────────────────────────────────────────────────
 configure_ssh_port() {
+    command -v sshd >/dev/null 2>&1 || return 0
     local port="${SSH_PORT:-}"
     [ -z "$port" ] && return 0
     log_info "Configuring SSH port: $port"
@@ -53,11 +54,12 @@ configure_ssh_port() {
 
 # ── SSH host key persistence ──────────────────────────────────────────────────
 setup_ssh_host_keys() {
+    command -v ssh-keygen >/dev/null 2>&1 || { log_info "ssh-keygen not available — skipping (non-SSH container)"; return 0; }
     log_info "Setting up SSH host keys..."
-    
+
     ensure_dir "/run/sshd"
     ensure_dir "/secrets" "root:root" "700"
-    
+
     if compgen -G "/secrets/ssh_host_*" > /dev/null 2>&1; then
         log_info "Restoring SSH keys from secrets volume"
         cp /secrets/ssh_host_* /etc/ssh/
@@ -70,7 +72,7 @@ setup_ssh_host_keys() {
         chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
         chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
     fi
-    
+
     log_success "SSH host keys ready"
 }
 
@@ -103,9 +105,9 @@ setup_sudo() {
 # ── Apt sandbox for container installs ────────────────────────────────────────
 setup_apt_sandbox() {
     log_info "Configuring Apt sandbox..."
-    # Remove stale partial files and reset ownership/permissions.
-    # In rootless Docker contexts, root and _apt may not be able to clean up
-    # each other's partial files, causing repeated EPERM failures.
+    # Recreate partial dirs removed by Dockerfile's `rm -rf /var/lib/apt/lists/*`
+    # and reset ownership/permissions for rootless Docker contexts.
+    mkdir -p /var/cache/apt/archives/partial /var/lib/apt/lists/partial
     find /var/cache/apt/archives/partial /var/lib/apt/lists/partial \
         -maxdepth 1 -type f -delete 2>/dev/null || true
     chown root:root \
@@ -119,6 +121,7 @@ setup_apt_sandbox() {
 
 # ── SSH authorized keys from SSH_PUBLIC_KEY ──────────────────────────────────
 setup_ssh_auth() {
+    command -v sshd >/dev/null 2>&1 || return 0
     log_info "Setting up SSH authorized keys..."
     
     # Persist public key on first start
