@@ -35,9 +35,9 @@ node::install() {
 node::install_npm_globals() {
     log_info "Installing npm global packages..."
 
-    # Use env var instead of npm config set — avoids writing prefix to ~/.npmrc
-    # which nvm rejects as incompatible with its own prefix management.
-    export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+    # Use --prefix flag directly — avoids writing to ~/.npmrc (nvm rejects prefix
+    # there) and avoids exporting NPM_CONFIG_PREFIX (nvm returns exit 11 on that).
+    local npm_prefix="$HOME/.npm-global"
 
     local packages=(
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION:-latest}"
@@ -48,7 +48,7 @@ node::install_npm_globals() {
 
     for pkg in "${packages[@]}"; do
         log_info "Installing npm package: $pkg"
-        npm install -g "$pkg" 2>/dev/null || log_warn "Failed to install $pkg; continuing"
+        npm install -g --prefix "$npm_prefix" "$pkg" 2>/dev/null || log_warn "Failed to install $pkg; continuing"
     done
 
     log_success "npm global packages installed"

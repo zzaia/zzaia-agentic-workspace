@@ -136,7 +136,7 @@ cli::install_azure_cli() {
     fi
 
     log_info "Installing Azure CLI..."
-    if curl -fsSL https://aka.ms/InstallAzureCLIDeb | bash; then
+    if curl -fsSL https://aka.ms/InstallAzureCLIDeb | sudo bash; then
         log_success "Azure CLI installed"
     else
         log_warn "Azure CLI install failed; skipping"

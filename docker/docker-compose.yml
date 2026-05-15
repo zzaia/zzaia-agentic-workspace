@@ -323,7 +323,7 @@ services:
     build:
       context: ..
       dockerfile: docker/containers/containers-dev-server/Dockerfile
-    image: zzaia-dev-server:latest
+    image: zzaia-containers-dev-server:latest
     profiles: ["devcontainer"]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
