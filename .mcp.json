@@ -46,6 +46,23 @@
       "headers": {
         "Api-Key": "${NEW_RELIC_API_KEY}"
       }
+    },
+    "aws-sns-sqs": {
+      "command": "uvx",
+      "args": ["awslabs.amazon-sns-sqs-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE}",
+        "AWS_REGION": "${AWS_REGION}"
+      }
+    },
+    "aws-postgres": {
+      "command": "uvx",
+      "args": ["awslabs.postgres-mcp-server@latest"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE}",
+        "AWS_REGION": "${AWS_REGION}",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
     }
   }
 }

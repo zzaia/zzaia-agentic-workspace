@@ -37,6 +37,8 @@ export ADO_MCP_AUTH_TOKEN=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="azure
 export AZURE_DEVOPS_ORGANIZATION=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="azure-devops-org") | .login.password')
 export POSTMAN_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="postman") | .login.password')
 export NEW_RELIC_API_KEY=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="new-relic") | .login.password')
+export AWS_PROFILE=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="aws-profile") | .login.password')
+export AWS_REGION=$(echo "$BW_ITEMS" | jq -r '.[] | select(.name=="aws-region") | .login.password')
 bw logout 2>/dev/null; unset BW_SESSION BW_ITEMS
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
