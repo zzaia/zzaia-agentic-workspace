@@ -137,6 +137,7 @@ Pre-configure the following vault items in Bitwarden, then run the installation 
 | `docker-registry` | DOCKER_REGISTRY | | Container registry hostname (e.g. `ghcr.io`) |
 | `docker-username` | DOCKER_USERNAME | | Registry login username |
 | `docker-password` | DOCKER_PASSWORD | | Registry login password or token |
+| `server-profiles` | DEPLOY_PROFILES | | Optional: space-separated profiles (e.g. `vscode devcontainer`) |
 
 **Ubuntu / WSL:**
 ```bash
@@ -189,14 +190,25 @@ export POSTMAN_API_KEY=""
 export NEW_RELIC_API_KEY=""
 export VSCODE_PORT="8080"
 export SSH_PORT="2222"
+export DEPLOY_PROFILES="vscode"  # space-separated: vscode, devcontainer, or both
 
-# Default: workspace + headroom + qdrant + neo4j + all MCP sidecars
 docker compose \
     -f "./docker/docker-compose.yml" \
     -p "$WORKSPACE_NAME" \
     up -d
 
-# Add --profile vscode to also start VS Code browser access on VSCODE_PORT
+# Build profile flags dynamically
+PROFILE_FLAGS=""
+for p in $DEPLOY_PROFILES; do
+    case "$p" in
+        vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+    esac
+done
+docker compose \
+    -f "./docker/docker-compose.yml" \
+    -p "$WORKSPACE_NAME" \
+    $PROFILE_FLAGS \
+    up -d
 
 unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
       ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
@@ -205,7 +217,7 @@ unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
       CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
       OPENAI_API_KEY GEMINI_API_KEY GITHUB_PERSONAL_ACCESS_TOKEN ASPIRE_DASHBOARD_PORT \
       TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
-      POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT
+      POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT DEPLOY_PROFILES
 ```
 
 #### Windows
@@ -263,9 +275,20 @@ $env:NEW_RELIC_API_KEY                 = $NEW_RELIC_API_KEY
 $env:VSCODE_PORT                       = $VSCODE_PORT
 $env:SSH_PORT                          = $SSH_PORT
 
+# Build profile flags dynamically
+$DEPLOY_PROFILES = "vscode"  # space-separated: vscode, devcontainer, or both
+$profileArgs = @()
+foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
+    if ($p -match '^(vscode|devcontainer)$') {
+        $profileArgs += '--profile'
+        $profileArgs += $p
+    }
+}
+
 docker compose `
     -f ".\docker\docker-compose.yml" `
     -p $WORKSPACE_NAME `
+    @profileArgs `
     up -d
 
 'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD',

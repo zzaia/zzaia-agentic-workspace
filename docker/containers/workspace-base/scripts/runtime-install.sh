@@ -66,6 +66,11 @@ main() {
     local upgrade=false
     [ "${1:-}" = "--upgrade" ] && upgrade=true
 
+    # Serialize concurrent installs across containers sharing the home volume
+    mkdir -p "$HOME/.bootstrap"
+    exec 9>"$HOME/.bootstrap/.install.lock"
+    flock -x 9
+
     # Bootstrap marker includes hash of this script — invalidate on changes
     local script_hash
     script_hash=$(sha256sum "$0" | awk '{print $1}')

@@ -61,6 +61,7 @@ try {
     $DOCKER_REGISTRY = Get-VaultSecret $items "docker-registry"
     $DOCKER_USERNAME = Get-VaultSecret $items "docker-username"
     $DOCKER_PASSWORD = Get-VaultSecret $items "docker-password"
+    $DEPLOY_PROFILES = Get-VaultSecret $items "server-profiles"
 
     Remove-Variable items
 
@@ -68,8 +69,8 @@ try {
         Write-Error "WORKSPACE_NAME (vault: workspace-name) not found or empty"
         exit 1
     }
-    if ([string]::IsNullOrWhiteSpace($SSH_PUBLIC_KEY)) {
-        Write-Error "SSH_PUBLIC_KEY (vault: ssh-public-key) not found or empty"
+    if ($DEPLOY_PROFILES -match 'ssh' -and [string]::IsNullOrWhiteSpace($SSH_PUBLIC_KEY)) {
+        Write-Error "SSH_PUBLIC_KEY (vault: ssh-public-key) required when ssh profile is selected"
         exit 1
     }
 
@@ -119,17 +120,32 @@ try {
         $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME --password-stdin
     }
 
+    # Build --profile flags from the server-profiles secret
+    $profileArgs = @()
+    if (-not [string]::IsNullOrWhiteSpace($DEPLOY_PROFILES)) {
+        foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
+            if ($p -match '^(ssh|vscode|devcontainer)$') {
+                $profileArgs += '--profile'
+                $profileArgs += $p
+            } else {
+                Write-Warning "Unknown server profile '$p' — valid: ssh, vscode, devcontainer"
+            }
+        }
+    }
+
     Write-Host ""
     Write-Host "Starting workspace with docker compose..."
     docker compose `
         -f "$PSScriptRoot\..\docker\docker-compose.yml" `
         -p $env:WORKSPACE_NAME `
+        @profileArgs `
         up -d
 
     Write-Host ""
     Write-Host "✓ Workspace started. Access:"
-    Write-Host "  VS Code: http://localhost:$($env:VSCODE_PORT)"
-    Write-Host "  SSH: ssh -p $($env:SSH_PORT) zzaia@localhost"
+    if ($DEPLOY_PROFILES -match 'ssh') { Write-Host "  SSH: ssh -p $($env:SSH_PORT) user@localhost" }
+    if ($DEPLOY_PROFILES -match 'vscode') { Write-Host "  VS Code: http://localhost:$($env:VSCODE_PORT)" }
+    if ($DEPLOY_PROFILES -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
     Write-Host "  Aspire Dashboard: http://localhost:$($env:ASPIRE_DASHBOARD_PORT)"
 }
 finally {
@@ -141,6 +157,7 @@ finally {
       'OPENAI_API_KEY','GEMINI_API_KEY','GITHUB_PERSONAL_ACCESS_TOKEN',
       'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
       'POSTMAN_API_KEY','NEW_RELIC_API_KEY','DOCKER_REGISTRY','DOCKER_USERNAME','DOCKER_PASSWORD',
+      'DEPLOY_PROFILES',
       'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
       'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
       'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL') | ForEach-Object {

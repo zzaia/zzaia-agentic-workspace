@@ -15,7 +15,7 @@ system::install_apt_packages() {
     log_info "Installing $label..."
     apt-get update
     apt-get install -y --no-install-recommends \
-        curl git openssh-server sudo unzip \
+        curl git sudo unzip \
         ca-certificates locales gpg gpg-agent \
         libicu74 plantuml tmux wget
     rm -rf /var/lib/apt/lists/*

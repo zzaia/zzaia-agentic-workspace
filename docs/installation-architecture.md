@@ -135,10 +135,62 @@ C4Container
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
 ```
 
+## Server Profiles
+
+The workspace supports optional Docker Compose profiles controlled by the `server-profiles` Bitwarden secret. This enables flexible deployment without hardcoding which server types run.
+
+### Profile Types
+
+| Profile | Server Type | Purpose |
+|---------|------------|---------|
+| `vscode` | `vscode-server` | Browser-based VS Code IDE on `VSCODE_PORT` (8080 default) |
+| `devcontainer` | `dev-server` | VS Code Dev Containers extension attachment |
+| _(none)_ | `ssh-server` | SSH access always starts (no profile required), provides terminal-only mode |
+
+### Usage
+
+#### Installation Scripts
+
+Both Ubuntu and Windows installation scripts read the `server-profiles` Bitwarden secret and build dynamic `--profile` flags:
+
+```bash
+# Ubuntu/Mac: install/ubuntu.sh
+DEPLOY_PROFILES=$(fetch_secret "server-profiles")  # e.g., "vscode devcontainer"
+for p in $DEPLOY_PROFILES; do
+    PROFILE_FLAGS="$PROFILE_FLAGS --profile $p"
+done
+docker compose ... $PROFILE_FLAGS up -d
+```
+
+```powershell
+# Windows: install/windows.ps1
+$DEPLOY_PROFILES = Get-VaultSecret $items "server-profiles"  # e.g., "vscode"
+foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
+    $profileArgs += '--profile', $p
+}
+docker compose ... @profileArgs up -d
+```
+
+#### Examples
+
+- **SSH-only mode**: Leave `server-profiles` empty in Bitwarden — only `ssh-server` starts (lightest footprint)
+- **Browser IDE**: Set `server-profiles` to `vscode` — start both `ssh-server` and `vscode-server`
+- **Dev Containers**: Set `server-profiles` to `devcontainer` — start both `ssh-server` and `dev-server`
+- **Full setup**: Set `server-profiles` to `vscode devcontainer` — start all three servers
+
+### Bitwarden Secret
+
+**Vault Item Name:** `server-profiles`  
+**Field:** `notes` or `password`  
+**Format:** Space-separated profile names (e.g., `vscode devcontainer`)  
+**Optional:** Yes — if empty or missing, only SSH access is available
+
+---
+
 ## Project Structure
 
 ```
-docker/containers/workspace/
+docker/containers/workspace-base/
 ├── Dockerfile
 ├── entrypoint.sh
 └── scripts/

@@ -68,11 +68,12 @@ NEW_RELIC_API_KEY=$(fetch_secret "new-relic")
 DOCKER_REGISTRY=$(fetch_secret "docker-registry")
 DOCKER_USERNAME=$(fetch_secret "docker-username")
 DOCKER_PASSWORD=$(fetch_secret "docker-password")
+DEPLOY_PROFILES=$(fetch_secret "server-profiles")
 
 unset BW_ITEMS
 
 [ -z "$WORKSPACE_NAME" ] && echo "Error: WORKSPACE_NAME (vault: workspace-name) not found or empty" && exit 1
-[ -z "$SSH_PUBLIC_KEY" ] && echo "Error: SSH_PUBLIC_KEY (vault: ssh-public-key) not found or empty" && exit 1
+[[ "${DEPLOY_PROFILES:-}" == *ssh* ]] && [ -z "$SSH_PUBLIC_KEY" ] && echo "Error: SSH_PUBLIC_KEY (vault: ssh-public-key) required when ssh profile is selected" && exit 1
 
 VSCODE_PORT="${VSCODE_PORT:-8080}"
 SSH_PORT="${SSH_PORT:-2222}"
@@ -91,7 +92,7 @@ fi
 export WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD VSCODE_PORT SSH_PORT ASPIRE_DASHBOARD_PORT
 export ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY
 export GITHUB_PERSONAL_ACCESS_TOKEN TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION
-export POSTMAN_API_KEY NEW_RELIC_API_KEY
+export POSTMAN_API_KEY NEW_RELIC_API_KEY DEPLOY_PROFILES
 
 export AWS_ACCESS_KEY_ID="" AWS_SECRET_ACCESS_KEY="" AWS_REGION="" ANTHROPIC_BEDROCK_BASE_URL=""
 export CLAUDE_CODE_USE_VERTEX="" ANTHROPIC_VERTEX_PROJECT_ID="" CLOUD_ML_REGION=""
@@ -102,10 +103,24 @@ if [ -n "$DOCKER_REGISTRY" ] && [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSW
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" --profile vscode up -d
+
+# Build --profile flags from the server-profiles secret
+PROFILE_FLAGS=""
+if [ -n "${DEPLOY_PROFILES:-}" ]; then
+    for p in $DEPLOY_PROFILES; do
+        case "$p" in
+            ssh|vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+            *) echo "Warning: Unknown server profile '$p' — valid: ssh, vscode, devcontainer" ;;
+        esac
+    done
+fi
+
+# shellcheck disable=SC2086
+docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
 
 echo ""
 echo "✓ Workspace started. Access:"
-echo "  VS Code: http://localhost:$VSCODE_PORT"
-echo "  SSH: ssh -p $SSH_PORT zzaia@localhost"
+[[ "${DEPLOY_PROFILES:-}" == *ssh* ]] && echo "  SSH: ssh -p $SSH_PORT user@localhost"
+[[ "${DEPLOY_PROFILES:-}" == *vscode* ]] && echo "  VS Code: http://localhost:$VSCODE_PORT"
+[[ "${DEPLOY_PROFILES:-}" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"

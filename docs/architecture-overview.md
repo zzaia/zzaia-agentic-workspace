@@ -167,17 +167,23 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 006: Decoupled VS Code Server Container
+### ADR 006: Decoupled Server Containers with Optional Profiles
 
-**Decision**: `code serve-web` runs as a separate `vscode-server` container, not inside the `workspace` container. Both use the same Docker image.
+**Decision**: Multiple optional servers run as decoupled containers, each with independent profiles controlled by the `server-profiles` Bitwarden secret.
 
-- `workspace` entrypoint simplified to: SSH setup → credential wiring → WORKSPACE_NAME templating → Aspire MCP
-- `vscode-server` uses a `command` override to run `code serve-web` only
-- Watchdog restart loop removed; Docker `restart: unless-stopped` + native healthcheck (HTTP/8080) replaces it
-- `vscode-server` starts after workspace is healthy (`depends_on: workspace: condition: service_healthy`)
-- Browser UI is opt-in via Compose profile `vscode` — zero overhead for SSH-only or CI deployments
+| Server | Container | Profile | Purpose |
+|--------|-----------|---------|---------|
+| SSH | `ssh-server` | _(none)_ | SSH daemon, always starts |
+| Browser IDE | `vscode-server` | `vscode` | `code serve-web` on port 8080 |
+| Dev Containers | `dev-server` | `devcontainer` | Dev Containers attachment support |
 
-**Rationale**: Failure isolation, native recovery semantics, and simpler entrypoint logic. Browser UI and agent runtime have independent lifecycles.
+- All three share the same Docker image base, differentiated only by entrypoint/command override
+- `ssh-server` entrypoint: SSH setup → credential wiring → WORKSPACE_NAME templating → Aspire MCP
+- Profiles are read from `server-profiles` Bitwarden secret at startup time; installation scripts build dynamic `--profile` flags
+- Zero overhead for SSH-only or CI deployments (leave `server-profiles` empty for `ssh-server` only)
+- Each server starts after workspace is healthy (`depends_on: workspace: condition: service_healthy`)
+
+**Rationale**: Failure isolation, independent lifecycles per server type, and flexible deployment without hardcoding which servers run. Profile-based composition enables single-command setup across different use cases.
 
 ---
 
@@ -482,8 +488,9 @@ zzaia-agentic-workspace/
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
 | `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
-| `workspace` | SSH daemon, agent runtime, Aspire MCP | 2222 (SSH) | always | |
-| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | |
+| `ssh-server` | SSH daemon, agent runtime, Aspire MCP | 2222 (SSH) | _(none)_ | Always starts, controlled via `server-profiles` secret |
+| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | Opt-in via `server-profiles` secret |
+| `dev-server` | Dev Containers support | stdin (MCP) | `devcontainer` | Opt-in via `server-profiles` secret |
 | **Layer 1 — Primary** | | | | |
 | `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | |
 | `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
