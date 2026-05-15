@@ -1,6 +1,6 @@
 #!/bin/bash
 # build-install.sh — System-level tool installation (Dockerfile build time, root)
-# Installs: apt packages, Docker CLI, Azure CLI, Tectonic, VS Code CLI
+# Installs: apt packages, Docker CLI, VS Code CLI
 
 set -euo pipefail
 
@@ -17,8 +17,6 @@ main() {
 
     system::install_apt_packages
     system::install_docker_cli
-    system::install_azure_cli
-    system::install_tectonic
     system::install_vscode_cli
 
     log_success "Build-time system installation complete"

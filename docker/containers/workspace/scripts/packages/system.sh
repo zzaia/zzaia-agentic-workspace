@@ -1,6 +1,6 @@
 #!/bin/bash
 # packages/system.sh — System-level package installation (run as root at build time)
-# Provides functions for apt packages, Docker CLI, Azure CLI, Tectonic, VS Code CLI
+# Provides functions for apt packages, Docker CLI, VS Code CLI
 
 set -euo pipefail
 
@@ -38,31 +38,6 @@ system::install_docker_cli() {
     apt-get install -y --no-install-recommends docker-ce-cli
     rm -rf /var/lib/apt/lists/*
     log_success "Docker CLI installed"
-}
-
-# ── Azure CLI ─────────────────────────────────────────────────────────────────
-system::install_azure_cli() {
-    if command -v az >/dev/null 2>&1; then
-        log_info "Azure CLI already installed"
-        return 0
-    fi
-
-    log_info "Installing Azure CLI..."
-    curl -fsSL https://aka.ms/InstallAzureCLIDeb | bash
-    log_success "Azure CLI installed"
-}
-
-# ── Tectonic LaTeX engine ─────────────────────────────────────────────────────
-system::install_tectonic() {
-    if [ -f /usr/local/bin/tectonic ]; then
-        log_info "Tectonic already installed"
-        return 0
-    fi
-
-    log_info "Installing Tectonic..."
-    curl --proto '=https' --tlsv1.2 -fsSL https://drop.tectonic-typesetting.org/install.sh | sh
-    [ -f "$HOME/.local/bin/tectonic" ] && mv "$HOME/.local/bin/tectonic" /usr/local/bin/tectonic || true
-    log_success "Tectonic installed"
 }
 
 # ── VS Code CLI ───────────────────────────────────────────────────────────────

@@ -36,11 +36,15 @@ export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/
     for f in "$HOME/.bashrc" "$HOME/.profile"; do
         [ -f "$f" ] || touch "$f"
         if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
-            # Replace existing block
             sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
         fi
         printf '\n%s\n' "$path_block" >> "$f"
     done
+
+    # Also update the current shell so verify_tools() can find installed binaries
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/miniforge3/bin:$PATH"
 
     log_success "PATH configured"
 }
@@ -93,6 +97,8 @@ main() {
     cli::install_d2
     cli::install_dapr
     cli::install_rtk
+    cli::install_azure_cli
+    cli::install_tectonic
 
     # Configure environment and verify
     configure_path

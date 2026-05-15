@@ -1,5 +1,5 @@
 #!/bin/bash
-# packages/cli.sh — Command-line tool installation (gh, k6, d2, dapr, rtk)
+# packages/cli.sh — Command-line tool installation (gh, k6, d2, dapr, rtk, az, tectonic)
 
 set -euo pipefail
 
@@ -59,25 +59,27 @@ cli::install_k6() {
 
 # ── D2 diagram tool ───────────────────────────────────────────────────────────
 cli::install_d2() {
-    if command -v d2 >/dev/null 2>&1; then
+    if command -v d2 >/dev/null 2>&1 || [ -f "$HOME/.local/bin/d2" ]; then
         log_info "D2 already installed"
         return 0
     fi
 
     log_info "Installing D2${D2_VERSION:+ ${D2_VERSION}}..."
 
-    local version_flag=""
-    [ -n "${D2_VERSION:-}" ] && version_flag="--version ${D2_VERSION}"
+    mkdir -p "$HOME/.local/bin"
 
-    # shellcheck disable=SC2086
-    curl -fsSL https://d2lang.com/install.sh | sh -s -- --prefix "$HOME/.local" ${version_flag} || log_warn "D2 install failed; continuing"
+    local d2_version="${D2_VERSION:-}"
+    if [ -z "$d2_version" ]; then
+        d2_version=$(curl -fsSL https://api.github.com/repos/terrastruct/d2/releases/latest | grep '"tag_name"' | sed 's/.*"v//;s/".*//') || true
+    fi
 
-    if [ -f "$HOME/.local/bin/d2" ]; then
-        chmod +x "$HOME/.local/bin/d2"
-        log_success "D2 installed"
+    if [ -n "$d2_version" ]; then
+        local d2_url="https://github.com/terrastruct/d2/releases/download/v${d2_version}/d2-v${d2_version}-linux-amd64.tar.gz"
+        curl -fsSL "$d2_url" | tar xz -C "$HOME/.local/bin" --strip-components 2 "d2-v${d2_version}/bin/d2" \
+            || log_warn "D2 download failed; continuing"
+        [ -f "$HOME/.local/bin/d2" ] && chmod +x "$HOME/.local/bin/d2" && log_success "D2 ${d2_version} installed" || log_warn "D2 binary not found after extraction"
     else
-        log_warn "D2 binary not found after installation"
-        return 0
+        log_warn "Could not determine D2 version; skipping installation"
     fi
 }
 
@@ -126,11 +128,41 @@ cli::install_rtk() {
     fi
 }
 
+# ── Azure CLI ─────────────────────────────────────────────────────────────────
+cli::install_azure_cli() {
+    if command -v az >/dev/null 2>&1; then
+        log_info "Azure CLI already installed"
+        return 0
+    fi
+
+    log_info "Installing Azure CLI..."
+    if curl -fsSL https://aka.ms/InstallAzureCLIDeb | bash; then
+        log_success "Azure CLI installed"
+    else
+        log_warn "Azure CLI install failed; skipping"
+    fi
+}
+
+# ── Tectonic LaTeX engine ─────────────────────────────────────────────────────
+cli::install_tectonic() {
+    if command -v tectonic >/dev/null 2>&1 || [ -f "$HOME/.local/bin/tectonic" ]; then
+        log_info "Tectonic already installed"
+        return 0
+    fi
+
+    log_info "Installing Tectonic..."
+    if curl --proto '=https' --tlsv1.2 -fsSL https://drop.tectonic-typesetting.org/install.sh | sh; then
+        log_success "Tectonic installed"
+    else
+        log_warn "Tectonic install failed (network or DNS issue); skipping"
+    fi
+}
+
 # ── Verify CLI tools ──────────────────────────────────────────────────────────
 cli::verify() {
     log_info "Verifying CLI tools..."
 
-    local required_tools=("gh" "k6" "d2" "dapr" "rtk")
+    local required_tools=("gh" "k6" "d2" "dapr" "rtk" "az" "tectonic")
     local failed=0
 
     for tool in "${required_tools[@]}"; do
