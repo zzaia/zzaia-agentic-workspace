@@ -149,23 +149,6 @@ setup_ssh_auth() {
     fi
 }
 
-# ── Bashrc mise activation ────────────────────────────────────────────────────
-setup_bashrc() {
-    log_info "Ensuring bashrc has mise activation..."
-    su -s /bin/bash user -c "
-        grep -qF 'mise activate bash' /home/user/.bashrc 2>/dev/null \
-            || echo 'eval \"\$(mise activate bash)\"' >> /home/user/.bashrc
-    "
-    log_success "Bashrc configured"
-}
-
-# ── Mise trust ────────────────────────────────────────────────────────────────
-setup_mise_trust() {
-    log_info "Trusting mise.toml..."
-    mise trust /home/user/mise.toml 2>/dev/null || true
-    su -s /bin/bash user -c "mise trust /home/user/mise.toml 2>/dev/null || true"
-    log_success "Mise trust configured"
-}
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
@@ -177,8 +160,6 @@ main() {
     setup_sudo
     setup_apt_sandbox
     setup_ssh_auth
-    setup_bashrc
-    setup_mise_trust
 }
 
 main "$@"

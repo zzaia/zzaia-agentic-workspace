@@ -6,7 +6,7 @@ set -euo pipefail
 WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 SECRETS_FILE="/secrets/.env"
 BOOTSTRAP_DIR="/home/user/.bootstrap"
-BOOTSTRAP_MARKER="${BOOTSTRAP_DIR}/mise.ready"
+BOOTSTRAP_MARKER="${BOOTSTRAP_DIR}/tools.ready"
 
 # ── Color output (optional, can be disabled) ──────────────────────────────────
 if [ -t 1 ]; then

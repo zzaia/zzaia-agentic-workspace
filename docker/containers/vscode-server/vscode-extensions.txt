@@ -13,7 +13,6 @@ fullstackspider.visual-nuget
 gaoshan0621.csharp-format-usings
 google.geminicodeassist
 google.gemini-cli-vscode-ide-companion
-openai.chatgpt
 gruntfuggly.todo-tree
 kreativ-software.csharpextensions
 mermaidchart.vscode-mermaid-chart

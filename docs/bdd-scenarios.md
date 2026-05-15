@@ -90,7 +90,7 @@ Scenario: VS Code Remote attaches to workspace via Dev Containers
   When user opens VS Code Remote → Attach to Running Container → workspace
   Then VS Code attaches to workspace container as user user
   And profile Main - Zzaia is applied via devcontainer.json customizations
-  And extensions match those in vscode-server (same mise.toml list)
+  And extensions match those in vscode-server (same vscode-extensions.txt)
 ```
 
 ---
@@ -397,7 +397,7 @@ Scenario: SSH connection to workspace
   And SSH_PUBLIC_KEY configured in workspace environment
   When user connects via ssh user@localhost -p 2222
   Then shell session opens as user user in /home/user
-  And full mise toolchain is available
+  And full toolchain is available (node, dotnet, gh, claude, codex, gemini)
   And docker socket access is available
 ```
 
@@ -432,7 +432,7 @@ Enables same container image to serve as workspace and vscode-server with runtim
 ```gherkin
 Background:
   Given zzaia-agentic-workspace:latest image is built
-  And image contains VS Code extensions layer and mise tools
+  And image contains VS Code extensions layer and workspace tools
   And devcontainer.json and docker-compose.yml are included in image
 ```
 

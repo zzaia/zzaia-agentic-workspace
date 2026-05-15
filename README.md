@@ -225,7 +225,7 @@ The `workspace/host/` directory contains a .NET Aspire AppHost — a template fo
 
 ## 🐳 Container
 
-The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via `mise.toml`. MCP servers run as isolated sidecar containers — each receives only its own secret.
+The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via modular shell scripts. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 > See [docs/architecture-overview.md](docs/architecture-overview.md) for architectural decisions and security model.
 > See [docker/DOCKER.md](docker/DOCKER.md) for full setup details.

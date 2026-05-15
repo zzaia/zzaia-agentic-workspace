@@ -60,7 +60,7 @@ services:
       - /tmp:mode=1777
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "[ -f /home/user/.bootstrap/mise.ready ] && bash -c \"</dev/tcp/localhost/${SSH_PORT:-2222}\""]
+      test: ["CMD-SHELL", "[ -f /home/user/.bootstrap/tools.ready ] && bash -c \"</dev/tcp/localhost/${SSH_PORT:-2222}\""]
       interval: 30s
       timeout: 10s
       retries: 3

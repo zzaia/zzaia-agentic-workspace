@@ -1,6 +1,6 @@
 # ZZAIA Container — Docker
 
-Ubuntu container with all workspace tools provisioned via `mise.toml`. Accessible via SSH and browser-based VS Code. MCP servers run as isolated sidecar containers — each receives only its own secret.
+Ubuntu container with all workspace tools provisioned via modular shell scripts (`build-install.sh` + `runtime-install.sh`). Accessible via SSH and browser-based VS Code. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 ---
 
@@ -65,7 +65,7 @@ The image does **not** bake files directly into `/home/user/workspace`. Instead,
 
 On the **first container start with an empty home volume**, Docker copies the image's `/home/user` content into the volume. This means:
 
-- All tools installed in the image (mise, miniforge3, VS Code extensions, conda envs, claude-code CLI) are available immediately on first start.
+- All tools (Node.js, .NET, miniforge3, CLI tools, VS Code extensions, conda envs, claude-code CLI) are installed on first container start and cached in the shared home volume.
 - Tool installations and configs persist across restarts and container recreation.
 - Claude auth tokens (`~/.config/claude/`) persist — `claude auth login` needs to be run only once.
 

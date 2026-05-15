@@ -44,8 +44,9 @@ setup_claude_credentials() {
     # Install plugins after auth so claude plugin sync can apply MCP config
     CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
     su -s /bin/bash user -c "
-        export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
-        mise run claude-plugins || true
+        export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
+        claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
+        claude plugin install agentic-workspace@zzaia || true
     "
 }
 
@@ -60,18 +61,14 @@ setup_github_credentials() {
     
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     su -s /bin/bash user -c "
-        export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
-        
+        export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
+        export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
+
         # Authenticate gh CLI
         echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
-        
+
         # Upgrade any existing extensions
         gh extension upgrade --all 2>/dev/null || true
-        
-            # Install GitHub Copilot CLI binary (requires gh auth)
-            export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
-            export PATH=/home/user/miniforge3/bin:/home/user/.local/share/mise/shims:/home/user/.local/bin:\$PATH
-            mise run gh-extensions || true
         
         # Configure git credential helper
         git config --global credential.https://github.com.helper store

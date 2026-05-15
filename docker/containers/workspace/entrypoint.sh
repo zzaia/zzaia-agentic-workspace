@@ -18,7 +18,7 @@ log_info "Workspace: $WORKSPACE_NAME"
 log_info "Phase 1: User and system setup"
 bash "$SCRIPT_DIR/setup-user.sh"
 
-# ── Phase 2: Runtime tools (mise, node, python, etc.) ────────────────────────
+# ── Phase 2: Runtime tools (node, python, dotnet, cli tools, etc.) ───────────
 log_info "Phase 2: Runtime tools bootstrap"
 bash "$SCRIPT_DIR/setup-tools.sh"
 

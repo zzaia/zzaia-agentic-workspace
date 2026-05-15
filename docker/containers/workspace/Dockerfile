@@ -1,6 +1,6 @@
 # ZZAIA Agentic Workspace — Ubuntu Container
-# All tools provisioned via mise.toml. SSH + vscode-server (code serve-web) accessible.
-# WORKSPACE_NAME is runtime-only — one image serves all workspace deployments.
+# SSH + vscode-server (code serve-web) accessible.
+# Tools provisioned via modular shell scripts. WORKSPACE_NAME is runtime-only.
 FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.title="ZZAIA Agentic Workspace"
@@ -13,25 +13,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=en_US.UTF-8 \
     BROWSER=/usr/local/bin/browser-print
 
-# ── System packages + Docker CE CLI + mise ────────────────────────────────────
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl git openssh-server sudo unzip \
-    ca-certificates locales gpg gpg-agent libicu74 \
-    && locale-gen en_US.UTF-8 \
-    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu noble stable" \
-        > /etc/apt/sources.list.d/docker.list \
-    && curl -fsSL https://mise.jdx.dev/gpg-key.pub \
-        | gpg --dearmor -o /usr/share/keyrings/mise-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/mise-archive-keyring.gpg arch=amd64] https://mise.jdx.dev/deb stable main" \
-        > /etc/apt/sources.list.d/mise.list \
-    && apt-get update && apt-get install -y --no-install-recommends docker-ce-cli mise \
-    && rm -rf /var/lib/apt/lists/*
-
-# ── External binaries: VS Code CLI ────────────────────────────────────────────
-# VS Code server is auto-downloaded by the CLI on first connection.
-RUN curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C /usr/local/bin
+# ── System setup and build-time tools ─────────────────────────────────────────
+COPY docker/containers/workspace/scripts /docker-scripts
+RUN bash /docker-scripts/build-install.sh
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
@@ -58,7 +42,6 @@ WORKDIR /home/user
 
 # ── Home seed — all home content staged outside the volume ───────────────────
 # entrypoint.sh merges /opt/zzaia/home-seed/ into /home/user/ at runtime.
-COPY --chown=user:user docker/mise.toml                /opt/zzaia/home-seed/mise.toml
 COPY --chown=user:user agents/gemini/                  /opt/zzaia/home-seed/
 COPY --chown=user:user agents/codex/                   /opt/zzaia/home-seed/
 COPY --chown=user:user agents/copilot/                 /opt/zzaia/home-seed/

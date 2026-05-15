@@ -156,9 +156,9 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 | Agent | CLI Binary | Config Folder | Instruction File |
 |-------|-----------|---------------|-----------------|
-| Claude Code | `claude` (mise) | `agents/claude/.claude/` | `agents/claude/CLAUDE.md` |
-| Gemini CLI | `gemini` (mise) | `agents/gemini/.gemini/` | `agents/gemini/GEMINI.md` |
-| OpenAI Codex | `codex` (mise) | `agents/codex/.codex/` | `agents/codex/AGENTS.md` |
+| Claude Code | `claude` (npm) | `agents/claude/.claude/` | `agents/claude/CLAUDE.md` |
+| Gemini CLI | `gemini` (npm) | `agents/gemini/.gemini/` | `agents/gemini/GEMINI.md` |
+| OpenAI Codex | `codex` (npm) | `agents/codex/.codex/` | `agents/codex/AGENTS.md` |
 | GitHub Copilot | `gh copilot` | `agents/copilot/.github/` | `agents/copilot/.github/copilot-instructions.md` |
 
 - All agents share the same MCP SSE endpoints — configured once, available everywhere
@@ -181,15 +181,16 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 007: Tool Provisioning via `mise` and Dockerfile
+### ADR 007: Tool Provisioning via Modular Shell Scripts and Dockerfile
 
-**Decision**: All workspace tools are provisioned inside the Docker image via `mise.toml` and Dockerfile steps.
+**Decision**: Workspace tools are provisioned in two phases: build-time system tools via `build-install.sh` (Dockerfile), and user-space tools at container start via `runtime-install.sh` (entrypoint).
 
-- `mise` manages language runtimes and CLI tools (Node.js, .NET, gh, agent CLIs)
+- `build-install.sh` installs system-level tools as root (Azure CLI, tectonic, VS Code CLI, apt packages)
+- `runtime-install.sh` installs user-space tools to the shared home volume (Node.js, .NET, gh, agent CLIs, conda, pip packages) using sourced modules under `scripts/packages/`
+- Version pins live in `scripts/versions.env` — single file to bump tool versions
 - Miniforge3 (conda) is the sole Python provider
-- The image is self-contained: any developer on Ubuntu, macOS, or Windows runs identically
 
-**Rationale**: Zero-dependency host setup is the primary usability objective.
+**Rationale**: Eliminates `mise` as a third-party dependency from the critical startup path. Two explicit scripts with bash module organization make the installation surface auditable and easy to extend.
 
 ---
 
@@ -199,7 +200,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 - The repo root contains a `.claude-plugin/plugin.json` manifest defining the plugin identity and component paths
 - `plugin.json` references `./agents/claude/.claude/commands/` for commands, `./agents/claude/.claude/agents/` for agents, and `./agents/claude/.mcp.json` for MCP servers — `agents/claude/.mcp.json` is the single source of truth
-- At container first startup, `setup-credentials.sh` runs `mise run claude-plugins` **after** writing `CLAUDE_CODE_OAUTH_TOKEN` to `~/.claude/.credentials.json`, so the plugin install has valid auth
+- At container first startup, `setup-credentials.sh` runs `claude plugin marketplace add` and `claude plugin install` **after** writing `CLAUDE_CODE_OAUTH_TOKEN` to `~/.claude/.credentials.json`, so the plugin install has valid auth
 - `claude plugin marketplace add <repo>#feature/improve-agentic-system` fetches the branch and installs into the user scope (`~/.claude/settings.json`)
 - `claude plugin sync` propagates all registered components to both the Claude CLI and the Claude VS Code extension
 - Other agents (Gemini, Codex, Copilot) continue to use Dockerfile `COPY` into `/opt/zzaia/home-seed/` because they have no equivalent plugin marketplace mechanism
@@ -392,7 +393,7 @@ C4Container
             Container(rtk, "rtk", "Rust binary in-image", "Bash hook intercepts command outputs — 81% avg compression")
         }
 
-        Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot) + mise")
+        Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot)")
         Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
 
         System_Boundary(primary, "Layer 1 — Primary (Automatic via Headroom proxy)") {
@@ -461,10 +462,9 @@ zzaia-agentic-workspace/
 │   └── copilot/             # GitHub Copilot — .github/copilot-instructions.md
 ├── vscode/                  # VS Code profile — settings, extensions, launch configs, workspace file
 ├── docker/
-│   ├── Dockerfile           # Single image — Ubuntu 24.04, mise, SSH, VS Code server pre-baked
+│   ├── Dockerfile           # Single image — Ubuntu 24.04, system tools, SSH, VS Code CLI
 │   ├── docker-compose.yml   # Stack — workspace + vscode-server + headroom (profiles) + 8 sidecars
 │   ├── entrypoint.sh        # SSH setup, credential wiring, WORKSPACE_NAME templating, Aspire MCP
-│   ├── mise.toml            # Tool versions — node, dotnet, agent CLIs, VS Code extensions
 │   └── sshd_config          # SSH daemon hardening config
 ├── docs/
 │   ├── architecture-overview.md  # This document
@@ -482,7 +482,7 @@ zzaia-agentic-workspace/
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
 | `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
-| `workspace` | SSH daemon, agent runtime, mise toolchain, Aspire MCP | 2222 (SSH) | always | |
+| `workspace` | SSH daemon, agent runtime, Aspire MCP | 2222 (SSH) | always | |
 | `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | |
 | **Layer 1 — Primary** | | | | |
 | `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | |
@@ -539,7 +539,7 @@ zzaia-agentic-workspace/
 | **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
 | **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
 | **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
-| Tool provisioning | mise (agent CLIs, node, dotnet) + Miniforge3 (Python/conda) |
+| Tool provisioning | `build-install.sh` + `runtime-install.sh` (node, dotnet, agent CLIs) + Miniforge3 (Python/conda) |
 | MCP bridge | supergateway (stdio → SSE) + native MCP servers (openmemory, codegraph) |
 | Multi-tenancy | Docker Compose project namespacing |
 | Secret lifecycle | Process env → one-time file write → sealed |
@@ -561,7 +561,7 @@ zzaia-agentic-workspace/
 
 - [QUICKSTART.md](../QUICKSTART.md) — Step-by-step setup instructions
 - [README.md](../README.md) — Project overview
-- [docker/](../docker/) — Dockerfile, Compose, entrypoint, and mise.toml
+- [docker/](../docker/) — Dockerfile, Compose, entrypoint, and install scripts
 - [bdd-scenarios.md](bdd-scenarios.md) — BDD scenarios for all workspace features
 - [agents/claude/CLAUDE.md](../agents/claude/CLAUDE.md) — Claude Code command hierarchy and standards
 - [agents/claude/.mcp.json](../agents/claude/.mcp.json) — MCP server configuration

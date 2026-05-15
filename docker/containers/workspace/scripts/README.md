@@ -10,7 +10,7 @@ docker/
 ├── scripts/
 │   ├── common.sh                 # Shared utilities, logging, env
 │   ├── setup-user.sh             # User home, SSH, permissions
-│   ├── setup-tools.sh            # Runtime tools (mise, conda, npm)
+│   ├── setup-tools.sh            # Runtime tools bootstrap (delegates to runtime-install.sh)
 │   ├── setup-credentials.sh      # Authentication (Claude, GitHub, Azure)
 │   ├── setup-aspire.sh           # Aspire MCP initialization
 │   └── README.md                 # This file
@@ -39,26 +39,31 @@ Runs as root. Initializes the workspace user environment:
 5. **setup_sudo()** — Passwordless sudo for bootstrap tasks
 6. **setup_apt_sandbox()** — Apt configuration for in-container runtime installs
 7. **setup_ssh_auth()** — Load SSH public key from env or secrets file
-8. **setup_bashrc()** — Ensure `mise activate` is in bashrc
-9. **setup_mise_trust()** — Trust `mise.toml` for runtime tool management
-
 **Exit on error**: Yes (`set -euo pipefail`)
 
 ---
 
 ### `setup-tools.sh` — Runtime Tools Bootstrap
-Runs as user. Installs development tools and runtimes via `mise`:
+Thin delegator. Runs `runtime-install.sh` as user via `su -s /bin/bash user`.
 
-1. **ensure_bootstrap_dir()** — Create marker directory
-2. **install_miniforge()** — Install Miniforge (conda) if missing
-3. **install_git_and_essentials()** — Run mise tasks for git, Azure CLI, Tectonic
-4. **install_npm_tools()** — Install Node.js, dotnet, CLI tools (gh, tmux, k6, d2, dapr, @anthropic/claude-code, etc.)
-5. **install_environments()** — Configure Python, Conda, and Dotnet environments
-6. **install_optional_tools()** — Optional tools (rtk, claude-plugins, gh-extensions, vscode-extensions) — failures don't block
-7. **bootstrap_runtime()** — Main flow; skips if `$BOOTSTRAP_MARKER` exists
+### `runtime-install.sh` — User-space Installation Orchestrator
+Runs as user. Installs all development tools to the shared home volume:
 
-**Idempotent**: Via `BOOTSTRAP_MARKER` file (`/home/user/.bootstrap/mise.ready`)
-**Retries**: `retry_with_backoff()` helper with exponential backoff for network reliability
+1. **python::install_miniforge()** — Miniforge (conda) if missing
+2. **node::install()** — Node.js via nvm
+3. **node::install_npm_globals()** — claude-code, mmdc, codex, gemini-cli
+4. **dotnet::install()** — .NET SDK via dotnet-install.sh
+5. **dotnet::install_tools()** — Aspire CLI + aspirate
+6. **python::install_packages()** — pip packages (pypdf, python-docx, etc.)
+7. **python::install_conda_envs()** — venv-analytics, venv-development
+8. **cli::install_*()** — gh, k6, d2, dapr, rtk
+9. **vscode::install_extensions()** — Extensions from `vscode-extensions.txt`
+10. **configure_path()** — Write canonical PATH to `.bashrc` + `.profile`
+11. **verify_tools()** — Gate check on required binaries
+
+**Idempotent**: Via `BOOTSTRAP_MARKER` (`/home/user/.bootstrap/tools.ready`) using script SHA256 hash
+**Upgrade**: `runtime-install.sh --upgrade` bypasses marker for explicit re-install
+**Retries**: `retry_with_backoff()` from `common.sh`
 
 ---
 
@@ -166,7 +171,7 @@ docker run --rm -it -u user -e GITHUB_PERSONAL_ACCESS_TOKEN=xxx zzaia-agentic-wo
 ## Future Improvements
 
 - [ ] Add script for vscode-server startup (separate from SSH bootstrap)
-- [ ] Add script for AppHost integration (launch via mise task)
+- [ ] Add script for AppHost integration
 - [ ] Add health checks / readiness probes per phase
 - [ ] Parallel tool installation where safe (currently sequential for stability)
 - [ ] Cached layers for Docker build optimization

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PATH=/home/user/.local/share/mise/shims:/home/user/.local/bin:$PATH
+export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:$PATH
 export BROWSER=/usr/local/bin/browser-print
 export HOME=/home/user
 
