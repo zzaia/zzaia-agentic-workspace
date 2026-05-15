@@ -5,20 +5,26 @@ set -euo pipefail
 # shellcheck source=common.sh
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
+trap cleanup_secrets EXIT
+
 # ── Template WORKSPACE_NAME in config files ──────────────────────────────────
 apply_workspace_templating() {
     log_info "Applying WORKSPACE_NAME templating..."
-    
-    su -s /bin/bash user -c "
+
+    WORKSPACE_NAME="$WORKSPACE_NAME" \
+    su -s /bin/bash user -c '
         find /home/user /home/user/.vscode-server /home/user/workspace \
-            \( -name '*.json' -o -name '*.code-workspace' \) -maxdepth 4 2>/dev/null \
-            | xargs sed -i 's/{{WORKSPACE_NAME}}/${WORKSPACE_NAME}/g' 2>/dev/null || true
-        
-        [ -f /home/user/zzaia.code-workspace ] \
-            && mv /home/user/zzaia.code-workspace \
-                  /home/user/${WORKSPACE_NAME}.code-workspace 2>/dev/null || true
-    "
-    
+            \( -name "*.json" -o -name "*.code-workspace" \) -maxdepth 4 2>/dev/null \
+            | xargs sed -i "s/{{WORKSPACE_NAME}}/${WORKSPACE_NAME}/g" 2>/dev/null || true
+
+        # Rename any *.code-workspace that is not already named for this workspace
+        for ws in /home/user/*.code-workspace; do
+            [ -f "$ws" ] || continue
+            target="/home/user/${WORKSPACE_NAME}.code-workspace"
+            [ "$ws" = "$target" ] || mv "$ws" "$target" 2>/dev/null || true
+        done
+    '
+
     log_success "WORKSPACE_NAME templating complete"
 }
 
@@ -44,6 +50,8 @@ setup_claude_credentials() {
     # Install plugins after auth so claude plugin sync can apply MCP config
     CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
     su -s /bin/bash user -c "
+        export NVM_DIR=/home/user/.nvm
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
         export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
         claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
         claude plugin install agentic-workspace@zzaia || true
@@ -61,6 +69,8 @@ setup_github_credentials() {
     
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     su -s /bin/bash user -c "
+        export NVM_DIR=/home/user/.nvm
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
         export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
         export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
 
@@ -69,7 +79,7 @@ setup_github_credentials() {
 
         # Upgrade any existing extensions
         gh extension upgrade --all 2>/dev/null || true
-        
+
         # Configure git credential helper
         git config --global credential.https://github.com.helper store
         grep -qF \"github.com\" /home/user/.git-credentials 2>/dev/null \

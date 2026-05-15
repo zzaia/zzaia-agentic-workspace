@@ -7,7 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 main() {
     log_info "Starting runtime tool installation..."
-    su -s /bin/bash user -c "bash /usr/local/lib/zzaia/scripts/runtime-install.sh"
+    su -s /bin/bash user -c "bash /usr/local/lib/zzaia/scripts/runtime-install.sh ${*}"
     log_success "Runtime tool installation complete"
 }
 

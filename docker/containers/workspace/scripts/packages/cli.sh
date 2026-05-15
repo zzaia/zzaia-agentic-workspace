@@ -14,15 +14,16 @@ cli::install_gh() {
 
     mkdir -p "$HOME/.local/bin"
 
-    # Get latest release from GitHub API
-    local gh_version
-    gh_version=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed 's/.*"v//;s/".*//') || true
+    local gh_version="${GH_VERSION:-}"
+    if [ -z "$gh_version" ]; then
+        gh_version=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed 's/.*"v//;s/".*//') || true
+    fi
 
     if [ -n "$gh_version" ]; then
         local gh_url="https://github.com/cli/cli/releases/download/v${gh_version}/gh_${gh_version}_linux_amd64.tar.gz"
         curl -fsSL "$gh_url" | tar xz -C "$HOME/.local/bin" "gh_${gh_version}_linux_amd64/bin/gh" --strip-components 2
         chmod +x "$HOME/.local/bin/gh"
-        log_success "GitHub CLI installed"
+        log_success "GitHub CLI ${gh_version} installed"
     else
         log_warn "Could not determine gh version; skipping installation"
         return 0
@@ -40,30 +41,36 @@ cli::install_k6() {
 
     mkdir -p "$HOME/.local/bin"
 
-    local k6_version
-    k6_version=$(curl -fsSL https://api.github.com/repos/grafana/k6/releases/latest | grep '"tag_name"' | sed 's/.*v//;s/".*//') || true
+    local k6_version="${K6_VERSION:-}"
+    if [ -z "$k6_version" ]; then
+        k6_version=$(curl -fsSL https://api.github.com/repos/grafana/k6/releases/latest | grep '"tag_name"' | sed 's/.*v//;s/".*//') || true
+    fi
 
     if [ -n "$k6_version" ]; then
         local k6_url="https://github.com/grafana/k6/releases/download/v${k6_version}/k6-v${k6_version}-linux-amd64.tar.gz"
-        curl -fsSL "$k6_url" | tar xz -C "$HOME/.local/bin" --strip-components 1 || log_warn "k6 download failed; continuing"
+        curl -fsSL "$k6_url" | tar xz -C "$HOME/.local/bin" --strip-components 1 "k6-v${k6_version}-linux-amd64/k6" || log_warn "k6 download failed; continuing"
         [ -f "$HOME/.local/bin/k6" ] && chmod +x "$HOME/.local/bin/k6"
-        log_success "k6 installed"
+        log_success "k6 ${k6_version} installed"
     else
         log_warn "Could not determine k6 version; skipping installation"
         return 0
     fi
 }
 
-# ── D2 diagram tool ──────────────────────────────────────────────────────────
+# ── D2 diagram tool ───────────────────────────────────────────────────────────
 cli::install_d2() {
     if command -v d2 >/dev/null 2>&1; then
         log_info "D2 already installed"
         return 0
     fi
 
-    log_info "Installing D2..."
+    log_info "Installing D2${D2_VERSION:+ ${D2_VERSION}}..."
 
-    curl -fsSL https://d2lang.com/install.sh | sh -s -- --prefix "$HOME/.local" || log_warn "D2 install failed; continuing"
+    local version_flag=""
+    [ -n "${D2_VERSION:-}" ] && version_flag="--version ${D2_VERSION}"
+
+    # shellcheck disable=SC2086
+    curl -fsSL https://d2lang.com/install.sh | sh -s -- --prefix "$HOME/.local" ${version_flag} || log_warn "D2 install failed; continuing"
 
     if [ -f "$HOME/.local/bin/d2" ]; then
         chmod +x "$HOME/.local/bin/d2"
@@ -81,9 +88,13 @@ cli::install_dapr() {
         return 0
     fi
 
-    log_info "Installing Dapr..."
+    log_info "Installing Dapr${DAPR_VERSION:+ ${DAPR_VERSION}}..."
 
-    curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash || log_warn "Dapr install failed; continuing"
+    if [ -n "${DAPR_VERSION:-}" ]; then
+        DAPR_RELEASE_TAG="v${DAPR_VERSION}" curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash || log_warn "Dapr install failed; continuing"
+    else
+        curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash || log_warn "Dapr install failed; continuing"
+    fi
 
     log_success "Dapr installation attempted"
 }
@@ -99,14 +110,16 @@ cli::install_rtk() {
 
     mkdir -p "$HOME/.local/bin"
 
-    local rtk_version
-    rtk_version=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest | grep '"tag_name"' | sed 's/.*"v//;s/".*//') || true
+    local rtk_version="${RTK_VERSION:-}"
+    if [ -z "$rtk_version" ]; then
+        rtk_version=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest | grep '"tag_name"' | sed 's/.*"v//;s/".*//') || true
+    fi
 
     if [ -n "$rtk_version" ]; then
         local rtk_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_version}/rtk-x86_64-unknown-linux-musl.tar.gz"
         curl -fsSL "$rtk_url" | tar xz -C "$HOME/.local/bin" rtk || log_warn "RTK download failed; continuing"
         [ -f "$HOME/.local/bin/rtk" ] && chmod +x "$HOME/.local/bin/rtk"
-        log_success "RTK installed"
+        log_success "RTK ${rtk_version} installed"
     else
         log_warn "Could not determine RTK version; skipping installation"
         return 0

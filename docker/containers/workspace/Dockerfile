@@ -15,7 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # ── System setup and build-time tools ─────────────────────────────────────────
 COPY docker/containers/workspace/scripts /docker-scripts
-RUN bash /docker-scripts/build-install.sh
+RUN bash /docker-scripts/build-install.sh && rm -rf /docker-scripts
 
 # ── Browser-print: prints OAuth URLs to terminal for headless auth ────────────
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
@@ -58,7 +58,7 @@ COPY docker/containers/workspace/scripts /usr/local/lib/zzaia/scripts
 COPY docker/containers/vscode-server/start-vscode-server.sh /usr/local/bin/start-vscode-server.sh
 COPY docker/containers/vscode-server/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
 RUN chmod +x /entrypoint.sh /usr/local/bin/start-vscode-server.sh \
-    && chmod +x /usr/local/lib/zzaia/scripts/*.sh
+    && find /usr/local/lib/zzaia/scripts -name '*.sh' -exec chmod +x {} +
 
 EXPOSE ${SSH_PORT}
 

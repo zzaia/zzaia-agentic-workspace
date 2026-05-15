@@ -6,13 +6,12 @@ Refactored entrypoint bootstrap into modular, testable scripts for improved read
 
 ```
 docker/
-├── entrypoint.sh                 # Main orchestrator (Phase 1-4)
+├── entrypoint.sh                 # Main orchestrator (Phase 1-3)
 ├── scripts/
 │   ├── common.sh                 # Shared utilities, logging, env
 │   ├── setup-user.sh             # User home, SSH, permissions
 │   ├── setup-tools.sh            # Runtime tools bootstrap (delegates to runtime-install.sh)
 │   ├── setup-credentials.sh      # Authentication (Claude, GitHub, Azure)
-│   ├── setup-aspire.sh           # Aspire MCP initialization
 │   └── README.md                 # This file
 ```
 
@@ -79,15 +78,6 @@ Runs as user. Configures all API credentials and git auth:
 
 ---
 
-### `setup-aspire.sh` — Aspire MCP Service
-Runs as user. Starts Aspire MCP as a background service:
-
-1. **start_aspire_mcp()** — Launch Aspire MCP via `supergateway` on port 3007; logs to `~/.local/share/vscode-server/aspire-mcp.log`
-
-**Detached**: Runs in background with `&`
-
----
-
 ### `entrypoint.sh` — Main Orchestrator
 Runs as root. Sequences all phases and starts SSH daemon:
 
@@ -95,7 +85,6 @@ Runs as root. Sequences all phases and starts SSH daemon:
 Phase 1: setup-user.sh          # User & system setup
 Phase 2: setup-tools.sh         # Runtime tools bootstrap  
 Phase 3: setup-credentials.sh   # Auth setup
-Phase 4: setup-aspire.sh        # Aspire MCP startup
 Then:    /usr/sbin/sshd -D      # SSH daemon (blocking)
 ```
 

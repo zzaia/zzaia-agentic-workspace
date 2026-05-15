@@ -48,7 +48,7 @@ system::install_azure_cli() {
     fi
 
     log_info "Installing Azure CLI..."
-    curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+    curl -fsSL https://aka.ms/InstallAzureCLIDeb | bash
     log_success "Azure CLI installed"
 }
 

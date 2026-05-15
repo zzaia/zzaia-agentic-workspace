@@ -5,8 +5,6 @@ set -euo pipefail
 # ── Default values ────────────────────────────────────────────────────────────
 WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 SECRETS_FILE="/secrets/.env"
-BOOTSTRAP_DIR="/home/user/.bootstrap"
-BOOTSTRAP_MARKER="${BOOTSTRAP_DIR}/tools.ready"
 
 # ── Color output (optional, can be disabled) ──────────────────────────────────
 if [ -t 1 ]; then
@@ -50,7 +48,7 @@ retry_with_backoff() {
         
         if [ "$attempt" -ge "$max_attempts" ]; then
             log_warn "${cmd[*]} failed after $max_attempts attempts"
-            return 0
+            return 1
         fi
         
         log_warn "${cmd[*]} attempt $attempt/$max_attempts failed; retrying in ${delay}s..."
@@ -78,7 +76,3 @@ cleanup_secrets() {
     unset -v GITHUB_PERSONAL_ACCESS_TOKEN ADO_MCP_AUTH_TOKEN 2>/dev/null || true
     unset -v ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
 }
-
-trap cleanup_secrets EXIT
-
-export -f log_info log_warn log_error log_success retry_with_backoff ensure_dir cleanup_secrets

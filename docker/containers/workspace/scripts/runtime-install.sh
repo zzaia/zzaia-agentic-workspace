@@ -20,8 +20,6 @@ source "$SCRIPT_DIR/packages/dotnet.sh"
 source "$SCRIPT_DIR/packages/python.sh"
 # shellcheck source=packages/cli.sh
 source "$SCRIPT_DIR/packages/cli.sh"
-# shellcheck source=packages/vscode.sh
-source "$SCRIPT_DIR/packages/vscode.sh"
 
 BOOTSTRAP_MARKER="$HOME/.bootstrap/tools.ready"
 
@@ -29,16 +27,19 @@ BOOTSTRAP_MARKER="$HOME/.bootstrap/tools.ready"
 configure_path() {
     log_info "Configuring PATH environment..."
 
-    # Canonical PATH block covering all tool locations
-    local path_block='export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/miniforge3/bin:$HOME/.nvm/versions/node/$(ls -t $HOME/.nvm/versions/node 2>/dev/null | head -1)/bin:$PATH"'
+    local path_block='# zzaia-path-begin
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/miniforge3/bin:$PATH"
+# zzaia-path-end'
 
     for f in "$HOME/.bashrc" "$HOME/.profile"; do
-        if [ ! -f "$f" ]; then
-            touch "$f"
+        [ -f "$f" ] || touch "$f"
+        if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
+            # Replace existing block
+            sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
         fi
-        if ! grep -qF '.npm-global' "$f" 2>/dev/null; then
-            echo "$path_block" >> "$f"
-        fi
+        printf '\n%s\n' "$path_block" >> "$f"
     done
 
     log_success "PATH configured"
@@ -92,7 +93,6 @@ main() {
     cli::install_d2
     cli::install_dapr
     cli::install_rtk
-    vscode::install_extensions
 
     # Configure environment and verify
     configure_path

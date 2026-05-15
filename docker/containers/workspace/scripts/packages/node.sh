@@ -6,29 +6,29 @@ set -euo pipefail
 
 # ── Node.js installation via nvm ──────────────────────────────────────────────
 node::install() {
-    local node_version="${NODE_VERSION:-22}"
+    log_info "Installing Node.js ${NODE_VERSION} via nvm..."
 
-    if [ -x "$HOME/.nvm/versions/node/v${node_version}."*/bin/node ] 2>/dev/null; then
-        log_info "Node.js v$node_version already installed"
+    # Source nvm if already installed
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    # Install nvm if not present
+    if ! command -v nvm >/dev/null 2>&1 && [ ! -s "$NVM_DIR/nvm.sh" ]; then
+        log_info "Installing nvm ${NVM_VERSION}..."
+        curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh" | bash
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    fi
+
+    # Check if target node version is already installed
+    if nvm ls "${NODE_VERSION}" 2>/dev/null | grep -q "v${NODE_VERSION}"; then
+        log_info "Node.js ${NODE_VERSION} already installed"
         return 0
     fi
 
-    log_info "Installing Node.js v$node_version via nvm..."
-
-    # Install nvm if not present
-    if [ ! -d "$HOME/.nvm" ]; then
-        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    fi
-
-    # Activate nvm and install Node.js
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    nvm install "${node_version}" --lts
-    nvm use "${node_version}"
-
-    log_success "Node.js v$node_version installed"
+    log_info "Installing Node.js ${NODE_VERSION}..."
+    nvm install "${NODE_VERSION}"
+    nvm alias default "${NODE_VERSION}"
+    log_success "Node.js ${NODE_VERSION} installed"
 }
 
 # ── npm globals configuration ─────────────────────────────────────────────────
@@ -38,10 +38,10 @@ node::install_npm_globals() {
     npm config set prefix "$HOME/.npm-global" 2>/dev/null || true
 
     local packages=(
-        "@anthropic-ai/claude-code"
-        "@mermaid-js/mermaid-cli"
-        "@openai/codex"
-        "@google/gemini-cli"
+        "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION:-latest}"
+        "@mermaid-js/mermaid-cli@${MMDC_VERSION:-latest}"
+        "@openai/codex@${CODEX_VERSION:-latest}"
+        "@google/gemini-cli@${GEMINI_CLI_VERSION:-latest}"
     )
 
     for pkg in "${packages[@]}"; do

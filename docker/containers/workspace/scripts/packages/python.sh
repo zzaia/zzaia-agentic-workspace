@@ -13,7 +13,7 @@ python::install_miniforge() {
     log_info "Installing Miniforge..."
 
     mkdir -p "$HOME/.local/share"
-    curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
+    curl -fsSL "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-${MINIFORGE_ARCH}.sh" \
         -o /tmp/miniforge.sh
 
     bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
@@ -35,8 +35,18 @@ python::install_packages() {
     fi
 
     "$HOME/miniforge3/bin/pip" install --upgrade pip
+
+    # Build versioned package specs — empty version var means install latest
+    local pypdf_spec="pypdf${PYPDF_VERSION:+==${PYPDF_VERSION}}"
+    local docx_spec="python-docx${PYTHON_DOCX_VERSION:+==${PYTHON_DOCX_VERSION}}"
+    local textual_spec="textual${TEXTUAL_VERSION:+==${TEXTUAL_VERSION}}"
+    local jinja2_spec="jinja2${JINJA2_VERSION:+==${JINJA2_VERSION}}"
+    local graphviz_spec="graphviz${GRAPHVIZ_VERSION:+==${GRAPHVIZ_VERSION}}"
+    local diagrams_spec="diagrams${DIAGRAMS_VERSION:+==${DIAGRAMS_VERSION}}"
+
     "$HOME/miniforge3/bin/pip" install \
-        pypdf python-docx textual jinja2 graphviz diagrams \
+        "$pypdf_spec" "$docx_spec" "$textual_spec" \
+        "$jinja2_spec" "$graphviz_spec" "$diagrams_spec" \
         || log_warn "Some Python packages failed to install; continuing"
 
     log_success "Python packages installed"
@@ -51,8 +61,9 @@ python::install_conda_envs() {
         return 0
     fi
 
-    "$HOME/miniforge3/bin/conda" create -n venv-analytics python=3.12 -y 2>/dev/null || true
-    "$HOME/miniforge3/bin/conda" create -n venv-development python=3.12 -y 2>/dev/null || true
+    local py_ver="${CONDA_PYTHON_VERSION:-3.12}"
+    "$HOME/miniforge3/bin/conda" create -n venv-analytics "python=${py_ver}" -y 2>/dev/null || true
+    "$HOME/miniforge3/bin/conda" create -n venv-development "python=${py_ver}" -y 2>/dev/null || true
 
     log_success "Conda environments created"
 }

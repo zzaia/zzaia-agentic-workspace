@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export NVM_DIR="/home/user/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
 export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:$PATH
 export BROWSER=/usr/local/bin/browser-print
 export HOME=/home/user
@@ -86,7 +88,7 @@ if [ ! -f "$EXT_SENTINEL" ] || [ "$(cat "$EXT_SENTINEL" 2>/dev/null)" != "$_CLI_
   _install_ext() {
     local ext="$1" attempt=1 max=5 delay=10 out rc
     while [ "$attempt" -le "$max" ]; do
-      if out=$("${USER_RUN[@]}" "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" 2>&1); then
+      if out=$("${USER_RUN[@]}" "$VSCODE_CLI" --extensions-dir "$EXT_DIR" --install-extension "$ext" --target linux-x64 2>&1); then
         rc=0
       else
         rc=$?
