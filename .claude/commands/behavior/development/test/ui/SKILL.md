@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:ui
-description: Execute a single BDD step via Playwright browser automation with New Relic and console diagnostics
-argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app> [--description <text>]"
+description: Execute a single BDD step via Playwright browser automation and query a data source for consistency and issue validation
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
 agent: zzaia-tester-specialist
 metadata:
@@ -13,8 +13,14 @@ metadata:
       description: Live URL to execute the browser interaction against
       required: true
     - name: application
-      description: New Relic application name for server-side diagnostics
+      description: Application name used for new-relic and aspire collection filtering
       required: true
+    - name: collection
+      description: "Data source to query for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
+      required: true
+    - name: source
+      description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
+      required: false
     - name: description
       description: Additional context or instructions for the operation
       required: false
@@ -22,7 +28,7 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as a browser interaction via Playwright, collect New Relic and browser console diagnostics, and return a concise step report.
+Execute a single BDD step as a browser interaction via Playwright, collect browser console diagnostics, query the specified `--collection` data source for consistency and issues, and return a concise step report.
 
 ## EXECUTION
 
@@ -35,21 +41,30 @@ Execute a single BDD step as a browser interaction via Playwright, collect New R
    - Call `/capability:playwright:navigate --url <environment> --description "<step>"`
    - Capture: interaction result, screenshot on failure, execution time
 
-3. **Collect Diagnostics**
+3. **Collect Diagnostics** — run both in parallel:
 
-   - Call `/behavior:devops:new-relic --action debug --application-name <application>` for server-side logs
-   - Call `/capability:playwright:debug --url <environment>` for browser console logs
+   - **Browser**: Call `/capability:playwright:debug --url <environment>` for console logs and network errors
+   - **Collection**: route by `--collection`:
+
+   | Collection    | Capability call                                                                              |
+   |---------------|----------------------------------------------------------------------------------------------|
+   | `new-relic`   | `/capability:new-relic:debug --application-name <application>`                               |
+   | `aspire`      | `/capability:aspire:debug --application <application>`                                       |
+   | `sqs`         | `/capability:sqs:debug --queue-name <source>`                                                |
+   | `postgresql`  | `/capability:postgresql:debug [--connection-name <application>] [--table <source>]`          |
+   | `docker`      | `/capability:docker:debug [--container <source>]`                                            |
+
+   - Cross-reference diagnostic findings with the browser interaction result — surface backend errors, failed traces, stuck messages, lock contention, or data anomalies triggered by the UI step
 
 4. **Report Step Result**
 
-   - Return: step name, result (pass/fail), execution time, browser and server anomalies
+   - Return: step name, result (pass/fail), execution time, browser findings, collection findings, cross-source inconsistencies
 
 ## DELEGATION
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-tester-specialist` — Execute browser step and collect diagnostics
-- `zzaia-workspace-manager` — Manage Playwright browser session
+- `zzaia-tester-specialist` — Execute browser step, collect diagnostics, and validate consistency
 
 ## WORKFLOW
 
@@ -58,33 +73,55 @@ sequenceDiagram
     participant C as behavior:development:test:ui
     participant PW as /capability:playwright
     participant TS as zzaia-tester-specialist
-    participant NR as /behavior:devops:new-relic
+    participant SRC as /capability:<collection>
 
-    C->>PW: /capability:playwright:navigate --url <environment> --description <step>
+    C->>PW: navigate --url <environment> --description <step>
     PW-->>C: Interaction result (pass/fail, timing)
-    C->>NR: --action debug --application-name <application>
-    NR-->>C: Server-side logs and anomalies
-    C->>PW: /capability:playwright:debug --url <environment>
-    PW-->>C: Browser console logs
-    C-->>C: Step report (pass/fail, timing, anomalies)
+    par Browser diagnostics
+        C->>PW: debug --url <environment>
+        PW-->>C: Console logs, network errors
+    and Collection diagnostics
+        C->>SRC: debug --application/queue/table per collection
+        SRC-->>C: Raw data (logs, messages, rows, traces)
+    end
+    C->>C: Cross-reference browser result with diagnostic findings
+    C-->>C: Step report (pass/fail, timing, findings, inconsistencies)
 ```
 
 ## ACCEPTANCE CRITERIA
 
 - Browser step executed via Playwright
-- New Relic diagnostics collected regardless of pass/fail
 - Browser console logs captured regardless of pass/fail
-- Concise step report returned with result, timing, and anomalies
+- Collection queried regardless of pass/fail
+- Cross-source consistency validated between browser interaction and backend data
+- Concise step report returned with result, timing, and all findings
 
 ## EXAMPLES
 
 ```
-/behavior:development:test --type ui --step "User clicks checkout button and sees confirmation page" --environment https://staging.myapp.com --application MyApp
+/behavior:development:test:ui --step "User clicks checkout and sees confirmation" --environment https://staging.myapp.com --application order-service --collection new-relic
+```
+
+```
+/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --collection sqs --source orders-queue
+```
+
+```
+/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --collection postgresql --source "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
+```
+
+```
+/behavior:development:test:ui --step "User navigates to dashboard" --environment https://staging.myapp.com --application frontend --collection aspire
+```
+
+```
+/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --collection docker --source file-processor
 ```
 
 ## OUTPUT
 
 - Step name and result (pass/fail)
 - Execution time
-- Browser console errors and warnings
-- Server-side anomalies from New Relic
+- Browser console errors, warnings, and network failures
+- Collection findings: errors, anomalies, data inconsistencies, unexpected states
+- Cross-source inconsistencies between browser result and backend data

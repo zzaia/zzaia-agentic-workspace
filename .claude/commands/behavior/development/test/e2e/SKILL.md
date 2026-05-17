@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:e2e
-description: Execute a single BDD step via direct API call with New Relic diagnostics
-argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app> [--description <text>]"
+description: Execute a single BDD step via direct API call and query a data source for consistency and issue validation
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
 agent: zzaia-tester-specialist
 metadata:
@@ -13,8 +13,14 @@ metadata:
       description: Live URL to execute the API call against
       required: true
     - name: application
-      description: New Relic application name for server-side diagnostics
+      description: Application name used for new-relic and aspire collection filtering
       required: true
+    - name: collection
+      description: "Data source to query for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
+      required: true
+    - name: source
+      description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
+      required: false
     - name: description
       description: Additional context or instructions for the operation
       required: false
@@ -22,7 +28,7 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as a direct API call against a live URL, resolve or create the Postman request, collect New Relic diagnostics, and return a concise step report.
+Execute a single BDD step as a direct API call against a live URL, resolve or create the Postman request, query the specified `--collection` data source for consistency and issues, and return a concise step report.
 
 ## EXECUTION
 
@@ -40,21 +46,28 @@ Execute a single BDD step as a direct API call against a live URL, resolve or cr
    - Execute the API call via the resolved Postman request
    - Capture: response status, body, response time
 
-4. **Collect Diagnostics**
+4. **Debug Collection** — route by `--collection`:
 
-   - Call `/behavior:devops:new-relic --action debug --application-name <application>`
-   - Capture server-side logs, errors, and anomalies
+   | Collection    | Capability call                                                                              |
+   |---------------|----------------------------------------------------------------------------------------------|
+   | `new-relic`   | `/capability:new-relic:debug --application-name <application>`                               |
+   | `aspire`      | `/capability:aspire:debug --application <application>`                                       |
+   | `sqs`         | `/capability:sqs:debug --queue-name <source>`                                                |
+   | `postgresql`  | `/capability:postgresql:debug [--connection-name <application>] [--table <source>]`          |
+   | `docker`      | `/capability:docker:debug [--container <source>]`                                            |
+
+   - Receive structured diagnostic findings from the selected source
+   - Cross-reference findings with the executed step: surface errors, anomalies, warnings, or inconsistencies triggered by the API call
 
 5. **Report Step Result**
 
-   - Return: step name, result (pass/fail), response time, anomalies or warnings
+   - Return: step name, result (pass/fail), response time, diagnostic findings (errors, anomalies, warnings, inconsistencies)
 
 ## DELEGATION
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-tester-specialist` — Execute API step and collect diagnostics
-- `zzaia-workspace-manager` — Resolve and create Postman requests
 
 ## WORKFLOW
 
@@ -63,33 +76,50 @@ sequenceDiagram
     participant C as behavior:development:test:e2e
     participant PM as /capability:postman
     participant TS as zzaia-tester-specialist
-    participant NR as /behavior:devops:new-relic
+    participant SRC as /capability:<collection>
 
-    C->>PM: --action read --target request
+    C->>PM: read --target request
     PM-->>C: Existing or new request
     C->>TS: Execute API call via Postman request
     TS-->>C: Response (status, body, timing)
-    C->>NR: --action debug --application-name <application>
-    NR-->>C: Server-side logs and anomalies
-    C-->>C: Step report (pass/fail, timing, anomalies)
+    C->>SRC: debug --application/queue/table per collection
+    SRC-->>C: Structured diagnostic findings (issues, warnings, anomalies)
+    C->>C: Validate consistency and detect issues
+    C-->>C: Step report (pass/fail, timing, findings)
 ```
 
 ## ACCEPTANCE CRITERIA
 
 - Postman request resolved or created before execution
 - API call executed and response captured
-- New Relic diagnostics collected regardless of pass/fail
-- Concise step report returned with result, timing, and anomalies
+- Collection debugged regardless of pass/fail
+- Issues, anomalies, warnings, and inconsistencies surfaced in step report
+- Concise step report returned with result, timing, and findings
 
 ## EXAMPLES
 
 ```
-/behavior:development:test --type e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application MyApp
+/behavior:development:test:e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application order-service --collection new-relic
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --collection sqs --source orders-queue
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --collection postgresql --source "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders returns 201" --environment https://staging.myapp.com --application order-service --collection aspire
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders triggers container processing" --environment https://staging.myapp.com --application order-service --collection docker --source order-worker
 ```
 
 ## OUTPUT
 
 - Step name and result (pass/fail)
 - HTTP response status and response time
-- Server-side anomalies from New Relic
-- Warnings or errors found
+- Collection findings: errors, anomalies, data inconsistencies, unexpected states

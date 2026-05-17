@@ -6,6 +6,8 @@ model: haiku
 mcpServers: 
   - azure-devops
   - new-relic
+  - aws-sns-sqs
+  - aws-postgres-sql
 color: purple
 ---
 
