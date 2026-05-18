@@ -46,16 +46,6 @@ setup_claude_credentials() {
     "
     
     log_success "Claude CLI authenticated"
-
-    # Install plugins after auth so claude plugin sync can apply MCP config
-    CLAUDE_CODE_OAUTH_TOKEN="$CLAUDE_CODE_OAUTH_TOKEN" \
-    su -s /bin/bash user -c "
-        export NVM_DIR=/home/user/.nvm
-        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
-        export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
-        claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
-        claude plugin install agentic-workspace@zzaia || true
-    "
 }
 
 # ── GitHub authentication and extensions ──────────────────────────────────────
@@ -69,9 +59,10 @@ setup_github_credentials() {
     
     GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
     su -s /bin/bash user -c "
-        export NVM_DIR=/home/user/.nvm
+        export HOME=/home/user
+        export NVM_DIR=/opt/tools/.nvm
         [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
-        export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:\$PATH
+        export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:\$PATH
         export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
 
         # Authenticate gh CLI
@@ -89,6 +80,21 @@ setup_github_credentials() {
     "
     
     log_success "GitHub authenticated"
+}
+
+# ── Claude Code plugin installation ──────────────────────────────────────────
+setup_claude_plugins() {
+    log_info "Installing Claude Code plugins..."
+
+    su -s /bin/bash user -c "
+        export HOME=/home/user
+        export NVM_DIR=/opt/tools/.nvm
+        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
+        export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:\$PATH
+        claude plugin marketplace add https://github.com/zzaia/zzaia-agentic-workspace.git#feature/improve-agentic-system || true
+        claude plugin install agentic-workspace@zzaia || true
+    " && log_success "Claude Code plugins installed" \
+      || log_warn "Claude Code plugin install failed; MCP config and settings are pre-seeded"
 }
 
 # ── Azure DevOps git credentials ──────────────────────────────────────────────
@@ -118,7 +124,8 @@ main() {
     setup_claude_credentials
     setup_github_credentials
     setup_azure_devops_credentials
-    
+    setup_claude_plugins
+
     log_success "All credentials configured"
 }
 

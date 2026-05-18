@@ -136,6 +136,8 @@ services:
       - NEO4J_AUTH=neo4j/${ADMIN_PASSWORD:-zzaia}
     volumes:
       - headroom-neo4j:/data
+    tmpfs:
+      - /logs
     networks:
       - mcp
     restart: unless-stopped

@@ -43,8 +43,19 @@ vscode::setup_credentials() {
 }
 
 vscode::prepare_dirs() {
-    "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data /home/user/.vscode-server/extensions
+    "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data/Machine /home/user/.vscode-server/extensions
     chown -R user:user /home/user/.vscode-server 2>/dev/null || true
+
+    # Write Machine settings so the Python extension finds the tools-volume interpreter
+    local machine_settings=/home/user/.vscode-server/data/Machine/settings.json
+    if [ ! -f "$machine_settings" ]; then
+        "${USER_RUN[@]}" sh -c "cat > '$machine_settings'" <<'EOF'
+{
+  "python.defaultInterpreterPath": "/opt/tools/miniforge3/bin/python",
+  "python.terminal.activateEnvironment": false
+}
+EOF
+    fi
 }
 
 vscode::discover_server() {
