@@ -10,9 +10,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
     BROWSER=/usr/local/bin/browser-print \
-    PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:$PATH \
-    NVM_DIR=/home/user/.nvm \
-    DOTNET_ROOT=/home/user/.dotnet
+    PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH \
+    NVM_DIR=/opt/tools/.nvm \
+    DOTNET_ROOT=/opt/tools/.dotnet
 
 # System packages + openssh-server
 COPY docker/containers/workspace-server/scripts /docker-scripts

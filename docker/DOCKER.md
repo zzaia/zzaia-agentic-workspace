@@ -56,27 +56,35 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
 | `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
-| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-server, containers-dev-server) | Home directory with user configs, credentials, workspace repos, and installed tools | Shared across all servers |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-server, containers-dev-server) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
+| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-server and containers-dev-server :ro) | Runtime tools: Node.js, .NET, Python, CLIs | Delete to force tool re-install |
 
 ### Home volume seeding
 
 On the **first start with an empty home volume**, Docker copies the image's `/home/user` content into the volume. This means:
 
 - Home configs, SSH configs, Claude auth tokens, and workspace seeds are copied once on first start
-- Tools are installed to `/home/user` by `workspace-server` entrypoint (during the first run of `runtime-install.sh`)
-- `workspace-server` owns and manages the shared `workspace-home` volume — it starts first and runs tool installation
+- `workspace-server` owns and manages the shared `workspace-home` volume — it starts first and runs initialization
 - `vscode-server` and `containers-dev-server` depend on `workspace-server: condition: service_healthy` and mount the same shared home
-- Home contents persist across restarts and container recreation — all tool installations are in the home
+- Home contents persist across restarts and container recreation
 
-**After image updates:** the home volume is NOT automatically updated from the new image. To pick up new tool versions, delete the home volume and let `workspace-server` re-install on next start:
+### Tools volume installation
+
+Tools install to `/opt/tools` in the separate `workspace-tools` volume:
+
+- `workspace-server` entrypoint runs `runtime-install.sh` which installs tools to `/opt/tools` (INSTALL_PREFIX=/opt/tools, HOME=/home/user)
+- `workspace-tools` volume is read-write for `workspace-server`, read-only (`:ro`) for `vscode-server` and `containers-dev-server`
+- Tools persist across restarts; delete the volume to force re-installation with new versions from `versions.env`
+
+**After image updates:** To pick up new tool versions, delete both the home and tools volumes:
 
 ```bash
 docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
-docker volume rm <WORKSPACE_NAME>-home
+docker volume rm <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools
 docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
 ```
 
-All server configs and credentials will be re-seeded from the new image, and tool installation will run fresh with new versions from `versions.env`.
+All server configs, credentials, and tools will be re-installed fresh on the next start.
 
 ### Volume lifecycle
 
@@ -87,11 +95,17 @@ docker volume ls --filter name=my-org
 # Inspect home volume
 docker run --rm -v my-org-home:/h alpine ls -la /h
 
-# Reset home (forces tool re-install on next workspace-server start)
+# Inspect tools volume
+docker run --rm -v my-org-tools:/t alpine ls -la /t
+
+# Reset home (user configs, credentials, workspace repos)
 docker volume rm my-org-home
 
+# Reset tools (forces tool re-install on next workspace-server start)
+docker volume rm my-org-tools
+
 # Full decommission
-docker volume rm my-org-secrets my-org-home
+docker volume rm my-org-secrets my-org-home my-org-tools
 ```
 
 ---

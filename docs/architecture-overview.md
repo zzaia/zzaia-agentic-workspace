@@ -519,7 +519,8 @@ zzaia-agentic-workspace/
 
 | Volume | Mount | Contents |
 |--------|-------|----------|
-| `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, installed tools, VS Code state, workspace repos |
+| `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, VS Code state, workspace repos |
+| `<ws>-tools` | `/opt/tools` (workspace-server rw, vscode-server and containers-dev-server :ro) | Runtime tools: Node.js, .NET, Python, CLIs |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
 | `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for headroom and openmemory |
 | `<ws>-headroom-neo4j` | `/data` | Knowledge graph for headroom retrieval |

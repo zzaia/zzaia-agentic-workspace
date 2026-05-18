@@ -36,17 +36,18 @@ Adding or removing a package = add/remove one function in the relevant module + 
 
 ---
 
-### ADR 003: INSTALL_PREFIX Pattern and Shared Home Volume
+### ADR 003: INSTALL_PREFIX Pattern and Dual Volumes
 
-**Decision**: All runtime tools install to `INSTALL_PREFIX` (default: `$HOME`, set to `/home/user` in workspace-server). A single shared `workspace-home` Docker volume is mounted at `/home/user` by all server containers.
+**Decision**: Tools install to `/opt/tools` (INSTALL_PREFIX=/opt/tools) in a separate `workspace-tools` volume. User configs and repos stay in `/home/user` (`workspace-home` volume). Both volumes are shared by all server containers.
 
-- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/home/user` during entrypoint, writing all tools to the shared home
-- `vscode-server` and `containers-dev-server` mount the same shared home and skip tool installation — tools are already present
-- `configure_path()` writes `.bashrc`/`.profile` at install time (INSTALL_PREFIX=/home/user)
-- All server containers share the same `/home/user` directory — single consistent home across SSH, browser, and Dev Containers
+- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/opt/tools` and `HOME=/home/user` during entrypoint
+- `workspace-tools` volume (read-write for workspace-server, read-only for vscode-server and containers-dev-server) holds all runtime tools: Node.js, .NET, Python, CLIs
+- `workspace-home` volume (shared read-write) holds user configs, credentials, workspace repos, and .vscode-server state
+- `configure_path()` writes `.bashrc`/`.profile` to `/home/user` — tools path references `/opt/tools`
+- All server containers share both `/home/user` and `/opt/tools` — single consistent environment across SSH, browser, and Dev Containers
 - `workspace-server` depends on no other servers; `vscode-server` and `containers-dev-server` depend on `workspace-server: condition: service_healthy`
 
-**Rationale**: Eliminates bootstrap lock contention, reduces startup time for optional servers (no tool install), provides configuration consistency across all access methods, and simplifies home state management.
+**Rationale**: Separates tools (immutable after install, can be rebuilt) from user state (configs, credentials, repos). Allows vscode-server and containers-dev-server to mount tools read-only. Simplifies home reset (delete home volume without deleting tools). Faster restart of optional servers (tools already present).
 
 ---
 
@@ -66,13 +67,14 @@ Adding or removing a package = add/remove one function in the relevant module + 
 
 **Decision**: Tool installation is merged into the `workspace-server` container entrypoint, which runs: setup-user → runtime-install → setup-credentials → sshd.
 
-- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/home/user` during entrypoint startup (as the `user` account)
+- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/opt/tools` and `HOME=/home/user` during entrypoint startup (as the `user` account)
+- `configure_path()` writes the PATH block to `/home/user/.bashrc` and `/home/user/.profile` (referencing `/opt/tools` tools)
+- Bootstrap hash marker (`/opt/tools/.bootstrap/tools.ready`) gates re-runs across volume recreations and detects spec changes
 - Other servers (`vscode-server`, `containers-dev-server`) depend on `workspace-server: condition: service_healthy` — they start only after tool installation completes
-- Bootstrap hash marker (`/home/user/.bootstrap/tools.ready`) gates re-runs across volume recreations and detects spec changes
-- `workspace-server` owns the shared `workspace-home` volume — it performs the initial seeding and installation
+- `workspace-server` owns both the `workspace-home` and `workspace-tools` volumes — it performs initial seeding and tool installation
 - `flock` file locking removed entirely — there is only one installer (workspace-server)
 
-**Rationale**: All-in-one pattern. `workspace-server` is the authoritative owner of the home volume. No separate init container or volume orchestration needed. Installation failures are clear in workspace-server logs. Optional servers have fast startup (skip installation).
+**Rationale**: All-in-one pattern. `workspace-server` is the authoritative owner of shared volumes. No separate init container or volume orchestration needed. Installation failures are clear in workspace-server logs. Optional servers have fast startup (tools already present in workspace-tools volume). Dual volumes allow clean home reset without rebuilding tools.
 
 ---
 

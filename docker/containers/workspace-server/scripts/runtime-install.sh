@@ -34,15 +34,13 @@ export NVM_DIR="${INSTALL_PREFIX}/.nvm"
 export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
 # zzaia-path-end'
 
-    if [ "${INSTALL_PREFIX}" = "${HOME}" ]; then
-        for f in "$HOME/.bashrc" "$HOME/.profile"; do
-            [ -f "$f" ] || touch "$f"
-            if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
-                sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
-            fi
-            printf '\n%s\n' "$path_block" >> "$f"
-        done
-    fi
+    for f in "$HOME/.bashrc" "$HOME/.profile"; do
+        [ -f "$f" ] || touch "$f"
+        if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
+            sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
+        fi
+        printf '\n%s\n' "$path_block" >> "$f"
+    done
 
     # Also update the current shell so verify_tools() can find installed binaries
     export NVM_DIR="${INSTALL_PREFIX}/.nvm"

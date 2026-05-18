@@ -438,17 +438,21 @@ docker compose `
 > | Volume | Contains | Delete to… |
 > |--------|----------|-----------|
 > | `<WORKSPACE_NAME>-secrets` | SSH public key, persisted env | Rotate SSH key |
-> | `<WORKSPACE_NAME>-home` | Home directory (tools, user config, credentials, workspace repos) | Reset all user state (forces re-install of tools) |
+> | `<WORKSPACE_NAME>-home` | Home directory (user config, credentials, workspace repos) | Reset all user state |
+> | `<WORKSPACE_NAME>-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next workspace-server start |
 >
 > ```bash
 > # Rotate SSH key only
 > docker volume rm <WORKSPACE_NAME>-secrets
 >
-> # Reset home (forces tool re-install on next workspace-server start)
+> # Reset home (user configs, credentials, repos)
 > docker volume rm <WORKSPACE_NAME>-home
 >
+> # Force tool re-install (delete tools volume)
+> docker volume rm <WORKSPACE_NAME>-tools
+>
 > # Full decommission
-> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home
+> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools
 > ```
 
 ---

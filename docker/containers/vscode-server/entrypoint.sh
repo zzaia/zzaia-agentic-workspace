@@ -10,9 +10,9 @@ VSCODE_CLI=""
 SERVER_PID=""
 
 vscode::setup_env() {
-    export NVM_DIR="/home/user/.nvm"
+    export NVM_DIR="/opt/tools/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
-    export PATH=/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.dotnet:/home/user/.dotnet/tools:/home/user/miniforge3/bin:$PATH
+    export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
     export BROWSER=/usr/local/bin/browser-print
     export HOME=/home/user
 
