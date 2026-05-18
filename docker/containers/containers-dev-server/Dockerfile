@@ -4,7 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        libicu74 \
     && rm -rf /var/lib/apt/lists/*
 
 # Match workspace-server user uid

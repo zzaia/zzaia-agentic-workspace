@@ -15,6 +15,8 @@ log_info "Phase 1: User and system setup"
 bash "$SCRIPT_DIR/setup-user.sh"
 
 log_info "Phase 2: Runtime tool installation"
+mkdir -p "$INSTALL_PREFIX"
+chown user:user "$INSTALL_PREFIX"
 su -s /bin/bash user -c "INSTALL_PREFIX=$INSTALL_PREFIX HOME=/home/user bash $SCRIPT_DIR/runtime-install.sh"
 
 log_info "Phase 3: Credentials and authentication"

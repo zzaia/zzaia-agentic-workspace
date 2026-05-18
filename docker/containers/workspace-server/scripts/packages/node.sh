@@ -15,6 +15,8 @@ node::install() {
     # Install nvm if not present
     if ! command -v nvm >/dev/null 2>&1 && [ ! -s "$NVM_DIR/nvm.sh" ]; then
         log_info "Installing nvm ${NVM_VERSION}..."
+        # Pre-create NVM_DIR so the installer doesn't exit 1 on missing pre-set dir
+        mkdir -p "$NVM_DIR"
         curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v${NVM_VERSION}/install.sh" | bash
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     fi

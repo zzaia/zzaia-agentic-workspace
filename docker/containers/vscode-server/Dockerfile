@@ -14,6 +14,7 @@ RUN apt-get update \
         ca-certificates \
         curl \
         util-linux \
+        libicu74 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
