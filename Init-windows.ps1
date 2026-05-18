@@ -41,6 +41,10 @@ $env:ADO_MCP_AUTH_TOKEN         = Get-VaultSecret $items "azure-devops-pat"
 $env:AZURE_DEVOPS_ORGANIZATION  = Get-VaultSecret $items "azure-devops-org"
 $env:POSTMAN_API_KEY            = Get-VaultSecret $items "postman"
 $env:NEW_RELIC_API_KEY          = Get-VaultSecret $items "new-relic"
+$env:GITHUB_PERSONAL_ACCESS_TOKEN = Get-VaultSecret $items "github-personal-access-token"
+$env:AWS_ACCESS_KEY_ID          = Get-VaultSecret $items "aws-access-key-id"
+$env:AWS_SECRET_ACCESS_KEY      = Get-VaultSecret $items "aws-secret-access-key"
+$env:AWS_REGION                 = Get-VaultSecret $items "aws-region"
 
 & bw logout 2>&1 | Out-Null
 Remove-Variable s, items
