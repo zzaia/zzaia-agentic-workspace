@@ -3,8 +3,10 @@ name: behavior:development:test:unit
 description: Unit test execution within a project using framework detection, with optional system debug after test run
 argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--collection <new-relic|sqs|postgresql|aspire|docker>] [--application <app>] [--source <queue|table|container>] [--framework auto] [--description <text>]"
 user-invocable: true
-agent: zzaia-tester-specialist
 metadata:
+  agents:
+    - name: zzaia-developer-specialist
+      description: Write unit test cases when --action implement is set
   parameters:
     - name: repo
       description: Repository name in workspace
@@ -63,7 +65,6 @@ Auto-detect the testing framework, run unit tests for a specific project, and op
    - Execute build process if required
    - Run unit tests only with coverage analysis
    - Skip if no unit tests found
-   - Use `zzaia-tester-specialist` for execution
 
 5. **Debug Collection** *(skip if `--collection` not provided)*
 
@@ -79,12 +80,6 @@ Auto-detect the testing framework, run unit tests for a specific project, and op
 
    - Cross-reference diagnostic findings with test results — surface system issues, warnings, and inconsistencies revealed by the test run
 
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-tester-specialist` — Framework detection and unit test execution
-- `zzaia-developer-specialist` — Test implementation when `--action implement`
 
 ## WORKFLOW
 
@@ -92,18 +87,16 @@ Auto-detect the testing framework, run unit tests for a specific project, and op
 sequenceDiagram
     participant U as User
     participant C as behavior:development:test:unit
-    participant TS as zzaia-tester-specialist
     participant DS as zzaia-developer-specialist
     participant SRC as /capability:<collection>
 
     U->>C: --repo <repo> --branch <branch> --project <project>
-    C->>TS: Detect framework and validate project
+    C->>C: Detect framework and validate project
     opt action is implement
         C->>DS: Implement unit test cases
         DS-->>C: Test implementation summary
     end
-    C->>TS: Execute unit tests with coverage
-    TS-->>C: Test results and coverage
+    C->>C: Execute build and unit tests with coverage
     opt collection is provided
         C->>SRC: debug --application/queue/table per collection
         SRC-->>C: Structured diagnostic findings

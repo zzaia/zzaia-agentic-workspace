@@ -3,7 +3,6 @@ name: behavior:development:test:e2e
 description: Execute a single BDD step via direct API call and query a data source for consistency and issue validation
 argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
-agent: zzaia-tester-specialist
 metadata:
   parameters:
     - name: step
@@ -63,25 +62,17 @@ Execute a single BDD step as a direct API call against a live URL, resolve or cr
 
    - Return: step name, result (pass/fail), response time, diagnostic findings (errors, anomalies, warnings, inconsistencies)
 
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-tester-specialist` — Execute API step and collect diagnostics
-
 ## WORKFLOW
 
 ```mermaid
 sequenceDiagram
     participant C as behavior:development:test:e2e
     participant PM as /capability:postman
-    participant TS as zzaia-tester-specialist
     participant SRC as /capability:<collection>
 
     C->>PM: read --target request
     PM-->>C: Existing or new request
-    C->>TS: Execute API call via Postman request
-    TS-->>C: Response (status, body, timing)
+    C->>C: Execute API call via Postman request
     C->>SRC: debug --application/queue/table per collection
     SRC-->>C: Structured diagnostic findings (issues, warnings, anomalies)
     C->>C: Validate consistency and detect issues

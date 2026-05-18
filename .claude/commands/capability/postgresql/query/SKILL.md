@@ -3,7 +3,7 @@ name: capability:postgresql:query
 description: Execute SQL queries and return raw results from PostgreSQL database
 argument-hint: "--query <sql> [--connection-name <name>] [--description <text>]"
 user-invocable: true
-agent: zzaia-developer-specialist
+agent: zzaia-devops-specialist
 metadata:
   parameters:
     - name: query
@@ -34,7 +34,7 @@ Execute raw SQL queries against PostgreSQL database via MCP. Returns unprocessed
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-developer-specialist` — Execute SQL queries via PostgreSQL MCP and retrieve raw results
+- `zzaia-devops-specialist` — Execute SQL queries via PostgreSQL MCP and retrieve raw results
 
 ## WORKFLOW
 
@@ -42,7 +42,7 @@ Execute raw SQL queries against PostgreSQL database via MCP. Returns unprocessed
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant A as Developer Agent
+    participant A as DevOps Agent
     participant PG as PostgreSQL MCP
 
     U->>C: /capability:postgresql:query --query <sql> [--connection-name <name>]

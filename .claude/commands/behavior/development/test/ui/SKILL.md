@@ -3,7 +3,6 @@ name: behavior:development:test:ui
 description: Execute a single BDD step via Playwright browser automation and query a data source for consistency and issue validation
 argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
-agent: zzaia-tester-specialist
 metadata:
   parameters:
     - name: step
@@ -60,19 +59,12 @@ Execute a single BDD step as a browser interaction via Playwright, collect brows
 
    - Return: step name, result (pass/fail), execution time, browser findings, collection findings, cross-source inconsistencies
 
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-tester-specialist` — Execute browser step, collect diagnostics, and validate consistency
-
 ## WORKFLOW
 
 ```mermaid
 sequenceDiagram
     participant C as behavior:development:test:ui
     participant PW as /capability:playwright
-    participant TS as zzaia-tester-specialist
     participant SRC as /capability:<collection>
 
     C->>PW: navigate --url <environment> --description <step>

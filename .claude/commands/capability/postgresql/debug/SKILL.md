@@ -3,7 +3,7 @@ name: capability:postgresql:debug
 description: Analyze PostgreSQL database health — surface locks, slow queries, errors, and data inconsistencies
 argument-hint: "[--connection-name <name>] [--table <name>] [--description <text>]"
 user-invocable: true
-agent: zzaia-developer-specialist
+agent: zzaia-devops-specialist
 metadata:
   parameters:
     - name: connection-name
@@ -51,7 +51,7 @@ Run automated diagnostic queries against PostgreSQL and analyze results. Surface
 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
-- `zzaia-developer-specialist` — Execute diagnostic SQL via PostgreSQL MCP and analyze results
+- `zzaia-devops-specialist` — Execute diagnostic SQL via PostgreSQL MCP and analyze results
 
 ## WORKFLOW
 
@@ -59,7 +59,7 @@ Run automated diagnostic queries against PostgreSQL and analyze results. Surface
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant A as Developer Agent
+    participant A as DevOps Agent
     participant PG as PostgreSQL MCP
 
     U->>C: /capability:postgresql:debug [--connection-name <name>] [--table <name>]

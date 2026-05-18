@@ -1,7 +1,7 @@
 ---
 name: workflow:remote:homologate
 description: Orchestrate homologation testing with BDD, live URL testing, diagnostics, and bug reporting
-argument-hint: "--work-item <id> --project <project> --url <target-url> --application <app-name> --type e2e|ui|integration [--test-case <id>] [--description <context>] [--doc <file-path>] [--ref-url <url>]"
+argument-hint: "--work-item <id> --project <project> --url <target-url> --application <app-name> --type e2e|ui [--test-case <id>] [--description <context>] [--doc <file-path>] [--ref-url <url>]"
 parameters:
   - name: work-item
     description: Work item ID to homologate
@@ -16,7 +16,7 @@ parameters:
     description: New Relic application name to query logs from
     required: true
   - name: type
-    description: "Test type: e2e (API end-to-end interaction), ui (browser/UI interaction via Playwright), integration (service integration)"
+    description: "Test type: e2e (API end-to-end interaction), ui (browser/UI interaction via Playwright)"
     required: true
   - name: test-case
     description: Existing Azure DevOps Test Case work item ID to use. If omitted, a new Test Case is created under the work item.
@@ -33,8 +33,6 @@ parameters:
 agents:
   - name: zzaia-devops-specialist
     description: Retrieve work items, post discussions, create bug work items
-  - name: zzaia-tester-specialist
-    description: Execute tests via /behavior:development:test
   - name: zzaia-document-specialist
     description: Generate BDD and test result documentation
 ---
@@ -49,9 +47,8 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 | `--type` | Scope | Tool |
 |----------|-------|------|
-| `e2e` | API end-to-end interaction — validates backend contracts and service flows | Direct API Calls|
+| `e2e` | API end-to-end interaction — validates backend contracts and service flows | Direct API Calls |
 | `ui` | Browser/UI interaction — validates user-facing flows via browser automation | Playwright |
-| `integration` | Service integration — validates inter-service communication and contracts | k6 / NBomber |
 
 ## WORKFLOW PHASES
 
@@ -74,7 +71,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
    - Call `/behavior:management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios appropriate for `--type` (API flows for e2e, UI flows for ui, contract flows for integration)
-   - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to write BDD as the Test Case steps
+   - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field acceptance-criteria` to write BDD as the Test Case steps
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
@@ -83,7 +80,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
    - If user indicates changes:
      - Call `/behavior:devops:work-item --action read-discussion --id <test-case> --project <project>` to retrieve requested corrections
      - Apply all corrections to the BDD scenarios
-     - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field steps` to update Test Case steps with corrected scenarios
+     - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field acceptance-criteria` to update Test Case steps with corrected scenarios
      - Call `/behavior:devops:work-item --action post-discussion --id <test-case> --project <project>` to reply confirming what was updated in Test Case steps based on observations
 
 5. **Execute Tests**: Iterate over each BDD step in the Test Case Steps and execute individually
@@ -121,7 +118,6 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 **MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
 
 - `zzaia-devops-specialist` — Retrieve work items, post discussions, create child bug work items
-- `zzaia-tester-specialist` — Execute tests via `/behavior:development:test`, capture results
 - `zzaia-document-specialist` — Generate BDD scenarios, create test result documentation
 
 ## WORKFLOW DIAGRAM
@@ -157,12 +153,14 @@ sequenceDiagram
     end
     W->>BDD: --context <details+children> --description <ctx>
     BDD-->>W: BDD scenarios (Given/When/Then)
-    W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field steps
+    W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field acceptance-criteria
     DW-->>W: BDD written to Test Case steps
     W->>U: /behavior:workspace:ask-user-question (review Test Case BDD & confirm)
     U-->>W: Confirmed
-    W->>WI: --action read-discussion --id <test-case> --project <project>
-    WI-->>W: User replies and BDD corrections
+    alt user requests changes
+        W->>WI: --action read-discussion --id <test-case> --project <project>
+        WI-->>W: User corrections applied to BDD
+    end
     loop for each BDD step in Test Case Steps
         W->>TST: /behavior:development:test --type <type> --step <step> --environment <url> --application <application>
         TST-->>W: Step report (pass/fail, timing, anomalies)
@@ -200,8 +198,6 @@ sequenceDiagram
 /workflow:remote:homologate --work-item 12345 --project MyProject --url https://staging.myapp.com --application MyApp --type e2e
 
 /workflow:remote:homologate --work-item 67890 --project MyProject --url https://staging.myapp.com --application MyApp --type ui --description "Validate checkout user flow"
-
-/workflow:remote:homologate --work-item 54321 --project MyProject --url https://qa.myapp.com --application MyApp --type integration --doc /path/to/requirements.md
 
 /workflow:remote:homologate --work-item 11111 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --ref-url https://example.com/acceptance-criteria
 ```
