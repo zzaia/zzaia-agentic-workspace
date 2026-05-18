@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:e2e
 description: Execute a single BDD step via direct API call and query a data source for consistency and issue validation
-argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
 metadata:
   parameters:
@@ -14,8 +14,8 @@ metadata:
     - name: application
       description: Application name used for new-relic and aspire collection filtering
       required: true
-    - name: collection
-      description: "Data source to query for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
+    - name: debug-sources
+      description: "Data source to debug for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
       required: true
     - name: source
       description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
@@ -27,7 +27,7 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as a direct API call against a live URL, resolve or create the Postman request, query the specified `--collection` data source for consistency and issues, and return a concise step report.
+Execute a single BDD step as a direct API call against a live URL, resolve or create the Postman request, query the specified `--debug-sources` data source for consistency and issues, and return a concise step report.
 
 ## EXECUTION
 
@@ -45,9 +45,9 @@ Execute a single BDD step as a direct API call against a live URL, resolve or cr
    - Execute the API call via the resolved Postman request
    - Capture: response status, body, response time
 
-4. **Debug Collection** — route by `--collection`:
+4. **Debug Sources** — route by `--debug-sources`:
 
-   | Collection    | Capability call                                                                              |
+   | Debug Source  | Capability call                                                                              |
    |---------------|----------------------------------------------------------------------------------------------|
    | `new-relic`   | `/capability:new-relic:debug --application-name <application>`                               |
    | `aspire`      | `/capability:aspire:debug --application <application>`                                       |
@@ -90,23 +90,23 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/behavior:development:test:e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application order-service --collection new-relic
+/behavior:development:test:e2e --step "POST /orders with valid payload returns 201" --environment https://staging.myapp.com --application order-service --debug-sources new-relic
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --collection sqs --source orders-queue
+/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source orders-queue
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --collection postgresql --source "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
+/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --debug-sources postgresql --source "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders returns 201" --environment https://staging.myapp.com --application order-service --collection aspire
+/behavior:development:test:e2e --step "POST /orders returns 201" --environment https://staging.myapp.com --application order-service --debug-sources aspire
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders triggers container processing" --environment https://staging.myapp.com --application order-service --collection docker --source order-worker
+/behavior:development:test:e2e --step "POST /orders triggers container processing" --environment https://staging.myapp.com --application order-service --debug-sources docker --source order-worker
 ```
 
 ## OUTPUT

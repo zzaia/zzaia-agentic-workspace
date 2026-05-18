@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:ui
 description: Execute a single BDD step via Playwright browser automation and query a data source for consistency and issue validation
-argument-hint: "--step <bdd-step> --environment <url> --application <app> --collection <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
 user-invocable: true
 metadata:
   parameters:
@@ -14,8 +14,8 @@ metadata:
     - name: application
       description: Application name used for new-relic and aspire collection filtering
       required: true
-    - name: collection
-      description: "Data source to query for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
+    - name: debug-sources
+      description: "Data source to debug for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
       required: true
     - name: source
       description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
@@ -27,7 +27,7 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as a browser interaction via Playwright, collect browser console diagnostics, query the specified `--collection` data source for consistency and issues, and return a concise step report.
+Execute a single BDD step as a browser interaction via Playwright, collect browser console diagnostics, query the specified `--debug-sources` data source for consistency and issues, and return a concise step report.
 
 ## EXECUTION
 
@@ -43,9 +43,9 @@ Execute a single BDD step as a browser interaction via Playwright, collect brows
 3. **Collect Diagnostics** — run both in parallel:
 
    - **Browser**: Call `/capability:playwright:debug --url <environment>` for console logs and network errors
-   - **Collection**: route by `--collection`:
+   - **Debug Sources**: route by `--debug-sources`:
 
-   | Collection    | Capability call                                                                              |
+   | Debug Source  | Capability call                                                                              |
    |---------------|----------------------------------------------------------------------------------------------|
    | `new-relic`   | `/capability:new-relic:debug --application-name <application>`                               |
    | `aspire`      | `/capability:aspire:debug --application <application>`                                       |
@@ -91,23 +91,23 @@ sequenceDiagram
 ## EXAMPLES
 
 ```
-/behavior:development:test:ui --step "User clicks checkout and sees confirmation" --environment https://staging.myapp.com --application order-service --collection new-relic
+/behavior:development:test:ui --step "User clicks checkout and sees confirmation" --environment https://staging.myapp.com --application order-service --debug-sources new-relic
 ```
 
 ```
-/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --collection sqs --source orders-queue
+/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source orders-queue
 ```
 
 ```
-/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --collection postgresql --source "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
+/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --debug-sources postgresql --source "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
 ```
 
 ```
-/behavior:development:test:ui --step "User navigates to dashboard" --environment https://staging.myapp.com --application frontend --collection aspire
+/behavior:development:test:ui --step "User navigates to dashboard" --environment https://staging.myapp.com --application frontend --debug-sources aspire
 ```
 
 ```
-/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --collection docker --source file-processor
+/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --debug-sources docker --source file-processor
 ```
 
 ## OUTPUT

@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:unit
 description: Unit test execution within a project using framework detection, with optional system debug after test run
-argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--collection <new-relic|sqs|postgresql|aspire|docker>] [--application <app>] [--source <queue|table|container>] [--framework auto] [--description <text>]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--debug-sources <new-relic|sqs|postgresql|aspire|docker>] [--application <app>] [--source <queue|table|container>] [--framework auto] [--description <text>]"
 user-invocable: true
 metadata:
   agents:
@@ -21,7 +21,7 @@ metadata:
       description: "Execution mode: implement — write test cases; run — execute existing tests"
       required: false
       default: run
-    - name: collection
+    - name: debug-sources
       description: "Data source to debug after test run: new-relic, sqs, postgresql, aspire, docker"
       required: false
     - name: application
@@ -66,11 +66,11 @@ Auto-detect the testing framework, run unit tests for a specific project, and op
    - Run unit tests only with coverage analysis
    - Skip if no unit tests found
 
-5. **Debug Collection** *(skip if `--collection` not provided)*
+5. **Debug Sources** *(skip if `--debug-sources` not provided)*
 
-   Route by `--collection` after test run completes:
+   Route by `--debug-sources` after test run completes:
 
-   | Collection    | Capability call                                                                              |
+   | Debug Source  | Capability call                                                                              |
    |---------------|----------------------------------------------------------------------------------------------|
    | `new-relic`   | `/capability:new-relic:debug --application-name <application>`                               |
    | `aspire`      | `/capability:aspire:debug --application <application>`                                       |
@@ -110,7 +110,7 @@ sequenceDiagram
 - Framework auto-detected from project structure
 - Build executed before test run when required
 - Only unit tests executed with coverage report
-- When `--collection` provided: debug executed after test run regardless of pass/fail
+- When `--debug-sources` provided: debug executed after test run regardless of pass/fail
 - Diagnostic findings cross-referenced with test results
 
 ## EXAMPLES
@@ -118,9 +118,9 @@ sequenceDiagram
 ```
 /behavior:development:test:unit --repo backend-hub --branch master --project api
 /behavior:development:test:unit --repo compliance-hub --branch feature/new-module --project core --action implement
-/behavior:development:test:unit --repo order-service --branch master --project api --collection postgresql --source orders
-/behavior:development:test:unit --repo payment-service --branch master --project worker --collection new-relic --application payment-service
-/behavior:development:test:unit --repo order-service --branch master --project api --collection docker --source order-service-api
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources postgresql --source orders
+/behavior:development:test:unit --repo payment-service --branch master --project worker --debug-sources new-relic --application payment-service
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources docker --source order-service-api
 ```
 
 ## OUTPUT
@@ -130,4 +130,4 @@ sequenceDiagram
 - Coverage percentage
 - Framework detection result
 - Errors and warnings on failure
-- *(when `--collection` set)* Diagnostic findings: issues, warnings, anomalies, and inconsistencies cross-referenced with test results
+- *(when `--debug-sources` set)* Diagnostic findings: issues, warnings, anomalies, and inconsistencies cross-referenced with test results
