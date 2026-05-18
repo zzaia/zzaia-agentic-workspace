@@ -1,6 +1,6 @@
 # ZZAIA Container — Docker
 
-Ubuntu container with all workspace tools provisioned via modular shell scripts (`build-install.sh` + `runtime-install.sh`). Accessible via SSH and browser-based VS Code. MCP servers run as isolated sidecar containers — each receives only its own secret.
+Ubuntu 24.04 all-in-one container (`workspace-server`) with tools provisioned via modular shell scripts (`build-install.sh` + `runtime-install.sh`). Runs SSH daemon by default; optionally runs browser VS Code and Dev Containers on separate container services. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 ---
 
@@ -26,7 +26,7 @@ docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> stop
 ```bash
 docker compose -f docker/docker-compose.yml build
 # Then force-recreate:
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d --force-recreate workspace
+docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d --force-recreate workspace-server
 ```
 
 ---
@@ -38,46 +38,37 @@ docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d --force-re
 | VS Code (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) |
 | SSH | `ssh -p <SSH_PORT> zzaia@localhost` (default `2222`) |
 
-The Claude Code extension is pre-installed. Code-server logs:
+The Claude Code extension is pre-installed. Code-server logs (if vscode profile enabled):
 
 ```bash
-docker logs <WORKSPACE_NAME>-workspace-1
-docker exec <WORKSPACE_NAME>-workspace-1 cat /tmp/code-server.log
+docker logs <WORKSPACE_NAME>-vscode-server-1
+docker exec <WORKSPACE_NAME>-vscode-server-1 cat /tmp/code-server.log
 ```
 
 ---
 
 ## Storage — Named Volumes
 
-The workspace uses two named Docker volumes per stack. Named volumes live entirely inside Docker's storage layer — no host filesystem ownership issues, no `sudo` required, no Docker Desktop VM permission pass-through problems.
+The workspace uses multiple named Docker volumes per stack. Named volumes live entirely inside Docker's storage layer — no host filesystem ownership issues, no `sudo` required, no Docker Desktop VM permission pass-through problems.
 
 ### Volume layout
 
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
-| `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` | SSH public key (persisted once at first start) | Independent — survives home deletion |
-| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` | System files, tools, configs, auth tokens, Claude settings | Reset to pick up image updates |
-| `workspace-repos` | `<WORKSPACE_NAME>-workspace` | `/home/user/workspace` | Cloned repositories and worktrees | **Independent** — survives home volume deletion |
-
-The image does **not** bake files directly into `/home/user/workspace`. Instead, it ships a seed tree at `/opt/zzaia/workspace-seed`, and the entrypoint copies that seed into the `workspace-repos` volume only when the volume is empty. This avoids the common nested-volume shadowing problem where rebuilt image content disappears behind a pre-existing named volume.
+| `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-server, containers-dev-server) | Home directory with user configs, credentials, workspace repos, and installed tools | Shared across all servers |
 
 ### Home volume seeding
 
-On the **first container start with an empty home volume**, Docker copies the image's `/home/user` content into the volume. This means:
+On the **first start with an empty home volume**, Docker copies the image's `/home/user` content into the volume. This means:
 
-- All tools (Node.js, .NET, miniforge3, CLI tools, VS Code extensions, conda envs, claude-code CLI) are installed on first container start and cached in the shared home volume.
-- Tool installations and configs persist across restarts and container recreation.
-- Claude auth tokens (`~/.config/claude/`) persist — `claude auth login` needs to be run only once.
+- Home configs, SSH configs, Claude auth tokens, and workspace seeds are copied once on first start
+- Tools are installed to `/home/user` by `workspace-server` entrypoint (during the first run of `runtime-install.sh`)
+- `workspace-server` owns and manages the shared `workspace-home` volume — it starts first and runs tool installation
+- `vscode-server` and `containers-dev-server` depend on `workspace-server: condition: service_healthy` and mount the same shared home
+- Home contents persist across restarts and container recreation — all tool installations are in the home
 
-### Repos volume seeding
-
-On the **first container start with an empty repos volume**, the entrypoint copies `/opt/zzaia/workspace-seed/*` into `/home/user/workspace`.
-
-- This keeps the initial host/AppHost template available without relying on Docker's nested copy-up behavior.
-- Rebuilding the image no longer appears to "lose" workspace files because nothing is baked into the mounted path itself.
-- If you want updated seed content, recreate only the repos volume.
-
-**After image updates:** the volume is NOT automatically updated from the new image. To pick up new tool versions, delete the home volume and recreate:
+**After image updates:** the home volume is NOT automatically updated from the new image. To pick up new tool versions, delete the home volume and let `workspace-server` re-install on next start:
 
 ```bash
 docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
@@ -85,15 +76,7 @@ docker volume rm <WORKSPACE_NAME>-home
 docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
 ```
 
-The repos volume is unaffected — your cloned repositories survive.
-
-To pick up updated seed workspace content from a rebuilt image:
-
-```bash
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
-docker volume rm <WORKSPACE_NAME>-workspace
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
-```
+All server configs and credentials will be re-seeded from the new image, and tool installation will run fresh with new versions from `versions.env`.
 
 ### Volume lifecycle
 
@@ -104,14 +87,11 @@ docker volume ls --filter name=my-org
 # Inspect home volume
 docker run --rm -v my-org-home:/h alpine ls -la /h
 
-# Inspect repos volume
-docker run --rm -v my-org-workspace:/w alpine ls -la /w
-
-# Reset system only (keeps secrets and repos)
+# Reset home (forces tool re-install on next workspace-server start)
 docker volume rm my-org-home
 
-# Full decommission (removes everything)
-docker volume rm my-org-secrets my-org-home my-org-workspace
+# Full decommission
+docker volume rm my-org-secrets my-org-home
 ```
 
 ---
@@ -135,11 +115,11 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 
 | Category | Tools |
 |----------|-------|
-| Runtimes | Node.js 22, Python 3.12, .NET 8, Go, Rust, Java |
-| CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid |
-| Editor | code-server + Claude Code extension — browser on port 8080 |
+| Runtimes | Node.js 24, Python 3.12, .NET 10, Go, Rust, Java |
+| CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid, Azure CLI |
+| Editor | code-server + Claude Code extension — browser on port 8080 (vscode profile) |
 | Data science | Miniforge3, conda envs |
-| Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams |
+| Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams, azure-cli |
 | .NET tools | Aspire workload, Aspirate |
 | System | tmux, PlantUML, tectonic, git, build-essential |
 
@@ -165,9 +145,9 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 
 ```
 docker/
-├── Dockerfile          — Image definition
-├── entrypoint.sh       — SSH key init + code-server + sshd startup
+├── Dockerfile          — Image definition (Ubuntu 24.04)
+├── entrypoint.sh       — workspace-server entrypoint: setup-user → runtime-install → setup-credentials → sshd
 ├── sshd_config         — Port 2222, key-auth only
-├── docker-compose.yml  — Workspace + MCP sidecar services
+├── docker-compose.yml  — workspace-server + vscode-server + containers-dev-server + MCP sidecars
 └── DOCKER.md           — This file
 ```

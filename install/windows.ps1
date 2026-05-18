@@ -69,10 +69,6 @@ try {
         Write-Error "WORKSPACE_NAME (vault: workspace-name) not found or empty"
         exit 1
     }
-    if ($DEPLOY_PROFILES -match 'ssh' -and [string]::IsNullOrWhiteSpace($SSH_PUBLIC_KEY)) {
-        Write-Error "SSH_PUBLIC_KEY (vault: ssh-public-key) required when ssh profile is selected"
-        exit 1
-    }
 
     $VSCODE_PORT = if ([string]::IsNullOrWhiteSpace($VSCODE_PORT)) { "8080" } else { $VSCODE_PORT }
     $SSH_PORT = if ([string]::IsNullOrWhiteSpace($SSH_PORT)) { "2222" } else { $SSH_PORT }
@@ -124,11 +120,11 @@ try {
     $profileArgs = @()
     if (-not [string]::IsNullOrWhiteSpace($DEPLOY_PROFILES)) {
         foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
-            if ($p -match '^(ssh|vscode|devcontainer)$') {
+            if ($p -match '^(vscode|devcontainer)$') {
                 $profileArgs += '--profile'
                 $profileArgs += $p
             } else {
-                Write-Warning "Unknown server profile '$p' — valid: ssh, vscode, devcontainer"
+                Write-Warning "Unknown server profile '$p' — valid: vscode, devcontainer"
             }
         }
     }
@@ -143,10 +139,10 @@ try {
 
     Write-Host ""
     Write-Host "✓ Workspace started. Access:"
-    if ($DEPLOY_PROFILES -match 'ssh') { Write-Host "  SSH: ssh -p $($env:SSH_PORT) user@localhost" }
+    Write-Host "  SSH: ssh -p $($env:SSH_PORT) user@localhost"
     if ($DEPLOY_PROFILES -match 'vscode') { Write-Host "  VS Code: http://localhost:$($env:VSCODE_PORT)" }
     if ($DEPLOY_PROFILES -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
-    Write-Host "  Aspire Dashboard: http://localhost:$($env:ASPIRE_DASHBOARD_PORT)"
+    Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$($env:ASPIRE_DASHBOARD_PORT)"
 }
 finally {
     & bw logout 2>$null | Out-Null

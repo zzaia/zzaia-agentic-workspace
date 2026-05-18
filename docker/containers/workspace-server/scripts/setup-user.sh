@@ -28,7 +28,7 @@ seed_home() {
         # /home/user is owned by user:user — run extraction as user to avoid
         # DAC_OVERRIDE requirement (root drops that cap in this container).
         tar -C "$home_seed_dir" -cf - . \
-            | su -s /bin/bash user -c "tar -C /home/user -xf - --skip-old-files"
+            | su -s /bin/bash user -c "tar -C /home/user -xf - --skip-old-files 2>/dev/null" || true
 
         su -s /bin/bash user -c "
             mkdir -p /home/user/.ssh /home/user/workspace/host \

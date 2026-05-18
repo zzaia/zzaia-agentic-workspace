@@ -9,7 +9,7 @@ node::install() {
     log_info "Installing Node.js ${NODE_VERSION} via nvm..."
 
     # Source nvm if already installed
-    export NVM_DIR="$HOME/.nvm"
+    export NVM_DIR="${INSTALL_PREFIX:-$HOME}/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
     # Install nvm if not present
@@ -19,16 +19,25 @@ node::install() {
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     fi
 
-    # Check if target node version is already installed
-    if nvm ls "${NODE_VERSION}" 2>/dev/null | grep -q "v${NODE_VERSION}"; then
+    # Install node if not already present (nvm installer may pre-install it via NODE_VERSION env)
+    if ! nvm ls "${NODE_VERSION}" 2>/dev/null | grep -q "v${NODE_VERSION}"; then
+        log_info "Installing Node.js ${NODE_VERSION}..."
+        nvm install "${NODE_VERSION}"
+        nvm alias default "${NODE_VERSION}"
+        log_success "Node.js ${NODE_VERSION} installed"
+    else
         log_info "Node.js ${NODE_VERSION} already installed"
-        return 0
     fi
 
-    log_info "Installing Node.js ${NODE_VERSION}..."
-    nvm install "${NODE_VERSION}"
-    nvm alias default "${NODE_VERSION}"
-    log_success "Node.js ${NODE_VERSION} installed"
+    # Always ensure node/npm symlinks exist in .local/bin (idempotent, needed for
+    # static ENV PATH in docker exec sessions where nvm is not sourced).
+    # Use filesystem lookup instead of `nvm which` to avoid subshell function scope issues.
+    local nvm_node_dir
+    nvm_node_dir=$(ls -d "${INSTALL_PREFIX:-$HOME}/.nvm/versions/node"/v* 2>/dev/null | head -1)
+    if [ -n "$nvm_node_dir" ] && [ -f "$nvm_node_dir/bin/node" ]; then
+        ln -sf "$nvm_node_dir/bin/node" "${INSTALL_PREFIX:-$HOME}/.local/bin/node" || true
+        ln -sf "$nvm_node_dir/bin/npm"  "${INSTALL_PREFIX:-$HOME}/.local/bin/npm"  || true
+    fi
 }
 
 # ── npm globals configuration ─────────────────────────────────────────────────
@@ -37,7 +46,7 @@ node::install_npm_globals() {
 
     # Use --prefix flag directly — avoids writing to ~/.npmrc (nvm rejects prefix
     # there) and avoids exporting NPM_CONFIG_PREFIX (nvm returns exit 11 on that).
-    local npm_prefix="$HOME/.npm-global"
+    local npm_prefix="${INSTALL_PREFIX:-$HOME}/.npm-global"
 
     local packages=(
         "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION:-latest}"

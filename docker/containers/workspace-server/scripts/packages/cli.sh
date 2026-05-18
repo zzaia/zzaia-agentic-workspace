@@ -12,7 +12,7 @@ cli::install_gh() {
 
     log_info "Installing GitHub CLI..."
 
-    mkdir -p "$HOME/.local/bin"
+    mkdir -p "${INSTALL_PREFIX:-$HOME}/.local/bin"
 
     local gh_version="${GH_VERSION:-}"
     if [ -z "$gh_version" ]; then
@@ -21,8 +21,8 @@ cli::install_gh() {
 
     if [ -n "$gh_version" ]; then
         local gh_url="https://github.com/cli/cli/releases/download/v${gh_version}/gh_${gh_version}_linux_amd64.tar.gz"
-        curl -fsSL "$gh_url" | tar xz -C "$HOME/.local/bin" "gh_${gh_version}_linux_amd64/bin/gh" --strip-components 2
-        chmod +x "$HOME/.local/bin/gh"
+        curl -fsSL "$gh_url" | tar xz -C "${INSTALL_PREFIX:-$HOME}/.local/bin" "gh_${gh_version}_linux_amd64/bin/gh" --strip-components 2
+        chmod +x "${INSTALL_PREFIX:-$HOME}/.local/bin/gh"
         log_success "GitHub CLI ${gh_version} installed"
     else
         log_warn "Could not determine gh version; skipping installation"
@@ -39,7 +39,7 @@ cli::install_k6() {
 
     log_info "Installing k6..."
 
-    mkdir -p "$HOME/.local/bin"
+    mkdir -p "${INSTALL_PREFIX:-$HOME}/.local/bin"
 
     local k6_version="${K6_VERSION:-}"
     if [ -z "$k6_version" ]; then
@@ -48,8 +48,8 @@ cli::install_k6() {
 
     if [ -n "$k6_version" ]; then
         local k6_url="https://github.com/grafana/k6/releases/download/v${k6_version}/k6-v${k6_version}-linux-amd64.tar.gz"
-        curl -fsSL "$k6_url" | tar xz -C "$HOME/.local/bin" --strip-components 1 "k6-v${k6_version}-linux-amd64/k6" || log_warn "k6 download failed; continuing"
-        [ -f "$HOME/.local/bin/k6" ] && chmod +x "$HOME/.local/bin/k6"
+        curl -fsSL "$k6_url" | tar xz -C "${INSTALL_PREFIX:-$HOME}/.local/bin" --strip-components 1 "k6-v${k6_version}-linux-amd64/k6" || log_warn "k6 download failed; continuing"
+        [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/k6" ] && chmod +x "${INSTALL_PREFIX:-$HOME}/.local/bin/k6"
         log_success "k6 ${k6_version} installed"
     else
         log_warn "Could not determine k6 version; skipping installation"
@@ -59,14 +59,14 @@ cli::install_k6() {
 
 # ── D2 diagram tool ───────────────────────────────────────────────────────────
 cli::install_d2() {
-    if command -v d2 >/dev/null 2>&1 || [ -f "$HOME/.local/bin/d2" ]; then
+    if command -v d2 >/dev/null 2>&1 || [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/d2" ]; then
         log_info "D2 already installed"
         return 0
     fi
 
     log_info "Installing D2${D2_VERSION:+ ${D2_VERSION}}..."
 
-    mkdir -p "$HOME/.local/bin"
+    mkdir -p "${INSTALL_PREFIX:-$HOME}/.local/bin"
 
     local d2_version="${D2_VERSION:-}"
     if [ -z "$d2_version" ]; then
@@ -75,9 +75,9 @@ cli::install_d2() {
 
     if [ -n "$d2_version" ]; then
         local d2_url="https://github.com/terrastruct/d2/releases/download/v${d2_version}/d2-v${d2_version}-linux-amd64.tar.gz"
-        curl -fsSL "$d2_url" | tar xz -C "$HOME/.local/bin" --strip-components 2 "d2-v${d2_version}/bin/d2" \
+        curl -fsSL "$d2_url" | tar xz -C "${INSTALL_PREFIX:-$HOME}/.local/bin" --strip-components 2 "d2-v${d2_version}/bin/d2" \
             || log_warn "D2 download failed; continuing"
-        [ -f "$HOME/.local/bin/d2" ] && chmod +x "$HOME/.local/bin/d2" && log_success "D2 ${d2_version} installed" || log_warn "D2 binary not found after extraction"
+        [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/d2" ] && chmod +x "${INSTALL_PREFIX:-$HOME}/.local/bin/d2" && log_success "D2 ${d2_version} installed" || log_warn "D2 binary not found after extraction"
     else
         log_warn "Could not determine D2 version; skipping installation"
     fi
@@ -85,20 +85,29 @@ cli::install_d2() {
 
 # ── Dapr CLI ──────────────────────────────────────────────────────────────────
 cli::install_dapr() {
-    if command -v dapr >/dev/null 2>&1; then
+    if [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/dapr" ]; then
         log_info "Dapr already installed"
         return 0
     fi
 
     log_info "Installing Dapr${DAPR_VERSION:+ ${DAPR_VERSION}}..."
 
+    local dapr_dir="${INSTALL_PREFIX:-$HOME}/.local/bin"
+    mkdir -p "$dapr_dir"
+
+    # Use `env` to pass DAPR_INSTALL_DIR to the piped bash — prefix assignment
+    # only applies to the curl process, not to the `bash` on the right of `|`.
     if [ -n "${DAPR_VERSION:-}" ]; then
-        DAPR_RELEASE_TAG="v${DAPR_VERSION}" curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash || log_warn "Dapr install failed; continuing"
+        curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh \
+            | env DAPR_INSTALL_DIR="$dapr_dir" DAPR_RELEASE_TAG="v${DAPR_VERSION}" bash \
+            || log_warn "Dapr install failed; continuing"
     else
-        curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh | bash || log_warn "Dapr install failed; continuing"
+        curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh \
+            | env DAPR_INSTALL_DIR="$dapr_dir" bash \
+            || log_warn "Dapr install failed; continuing"
     fi
 
-    log_success "Dapr installation attempted"
+    log_success "Dapr installed to $dapr_dir"
 }
 
 # ── RTK (Rust Token Killer) ───────────────────────────────────────────────────
@@ -110,7 +119,7 @@ cli::install_rtk() {
 
     log_info "Installing RTK..."
 
-    mkdir -p "$HOME/.local/bin"
+    mkdir -p "${INSTALL_PREFIX:-$HOME}/.local/bin"
 
     local rtk_version="${RTK_VERSION:-}"
     if [ -z "$rtk_version" ]; then
@@ -119,8 +128,8 @@ cli::install_rtk() {
 
     if [ -n "$rtk_version" ]; then
         local rtk_url="https://github.com/rtk-ai/rtk/releases/download/v${rtk_version}/rtk-x86_64-unknown-linux-musl.tar.gz"
-        curl -fsSL "$rtk_url" | tar xz -C "$HOME/.local/bin" rtk || log_warn "RTK download failed; continuing"
-        [ -f "$HOME/.local/bin/rtk" ] && chmod +x "$HOME/.local/bin/rtk"
+        curl -fsSL "$rtk_url" | tar xz -C "${INSTALL_PREFIX:-$HOME}/.local/bin" rtk || log_warn "RTK download failed; continuing"
+        [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/rtk" ] && chmod +x "${INSTALL_PREFIX:-$HOME}/.local/bin/rtk"
         log_success "RTK ${rtk_version} installed"
     else
         log_warn "Could not determine RTK version; skipping installation"
@@ -130,31 +139,46 @@ cli::install_rtk() {
 
 # ── Azure CLI ─────────────────────────────────────────────────────────────────
 cli::install_azure_cli() {
-    if command -v az >/dev/null 2>&1; then
+    if [ -f "${INSTALL_PREFIX:-$HOME}/miniforge3/bin/az" ]; then
         log_info "Azure CLI already installed"
         return 0
     fi
 
-    log_info "Installing Azure CLI..."
-    if curl -fsSL https://aka.ms/InstallAzureCLIDeb | sudo bash; then
-        log_success "Azure CLI installed"
+    log_info "Installing Azure CLI via pip..."
+    if [ -x "${INSTALL_PREFIX:-$HOME}/miniforge3/bin/pip" ]; then
+        "${INSTALL_PREFIX:-$HOME}/miniforge3/bin/pip" install azure-cli --quiet \
+            && log_success "Azure CLI installed to miniforge" \
+            || log_warn "Azure CLI install failed; skipping"
     else
-        log_warn "Azure CLI install failed; skipping"
+        log_warn "miniforge pip not available; skipping Azure CLI"
     fi
 }
 
 # ── Tectonic LaTeX engine ─────────────────────────────────────────────────────
 cli::install_tectonic() {
-    if command -v tectonic >/dev/null 2>&1 || [ -f "$HOME/.local/bin/tectonic" ]; then
+    if [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/tectonic" ]; then
         log_info "Tectonic already installed"
         return 0
     fi
 
     log_info "Installing Tectonic..."
-    if curl --proto '=https' --tlsv1.2 -fsSL https://drop.tectonic-typesetting.org/install.sh | sh; then
-        log_success "Tectonic installed"
+    local tectonic_dir="${INSTALL_PREFIX:-$HOME}/.local/bin"
+    mkdir -p "$tectonic_dir"
+
+    local tectonic_version="${TECTONIC_VERSION:-}"
+    if [ -z "$tectonic_version" ]; then
+        tectonic_version=$(curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
+            | grep '"tag_name"' | sed 's/.*"tectonic@//;s/".*//') || true
+    fi
+
+    if [ -n "$tectonic_version" ]; then
+        local tectonic_url="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${tectonic_version}/tectonic-${tectonic_version}-x86_64-unknown-linux-musl.tar.gz"
+        curl -fsSL "$tectonic_url" | tar xz -C "$tectonic_dir" tectonic \
+            && chmod +x "$tectonic_dir/tectonic" \
+            && log_success "Tectonic ${tectonic_version} installed" \
+            || log_warn "Tectonic download failed; skipping"
     else
-        log_warn "Tectonic install failed (network or DNS issue); skipping"
+        log_warn "Could not determine Tectonic version; skipping"
     fi
 }
 

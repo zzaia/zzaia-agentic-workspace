@@ -10,7 +10,6 @@ docker/
 ├── scripts/
 │   ├── common.sh                 # Shared utilities, logging, env
 │   ├── setup-user.sh             # User home, SSH, permissions
-│   ├── setup-tools.sh            # Runtime tools bootstrap (delegates to runtime-install.sh)
 │   ├── setup-credentials.sh      # Authentication (Claude, GitHub, Azure)
 │   └── README.md                 # This file
 ```
@@ -42,11 +41,8 @@ Runs as root. Initializes the workspace user environment:
 
 ---
 
-### `setup-tools.sh` — Runtime Tools Bootstrap
-Thin delegator. Runs `runtime-install.sh` as user via `su -s /bin/bash user`.
-
-### `runtime-install.sh` — User-space Installation Orchestrator
-Runs as user. Installs all development tools to the shared home volume:
+### `runtime-install.sh` — Installation Orchestrator
+Runs as user. Installs all development tools to `INSTALL_PREFIX` (default: `/home/user` — the shared workspace-home volume):
 
 1. **python::install_miniforge()** — Miniforge (conda) if missing
 2. **node::install()** — Node.js via nvm
@@ -60,7 +56,7 @@ Runs as user. Installs all development tools to the shared home volume:
 10. **configure_path()** — Write canonical PATH to `.bashrc` + `.profile`
 11. **verify_tools()** — Gate check on required binaries
 
-**Idempotent**: Via `BOOTSTRAP_MARKER` (`/home/user/.bootstrap/tools.ready`) using script SHA256 hash
+**Idempotent**: Via `BOOTSTRAP_MARKER` (`$INSTALL_PREFIX/.bootstrap/tools.ready`) using script SHA256 hash
 **Upgrade**: `runtime-install.sh --upgrade` bypasses marker for explicit re-install
 **Retries**: `retry_with_backoff()` from `common.sh`
 
@@ -83,10 +79,11 @@ Runs as root. Sequences all phases and starts SSH daemon:
 
 ```bash
 Phase 1: setup-user.sh          # User & system setup
-Phase 2: setup-tools.sh         # Runtime tools bootstrap  
-Phase 3: setup-credentials.sh   # Auth setup
+Phase 2: setup-credentials.sh   # Auth setup
 Then:    /usr/sbin/sshd -D      # SSH daemon (blocking)
 ```
+
+> Tools are installed by `workspace-server` into `/home/user` (the shared `workspace-home` volume) during container startup.
 
 **Logging**: Each phase logs start/completion via `log_info()` and `log_success()`
 **Error handling**: Any phase failure (`set -e`) stops execution
@@ -129,10 +126,6 @@ Each script can be tested independently:
 # Test user setup
 docker run --rm -it -v workspace-secrets:/secrets zzaia-agentic-workspace:latest \
   bash docker/scripts/setup-user.sh
-
-# Test tools installation
-docker run --rm -it -u user zzaia-agentic-workspace:latest \
-  bash docker/scripts/setup-tools.sh
 
 # Test credentials
 docker run --rm -it -u user -e GITHUB_PERSONAL_ACCESS_TOKEN=xxx zzaia-agentic-workspace:latest \

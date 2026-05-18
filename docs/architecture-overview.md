@@ -169,32 +169,34 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 006: Decoupled Server Containers with Optional Profiles
 
-**Decision**: Multiple optional servers run as decoupled containers, each with independent profiles controlled by the `server-profiles` Bitwarden secret.
+**Decision**: The workspace runs as a set of containers where `workspace-server` is the always-on authoritative container. Optional servers (`vscode-server`, `containers-dev-server`) depend on workspace-server and share its home volume.
 
 | Server | Container | Profile | Purpose |
 |--------|-----------|---------|---------|
-| SSH | `ssh-server` | _(none)_ | SSH daemon, always starts |
+| Primary workspace | `workspace-server` | _(none, always starts)_ | SSH daemon + tool installation + shared home owner |
 | Browser IDE | `vscode-server` | `vscode` | `code serve-web` on port 8080 |
-| Dev Containers | `dev-server` | `devcontainer` | Dev Containers attachment support |
+| Dev Containers | `containers-dev-server` | `devcontainer` | Dev Containers attachment support |
 
-- All three share the same Docker image base, differentiated only by entrypoint/command override
-- `ssh-server` entrypoint: SSH setup → credential wiring → WORKSPACE_NAME templating → Aspire MCP
+- `workspace-server` always starts — it owns the shared `workspace-home` volume and exposes SSH
+- `vscode-server` and `containers-dev-server` use `FROM ubuntu:24.04` (NOT workspace-server) — minimal base images
+- Both optional servers depend on `workspace-server: condition: service_healthy` — they start only after workspace-server completes tool installation
+- All three containers share `workspace-home` — one consistent home directory, credentials, and tool installations
+- SSH-only deployment: leave `server-profiles` empty — only `workspace-server` starts
 - Profiles are read from `server-profiles` Bitwarden secret at startup time; installation scripts build dynamic `--profile` flags
-- Zero overhead for SSH-only or CI deployments (leave `server-profiles` empty for `ssh-server` only)
-- Each server starts after workspace is healthy (`depends_on: workspace: condition: service_healthy`)
 
-**Rationale**: Failure isolation, independent lifecycles per server type, and flexible deployment without hardcoding which servers run. Profile-based composition enables single-command setup across different use cases.
+**Rationale**: Shared home eliminates configuration drift between access methods. workspace-server as authoritative owner simplifies initialization — tools, credentials, and home seed are set up once.
 
 ---
 
 ### ADR 007: Tool Provisioning via Modular Shell Scripts and Dockerfile
 
-**Decision**: Workspace tools are provisioned in two phases: build-time system tools via `build-install.sh` (Dockerfile), and user-space tools at container start via `runtime-install.sh` (entrypoint).
+**Decision**: Workspace tools are provisioned in two phases: build-time system tools via `build-install.sh` (Dockerfile), and user-space tools at workspace-server startup via `runtime-install.sh` (entrypoint).
 
 - `build-install.sh` installs system-level tools as root (Azure CLI, tectonic, VS Code CLI, apt packages)
-- `runtime-install.sh` installs user-space tools to the shared home volume (Node.js, .NET, gh, agent CLIs, conda, pip packages) using sourced modules under `scripts/packages/`
+- `runtime-install.sh` installs user-space tools to `/home/user` (Node.js, .NET, gh, agent CLIs, conda, pip packages) using sourced modules under `scripts/packages/`
 - Version pins live in `scripts/versions.env` — single file to bump tool versions
 - Miniforge3 (conda) is the sole Python provider
+- workspace-server runs runtime-install during entrypoint; optional servers skip it (tools already in shared home)
 
 **Rationale**: Eliminates `mise` as a third-party dependency from the critical startup path. Two explicit scripts with bash module organization make the installation surface auditable and easy to extend.
 
@@ -233,16 +235,17 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 009: Single Image Strategy for Profile Consistency
+### ADR 009: Workspace-Server as Authoritative Owner
 
-**Decision**: Both `workspace` and `vscode-server` containers use the same Docker image (`zzaia-agentic-workspace:latest`).
+**Decision**: `workspace-server` is the sole installer and authoritative owner of the shared `workspace-home` volume. Other servers (vscode-server, containers-dev-server) use minimal base images and depend on workspace-server.
 
 - VS Code profile ("Main - Zzaia"), extensions, and settings are baked into the image once
-- Both containers mount `workspace-home` volume → single `.vscode-server/extensions` directory
-- `devcontainer.json` embedded in the image mirrors the same extension list for Dev Containers attach
-- No duplication, no drift between connection types
+- All containers mount shared `workspace-home` volume → single `.vscode-server/extensions` directory
+- `devcontainer.json` embedded in the workspace-server image mirrors the same extension list for Dev Containers attach
+- No duplication, no drift between connection types — all servers share identical home state
+- workspace-server installs tools once; optional servers skip installation (fast startup)
 
-**Rationale**: Profile and extension consistency across all entry points is critical for developer experience. Single-image enforces parity at build time.
+**Rationale**: Single authoritative owner (workspace-server) simplifies initialization and eliminates bootstrap race conditions. Shared home ensures parity across all access methods (SSH, browser, Dev Containers).
 
 ### ADR 009A: Explicit Workspace Volume Seeding
 
@@ -399,8 +402,9 @@ C4Container
             Container(rtk, "rtk", "Rust binary in-image", "Bash hook intercepts command outputs — 81% avg compression")
         }
 
-        Container(ws, "workspace", "Ubuntu 24.04", "SSH :2222 + agent runtime (Claude/Gemini/Codex/Copilot)")
-        Container(vscode, "vscode-server", "Same image, command override", "code serve-web :8080 [profile: vscode]")
+        Container(ws, "workspace-server", "Ubuntu 24.04", "SSH :2222 + tool installer + agent runtime (Claude/Gemini/Codex/Copilot)")
+        Container(vscode, "vscode-server", "Ubuntu 24.04 minimal", "code serve-web :8080 [profile: vscode], depends on workspace-server")
+        Container(devcontainer, "containers-dev-server", "Ubuntu 24.04 minimal", "Dev Containers support [profile: devcontainer], depends on workspace-server")
 
         System_Boundary(primary, "Layer 1 — Primary (Automatic via Headroom proxy)") {
             Container(headroom, "headroom", "Headroom proxy --memory --code-graph", "HTTP proxy :8787 — compression + memory injection + code-graph [always-on]")
@@ -423,24 +427,27 @@ C4Container
     }
 
     System_Boundary(host, "Docker Host") {
-        ContainerDb(home, "<workspace>-home", "Named volume", "Persisted home dir — .vscode-server/, .claude/, agent configs, auth tokens")
-        ContainerDb(repos, "<workspace>-workspace", "Named volume", "Git repositories and worktrees")
+        ContainerDb(home, "<workspace>-home", "Named volume", "Shared home dir — tools, .vscode-server/, .claude/, agent configs, auth tokens, repos")
         ContainerDb(secrets, "<workspace>-secrets", "Named volume", "SSH host keys and public key")
         Container(dockersock, "/var/run/docker.sock", "Unix socket", "Docker API access for agent-initiated ops")
     }
 
     Rel(dev, ws, "SSH terminal / VS Code Remote SSH / Dev Containers", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
+    Rel(dev, devcontainer, "Dev Containers attach", "Docker socket")
     Rel(ws, rtk, "Bash hook intercepts outputs", "stdin/stdout at shell level")
-    Rel(ws, vscode, "Shares workspace-home volume", "named volume")
+    Rel(ws, vscode, "Shares workspace-home volume", "named volume /home/user")
+    Rel(ws, devcontainer, "Shares workspace-home volume", "named volume /home/user")
+    Rel(vscode, ws, "Depends on", "service_healthy")
+    Rel(devcontainer, ws, "Depends on", "service_healthy")
     Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
     Rel(headroom, qdrant, "Compression + memory + code-graph", "semantic search :6333")
     Rel(headroom, neo4j, "Knowledge graph + code-graph", "Bolt :7687")
-    Rel(headroom, repos, "Background file watcher", "code-graph on workspace-repos volume")
+    Rel(headroom, home, "Background file watcher", "code-graph on workspace-home volume")
     Rel(ws, openmemory, "MCP tool calls (Phase 2)", "search_memory / add_memories :5005")
     Rel(openmemory, qdrant, "Semantic memory index", "vector DB :6333")
     Rel(ws, codegraph, "MCP tool calls (Phase 3)", "find_callers / class_hierarchy / call_chain")
-    Rel(codegraph, repos, "Parse source files", "named volume /home/user/workspace")
+    Rel(codegraph, home, "Parse source files", "named volume /home/user")
     Rel(ws, tavily, "MCP tool calls", "SSE mcp network")
     Rel(ws, ado, "MCP tool calls", "SSE mcp network")
     Rel(ws, postman, "MCP tool calls", "SSE mcp network")
@@ -448,11 +455,11 @@ C4Container
     Rel(ws, ghsidecar, "MCP tool calls", "SSE mcp network")
     Rel(ws, playwright, "MCP tool calls", "SSE mcp network")
     Rel(ws, aspireds, "OTLP telemetry", "AppHost → :18889")
-    Rel(ws, home, "Home directory", "named volume /home/user")
-    Rel(ws, repos, "Repository storage", "named volume /home/user/workspace")
+    Rel(ws, home, "Home directory + tools + repos", "named volume /home/user")
     Rel(ws, secrets, "SSH keys", "named volume /secrets")
     Rel(ws, dockersock, "Docker API", "bind mount")
-    Rel(vscode, home, "Read VS Code state", "named volume /home/user")
+    Rel(vscode, home, "Read VS Code state + configs", "named volume /home/user")
+    Rel(devcontainer, home, "Read home state + workspace", "named volume /home/user")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="2")
 ```
@@ -468,10 +475,11 @@ zzaia-agentic-workspace/
 │   └── copilot/             # GitHub Copilot — .github/copilot-instructions.md
 ├── vscode/                  # VS Code profile — settings, extensions, launch configs, workspace file
 ├── docker/
-│   ├── Dockerfile           # Single image — Ubuntu 24.04, system tools, SSH, VS Code CLI
-│   ├── docker-compose.yml   # Stack — workspace + vscode-server + headroom (profiles) + 8 sidecars
-│   ├── entrypoint.sh        # SSH setup, credential wiring, WORKSPACE_NAME templating, Aspire MCP
-│   └── sshd_config          # SSH daemon hardening config
+│   ├── Dockerfile           # Single image — Ubuntu 24.04, system tools, SSH, VS Code CLI, scripts
+│   ├── docker-compose.yml   # Stack — workspace-server + optional servers + headroom + 8 sidecars
+│   ├── entrypoint.sh        # workspace-server startup: setup-user → runtime-install → setup-credentials → sshd
+│   ├── sshd_config          # SSH daemon hardening config
+│   └── scripts/             # Installation scripts (build-install.sh, runtime-install.sh, packages/)
 ├── docs/
 │   ├── architecture-overview.md  # This document
 │   └── bdd-scenarios.md          # BDD scenarios for all workspace features
@@ -488,9 +496,9 @@ zzaia-agentic-workspace/
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
 | `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
-| `ssh-server` | SSH daemon, agent runtime, Aspire MCP | 2222 (SSH) | _(none)_ | Always starts, controlled via `server-profiles` secret |
-| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | Opt-in via `server-profiles` secret |
-| `dev-server` | Dev Containers support | stdin (MCP) | `devcontainer` | Opt-in via `server-profiles` secret |
+| `workspace-server` | SSH daemon, tool installer, agent runtime, Aspire MCP | 2222 (SSH) | _(none)_ | Always starts, owns shared home |
+| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | Opt-in via `server-profiles` secret, depends on workspace-server healthy |
+| `containers-dev-server` | Dev Containers support | stdin (MCP) | `devcontainer` | Opt-in via `server-profiles` secret, depends on workspace-server healthy |
 | **Layer 1 — Primary** | | | | |
 | `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | |
 | `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
@@ -511,13 +519,12 @@ zzaia-agentic-workspace/
 
 | Volume | Mount | Contents |
 |--------|-------|----------|
-| `<ws>-home` | `/home/user` | `.vscode-server/`, `.claude/`, agent configs, auth tokens |
-| `<ws>-workspace` | `/home/user/workspace` | Git repositories, worktrees, and first-run seed copied from `/opt/zzaia/workspace-seed` |
+| `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, installed tools, VS Code state, workspace repos |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
 | `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for headroom and openmemory |
 | `<ws>-headroom-neo4j` | `/data` | Knowledge graph for headroom retrieval |
-| `<ws>-openmemory-data` | `/var/lib/postgresql/data` | OpenMemory Postgres persistent memory store |
-| `<ws>-code-graph-db` | `/data/code-graph` | CodeGraphContext graph index (KûzuDB or Neo4j) |
+| `<ws>-openmemory-data` | `/var/lib/postgresql/data` | OpenMemory Postgres persistent memory store (Phase 2, not yet implemented) |
+| `<ws>-code-graph-db` | `/data/code-graph` | CodeGraphContext graph index (Phase 3, not yet implemented) |
 
 ### Connection Types
 

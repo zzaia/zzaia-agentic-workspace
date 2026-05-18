@@ -1,23 +1,15 @@
 #!/bin/bash
-# entrypoint.sh — Dev-server container bootstrap (setup phases, no SSH daemon)
+# entrypoint.sh — Dev-server container (workspace-server handles bootstrap)
 set -euo pipefail
 
-SCRIPT_DIR="/usr/local/lib/zzaia/scripts"
 export WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 
-source "$SCRIPT_DIR/common.sh"
+# Install devcontainer config into shared home if not already present
+if [ ! -f /home/user/.devcontainer/devcontainer.json ]; then
+    mkdir -p /home/user/.devcontainer
+    cp /opt/zzaia/devcontainer.json /home/user/.devcontainer/devcontainer.json
+    chown -R user:user /home/user/.devcontainer 2>/dev/null || true
+fi
 
-log_info "Starting zzaia dev-server container..."
-log_info "Workspace: $WORKSPACE_NAME"
-
-log_info "Phase 1: User and system setup"
-bash "$SCRIPT_DIR/setup-user.sh"
-
-log_info "Phase 2: Runtime tools bootstrap"
-bash "$SCRIPT_DIR/setup-tools.sh"
-
-log_info "Phase 3: Credentials and authentication"
-bash "$SCRIPT_DIR/setup-credentials.sh"
-
-log_success "Dev-server bootstrap complete — container ready for devcontainer connection"
+echo "Dev-server ready — container available for devcontainer connection"
 exec sleep infinity

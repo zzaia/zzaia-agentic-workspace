@@ -137,7 +137,7 @@ Pre-configure the following vault items in Bitwarden, then run the installation 
 | `docker-registry` | DOCKER_REGISTRY | | Container registry hostname (e.g. `ghcr.io`) |
 | `docker-username` | DOCKER_USERNAME | | Registry login username |
 | `docker-password` | DOCKER_PASSWORD | | Registry login password or token |
-| `server-profiles` | DEPLOY_PROFILES | | Optional: space-separated profiles (e.g. `vscode devcontainer`) |
+| `server-profiles` | DEPLOY_PROFILES | | Optional: space-separated profiles — `vscode`, `devcontainer` |
 
 **Ubuntu / WSL:**
 ```bash
@@ -367,9 +367,9 @@ All configured tools should show as connected. Then verify commands are availabl
 | Symptom | Fix |
 |---------|-----|
 | MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
-| Workspace slow to start | Headroom waits for qdrant and neo4j healthchecks — allow up to 60s on first boot |
+| Workspace slow to start | workspace-server runs tool installation on first boot; headroom waits for qdrant/neo4j — allow up to 90s on first boot |
 | Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
-| Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
+| Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-server-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
 | Terminal `claude` shows onboarding wizard | Home volume was created before the fix — delete `<WORKSPACE_NAME>-home` volume and restart, or run `claude setup-token` inside the container |
@@ -433,23 +433,22 @@ docker compose `
     up -d --force-recreate mcp-tavily
 ```
 
-> Three volumes exist per workspace, each with an independent lifecycle:
+> Multiple volumes exist per workspace, each with an independent lifecycle:
 >
 > | Volume | Contains | Delete to… |
 > |--------|----------|-----------|
-> | `<WORKSPACE_NAME>-secrets` | SSH public key | Rotate SSH key |
-> | `<WORKSPACE_NAME>-home` | Tools, configs, auth tokens | Reset system / pick up image updates |
-> | `<WORKSPACE_NAME>-workspace` | Cloned repos | Wipe all repositories |
+> | `<WORKSPACE_NAME>-secrets` | SSH public key, persisted env | Rotate SSH key |
+> | `<WORKSPACE_NAME>-home` | Home directory (tools, user config, credentials, workspace repos) | Reset all user state (forces re-install of tools) |
 >
 > ```bash
 > # Rotate SSH key only
 > docker volume rm <WORKSPACE_NAME>-secrets
 >
-> # Reset system (keeps secrets and repos)
+> # Reset home (forces tool re-install on next workspace-server start)
 > docker volume rm <WORKSPACE_NAME>-home
 >
 > # Full decommission
-> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-workspace
+> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home
 > ```
 
 ---

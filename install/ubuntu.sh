@@ -73,7 +73,6 @@ DEPLOY_PROFILES=$(fetch_secret "server-profiles")
 unset BW_ITEMS
 
 [ -z "$WORKSPACE_NAME" ] && echo "Error: WORKSPACE_NAME (vault: workspace-name) not found or empty" && exit 1
-[[ "${DEPLOY_PROFILES:-}" == *ssh* ]] && [ -z "$SSH_PUBLIC_KEY" ] && echo "Error: SSH_PUBLIC_KEY (vault: ssh-public-key) required when ssh profile is selected" && exit 1
 
 VSCODE_PORT="${VSCODE_PORT:-8080}"
 SSH_PORT="${SSH_PORT:-2222}"
@@ -109,8 +108,8 @@ PROFILE_FLAGS=""
 if [ -n "${DEPLOY_PROFILES:-}" ]; then
     for p in $DEPLOY_PROFILES; do
         case "$p" in
-            ssh|vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
-            *) echo "Warning: Unknown server profile '$p' — valid: ssh, vscode, devcontainer" ;;
+            vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+            *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer" ;;
         esac
     done
 fi
@@ -120,7 +119,7 @@ docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME
 
 echo ""
 echo "✓ Workspace started. Access:"
-[[ "${DEPLOY_PROFILES:-}" == *ssh* ]] && echo "  SSH: ssh -p $SSH_PORT user@localhost"
+echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "${DEPLOY_PROFILES:-}" == *vscode* ]] && echo "  VS Code: http://localhost:$VSCODE_PORT"
 [[ "${DEPLOY_PROFILES:-}" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"

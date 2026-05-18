@@ -1,11 +1,8 @@
-.PHONY: build build-base
+.PHONY: build up
 
-build: build-base
+build:
 	docker compose build
 
-build-base:
-	docker compose build workspace-base
-
-up: build-base
+up:
 	docker compose build
 	docker compose up -d

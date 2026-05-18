@@ -1,6 +1,6 @@
 #!/bin/bash
-# runtime-install.sh — User-space tool installation (entrypoint, shared volume)
-# Installs: Node.js, npm globals, .NET, Python/Miniforge, CLI tools, VS Code extensions
+# runtime-install.sh — Tool installation targeting INSTALL_PREFIX (default: $HOME)
+# Installs: Node.js, npm globals, .NET, Python/Miniforge, CLI tools
 # Usage: runtime-install.sh [--upgrade]
 
 set -euo pipefail
@@ -21,30 +21,33 @@ source "$SCRIPT_DIR/packages/python.sh"
 # shellcheck source=packages/cli.sh
 source "$SCRIPT_DIR/packages/cli.sh"
 
-BOOTSTRAP_MARKER="$HOME/.bootstrap/tools.ready"
+INSTALL_PREFIX="${INSTALL_PREFIX:-$HOME}"
+BOOTSTRAP_MARKER="$INSTALL_PREFIX/.bootstrap/tools.ready"
 
 # ── Configure PATH for all shells ─────────────────────────────────────────────
 configure_path() {
     log_info "Configuring PATH environment..."
 
     local path_block='# zzaia-path-begin
-export NVM_DIR="$HOME/.nvm"
+export NVM_DIR="${INSTALL_PREFIX}/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/miniforge3/bin:$PATH"
+export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
 # zzaia-path-end'
 
-    for f in "$HOME/.bashrc" "$HOME/.profile"; do
-        [ -f "$f" ] || touch "$f"
-        if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
-            sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
-        fi
-        printf '\n%s\n' "$path_block" >> "$f"
-    done
+    if [ "${INSTALL_PREFIX}" = "${HOME}" ]; then
+        for f in "$HOME/.bashrc" "$HOME/.profile"; do
+            [ -f "$f" ] || touch "$f"
+            if grep -qF '# zzaia-path-begin' "$f" 2>/dev/null; then
+                sed -i '/# zzaia-path-begin/,/# zzaia-path-end/d' "$f"
+            fi
+            printf '\n%s\n' "$path_block" >> "$f"
+        done
+    fi
 
     # Also update the current shell so verify_tools() can find installed binaries
-    export NVM_DIR="$HOME/.nvm"
+    export NVM_DIR="${INSTALL_PREFIX}/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    export PATH="$HOME/.local/bin:$HOME/.npm-global/bin:$HOME/.dotnet:$HOME/.dotnet/tools:$HOME/miniforge3/bin:$PATH"
+    export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
 
     log_success "PATH configured"
 }
@@ -66,10 +69,7 @@ main() {
     local upgrade=false
     [ "${1:-}" = "--upgrade" ] && upgrade=true
 
-    # Serialize concurrent installs across containers sharing the home volume
-    mkdir -p "$HOME/.bootstrap"
-    exec 9>"$HOME/.bootstrap/.install.lock"
-    flock -x 9
+    mkdir -p "${INSTALL_PREFIX}/.bootstrap"
 
     # Bootstrap marker includes hash of this script — invalidate on changes
     local script_hash
@@ -87,7 +87,7 @@ main() {
     log_info "Starting runtime tool installation..."
 
     # Create required directories
-    mkdir -p "$HOME/.bootstrap" "$HOME/.local/bin" "$HOME/.npm-global"
+    mkdir -p "${INSTALL_PREFIX}/.bootstrap" "${INSTALL_PREFIX}/.local/bin" "${INSTALL_PREFIX}/.npm-global"
 
     # Install all tools in order
     python::install_miniforge
