@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:e2e
 description: Execute a single BDD step via direct API call and query a data source for consistency and issue validation
-argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source-metadata <queue|table|container>] [--description <text>]"
 user-invocable: true
 metadata:
   parameters:
@@ -17,8 +17,8 @@ metadata:
     - name: debug-sources
       description: "Data source to debug for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
       required: true
-    - name: source
-      description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
+    - name: source-metadata
+      description: "Source-specific metadata — queue name (sqs), database/table name (postgresql), container name (docker)"
       required: false
     - name: description
       description: Additional context or instructions for the operation
@@ -94,11 +94,11 @@ sequenceDiagram
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source orders-queue
+/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --debug-sources postgresql --source "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
+/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --debug-sources postgresql --source-metadata "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
 ```
 
 ```
@@ -106,7 +106,7 @@ sequenceDiagram
 ```
 
 ```
-/behavior:development:test:e2e --step "POST /orders triggers container processing" --environment https://staging.myapp.com --application order-service --debug-sources docker --source order-worker
+/behavior:development:test:e2e --step "POST /orders triggers container processing" --environment https://staging.myapp.com --application order-service --debug-sources docker --source-metadata order-worker
 ```
 
 ## OUTPUT

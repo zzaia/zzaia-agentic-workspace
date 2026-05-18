@@ -1,7 +1,7 @@
 ---
 name: workflow:remote:homologate
 description: Orchestrate homologation testing with BDD, live URL testing, diagnostics, and bug reporting
-argument-hint: "--work-item <id> --project <project> --url <target-url> --application <app-name> --type e2e|ui [--debug-sources <new-relic|sqs|postgresql|aspire|docker>] [--source <queue|table|container>] [--test-case <id>] [--description <context>] [--doc <file-path>] [--ref-url <url>]"
+argument-hint: "--work-item <id> --project <project> --url <target-url> --application <app-name> --type e2e|ui [--debug-sources <new-relic|sqs|postgresql|aspire|docker>] [--source-metadata <queue|table|container>] [--test-case <id>] [--description <context>] [--doc <file-path>] [--ref-url <url>]"
 parameters:
   - name: work-item
     description: Work item ID to homologate
@@ -31,8 +31,8 @@ parameters:
     description: "Data source to debug after each test step: new-relic, sqs, postgresql, aspire, docker"
     required: false
     default: new-relic
-  - name: source
-    description: "Collection-specific source — queue name (sqs), table name (postgresql), container name (docker)"
+  - name: source-metadata
+    description: "Source-specific metadata — queue name (sqs), database/table name (postgresql), container name (docker)"
     required: false
   - name: ref-url
     description: URL reference to fetch and inject as context
@@ -93,7 +93,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 5. **Execute Tests**: Iterate over each BDD step in the Test Case Steps and execute individually
 
    - For each step in Test Case Steps (in order):
-     - Call `/behavior:development:test --type <type> --step "<step>" --environment <url> --application <application> --debug-sources <debug-sources> [--source <source>]`
+     - Call `/behavior:development:test --type <type> --step "<step>" --environment <url> --application <application> --debug-sources <debug-sources> [--source-metadata <source>]`
      - Display concise step report immediately: step name, result (pass/fail), response time, anomalies
 
 6. **Correlate Step Findings**: Consolidate all per-step diagnostic data into a unified findings list
@@ -206,7 +206,7 @@ sequenceDiagram
 
 /workflow:remote:homologate --work-item 67890 --project MyProject --url https://staging.myapp.com --application MyApp --type ui --debug-sources new-relic --description "Validate checkout user flow"
 
-/workflow:remote:homologate --work-item 11111 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --debug-sources sqs --source orders-queue
+/workflow:remote:homologate --work-item 11111 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --debug-sources sqs --source-metadata orders-queue
 
 /workflow:remote:homologate --work-item 22222 --project MyProject --url https://qa.myapp.com --application MyApp --type ui --ref-url https://example.com/acceptance-criteria
 ```

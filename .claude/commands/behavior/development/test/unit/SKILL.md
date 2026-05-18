@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:unit
 description: Unit test execution within a project using framework detection, with optional system debug after test run
-argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--debug-sources <new-relic|sqs|postgresql|aspire|docker>] [--application <app>] [--source <queue|table|container>] [--framework auto] [--description <text>]"
+argument-hint: "--repo <name> --branch <name> --project <name> [--action implement|run] [--debug-sources <new-relic|sqs|postgresql|aspire|docker>] [--application <app>] [--source-metadata <queue|table|container>] [--framework auto] [--description <text>]"
 user-invocable: true
 metadata:
   agents:
@@ -27,8 +27,8 @@ metadata:
     - name: application
       description: Application name for new-relic and aspire collection filtering
       required: false
-    - name: source
-      description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
+    - name: source-metadata
+      description: "Source-specific metadata — queue name (sqs), database/table name (postgresql), container name (docker)"
       required: false
     - name: framework
       description: Optional test framework override (auto-detected by default)
@@ -118,9 +118,9 @@ sequenceDiagram
 ```
 /behavior:development:test:unit --repo backend-hub --branch master --project api
 /behavior:development:test:unit --repo compliance-hub --branch feature/new-module --project core --action implement
-/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources postgresql --source orders
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources postgresql --source-metadata orders
 /behavior:development:test:unit --repo payment-service --branch master --project worker --debug-sources new-relic --application payment-service
-/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources docker --source order-service-api
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources docker --source-metadata order-service-api
 ```
 
 ## OUTPUT

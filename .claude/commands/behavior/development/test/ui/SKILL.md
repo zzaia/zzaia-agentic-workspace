@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:ui
 description: Execute a single BDD step via Playwright browser automation and query a data source for consistency and issue validation
-argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source <queue|table|container>] [--description <text>]"
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source-metadata <queue|table|container>] [--description <text>]"
 user-invocable: true
 metadata:
   parameters:
@@ -17,8 +17,8 @@ metadata:
     - name: debug-sources
       description: "Data source to debug for consistency and issue validation: new-relic, sqs, postgresql, aspire, docker"
       required: true
-    - name: source
-      description: "Collection-specific source — queue name (sqs), table name (postgresql optional), container name (docker optional)"
+    - name: source-metadata
+      description: "Source-specific metadata — queue name (sqs), database/table name (postgresql), container name (docker)"
       required: false
     - name: description
       description: Additional context or instructions for the operation
@@ -95,11 +95,11 @@ sequenceDiagram
 ```
 
 ```
-/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source orders-queue
+/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
 ```
 
 ```
-/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --debug-sources postgresql --source "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
+/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --debug-sources postgresql --source-metadata "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
 ```
 
 ```
@@ -107,7 +107,7 @@ sequenceDiagram
 ```
 
 ```
-/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --debug-sources docker --source file-processor
+/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --debug-sources docker --source-metadata file-processor
 ```
 
 ## OUTPUT
