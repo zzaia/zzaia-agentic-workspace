@@ -3,8 +3,8 @@
     "preToolUse": [
       {
         "type": "command",
-        "bash": "if command -v rtk &>/dev/null; then exec rtk; else cat; fi",
-        "powershell": "if (Get-Command rtk -ErrorAction SilentlyContinue) { rtk } else { [System.Console]::In.ReadToEnd() }",
+        "bash": "if command -v rtk &>/dev/null; then rtk hook copilot; else cat; fi",
+        "powershell": "if (Get-Command rtk -ErrorAction SilentlyContinue) { rtk hook copilot } else { [System.Console]::In.ReadToEnd() }",
         "timeoutSec": 10
       }
     ]

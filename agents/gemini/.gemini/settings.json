@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"
+            "command": "if command -v rtk &>/dev/null; then rtk hook gemini; else cat; fi"
           }
         ]
       }

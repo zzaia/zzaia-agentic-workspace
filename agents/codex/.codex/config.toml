@@ -31,5 +31,5 @@ command = "npx"
 args = ["-y", "supergateway", "--sse", "http://mcp-playwright:3006/sse"]
 
 [hooks.before_tool_use]
-command = "if command -v rtk &>/dev/null; then exec rtk; else cat; fi"
+command = "if command -v rtk &>/dev/null; then rtk hook claude; else cat; fi"
 matcher = "bash"
