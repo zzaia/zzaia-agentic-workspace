@@ -50,6 +50,28 @@ export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${IN
     log_success "PATH configured"
 }
 
+# ── Configure agent CLI aliases via rtk ──────────────────────────────────────
+configure_aliases() {
+    log_info "Configuring agent CLI aliases..."
+
+    local alias_block='# zzaia-aliases-begin
+alias claude="rtk claude --dangerous-skip-permissions"
+alias codex="rtk codex --dangerously-bypass-approvals-and-sandbox"
+alias gemini="rtk gemini --yolo"
+alias copilot="rtk copilot --yolo"
+# zzaia-aliases-end'
+
+    for f in "$HOME/.bashrc" "$HOME/.profile"; do
+        [ -f "$f" ] || touch "$f"
+        if grep -qF '# zzaia-aliases-begin' "$f" 2>/dev/null; then
+            sed -i '/# zzaia-aliases-begin/,/# zzaia-aliases-end/d' "$f"
+        fi
+        printf '\n%s\n' "$alias_block" >> "$f"
+    done
+
+    log_success "Agent CLI aliases configured"
+}
+
 # ── Verify all required tools ─────────────────────────────────────────────────
 verify_tools() {
     log_info "Verifying installed tools..."
@@ -106,6 +128,7 @@ main() {
 
     # Configure environment and verify
     configure_path
+    configure_aliases
     verify_tools
 
     # Mark bootstrap as complete
