@@ -154,6 +154,40 @@ cli::install_azure_cli() {
     fi
 }
 
+# ── Docker CLI ───────────────────────────────────────────────────────────────
+cli::install_docker() {
+    if command -v docker >/dev/null 2>&1; then
+        log_info "Docker CLI already installed"
+        return 0
+    fi
+
+    log_info "Installing Docker CLI..."
+
+    mkdir -p "${INSTALL_PREFIX:-$HOME}/.local/bin" "${INSTALL_PREFIX:-$HOME}/.local/docker/cli-plugins"
+
+    local docker_version="${DOCKER_VERSION:-}"
+    if [ -z "$docker_version" ]; then
+        log_warn "DOCKER_VERSION not set; skipping Docker installation"
+        return 0
+    fi
+
+    local docker_url="https://download.docker.com/linux/static/stable/x86_64/docker-${docker_version}.tgz"
+    if curl -fsSL "$docker_url" | tar xz -C "${INSTALL_PREFIX:-$HOME}/.local/bin" --strip-components 1 docker/docker 2>/dev/null; then
+        chmod +x "${INSTALL_PREFIX:-$HOME}/.local/bin/docker"
+        log_success "Docker CLI ${docker_version} installed"
+    else
+        log_warn "Docker CLI download failed; continuing"
+        return 0
+    fi
+
+    if curl -fsSL "https://github.com/docker/buildx/releases/download/v${docker_version}/buildx-v${docker_version}.linux-amd64" -o "${INSTALL_PREFIX:-$HOME}/.local/docker/cli-plugins/docker-buildx" 2>/dev/null; then
+        chmod +x "${INSTALL_PREFIX:-$HOME}/.local/docker/cli-plugins/docker-buildx"
+        log_success "Docker buildx plugin installed"
+    else
+        log_warn "Docker buildx plugin download failed; continuing"
+    fi
+}
+
 # ── Tectonic LaTeX engine ─────────────────────────────────────────────────────
 cli::install_tectonic() {
     if [ -f "${INSTALL_PREFIX:-$HOME}/.local/bin/tectonic" ]; then
@@ -186,7 +220,7 @@ cli::install_tectonic() {
 cli::verify() {
     log_info "Verifying CLI tools..."
 
-    local required_tools=("gh" "k6" "d2" "dapr" "rtk" "az" "tectonic")
+    local required_tools=("gh" "k6" "d2" "dapr" "rtk" "az" "tectonic" "docker")
     local failed=0
 
     for tool in "${required_tools[@]}"; do

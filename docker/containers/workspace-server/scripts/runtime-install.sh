@@ -100,6 +100,7 @@ main() {
     cli::install_d2
     cli::install_dapr
     cli::install_rtk
+    cli::install_docker
     cli::install_azure_cli
     cli::install_tectonic
 

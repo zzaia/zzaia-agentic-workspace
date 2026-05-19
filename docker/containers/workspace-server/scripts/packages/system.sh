@@ -1,6 +1,6 @@
 #!/bin/bash
 # packages/system.sh — System-level package installation (run as root at build time)
-# Provides functions for apt packages, Docker CLI, VS Code CLI
+# Provides functions for apt packages, VS Code CLI
 
 set -euo pipefail
 
@@ -22,24 +22,6 @@ system::install_apt_packages() {
     update-locale LANG=en_US.UTF-8
     rm -rf /var/lib/apt/lists/*
     log_success "$label installed"
-}
-
-# ── Docker CE CLI ─────────────────────────────────────────────────────────────
-system::install_docker_cli() {
-    if command -v docker >/dev/null 2>&1; then
-        log_info "Docker CLI already installed"
-        return 0
-    fi
-
-    log_info "Installing Docker CE CLI..."
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu noble stable" \
-        > /etc/apt/sources.list.d/docker.list
-    apt-get update
-    apt-get install -y --no-install-recommends docker-ce-cli
-    rm -rf /var/lib/apt/lists/*
-    log_success "Docker CLI installed"
 }
 
 # ── VS Code CLI ───────────────────────────────────────────────────────────────

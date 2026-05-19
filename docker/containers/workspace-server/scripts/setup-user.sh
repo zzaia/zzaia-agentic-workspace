@@ -159,7 +159,6 @@ main() {
     seed_home
     configure_ssh_port
     setup_ssh_host_keys
-    setup_docker_socket
     setup_sudo
     setup_apt_sandbox
     setup_ssh_auth

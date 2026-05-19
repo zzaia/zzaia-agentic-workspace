@@ -10,6 +10,7 @@
 |------|---------|---------|
 | **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
 | **Bitwarden CLI** (optional) | Secret manager integration for automated setup | [bitwarden.com/help/cli](https://bitwarden.com/help/cli) |
+| **Enhanced Container Isolation (ECI)** *(optional)* | Enables unprivileged Docker-in-Docker sandboxing — Docker Desktop > Settings > General > "Use Enhanced Container Isolation" | [docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation](https://docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation/) |
 
 ---
 

@@ -4,6 +4,15 @@ Ubuntu 24.04 all-in-one container (`workspace-server`) with tools provisioned vi
 
 ---
 
+## Prerequisites
+
+The workspace requires the following host software:
+
+- **Docker Desktop** — Container runtime and compose orchestration ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop))
+- **Enhanced Container Isolation (ECI)** *(optional)* — Enables unprivileged Docker-in-Docker sandboxing. Enable via Docker Desktop > Settings > General > "Use Enhanced Container Isolation".
+
+---
+
 ## Start (once per environment)
 
 See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short version:
@@ -143,6 +152,7 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 
 | Control | Value |
 |---------|-------|
+| Docker sandbox | DinD via `runc` runtime; enable Docker Desktop ECI for unprivileged isolation (optional) |
 | Workspace secrets | SSH key only — no API keys in workspace container |
 | MCP secrets | Isolated per sidecar container, internal network only |
 | Secret handling | Injected in-memory at startup — no cleartext on host disk |

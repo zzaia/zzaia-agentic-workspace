@@ -4,6 +4,23 @@
 name: ${WORKSPACE_NAME:-zzaia}
 
 services:
+  dind:
+    image: docker:28.1.1-dind
+    runtime: runc
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    volumes:
+      - dind-storage:/var/lib/docker
+    networks:
+      - mcp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "docker info >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   workspace-server:
     build:
       context: ..
@@ -14,7 +31,6 @@ services:
     ports:
       - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - workspace-secrets:/secrets
       - workspace-home:/home/user
       - workspace-tools:/opt/tools
@@ -25,6 +41,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - SSH_PORT=${SSH_PORT:-2222}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
+      - DOCKER_HOST=tcp://dind:2376
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -71,6 +88,8 @@ services:
       retries: 3
       start_period: 30m
     depends_on:
+      dind:
+        condition: service_healthy
       proxy-headroom:
         condition: service_healthy
       mcp-playwright:
@@ -282,12 +301,12 @@ services:
       - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
       - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18890}:17001"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - workspace-home:/home/user
       - workspace-tools:/opt/tools:ro
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
+      - DOCKER_HOST=tcp://dind:2376
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -335,11 +354,11 @@ services:
     image: zzaia-containers-dev-server:latest
     profiles: ["devcontainer"]
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
       - workspace-home:/home/user
       - workspace-tools:/opt/tools:ro
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
+      - DOCKER_HOST=tcp://dind:2376
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -382,6 +401,8 @@ volumes:
     name: ${WORKSPACE_NAME:-zzaia}-headroom-qdrant
   headroom-neo4j:
     name: ${WORKSPACE_NAME:-zzaia}-headroom-neo4j
+  dind-storage:
+    name: ${WORKSPACE_NAME:-zzaia}-dind-storage
 
 networks:
   mcp:
