@@ -55,10 +55,10 @@ configure_aliases() {
     log_info "Configuring agent CLI aliases..."
 
     local alias_block='# zzaia-aliases-begin
-alias claude="rtk claude --dangerous-skip-permissions"
-alias codex="rtk codex --dangerously-bypass-approvals-and-sandbox"
-alias gemini="rtk gemini --yolo"
-alias copilot="rtk copilot --yolo"
+alias claude="claude --dangerously-skip-permissions"
+alias codex="codex --dangerously-bypass-approvals-and-sandbox"
+alias gemini="gemini --yolo"
+alias copilot="copilot --yolo"
 # zzaia-aliases-end'
 
     for f in "$HOME/.bashrc" "$HOME/.profile"; do
@@ -70,6 +70,23 @@ alias copilot="rtk copilot --yolo"
     done
 
     log_success "Agent CLI aliases configured"
+}
+
+# ── Initialize RTK hook for token optimization ───────────────────────────────
+configure_rtk() {
+    log_info "Initializing RTK hooks..."
+
+    if ! command -v rtk &>/dev/null; then
+        log_warn "rtk not found; skipping RTK hook initialization"
+        return 0
+    fi
+
+    rtk init -g --agent claude --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --gemini --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --codex 2>&1 | sed 's/^/  /'
+    rtk init -g --copilot --auto-patch 2>&1 | sed 's/^/  /'
+
+    log_success "RTK hooks initialized for claude, gemini, codex, copilot"
 }
 
 # ── Verify all required tools ─────────────────────────────────────────────────
@@ -128,6 +145,7 @@ main() {
 
     # Configure environment and verify
     configure_path
+    configure_rtk
     configure_aliases
     verify_tools
 
