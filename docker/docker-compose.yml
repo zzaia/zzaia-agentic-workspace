@@ -41,7 +41,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - SSH_PORT=${SSH_PORT:-2222}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
-      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_HOST=tcp://dind:2375
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -306,7 +306,7 @@ services:
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
-      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_HOST=tcp://dind:2375
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -358,7 +358,7 @@ services:
       - workspace-tools:/opt/tools:ro
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
-      - DOCKER_HOST=tcp://dind:2376
+      - DOCKER_HOST=tcp://dind:2375
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
