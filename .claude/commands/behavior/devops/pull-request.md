@@ -76,9 +76,15 @@ Unified pull request management across Azure DevOps and GitHub with support for 
    - Create: Generate PR and return link with ID
    - Read: Fetch PR details and format for review
    - Update: Apply changes and confirm completion
-   - Publish reviews when requested
+   - Publish reviews when requested — **ALWAYS as inline code-line comments** on the specific file and line referenced
    - Apply PR templates to description
    - Link work items automatically (Azure DevOps)
+
+4. **Review Publishing Rules** (MANDATORY):
+   - Every review comment MUST be attached to the specific file path and line number it refers to
+   - Never post general/top-level review comments — always anchor to the code line
+   - Each inline comment must include: file path, line number, issue description, and suggested fix
+   - Group related issues on the same file when adjacent lines are affected
 
 ## DELEGATION
 
@@ -178,6 +184,6 @@ The pull request title must follow the patter:
 - **PR Creation**: ID, direct link, work item link (Azure only), confirmation
 - **PR Read**: Current state, reviewers, labels/tags, linked items, diff statistics
 - **PR Update**: Changed fields confirmation, new reviewers, timestamp
-- **Review Publishing**: Confirmation with comment count and status
+- **Review Publishing**: Confirmation with comment count, inline anchors (file:line), and status
 - **Errors**: Validation failures with specific fix suggestions
 - **Batch Operations**: Summary of all operations with individual statuses
