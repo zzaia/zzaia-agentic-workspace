@@ -69,6 +69,7 @@ DOCKER_REGISTRY=$(fetch_secret "docker-registry")
 DOCKER_USERNAME=$(fetch_secret "docker-username")
 DOCKER_PASSWORD=$(fetch_secret "docker-password")
 DEPLOY_PROFILES=$(fetch_secret "server-profiles")
+GPU_ENABLED=$(fetch_secret "gpu-enabled")
 
 unset BW_ITEMS
 
@@ -96,9 +97,35 @@ export POSTMAN_API_KEY NEW_RELIC_API_KEY DEPLOY_PROFILES
 export AWS_ACCESS_KEY_ID="" AWS_SECRET_ACCESS_KEY="" AWS_REGION="" ANTHROPIC_BEDROCK_BASE_URL=""
 export CLAUDE_CODE_USE_VERTEX="" ANTHROPIC_VERTEX_PROJECT_ID="" CLOUD_ML_REGION=""
 export CLAUDE_CODE_USE_FOUNDRY="" AZURE_FOUNDRY_BASE_URL=""
+GPU_ENABLED="${GPU_ENABLED:-false}"
+export GPU_ENABLED
 
 if [ -n "$DOCKER_REGISTRY" ] && [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
     echo "$DOCKER_PASSWORD" | docker login "$DOCKER_REGISTRY" -u "$DOCKER_USERNAME" --password-stdin
+fi
+
+# Install NVIDIA Container Toolkit when GPU is enabled (NVIDIA only, native Docker Engine required)
+if [ "${GPU_ENABLED:-false}" = "true" ]; then
+    echo "GPU_ENABLED=true — checking NVIDIA Container Toolkit..."
+    if ! command -v nvidia-smi &> /dev/null; then
+        echo "Error: nvidia-smi not found. Install NVIDIA drivers before enabling GPU." && exit 1
+    fi
+    if ! dpkg -s nvidia-container-toolkit &> /dev/null 2>&1; then
+        echo "Installing NVIDIA Container Toolkit..."
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+            | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+            | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+            | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+        sudo apt-get update -qq && sudo apt-get install -y nvidia-container-toolkit
+    fi
+    echo "Generating CDI spec..."
+    sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+    echo "Configuring Docker runtime..."
+    [ -s /etc/docker/daemon.json ] || echo '{}' | sudo tee /etc/docker/daemon.json > /dev/null
+    sudo nvidia-ctk runtime configure --runtime=docker
+    sudo systemctl restart docker
+    echo "✓ NVIDIA Container Toolkit ready"
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

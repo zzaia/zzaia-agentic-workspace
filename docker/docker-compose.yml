@@ -43,6 +43,7 @@ services:
       - SSH_PORT=${SSH_PORT:-2222}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
       - DOCKER_HOST=tcp://dind:2375
+      - GPU_ENABLED=${GPU_ENABLED:-false}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -104,6 +105,7 @@ services:
       dockerfile: docker/containers/proxy-headroom/Dockerfile
     image: zzaia-proxy-headroom:latest
     environment:
+      - GPU_ENABLED=${GPU_ENABLED:-false}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -115,6 +117,7 @@ services:
       - HEADROOM_TELEMETRY=off
     volumes:
       - workspace-home:/workspace
+      - workspace-tools:/opt/tools:ro
     networks:
       - mcp
     restart: unless-stopped
@@ -125,48 +128,6 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8787/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  proxy-headroom-nvidia:
-    build:
-      context: ..
-      dockerfile: docker/containers/proxy-headroom/Dockerfile.nvidia
-    image: zzaia-proxy-headroom:nvidia
-    profiles: ["nvidia"]
-    environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - QDRANT_URL=http://database-qdrant:6333
-      - NEO4J_URI=bolt://database-neo4j:7687
-      - NEO4J_USERNAME=neo4j
-      - NEO4J_PASSWORD=${ADMIN_PASSWORD:-}
-      - PORT=8787
-      - HEADROOM_TELEMETRY=off
-      - CUDA_VISIBLE_DEVICES=0
-    volumes:
-      - workspace-home:/workspace
-      - proxy-headroom-nvidia-packages:/opt/headroom
-    networks:
-      - mcp
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    depends_on:
-      database-qdrant:
-        condition: service_started
-      database-neo4j:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "[ -f /opt/headroom/.bootstrap/packages.ready ] && curl -sf http://localhost:8787/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -446,8 +407,6 @@ volumes:
     name: ${WORKSPACE_NAME:-zzaia}-headroom-neo4j
   dind-storage:
     name: ${WORKSPACE_NAME:-zzaia}-dind-storage
-  proxy-headroom-nvidia-packages:
-    name: ${WORKSPACE_NAME:-zzaia}-proxy-headroom-nvidia-packages
 
 networks:
   mcp:

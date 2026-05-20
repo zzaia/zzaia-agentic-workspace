@@ -149,6 +149,23 @@ main() {
     configure_aliases
     verify_tools
 
+    # ── GPU packages (separate marker — does not invalidate base tools) ──────────
+    GPU_MARKER="$INSTALL_PREFIX/.bootstrap/gpu-packages.ready"
+    if [ "${GPU_ENABLED:-false}" = "true" ]; then
+        local gpu_hash
+        gpu_hash=$(sha256sum "$SCRIPT_DIR/packages/python.sh" | awk '{print $1}')
+        local stored_gpu_hash
+        stored_gpu_hash=$(cat "$GPU_MARKER" 2>/dev/null || echo "")
+        if [ "$stored_gpu_hash" != "$gpu_hash" ]; then
+            python::install_gpu_packages
+            python::verify_gpu
+            echo "$gpu_hash" > "$GPU_MARKER"
+            log_success "GPU packages bootstrapped"
+        else
+            log_info "GPU packages already installed (hash match)"
+        fi
+    fi
+
     # Mark bootstrap as complete
     echo "$script_hash" > "$BOOTSTRAP_MARKER"
     log_success "Runtime bootstrap complete"
