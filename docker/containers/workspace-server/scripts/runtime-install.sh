@@ -134,6 +134,7 @@ main() {
     dotnet::install_tools
     python::install_packages
     python::install_conda_envs
+    python::install_venv_development
     cli::install_gh
     cli::install_k6
     cli::install_d2
@@ -148,6 +149,17 @@ main() {
     configure_rtk
     configure_aliases
     verify_tools
+
+    # ── Development environment marker ──────────────────────────────────────────
+    DEV_MARKER="$INSTALL_PREFIX/.bootstrap/venv-development.ready"
+    local dev_hash
+    dev_hash=$(sha256sum "$SCRIPT_DIR/packages/python.sh" | awk '{print $1}')
+    local stored_dev_hash
+    stored_dev_hash=$(cat "$DEV_MARKER" 2>/dev/null || echo "")
+    if [ "$stored_dev_hash" != "$dev_hash" ]; then
+        log_info "venv-development marker updated"
+        echo "$dev_hash" > "$DEV_MARKER"
+    fi
 
     # ── GPU packages (separate marker — does not invalidate base tools) ──────────
     GPU_MARKER="$INSTALL_PREFIX/.bootstrap/gpu-packages.ready"

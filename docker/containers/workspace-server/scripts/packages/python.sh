@@ -63,9 +63,53 @@ python::install_conda_envs() {
 
     local py_ver="${CONDA_PYTHON_VERSION:-3.12}"
     "${INSTALL_PREFIX:-$HOME}/miniforge3/bin/conda" create -n venv-analytics "python=${py_ver}" -y 2>/dev/null || true
-    "${INSTALL_PREFIX:-$HOME}/miniforge3/bin/conda" create -n venv-development "python=${py_ver}" -y 2>/dev/null || true
 
     log_success "Conda environments created"
+}
+
+# ── Development environment (Jupyter, data science packages) ──────────────────
+python::install_venv_development() {
+    log_info "Installing venv-development with API development packages..."
+
+    local conda="${INSTALL_PREFIX:-$HOME}/miniforge3/bin/conda"
+    local pip="${INSTALL_PREFIX:-$HOME}/miniforge3/envs/venv-development/bin/pip"
+
+    if [ ! -x "$conda" ]; then
+        log_warn "conda not found; skipping venv-development setup"
+        return 0
+    fi
+
+    # Create environment
+    "$conda" create -n venv-development "python=${CONDA_PYTHON_VERSION:-3.12}" -y 2>/dev/null || true
+
+    if [ ! -x "$pip" ]; then
+        log_warn "pip not found in venv-development"
+        return 0
+    fi
+
+    # Upgrade pip
+    "$pip" install --upgrade pip --quiet
+
+    # Build versioned package specs
+    local fastapi_spec="fastapi${FASTAPI_VERSION:+==${FASTAPI_VERSION}}"
+    local uvicorn_spec="uvicorn[standard]${UVICORN_VERSION:+==${UVICORN_VERSION}}"
+    local pydantic_spec="pydantic${PYDANTIC_VERSION:+==${PYDANTIC_VERSION}}"
+    local httpx_spec="httpx${HTTPX_VERSION:+==${HTTPX_VERSION}}"
+    local sqlalchemy_spec="sqlalchemy${SQLALCHEMY_VERSION:+==${SQLALCHEMY_VERSION}}"
+    local alembic_spec="alembic${ALEMBIC_VERSION:+==${ALEMBIC_VERSION}}"
+
+    # Install API development packages
+    "$pip" install \
+        "$fastapi_spec" "$uvicorn_spec" "$pydantic_spec" \
+        "$httpx_spec" "httpx[http2]" \
+        "$sqlalchemy_spec" "$alembic_spec" \
+        "python-jose[cryptography]" "passlib[bcrypt]" \
+        python-multipart aiofiles \
+        typer loguru python-dotenv \
+        pytest pytest-asyncio \
+        --quiet || log_warn "Some venv-development packages failed to install; continuing"
+
+    log_success "venv-development configured with API development packages"
 }
 
 # ── GPU / ML packages ────────────────────────────────────────────────────────
@@ -92,9 +136,6 @@ python::install_gpu_packages() {
 
     local torch_spec="torch${TORCH_VERSION:+==${TORCH_VERSION}}"
     local headroom_spec="headroom-ai[ml]${HEADROOM_AI_VERSION:+==${HEADROOM_AI_VERSION}}"
-    local jupyter_spec="jupyter${JUPYTER_VERSION:+==${JUPYTER_VERSION}}"
-    local jupyterlab_spec="jupyterlab${JUPYTERLAB_VERSION:+==${JUPYTERLAB_VERSION}}"
-    local ipykernel_spec="ipykernel${IPYKERNEL_VERSION:+==${IPYKERNEL_VERSION}}"
     local numpy_spec="numpy${NUMPY_VERSION:+==${NUMPY_VERSION}}"
     local pandas_spec="pandas${PANDAS_VERSION:+==${PANDAS_VERSION}}"
     local sklearn_spec="scikit-learn${SCIKIT_LEARN_VERSION:+==${SCIKIT_LEARN_VERSION}}"
@@ -103,13 +144,8 @@ python::install_gpu_packages() {
     "$pip" install \
         "$torch_spec" torchvision torchaudio \
         "$headroom_spec" fastapi uvicorn "httpx[http2]" \
-        "$jupyter_spec" "$jupyterlab_spec" "$ipykernel_spec" \
         "$numpy_spec" "$pandas_spec" "$sklearn_spec" "$matplotlib_spec" \
         || log_warn "Some GPU packages failed to install; continuing"
-
-    # Register venv-analytics as a Jupyter kernel
-    "${INSTALL_PREFIX:-$HOME}/miniforge3/envs/venv-analytics/bin/python" \
-        -m ipykernel install --user --name ml-runtime --display-name "ML Runtime (GPU)" 2>/dev/null || true
 
     log_success "GPU/ML packages installed into venv-analytics"
 }

@@ -74,7 +74,8 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 |---|---|---|---|---|
 | `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
 | `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-server, containers-dev-server) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
-| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-server, containers-dev-server, and proxy-headroom :ro) | Runtime tools: Node.js, .NET, Python, CLIs, ML packages (when GPU_ENABLED=true) | Delete to force tool re-install |
+| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-server, containers-dev-server :ro) | Runtime tools: Node.js, .NET, Python, CLIs, ML packages (when GPU_ENABLED=true) | Delete to force tool re-install |
+| `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
 
 ### Home volume seeding
 
@@ -92,6 +93,15 @@ Tools install to `/opt/tools` in the separate `workspace-tools` volume:
 - `workspace-server` entrypoint runs `runtime-install.sh` which installs tools to `/opt/tools` (INSTALL_PREFIX=/opt/tools, HOME=/home/user)
 - `workspace-tools` volume is read-write for `workspace-server`, read-only (`:ro`) for `vscode-server` and `containers-dev-server`
 - Tools persist across restarts; delete the volume to force re-installation with new versions from `versions.env`
+
+### ML-server volume installation
+
+ML-server runtime installs to `/opt/ml-tools` in the separate `ml-tools` volume:
+
+- `ml-server` entrypoint bootstraps miniforge3 and venv-system conda env with headroom-ai, fastapi, uvicorn
+- `ml-tools` volume is read-write for `ml-server` only — owned by headroom user (uid=1001)
+- Workspace home (`workspace-home`) is mounted read-only for headroom code-graph/memory access
+- `ml-server` does NOT mount `workspace-tools` — independent sealed environment
 
 **After image updates:** To pick up new tool versions, delete both the home and tools volumes:
 
@@ -121,13 +131,22 @@ docker volume rm my-org-home
 # Reset tools (forces tool re-install on next workspace-server start)
 docker volume rm my-org-tools
 
+# Reset ml-tools (forces ml-server miniforge re-download and package re-install)
+docker volume rm my-org-ml-tools
+
 # Full decommission
-docker volume rm my-org-secrets my-org-home my-org-tools
+docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 ```
 
 ---
 
-## MCP Services
+## MCP Services and Proxy
+
+**Proxy server** runs as the central bridge for LLM API calls:
+
+| Service | Port | Role |
+|---------|------|------|
+| ml-server | 8787 | Central LLM API proxy (headroom) — all containers point to `http://ml-server:8787` |
 
 Each MCP server runs as an isolated sidecar container on the internal `mcp` Docker network. Ports are not exposed to the host. If a secret is not provided, the sidecar exits cleanly (code 0) and does not restart.
 
@@ -149,9 +168,11 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | Runtimes | Node.js 24, Python 3.12, .NET 10, Go, Rust, Java |
 | CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid, Azure CLI |
 | Editor | code-server + Claude Code extension — browser on port 8080 (vscode profile) |
-| Data science | Miniforge3, conda envs |
+| Data science | Miniforge3, conda envs (venv-analytics for GPU ML, venv-development for Jupyter) |
 | Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams, azure-cli |
-| ML packages *(GPU_ENABLED=true)* | PyTorch, headroom-ai[ml], Jupyter, ipykernel, NumPy, Pandas, scikit-learn, Matplotlib |
+| Development | venv-development: FastAPI, Uvicorn, Pydantic, HTTPx, SQLAlchemy, Alembic, python-jose, passlib, python-multipart, aiofiles, typer, loguru, pytest |
+| ML packages *(GPU_ENABLED=true)* | venv-analytics: PyTorch, headroom-ai[ml], scikit-learn |
+| Proxy server | headroom-ai, fastapi, uvicorn, httpx (in ml-server's venv-system) |
 | .NET tools | Aspire workload, Aspirate |
 | System | tmux, PlantUML, tectonic, git, build-essential |
 
@@ -194,9 +215,9 @@ GPU_ENABLED=true docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME
 ```
 
 With `GPU_ENABLED=true`:
-- `workspace-server` installs ML packages (PyTorch, headroom-ai[ml], Jupyter) into the `venv-analytics` conda env on first start
-- `proxy-headroom` activates that env and runs headroom with Kompress model (SLM context compression)
-- ML packages persist in the `workspace-tools` volume — deleted the volume forces re-install
+- `workspace-server` installs ML packages (PyTorch, headroom-ai[ml], scikit-learn) into the `venv-analytics` conda env on first start
+- `ml-server` detects GPU_ENABLED=true and installs torch variant of headroom-ai[ml] in venv-system
+- ML packages persist in their respective volumes (`workspace-tools` for workspace-server, `ml-tools` for ml-server)
 
 ---
 
