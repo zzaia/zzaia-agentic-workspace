@@ -61,4 +61,7 @@ RUN chmod +x /entrypoint.sh
 
 EXPOSE 2222
 
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30m \
+    CMD bash -c "[ -f /opt/tools/.bootstrap/tools.ready ] && timeout 5 bash -c '</dev/tcp/localhost/2222' 2>/dev/null"
+
 ENTRYPOINT ["/entrypoint.sh"]

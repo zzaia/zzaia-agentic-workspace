@@ -31,4 +31,7 @@ RUN chmod +x /entrypoint.sh
 
 EXPOSE ${VSCODE_PORT}
 
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=30m \
+    CMD curl -sf http://localhost:${VSCODE_PORT:-8080}/ >/dev/null
+
 ENTRYPOINT ["/entrypoint.sh"]

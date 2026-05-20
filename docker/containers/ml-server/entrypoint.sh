@@ -54,11 +54,16 @@ install_venv_system() {
         return 1
     fi
 
-    log_info "Creating venv-system conda environment with python=${py_ver}..."
-    "$conda" create -n venv-system "python=${py_ver}" -y 2>/dev/null || true
+    if ! "$conda" env list 2>/dev/null | grep -q "^venv-system"; then
+        log_info "Creating venv-system conda environment with python=${py_ver}..."
+        "$conda" create -n venv-system "python=${py_ver}" pip -y \
+            || { log_error "conda create venv-system failed"; return 1; }
+    else
+        log_info "venv-system conda environment already exists"
+    fi
 
     if [ ! -x "$pip" ]; then
-        log_warn "pip not found in venv-system"
+        log_error "pip not found in venv-system after environment creation"
         return 1
     fi
 

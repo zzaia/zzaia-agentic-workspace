@@ -13,8 +13,10 @@ COPY docker/containers/ml-server/entrypoint.sh /entrypoint.sh
 COPY docker/containers/ml-server/scripts/versions.env /opt/scripts/versions.env
 RUN chmod +x /entrypoint.sh
 
-WORKDIR /workspace
+WORKDIR /opt/ml-tools
 USER headroom
+
+EXPOSE 8787
 
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=15m \
     CMD curl -sf http://localhost:8787/health || exit 1

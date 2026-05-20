@@ -90,15 +90,16 @@ setup_docker_socket() {
 
 # ── Sudo configuration ────────────────────────────────────────────────────────
 setup_sudo() {
-    log_info "Configuring passwordless sudo..."
     rm -f /etc/sudoers.d/user-admin
-    echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user-admin
-    chmod 440 /etc/sudoers.d/user-admin
-    
     if [ -n "${ADMIN_PASSWORD:-}" ]; then
+        log_info "Configuring password-protected sudo (ADMIN_PASSWORD set)..."
+        echo "user ALL=(ALL) ALL" > /etc/sudoers.d/user-admin
         echo "user:${ADMIN_PASSWORD}" | chpasswd
+    else
+        log_info "Configuring passwordless sudo (no ADMIN_PASSWORD)..."
+        echo "user ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/user-admin
     fi
-    
+    chmod 440 /etc/sudoers.d/user-admin
     log_success "Sudo configured"
 }
 

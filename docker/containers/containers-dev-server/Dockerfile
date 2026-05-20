@@ -17,4 +17,7 @@ COPY docker/containers/containers-dev-server/devcontainer.json /opt/zzaia/devcon
 COPY docker/containers/containers-dev-server/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30m \
+    CMD [ -f /opt/tools/.bootstrap/tools.ready ]
+
 ENTRYPOINT ["/entrypoint.sh"]

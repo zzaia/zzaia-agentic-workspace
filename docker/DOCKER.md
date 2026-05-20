@@ -234,7 +234,7 @@ With `GPU_ENABLED=true`:
 | MCP ports | Internal only — not exposed to host |
 | Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
 | Root login | Disabled |
-| Sudo access | Disabled by default; set `ADMIN_PASSWORD` to enable password-based sudo |
+| Sudo access | Passwordless by default; set `ADMIN_PASSWORD` to require password for sudo (restricts installs) |
 
 ---
 
