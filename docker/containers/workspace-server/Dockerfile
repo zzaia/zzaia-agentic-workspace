@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANGUAGE=en_US:en \
     LC_ALL=en_US.UTF-8 \
     BROWSER=/usr/local/bin/browser-print \
-    PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH \
+    PATH=/opt/tools/miniforge3/envs/venv-development/bin:/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH \
     NVM_DIR=/opt/tools/.nvm \
     DOTNET_ROOT=/opt/tools/.dotnet
 

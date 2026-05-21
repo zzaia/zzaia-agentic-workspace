@@ -31,7 +31,7 @@ configure_path() {
     local path_block='# zzaia-path-begin
 export NVM_DIR="${INSTALL_PREFIX}/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
+export PATH="/opt/ml-tools/envs/venv-development/bin:${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
 # zzaia-path-end'
 
     for f in "$HOME/.bashrc" "$HOME/.profile"; do
@@ -42,10 +42,9 @@ export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${IN
         printf '\n%s\n' "$path_block" >> "$f"
     done
 
-    # Also update the current shell so verify_tools() can find installed binaries
     export NVM_DIR="${INSTALL_PREFIX}/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    export PATH="${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
+    export PATH="/opt/ml-tools/envs/venv-development/bin:${INSTALL_PREFIX}/.local/bin:${INSTALL_PREFIX}/.npm-global/bin:${INSTALL_PREFIX}/.dotnet:${INSTALL_PREFIX}/.dotnet/tools:${INSTALL_PREFIX}/miniforge3/bin:$PATH"
 
     log_success "PATH configured"
 }
@@ -128,12 +127,12 @@ main() {
 
     # Install all tools in order
     python::install_miniforge
+    python::install_cuda
     node::install
     node::install_npm_globals
     dotnet::install
     dotnet::install_tools
     python::install_packages
-    python::install_conda_envs
     python::install_venv_development
     cli::install_gh
     cli::install_k6
@@ -159,23 +158,6 @@ main() {
     if [ "$stored_dev_hash" != "$dev_hash" ]; then
         log_info "venv-development marker updated"
         echo "$dev_hash" > "$DEV_MARKER"
-    fi
-
-    # ── GPU packages (separate marker — does not invalidate base tools) ──────────
-    GPU_MARKER="$INSTALL_PREFIX/.bootstrap/gpu-packages.ready"
-    if [ "${GPU_ENABLED:-false}" = "true" ]; then
-        local gpu_hash
-        gpu_hash=$(sha256sum "$SCRIPT_DIR/packages/python.sh" | awk '{print $1}')
-        local stored_gpu_hash
-        stored_gpu_hash=$(cat "$GPU_MARKER" 2>/dev/null || echo "")
-        if [ "$stored_gpu_hash" != "$gpu_hash" ]; then
-            python::install_gpu_packages
-            python::verify_gpu
-            echo "$gpu_hash" > "$GPU_MARKER"
-            log_success "GPU packages bootstrapped"
-        else
-            log_info "GPU packages already installed (hash match)"
-        fi
     fi
 
     # Mark bootstrap as complete

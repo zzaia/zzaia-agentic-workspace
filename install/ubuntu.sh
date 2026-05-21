@@ -135,14 +135,17 @@ PROFILE_FLAGS=""
 if [ -n "${DEPLOY_PROFILES:-}" ]; then
     for p in $DEPLOY_PROFILES; do
         case "$p" in
-            vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
-            *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer" ;;
+            vscode|devcontainer|jupyter) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+            *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer, jupyter" ;;
         esac
     done
 fi
 
+GPU_COMPOSE_FLAG=""
+[ "${GPU_ENABLED:-false}" = "true" ] && GPU_COMPOSE_FLAG="-f $SCRIPT_DIR/../docker/docker-compose.gpu.yml"
+
 # shellcheck disable=SC2086
-docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
+docker compose -f "$SCRIPT_DIR/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
 
 echo ""
 echo "✓ Workspace started. Access:"

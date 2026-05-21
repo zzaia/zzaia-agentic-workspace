@@ -73,8 +73,8 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
 | `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
-| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-server, containers-dev-server) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
-| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-server, containers-dev-server :ro) | Runtime tools: Node.js, .NET, Python, CLIs, ML packages (when GPU_ENABLED=true) | Delete to force tool re-install |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
+| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
 | `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
 
 ### Home volume seeding
@@ -83,7 +83,7 @@ On the **first start with an empty home volume**, Docker copies the image's `/ho
 
 - Home configs, SSH configs, Claude auth tokens, and workspace seeds are copied once on first start
 - `workspace-server` owns and manages the shared `workspace-home` volume — it starts first and runs initialization
-- `vscode-server` and `containers-dev-server` depend on `workspace-server: condition: service_healthy` and mount the same shared home
+- `vscode-sidecar`, `containers-dev-sidecar`, and `jupyter-sidecar` depend on `workspace-server: condition: service_healthy` and mount the same shared home
 - Home contents persist across restarts and container recreation
 
 ### Tools volume installation
@@ -99,7 +99,7 @@ Tools install to `/opt/tools` in the separate `workspace-tools` volume:
 ML-server runtime installs to `/opt/ml-tools` in the separate `ml-tools` volume:
 
 - `ml-server` entrypoint bootstraps miniforge3 and venv-system conda env with headroom-ai, fastapi, uvicorn
-- `ml-tools` volume is read-write for `ml-server` only — owned by headroom user (uid=1001)
+- `ml-tools` volume is read-write for `ml-server` only — owned by headroom user (uid=1001), no shared conda envs
 - Workspace home (`workspace-home`) is mounted read-only for headroom code-graph/memory access
 - `ml-server` does NOT mount `workspace-tools` — independent sealed environment
 
@@ -168,7 +168,7 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | Runtimes | Node.js 24, Python 3.12, .NET 10, Go, Rust, Java |
 | CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid, Azure CLI |
 | Editor | code-server + Claude Code extension — browser on port 8080 (vscode profile) |
-| Data science | Miniforge3, conda envs (venv-analytics for GPU ML, venv-development for Jupyter) |
+| Data science | Miniforge3 (in workspace-tools), venv-development, venv-analytics |
 | Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams, azure-cli |
 | Development | venv-development: FastAPI, Uvicorn, Pydantic, HTTPx, SQLAlchemy, Alembic, python-jose, passlib, python-multipart, aiofiles, typer, loguru, pytest |
 | ML packages *(GPU_ENABLED=true)* | venv-analytics: PyTorch, headroom-ai[ml], scikit-learn |
@@ -208,16 +208,69 @@ sudo systemctl restart docker
 
 ### Enabling GPU in the workspace
 
-Set `GPU_ENABLED=true` in your Bitwarden vault (item: `gpu-enabled`) or pass it directly:
+Use the docker-compose GPU override file to enable GPU support. GPU is completely optional — the primary compose file has zero CUDA footprint on CPU-only deployments.
+
+**Two-file compose pattern:**
 
 ```bash
-GPU_ENABLED=true docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" up -d
+# CPU-only (no GPU packages, no CUDA footprint)
+docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" up -d
+
+# With GPU support (opt-in via override file)
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml -p "$WORKSPACE_NAME" up -d
 ```
 
-With `GPU_ENABLED=true`:
-- `workspace-server` installs ML packages (PyTorch, headroom-ai[ml], scikit-learn) into the `venv-analytics` conda env on first start
-- `ml-server` detects GPU_ENABLED=true and installs torch variant of headroom-ai[ml] in venv-system
-- ML packages persist in their respective volumes (`workspace-tools` for workspace-server, `ml-tools` for ml-server)
+### What GPU mode does
+
+#### Shared Conda CUDA (workspace-server group)
+
+Instead of each container needing its own CUDA base image, CUDA libraries are installed once in the shared `workspace-tools` volume:
+
+- `workspace-server` installs `cuda-runtime` and `cuda-nvcc` via conda into `/opt/tools/miniforge3/` when `GPU_ENABLED=true`
+- All sidecars (vscode-sidecar, containers-dev-sidecar, jupyter-sidecar) mount `/opt/tools` and inherit the CUDA installation via existing PATH/LD_LIBRARY_PATH
+- NVIDIA Container Toolkit injects `libcuda.so.1` (driver stub) per-container when GPU devices are bound in compose
+- All containers with GPU_ENABLED=true reserve all available NVIDIA GPUs
+
+#### Custom DinD Image with NVIDIA Container Toolkit
+
+The workspace uses a custom Docker-in-Docker image (`containers/dind/`) that extends the official `docker:28.1.1-dind` with conditional NVIDIA Container Toolkit support:
+
+**How it works:**
+
+1. **Image:** Custom Dockerfile in `containers/dind/Dockerfile` extends `docker:28.1.1-dind` (Alpine)
+2. **Entrypoint:** Custom `entrypoint.sh` checks `GPU_ENABLED` environment variable at container startup
+3. **GPU mode:** When `GPU_ENABLED=true`:
+   - Entrypoint downloads and installs NVIDIA Container Toolkit binaries for Alpine (x86_64/arm64)
+   - Docker daemon starts with toolkit ready
+   - Inner containers can use `docker run --gpus all` to access GPUs
+4. **CPU mode:** When `GPU_ENABLED=false`:
+   - No toolkit installed, zero NVIDIA overhead
+   - Standard Docker daemon
+
+**Compose integration:**
+
+- **Base:** `docker-compose.yml` builds and uses `zzaia-dind-nvidia:latest` image
+- **GPU override:** `docker-compose.gpu.yml` sets `GPU_ENABLED=true` and reserves GPU devices for dind service
+- **Build:** `docker compose build` automatically builds the custom image if not present
+
+**GPU DinD support in workspace-server:**
+
+When `GPU_ENABLED=true`, workspace-server entrypoint also:
+
+1. Installs NVIDIA Container Toolkit inside workspace-server (redundant but ensures availability)
+2. Generates CDI spec: `nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`
+3. Configures inner Docker daemon with nvidia runtime: `nvidia-ctk runtime configure --runtime=docker`
+4. This runs in entrypoint BEFORE sshd starts
+
+Users can then start inner containers with `docker run --privileged` or `--gpus all` to access GPU.
+
+#### ML packages
+
+- `ml-server` uses `ARG GPU_ENABLED=true` to select `nvidia/cuda:12.1.1-runtime-ubuntu24.04` base image (isolated from shared tools)
+- `ml-server` installs PyTorch from CUDA 12.1 index (`https://download.pytorch.org/whl/cu121`) into its own `ml-tools` volume
+- ML packages persist in their respective volumes (`ml-tools` for ml-server, `workspace-tools` for all workspace containers)
+
+**Important:** ECI (Enhanced Container Isolation) must be disabled for DinD GPU support to work. Docker Desktop VM isolation prevents CDI device injection into inner containers.
 
 ---
 
@@ -242,9 +295,23 @@ With `GPU_ENABLED=true`:
 
 ```
 docker/
-├── Dockerfile          — Image definition (Ubuntu 24.04)
-├── entrypoint.sh       — workspace-server entrypoint: setup-user → runtime-install → setup-credentials → sshd
-├── sshd_config         — Port 2222, key-auth only
-├── docker-compose.yml  — workspace-server + vscode-server + containers-dev-server + MCP sidecars
-└── DOCKER.md           — This file
+├── Dockerfile               — Image definition (Ubuntu 24.04)
+├── entrypoint.sh           — workspace-server entrypoint: setup-user → runtime-install → setup-credentials → sshd
+├── sshd_config             — Port 2222, key-auth only
+├── docker-compose.yml      — workspace-server + vscode-server + containers-dev-server + dind + MCP sidecars
+├── docker-compose.gpu.yml  — GPU override for all services + dind
+├── DOCKER.md               — This file
+└── containers/
+    ├── workspace-server/   — Workspace container definition
+    ├── vscode-sidecar/     — VS Code editor sidecar
+    ├── ml-server/          — ML inference server (headroom-ai, FastAPI)
+    ├── jupyter-sidecar/    — Jupyter notebook server
+    ├── containers-dev-sidecar/  — Dev containers CLI host
+    ├── dind/               — Custom Docker-in-Docker with NVIDIA Container Toolkit support
+    │   ├── Dockerfile      — DinD image extending docker:28.1.1-dind with toolkit installation
+    │   ├── entrypoint.sh   — Custom entrypoint: conditionally installs NVIDIA toolkit if GPU_ENABLED=true
+    │   ├── test-build.sh   — Build verification script
+    │   └── README.md       — DinD image documentation
+    ├── mcp-**/             — MCP server sidecar containers (tavily, github, postman, etc.)
+    └── database-**/        — Database containers (neo4j, qdrant)
 ```

@@ -1,4 +1,9 @@
-FROM ubuntu:24.04
+ARG GPU_ENABLED=false
+
+FROM ubuntu:24.04 AS base-false
+FROM nvidia/cuda:12.1.1-runtime-ubuntu24.04 AS base-true
+
+FROM base-${GPU_ENABLED} AS final
 
 RUN apt-get update && apt-get install -y \
     curl bzip2 ca-certificates \

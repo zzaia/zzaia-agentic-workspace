@@ -62,6 +62,7 @@ try {
     $DOCKER_USERNAME = Get-VaultSecret $items "docker-username"
     $DOCKER_PASSWORD = Get-VaultSecret $items "docker-password"
     $DEPLOY_PROFILES = Get-VaultSecret $items "server-profiles"
+    $GPU_ENABLED = Get-VaultSecret $items "gpu-enabled"
 
     Remove-Variable items
 
@@ -111,6 +112,8 @@ try {
     $env:CLOUD_ML_REGION = ""
     $env:CLAUDE_CODE_USE_FOUNDRY = ""
     $env:AZURE_FOUNDRY_BASE_URL = ""
+    $GPU_ENABLED = if ([string]::IsNullOrWhiteSpace($GPU_ENABLED)) { "false" } else { $GPU_ENABLED }
+    $env:GPU_ENABLED = $GPU_ENABLED
 
     if ($DOCKER_REGISTRY -and $DOCKER_USERNAME -and $DOCKER_PASSWORD) {
         $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME --password-stdin
@@ -120,19 +123,25 @@ try {
     $profileArgs = @()
     if (-not [string]::IsNullOrWhiteSpace($DEPLOY_PROFILES)) {
         foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
-            if ($p -match '^(vscode|devcontainer)$') {
+            if ($p -match '^(vscode|devcontainer|jupyter)$') {
                 $profileArgs += '--profile'
                 $profileArgs += $p
             } else {
-                Write-Warning "Unknown server profile '$p' — valid: vscode, devcontainer"
+                Write-Warning "Unknown server profile '$p' — valid: vscode, devcontainer, jupyter"
             }
         }
+    }
+
+    $gpuComposeArgs = @()
+    if ($GPU_ENABLED -eq "true") {
+        $gpuComposeArgs = @('-f', "$PSScriptRoot\..\docker\docker-compose.gpu.yml")
     }
 
     Write-Host ""
     Write-Host "Starting workspace with docker compose..."
     docker compose `
         -f "$PSScriptRoot\..\docker\docker-compose.yml" `
+        @gpuComposeArgs `
         -p $env:WORKSPACE_NAME `
         @profileArgs `
         up -d
@@ -153,7 +162,7 @@ finally {
       'OPENAI_API_KEY','GEMINI_API_KEY','GITHUB_PERSONAL_ACCESS_TOKEN',
       'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
       'POSTMAN_API_KEY','NEW_RELIC_API_KEY','DOCKER_REGISTRY','DOCKER_USERNAME','DOCKER_PASSWORD',
-      'DEPLOY_PROFILES',
+      'DEPLOY_PROFILES','GPU_ENABLED',
       'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
       'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
       'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL') | ForEach-Object {

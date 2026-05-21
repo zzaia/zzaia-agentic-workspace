@@ -1,0 +1,72 @@
+# docker-compose.gpu.yml — GPU override: merge with docker-compose.yml to enable GPU support
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml -p "$WORKSPACE_NAME" up -d
+# Requirements: Native Docker Engine + NVIDIA Container Toolkit on host. ECI must be disabled for DinD GPU.
+
+services:
+  dind-server:
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  ml-server:
+    build:
+      args:
+        GPU_ENABLED: "true"
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  workspace-server:
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vscode-sidecar:
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  containers-dev-sidecar:
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  jupyter-sidecar:
+    environment:
+      - GPU_ENABLED=true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

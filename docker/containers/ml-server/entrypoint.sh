@@ -84,6 +84,7 @@ install_venv_system() {
         "$pip" install \
             "$torch_spec" torchvision torchaudio \
             "$headroom_spec" \
+            --index-url https://download.pytorch.org/whl/cu121 \
             --quiet || log_warn "GPU packages failed to install; continuing"
 
         log_success "GPU packages installed (torch, headroom-ai[ml])"

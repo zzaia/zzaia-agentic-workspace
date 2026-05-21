@@ -1,15 +1,21 @@
 # ZZAIA Workspace — Local Docker deployment
 # workspace-server is the authoritative container: tools, SSH, shared home.
-# vscode-server and containers-dev-server depend on workspace-server being healthy.
+# vscode-sidecar, containers-dev-sidecar, and jupyter-sidecar depend on workspace-server being healthy.
 name: ${WORKSPACE_NAME:-zzaia}
 
 services:
-  dind:
-    image: docker:28.1.1-dind
+  dind-server:
+    build:
+      context: containers/dind-server
+      dockerfile: Dockerfile
+      labels:
+        description: "Custom Docker-in-Docker with optional NVIDIA Container Toolkit"
+    image: zzaia-dind-nvidia:latest
     runtime: runc
     privileged: true
     environment:
       - DOCKER_TLS_CERTDIR=
+      - GPU_ENABLED=${GPU_ENABLED:-false}
     volumes:
       - dind-storage:/var/lib/docker
     networks:
@@ -41,8 +47,7 @@ services:
       - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - SSH_PORT=${SSH_PORT:-2222}
-      - VSCODE_PORT=${VSCODE_PORT:-8080}
-      - DOCKER_HOST=tcp://dind:2375
+      - DOCKER_HOST=tcp://dind-server:2375
       - GPU_ENABLED=${GPU_ENABLED:-false}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
@@ -90,7 +95,7 @@ services:
       retries: 3
       start_period: 30m
     depends_on:
-      dind:
+      dind-server:
         condition: service_healthy
       ml-server:
         condition: service_healthy
@@ -143,7 +148,7 @@ services:
       dockerfile: docker/containers/database-qdrant/Dockerfile
     image: zzaia-qdrant:v1.17.1
     volumes:
-      - headroom-qdrant:/qdrant/storage
+      - database-qdrant:/qdrant/storage
     networks:
       - mcp
     restart: unless-stopped
@@ -162,7 +167,7 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/${ADMIN_PASSWORD:-zzaia1234}
     volumes:
-      - headroom-neo4j:/data
+      - database-neo4j:/data
     tmpfs:
       - /logs
     networks:
@@ -296,13 +301,13 @@ services:
       retries: 5
       start_period: 60s
 
-  vscode-server:
+  vscode-sidecar:
     build:
       context: ..
-      dockerfile: docker/containers/vscode-server/Dockerfile
+      dockerfile: docker/containers/vscode-sidecar/Dockerfile
       args:
         VSCODE_PORT: ${VSCODE_PORT:-8080}
-    image: zzaia-vscode-server:latest
+    image: zzaia-vscode-sidecar:latest
     profiles: ["vscode"]
     user: root
     ports:
@@ -314,7 +319,7 @@ services:
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - VSCODE_PORT=${VSCODE_PORT:-8080}
-      - DOCKER_HOST=tcp://dind:2375
+      - DOCKER_HOST=tcp://dind-server:2375
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -355,18 +360,56 @@ services:
       workspace-server:
         condition: service_healthy
 
-  containers-dev-server:
+  jupyter-sidecar:
     build:
       context: ..
-      dockerfile: docker/containers/containers-dev-server/Dockerfile
-    image: zzaia-containers-dev-server:latest
+      dockerfile: docker/containers/jupyter-sidecar/Dockerfile
+      args:
+        JUPYTER_PORT: ${JUPYTER_PORT:-8888}
+    image: zzaia-jupyter-sidecar:latest
+    profiles: ["jupyter"]
+    ports:
+      - "127.0.0.1:${JUPYTER_PORT:-8888}:${JUPYTER_PORT:-8888}"
+    volumes:
+      - workspace-home:/home/user
+      - workspace-tools:/opt/tools
+    environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
+      - JUPYTER_PORT=${JUPYTER_PORT:-8888}
+      - GPU_ENABLED=${GPU_ENABLED:-false}
+      - INSTALL_PREFIX=/opt/tools
+    networks:
+      - mcp
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:${JUPYTER_PORT:-8888}/api >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30m
+    depends_on:
+      workspace-server:
+        condition: service_healthy
+
+  containers-dev-sidecar:
+    build:
+      context: ..
+      dockerfile: docker/containers/containers-dev-sidecar/Dockerfile
+    image: zzaia-containers-dev-sidecar:latest
     profiles: ["devcontainer"]
     volumes:
       - workspace-home:/home/user
       - workspace-tools:/opt/tools:ro
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
-      - DOCKER_HOST=tcp://dind:2375
+      - DOCKER_HOST=tcp://dind-server:2375
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -407,10 +450,10 @@ volumes:
     name: ${WORKSPACE_NAME:-zzaia}-tools
   ml-tools:
     name: ${WORKSPACE_NAME:-zzaia}-ml-tools
-  headroom-qdrant:
-    name: ${WORKSPACE_NAME:-zzaia}-headroom-qdrant
-  headroom-neo4j:
-    name: ${WORKSPACE_NAME:-zzaia}-headroom-neo4j
+  database-qdrant:
+    name: ${WORKSPACE_NAME:-zzaia}-database-qdrant
+  database-neo4j:
+    name: ${WORKSPACE_NAME:-zzaia}-database-neo4j
   dind-storage:
     name: ${WORKSPACE_NAME:-zzaia}-dind-storage
 
