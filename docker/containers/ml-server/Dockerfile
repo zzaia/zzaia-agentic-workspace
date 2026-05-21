@@ -1,7 +1,7 @@
 ARG GPU_ENABLED=false
 
 FROM ubuntu:24.04 AS base-false
-FROM nvidia/cuda:12.1.1-runtime-ubuntu24.04 AS base-true
+FROM nvidia/cuda:12.9.2-runtime-ubuntu24.04 AS base-true
 
 FROM base-${GPU_ENABLED} AS final
 
