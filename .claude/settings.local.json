@@ -40,19 +40,6 @@
       "SlashCommand(*)",
       "Bash(xargs sed:*)",
       "WebSearch"
-    ],
-    "deny": [
-      "Bash(curl *)",
-      "Bash(wget *)",
-      "Bash(echo $*)",
-      "Bash(env)",
-      "Bash(printenv *)",
-      "Bash(cat /etc/*)",
-      "Bash(sudo *)",
-      "Bash(git push --force *)",
-      "Bash(git push -f *)",
-      "Bash(kill *)",
-      "Bash(pkill *)"
     ]
   },
   "outputStyle": "agentic-concise",
