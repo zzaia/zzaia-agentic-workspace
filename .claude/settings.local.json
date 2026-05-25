@@ -44,9 +44,6 @@
     "deny": [
       "Bash(curl *)",
       "Bash(wget *)",
-      "Bash(rm -rf *)",
-      "Bash(rm -r *)",
-      "Bash(rm /*)",
       "Bash(echo $*)",
       "Bash(env)",
       "Bash(printenv *)",
@@ -61,6 +58,5 @@
   "outputStyle": "agentic-concise",
   "preferences": {
     "tmuxSplitPanes": true
-  },
-  "model": "sonnet"
+  }
 }
