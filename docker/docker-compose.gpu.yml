@@ -1,6 +1,14 @@
 # docker-compose.gpu.yml — GPU override: merge with docker-compose.yml to enable GPU support
 # Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml -p "$WORKSPACE_NAME" up -d
-# Requirements: Native Docker Engine + NVIDIA Container Toolkit on host. ECI must be disabled for DinD GPU.
+# Requirements:
+#   - Native Docker Engine (not ECI/Fargate) — DinD GPU requires privileged + direct device access
+#   - NVIDIA GPU driver installed on host
+#   - NVIDIA Container Toolkit installed: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+#     Install: distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+#              curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+#              curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+#              sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+#              sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
 
 services:
   dind-server:
