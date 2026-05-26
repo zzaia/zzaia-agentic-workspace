@@ -13,8 +13,8 @@ RUN apt-get update \
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 user
 
-COPY docker/containers/containers-dev-server/devcontainer.json /opt/zzaia/devcontainer.json
-COPY docker/containers/containers-dev-server/entrypoint.sh /entrypoint.sh
+COPY docker/containers/containers-dev-sidecar/devcontainer.json /opt/zzaia/devcontainer.json
+COPY docker/containers/containers-dev-sidecar/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=30m \
