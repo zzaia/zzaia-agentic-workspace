@@ -96,6 +96,9 @@ install_venv_system() {
 
         "$pip" install "$headroom_spec" --quiet || log_warn "headroom-ai[code] failed to install; continuing"
 
+        log_info "Installing onnxruntime for kompress ONNX CPU backend..."
+        "$pip" install "onnxruntime" --quiet || log_warn "onnxruntime failed to install; continuing"
+
         log_success "CPU packages installed (headroom-ai[code])"
     fi
 
@@ -144,6 +147,12 @@ main() {
     fi
 
     export PATH="$venv/bin:$PATH"
+
+    # Use ONNX CPU backend for kompress when GPU is not available
+    if [ "${GPU_ENABLED:-false}" != "true" ]; then
+        export HEADROOM_KOMPRESS_BACKEND="${HEADROOM_KOMPRESS_BACKEND:-onnx_cpu}"
+    fi
+
     log_info "Activating venv-system and starting headroom proxy..."
     exec "$venv/bin/headroom" proxy "$@"
 }

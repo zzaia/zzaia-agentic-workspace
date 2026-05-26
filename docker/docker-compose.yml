@@ -124,6 +124,7 @@ services:
       - NEO4J_PASSWORD=${ADMIN_PASSWORD:-}
       - PORT=8787
       - HEADROOM_TELEMETRY=off
+      - HEADROOM_MIN_TOKENS=1
     volumes:
       - workspace-home:/workspace:ro
       - ml-tools:/opt/ml-tools
