@@ -25,8 +25,8 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 user
 
-COPY docker/containers/vscode-server/entrypoint.sh /entrypoint.sh
-COPY docker/containers/vscode-server/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
+COPY docker/containers/vscode-sidecar/entrypoint.sh /entrypoint.sh
+COPY docker/containers/vscode-sidecar/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt
 RUN chmod +x /entrypoint.sh
 
 EXPOSE ${VSCODE_PORT}
