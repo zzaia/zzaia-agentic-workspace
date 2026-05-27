@@ -1,0 +1,9 @@
+---
+python_version: "3.12"
+headroom_ai_version: "0.22.2"
+fastapi_version: "0.136.1"
+uvicorn_version: "0.47.0"
+torch_version: "2.5.1"
+miniforge_version: "26.3.2-2"
+install_prefix: /opt/ml-tools
+gpu_enabled: "false"

@@ -19,8 +19,11 @@ COPY docker/containers/workspace-server/scripts /docker-scripts
 RUN bash /docker-scripts/build-install.sh && rm -rf /docker-scripts
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssh-server \
+    && apt-get install -y --no-install-recommends openssh-server python3-pip acl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Ansible for container initialization
+RUN pip3 install ansible-core --break-system-packages
 
 # Browser-print: prints OAuth URLs to terminal for headless auth
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
@@ -50,6 +53,12 @@ COPY --chown=user:user workspace/                      /opt/zzaia/home-seed/work
 USER root
 COPY docker/containers/workspace-server/scripts /usr/local/lib/zzaia/scripts
 RUN find /usr/local/lib/zzaia/scripts -name '*.sh' -exec chmod +x {} +
+
+# Copy Ansible playbooks
+COPY docker/containers/workspace-server/ansible /usr/local/lib/zzaia/ansible
+RUN find /usr/local/lib/zzaia/ansible -name '*.yml' -exec chmod 644 {} + \
+    && find /usr/local/lib/zzaia/ansible -name '*.ini' -exec chmod 644 {} + \
+    && find /usr/local/lib/zzaia/ansible -name '*.cfg' -exec chmod 644 {} +
 
 # SSH configuration
 COPY docker/sshd_config /etc/ssh/sshd_config.d/workspace.conf

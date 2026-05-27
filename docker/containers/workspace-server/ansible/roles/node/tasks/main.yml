@@ -1,0 +1,131 @@
+---
+# Node.js and npm global installation via nvm
+
+- name: Create NVM directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.nvm"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Install NVM
+  ansible.builtin.shell: |
+    curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh" | bash
+  args:
+    creates: "{{ install_prefix }}/.nvm/nvm.sh"
+  environment:
+    NVM_DIR: "{{ install_prefix }}/.nvm"
+  changed_when: false
+
+- name: Install Node.js
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ install_prefix }}/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+    if ! nvm ls "{{ node_version }}" 2>/dev/null | grep -q "v{{ node_version }}"; then
+        nvm install "{{ node_version }}"
+        nvm alias default "{{ node_version }}"
+    fi
+  args:
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ install_prefix }}/.nvm"
+  changed_when: false
+
+- name: Create node/npm symlinks in .local/bin
+  block:
+    - name: Find latest Node.js installation
+      ansible.builtin.find:
+        path: "{{ install_prefix }}/.nvm/versions/node"
+        patterns: "v*"
+        file_type: directory
+      register: node_dirs
+
+    - name: Set node directory
+      ansible.builtin.set_fact:
+        node_dir: "{{ node_dirs.files | sort(attribute='path', reverse=True) | first }}"
+      when: node_dirs.files | length > 0
+
+    - name: Create symlinks
+      ansible.builtin.file:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: user
+        group: user
+        state: link
+        force: yes
+      loop:
+        - { src: "{{ node_dir.path }}/bin/node", dest: "{{ install_prefix }}/.local/bin/node" }
+        - { src: "{{ node_dir.path }}/bin/npm", dest: "{{ install_prefix }}/.local/bin/npm" }
+      when: node_dir is defined
+
+- name: Clean partial Puppeteer cache to prevent install failures
+  ansible.builtin.file:
+    path: /home/user/.cache/puppeteer
+    state: absent
+  become: yes
+  become_user: user
+  changed_when: false
+
+- name: Install npm global packages
+  block:
+    - name: Create npm global directory
+      ansible.builtin.file:
+        path: "{{ install_prefix }}/.npm-global"
+        owner: user
+        group: user
+        mode: "0755"
+        state: directory
+
+    - name: Install Claude Code
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "@anthropic-ai/claude-code@{{ claude_code_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/claude"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false
+
+    - name: Install mermaid CLI
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "@mermaid-js/mermaid-cli@{{ mmdc_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/mmdc"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false
+
+    - name: Install Codex
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "@openai/codex@{{ codex_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/codex"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false
+
+    - name: Install Gemini CLI
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "@google/gemini-cli@{{ gemini_cli_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/gemini"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false

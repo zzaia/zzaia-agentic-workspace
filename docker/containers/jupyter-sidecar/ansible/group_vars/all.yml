@@ -1,0 +1,18 @@
+---
+python_version: "3.12"
+jupyterlab_version: "4.4.3"
+notebook_version: "7.4.3"
+ipykernel_version: "6.29.5"
+jupyter_kernel_gateway_version: "3.0.1"
+numpy_version: "2.2.6"
+pandas_version: "2.2.3"
+matplotlib_version: "3.10.3"
+scipy_version: "1.15.3"
+scikit_learn_version: "1.6.1"
+seaborn_version: "0.13.2"
+plotly_version: "6.1.2"
+ipywidgets_version: "8.1.7"
+headroom_ai_version: "0.22.2"
+torch_version: "2.5.1"
+install_prefix: /opt/tools
+gpu_enabled: "false"

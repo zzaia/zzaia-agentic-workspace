@@ -8,8 +8,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/tools/miniforge3/envs/venv-analytics/bin:/opt/tools/miniforge3/bin:/opt/tools/.local/bin:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl \
+        ca-certificates curl python3-pip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install ansible-core --break-system-packages
 
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
         > /usr/local/bin/browser-print \
@@ -21,6 +23,11 @@ RUN userdel -r ubuntu 2>/dev/null || true \
 COPY docker/containers/jupyter-sidecar/entrypoint.sh /entrypoint.sh
 COPY docker/containers/jupyter-sidecar/scripts/versions.env /opt/scripts/versions.env
 RUN chmod +x /entrypoint.sh
+
+COPY docker/containers/jupyter-sidecar/ansible /usr/local/lib/zzaia/ansible
+RUN find /usr/local/lib/zzaia/ansible -name '*.yml' -exec chmod 644 {} + \
+    && find /usr/local/lib/zzaia/ansible -name '*.ini' -exec chmod 644 {} + \
+    && find /usr/local/lib/zzaia/ansible -name '*.cfg' -exec chmod 644 {} +
 
 WORKDIR /home/user
 USER user

@@ -1,0 +1,22 @@
+---
+# VS Code CLI installation
+
+- name: Create .local/bin directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.local/bin"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Check if VS Code CLI is already installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.local/bin/code"
+  register: vscode_cli_stat
+
+- name: Install VS Code CLI
+  ansible.builtin.shell: |
+    curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C "{{ install_prefix }}/.local/bin"
+  args:
+    creates: "{{ install_prefix }}/.local/bin/code"
+  changed_when: false

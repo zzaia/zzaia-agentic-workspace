@@ -1,0 +1,36 @@
+---
+# System-level package installation (APT)
+
+- name: Install system APT packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - sudo
+      - unzip
+      - ca-certificates
+      - locales
+      - gpg
+      - gpg-agent
+      - libicu74
+      - plantuml
+      - tmux
+      - wget
+      - python3-pip
+      - acl
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  changed_when: false
+
+- name: Generate locale
+  ansible.builtin.command: locale-gen en_US.UTF-8
+  changed_when: false
+
+- name: Update locale
+  ansible.builtin.command: update-locale LANG=en_US.UTF-8
+  changed_when: false
+
+- name: Clean up APT cache
+  ansible.builtin.shell: rm -rf /var/lib/apt/lists/*
+  changed_when: false

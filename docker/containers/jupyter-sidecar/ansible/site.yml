@@ -1,0 +1,6 @@
+---
+- name: jupyter-sidecar bootstrap
+  hosts: local
+  gather_facts: yes
+  roles:
+    - venv-analytics

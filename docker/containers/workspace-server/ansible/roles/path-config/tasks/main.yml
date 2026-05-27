@@ -1,0 +1,57 @@
+---
+# PATH and aliases configuration
+
+- name: Configure PATH in shell profiles
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    block: |
+      export NVM_DIR="{{ install_prefix }}/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH"
+    marker: "# {mark} ZZAIA PATH"
+    create: yes
+    owner: user
+    group: user
+    mode: "0644"
+  loop:
+    - /home/user/.bashrc
+    - /home/user/.profile
+
+- name: Configure aliases in shell profiles
+  ansible.builtin.blockinfile:
+    path: "{{ item }}"
+    block: |
+      alias claude="claude --dangerously-skip-permissions"
+      alias codex="codex --dangerously-bypass-approvals-and-sandbox"
+      alias gemini="gemini --yolo"
+      alias copilot="copilot --yolo"
+    marker: "# {mark} ZZAIA ALIASES"
+    create: yes
+    owner: user
+    group: user
+    mode: "0644"
+  loop:
+    - /home/user/.bashrc
+    - /home/user/.profile
+
+- name: Initialize RTK hooks
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ install_prefix }}/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH"
+
+    if ! command -v rtk &>/dev/null; then
+        exit 0
+    fi
+
+    rtk init -g --agent claude --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --gemini --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --codex 2>&1 | sed 's/^/  /'
+    rtk init -g --copilot --auto-patch 2>&1 | sed 's/^/  /'
+  args:
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ install_prefix }}/.nvm"
+    PATH: "{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+    HOME: /home/user
+  changed_when: false

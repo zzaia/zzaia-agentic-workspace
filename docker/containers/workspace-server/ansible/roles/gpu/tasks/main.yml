@@ -1,0 +1,60 @@
+---
+# GPU support setup (NVIDIA Container Toolkit)
+
+- name: Skip GPU setup if disabled
+  meta: end_play
+  when: not (gpu_enabled | bool)
+
+- name: Check if nvidia-ctk is installed
+  ansible.builtin.command: command -v nvidia-ctk
+  register: nvidia_ctk_check
+  failed_when: false
+  changed_when: false
+
+- name: Add NVIDIA repository
+  block:
+    - name: Download NVIDIA GPG key
+      ansible.builtin.shell: |
+        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+            | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+      changed_when: false
+
+    - name: Add NVIDIA repository to sources
+      ansible.builtin.shell: |
+        curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+            | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+            | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      changed_when: false
+
+    - name: Install NVIDIA Container Toolkit
+      ansible.builtin.apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: yes
+      ignore_errors: yes
+
+  when: nvidia_ctk_check.rc != 0
+
+- name: Generate CDI spec
+  block:
+    - name: Check if CDI spec exists
+      ansible.builtin.stat:
+        path: /etc/cdi/nvidia.yaml
+      register: cdi_spec_stat
+
+    - name: Create /etc/cdi directory
+      ansible.builtin.file:
+        path: /etc/cdi
+        state: directory
+        mode: "0755"
+
+    - name: Generate CDI spec for GPU devices
+      ansible.builtin.shell: nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+      when: not cdi_spec_stat.stat.exists
+      ignore_errors: yes
+      changed_when: false
+
+- name: Configure Docker runtime with nvidia
+  ansible.builtin.shell: nvidia-ctk runtime configure --runtime=docker
+  ignore_errors: yes
+  changed_when: false

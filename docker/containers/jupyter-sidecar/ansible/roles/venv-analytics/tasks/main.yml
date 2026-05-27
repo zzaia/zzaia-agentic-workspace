@@ -1,0 +1,55 @@
+---
+- name: Create venv-analytics conda environment
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/bin/conda create -n venv-analytics python={{ python_version }} pip -y"
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-analytics/bin/python"
+
+- name: Upgrade pip
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/envs/venv-analytics/bin/pip install --upgrade pip --quiet"
+  changed_when: false
+
+- name: Install Jupyter packages
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/pip install
+      jupyterlab=={{ jupyterlab_version }}
+      notebook=={{ notebook_version }}
+      ipykernel=={{ ipykernel_version }}
+      jupyter-kernel-gateway=={{ jupyter_kernel_gateway_version }}
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-analytics/bin/jupyter"
+
+- name: Install data science packages
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/pip install
+      numpy=={{ numpy_version }}
+      pandas=={{ pandas_version }}
+      matplotlib=={{ matplotlib_version }}
+      scipy=={{ scipy_version }}
+      scikit-learn=={{ scikit_learn_version }}
+      seaborn=={{ seaborn_version }}
+      plotly=={{ plotly_version }}
+      ipywidgets=={{ ipywidgets_version }}
+      nbformat
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-analytics/lib/python{{ python_version }}/site-packages/numpy/__init__.py"
+
+- name: Register ipykernel
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/python -m ipykernel install
+      --user --name venv-analytics --display-name "Python (venv-analytics)"
+    creates: "{{ ansible_env.HOME }}/.local/share/jupyter/kernels/venv-analytics/kernel.json"
+
+- name: Install torch (GPU mode)
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/pip install
+      torch=={{ torch_version }} torchvision torchaudio
+      headroom-ai[ml]=={{ headroom_ai_version }}
+      --index-url https://download.pytorch.org/whl/cu121
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-analytics/lib/python{{ python_version }}/site-packages/torch/__init__.py"
+  when: gpu_enabled | string == 'true'

@@ -7,4 +7,4 @@ if [ -z "${POSTMAN_API_KEY:-}" ]; then
   while :; do sleep 3600; done
 fi
 
-exec npx -y supergateway@latest --port 3003 --outputTransport streamableHttp --stdio "npx -y @postman/postman-mcp-server --minimal --region us"
+exec supergateway --port 3003 --outputTransport streamableHttp --stdio "npx -y @postman/postman-mcp-server --minimal --region us"

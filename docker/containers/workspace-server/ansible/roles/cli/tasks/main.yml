@@ -1,0 +1,166 @@
+---
+# Command-line tool installation (gh, k6, d2, dapr, rtk, docker, azure-cli, tectonic)
+
+- name: Create .local/bin directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.local/bin"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Install GitHub CLI
+  block:
+    - name: Check if gh is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/gh"
+      register: gh_stat
+
+    - name: Download and install gh
+      ansible.builtin.shell: |
+        gh_url="https://github.com/cli/cli/releases/download/v{{ gh_version }}/gh_{{ gh_version }}_linux_amd64.tar.gz"
+        curl -fsSL "$gh_url" | tar xz -C "{{ install_prefix }}/.local/bin" "gh_{{ gh_version }}_linux_amd64/bin/gh" --strip-components 2
+        chmod +x "{{ install_prefix }}/.local/bin/gh"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/gh"
+      when: not gh_stat.stat.exists
+      changed_when: false
+
+- name: Install k6
+  block:
+    - name: Check if k6 is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/k6"
+      register: k6_stat
+
+    - name: Download and install k6
+      ansible.builtin.shell: |
+        k6_url="https://github.com/grafana/k6/releases/download/v{{ k6_version }}/k6-v{{ k6_version }}-linux-amd64.tar.gz"
+        curl -fsSL "$k6_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 1 "k6-v{{ k6_version }}-linux-amd64/k6" || true
+        [ -f "{{ install_prefix }}/.local/bin/k6" ] && chmod +x "{{ install_prefix }}/.local/bin/k6"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/k6"
+      when: not k6_stat.stat.exists
+      changed_when: false
+
+- name: Install D2
+  block:
+    - name: Check if d2 is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/d2"
+      register: d2_stat
+
+    - name: Download and install d2
+      ansible.builtin.shell: |
+        d2_url="https://github.com/terrastruct/d2/releases/download/v{{ d2_version }}/d2-v{{ d2_version }}-linux-amd64.tar.gz"
+        curl -fsSL "$d2_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 2 "d2-v{{ d2_version }}/bin/d2" || true
+        [ -f "{{ install_prefix }}/.local/bin/d2" ] && chmod +x "{{ install_prefix }}/.local/bin/d2"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/d2"
+      when: not d2_stat.stat.exists
+      changed_when: false
+
+- name: Install Dapr
+  block:
+    - name: Check if dapr is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/dapr"
+      register: dapr_stat
+
+    - name: Download and install dapr
+      ansible.builtin.shell: |
+        curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh \
+            | env DAPR_INSTALL_DIR="{{ install_prefix }}/.local/bin" DAPR_RELEASE_TAG="v{{ dapr_version }}" bash \
+            || true
+      args:
+        creates: "{{ install_prefix }}/.local/bin/dapr"
+      when: not dapr_stat.stat.exists
+      changed_when: false
+
+- name: Install RTK
+  block:
+    - name: Check if rtk is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/rtk"
+      register: rtk_stat
+
+    - name: Download and install rtk
+      ansible.builtin.shell: |
+        rtk_url="https://github.com/rtk-ai/rtk/releases/download/v{{ rtk_version }}/rtk-x86_64-unknown-linux-musl.tar.gz"
+        curl -fsSL "$rtk_url" | tar xz -C "{{ install_prefix }}/.local/bin" rtk || true
+        [ -f "{{ install_prefix }}/.local/bin/rtk" ] && chmod +x "{{ install_prefix }}/.local/bin/rtk"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/rtk"
+      when: not rtk_stat.stat.exists
+      changed_when: false
+
+- name: Install Docker CLI
+  block:
+    - name: Check if docker is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/docker"
+      register: docker_stat
+
+    - name: Create Docker directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: user
+        group: user
+        mode: "0755"
+        state: directory
+      loop:
+        - "{{ install_prefix }}/.local/bin"
+        - "{{ install_prefix }}/.local/docker/cli-plugins"
+
+    - name: Download and install docker
+      ansible.builtin.shell: |
+        docker_url="https://download.docker.com/linux/static/stable/x86_64/docker-{{ docker_version }}.tgz"
+        curl -fsSL "$docker_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 1 docker/docker 2>/dev/null || true
+        [ -f "{{ install_prefix }}/.local/bin/docker" ] && chmod +x "{{ install_prefix }}/.local/bin/docker"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/docker"
+      when: not docker_stat.stat.exists
+      changed_when: false
+
+    - name: Install docker-buildx
+      ansible.builtin.shell: |
+        curl -fsSL "https://github.com/docker/buildx/releases/download/v{{ docker_buildx_version }}/buildx-v{{ docker_buildx_version }}.linux-amd64" \
+            -o "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" 2>/dev/null || true
+        [ -f "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" ] && \
+            chmod +x "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" || true
+      changed_when: false
+      failed_when: false
+
+- name: Install Azure CLI
+  ansible.builtin.shell: |
+    export PATH="{{ install_prefix }}/miniforge3/bin:$PATH"
+    {{ install_prefix }}/miniforge3/bin/pip install azure-cli --quiet 2>/dev/null || true
+  environment:
+    PATH: "{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+  changed_when: false
+
+- name: Install Tectonic
+  block:
+    - name: Check if tectonic is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.local/bin/tectonic"
+      register: tectonic_stat
+
+    - name: Get latest Tectonic version
+      ansible.builtin.shell: |
+        curl -fsSL https://api.github.com/repos/tectonic-typesetting/tectonic/releases/latest \
+            | grep '"tag_name"' | sed 's/.*"tectonic@//;s/".*//';
+      register: tectonic_version_result
+      changed_when: false
+
+    - name: Download and install tectonic
+      ansible.builtin.shell: |
+        tectonic_url="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40{{ tectonic_version_result.stdout }}/tectonic-{{ tectonic_version_result.stdout }}-x86_64-unknown-linux-musl.tar.gz"
+        curl -fsSL "$tectonic_url" | tar xz -C "{{ install_prefix }}/.local/bin" tectonic || true
+        [ -f "{{ install_prefix }}/.local/bin/tectonic" ] && chmod +x "{{ install_prefix }}/.local/bin/tectonic"
+      args:
+        creates: "{{ install_prefix }}/.local/bin/tectonic"
+      when:
+        - not tectonic_stat.stat.exists
+        - tectonic_version_result.stdout | length > 0
+      changed_when: false

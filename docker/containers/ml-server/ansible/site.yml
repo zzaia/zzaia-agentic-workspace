@@ -1,0 +1,7 @@
+---
+- name: ml-server bootstrap
+  hosts: local
+  gather_facts: no
+  roles:
+    - miniforge
+    - venv-system

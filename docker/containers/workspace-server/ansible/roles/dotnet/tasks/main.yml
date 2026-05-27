@@ -1,0 +1,56 @@
+---
+# .NET SDK and tools installation
+
+- name: Create .dotnet directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.dotnet"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Install .NET SDK
+  ansible.builtin.shell: |
+    curl -fsSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin \
+        --channel "{{ dotnet_version }}.0" \
+        --install-dir "{{ install_prefix }}/.dotnet"
+  args:
+    creates: "{{ install_prefix }}/.dotnet/dotnet"
+  changed_when: false
+
+- name: Install Aspire CLI
+  block:
+    - name: Check if Aspire is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.aspire/bin/aspire"
+      register: aspire_stat
+
+    - name: Install Aspire
+      ansible.builtin.shell: curl -sSL https://aspire.dev/install.sh | bash
+      environment:
+        INSTALL_DIR: "{{ install_prefix }}/.aspire"
+      when: not aspire_stat.stat.exists
+      changed_when: false
+
+    - name: Create Aspire symlink
+      ansible.builtin.file:
+        src: "{{ install_prefix }}/.aspire/bin/aspire"
+        dest: "{{ install_prefix }}/.local/bin/aspire"
+        owner: user
+        group: user
+        state: link
+        force: yes
+        follow: no
+      when: aspire_stat.stat.exists or true
+
+- name: Install aspirate tool
+  ansible.builtin.shell: |
+    export DOTNET_ROOT="{{ install_prefix }}/.dotnet"
+    export PATH="{{ install_prefix }}/.dotnet:$PATH"
+    "{{ install_prefix }}/.dotnet/dotnet" tool install -g aspirate 2>/dev/null \
+        || "{{ install_prefix }}/.dotnet/dotnet" tool update -g aspirate 2>/dev/null \
+        || true
+  environment:
+    DOTNET_ROOT: "{{ install_prefix }}/.dotnet"
+    PATH: "{{ install_prefix }}/.dotnet:{{ ansible_env.PATH }}"
+  changed_when: false

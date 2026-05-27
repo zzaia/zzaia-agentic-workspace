@@ -1,0 +1,111 @@
+---
+# Miniforge (conda) and Python package installation
+
+- name: Install Miniforge
+  block:
+    - name: Check if Miniforge is installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/miniforge3/bin/conda"
+      register: miniforge_stat
+
+    - name: Download Miniforge installer
+      ansible.builtin.get_url:
+        url: "https://github.com/conda-forge/miniforge/releases/download/{{ miniforge_version }}/Miniforge3-Linux-{{ miniforge_arch }}.sh"
+        dest: /tmp/miniforge.sh
+        mode: "0755"
+      when: not miniforge_stat.stat.exists
+
+    - name: Run Miniforge installer
+      ansible.builtin.shell: bash /tmp/miniforge.sh -b -p "{{ install_prefix }}/miniforge3"
+      when: not miniforge_stat.stat.exists
+      changed_when: false
+
+    - name: Initialize conda for bash
+      ansible.builtin.shell: "{{ install_prefix }}/miniforge3/bin/conda init bash"
+      when: not miniforge_stat.stat.exists
+      changed_when: false
+
+    - name: Clean up installer
+      ansible.builtin.file:
+        path: /tmp/miniforge.sh
+        state: absent
+
+- name: Install CUDA runtime (if GPU enabled)
+  block:
+    - name: Check if CUDA is already installed
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/miniforge3/lib/libcudart.so.{{ cuda_version.split('.')[0] }}"
+      register: cuda_stat
+
+    - name: Install CUDA via conda
+      ansible.builtin.shell: |
+        export PATH="{{ install_prefix }}/miniforge3/bin:$PATH"
+        {{ install_prefix }}/miniforge3/bin/conda install -c nvidia \
+            "cuda-runtime={{ cuda_version }}" \
+            "cuda-nvcc={{ cuda_version }}" \
+            -n base -y --quiet 2>/dev/null || true
+      when:
+        - not cuda_stat.stat.exists
+        - gpu_enabled | bool
+      changed_when: false
+  when: gpu_enabled | bool
+
+- name: Install Python packages
+  block:
+    - name: Upgrade pip
+      ansible.builtin.shell: "{{ install_prefix }}/miniforge3/bin/pip install --upgrade pip"
+      environment:
+        PATH: "{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+      changed_when: false
+
+    - name: Install Python packages
+      ansible.builtin.shell: |
+        {{ install_prefix }}/miniforge3/bin/pip install \
+            "pypdf=={{ pypdf_version }}" \
+            "python-docx=={{ python_docx_version }}" \
+            "textual=={{ textual_version }}" \
+            "jinja2=={{ jinja2_version }}" \
+            "graphviz=={{ graphviz_version }}" \
+            "diagrams=={{ diagrams_version }}" \
+            --quiet 2>/dev/null || true
+      environment:
+        PATH: "{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+      changed_when: false
+
+- name: Create venv-development
+  block:
+    - name: Check if venv-development exists
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/miniforge3/envs/venv-development"
+      register: venv_dev_stat
+
+    - name: Create venv-development environment
+      ansible.builtin.shell: |
+        export PATH="{{ install_prefix }}/miniforge3/bin:$PATH"
+        {{ install_prefix }}/miniforge3/bin/conda create -n venv-development \
+            "python={{ conda_python_version }}" pip -y --quiet 2>/dev/null || true
+      environment:
+        PATH: "{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+      when: not venv_dev_stat.stat.exists
+      changed_when: false
+
+    - name: Install venv-development packages
+      ansible.builtin.shell: |
+        export PATH="{{ install_prefix }}/miniforge3/envs/venv-development/bin:{{ install_prefix }}/miniforge3/bin:$PATH"
+        {{ install_prefix }}/miniforge3/envs/venv-development/bin/pip install --upgrade pip --quiet
+
+        {{ install_prefix }}/miniforge3/envs/venv-development/bin/pip install \
+            "fastapi=={{ fastapi_version }}" \
+            "uvicorn[standard]=={{ uvicorn_version }}" \
+            "pydantic=={{ pydantic_version }}" \
+            "httpx=={{ httpx_version }}" "httpx[http2]" \
+            "sqlalchemy=={{ sqlalchemy_version }}" \
+            "alembic=={{ alembic_version }}" \
+            "python-jose[cryptography]" "passlib[bcrypt]" \
+            python-multipart aiofiles \
+            typer loguru python-dotenv \
+            pytest pytest-asyncio \
+            --quiet 2>/dev/null || true
+      environment:
+        PATH: "{{ install_prefix }}/miniforge3/envs/venv-development/bin:{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
+      changed_when: false

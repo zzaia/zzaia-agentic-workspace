@@ -1,0 +1,278 @@
+---
+# User account setup, home initialization, SSH keys
+
+- name: Initialize user home directory permissions
+  ansible.builtin.file:
+    path: /home/user
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Ensure install prefix is user-owned
+  ansible.builtin.file:
+    path: "{{ install_prefix }}"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Ensure workspace directory exists
+  ansible.builtin.shell: |
+    su -s /bin/bash user -c "mkdir -p /home/user/workspace"
+  args:
+    creates: /home/user/workspace
+  changed_when: false
+
+- name: Seed home directory from template
+  block:
+    - name: Check if home seeded
+      ansible.builtin.stat:
+        path: /home/user/.bootstrap/home.seeded
+      register: home_seeded
+
+    - name: Check if seed directory exists
+      ansible.builtin.stat:
+        path: /opt/zzaia/home-seed
+      register: seed_dir_exists
+
+    - name: Extract home seed
+      ansible.builtin.shell: |
+        tar -C /opt/zzaia/home-seed -cf - . \
+            | su -s /bin/bash user -c "tar -C /home/user -xf - --skip-old-files 2>/dev/null"
+      when:
+        - not home_seeded.stat.exists
+        - seed_dir_exists.stat.exists
+      changed_when: false
+
+    - name: Create bootstrap directories
+      ansible.builtin.shell: |
+        su -s /bin/bash user -c "
+            mkdir -p /home/user/.ssh /home/user/workspace/host \
+                     /home/user/.local/share/vscode-server /home/user/.bootstrap
+            chmod 700 /home/user/.ssh
+            touch /home/user/.bootstrap/home.seeded
+        "
+      when:
+        - not home_seeded.stat.exists
+        - seed_dir_exists.stat.exists
+      changed_when: false
+
+- name: Configure SSH port
+  block:
+    - name: Check if SSH port override is set
+      ansible.builtin.set_fact:
+        ssh_port_to_set: "{{ lookup('env', 'SSH_PORT') }}"
+
+    - name: Update SSH port in sshd config
+      ansible.builtin.replace:
+        path: /etc/ssh/sshd_config.d/workspace.conf
+        regexp: '^Port .*'
+        replace: "Port {{ ssh_port_to_set }}"
+      when: ssh_port_to_set | length > 0
+
+    - name: Write SSH port to file
+      ansible.builtin.copy:
+        content: "{{ ssh_port_to_set }}"
+        dest: /etc/ssh-port
+      when: ssh_port_to_set | length > 0
+
+- name: Setup SSH host keys
+  block:
+    - name: Create /run/sshd directory
+      ansible.builtin.file:
+        path: /run/sshd
+        state: directory
+        mode: "0755"
+
+    - name: Create /secrets directory
+      ansible.builtin.file:
+        path: /secrets
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Check for existing SSH keys in secrets
+      ansible.builtin.find:
+        path: /secrets
+        pattern: "ssh_host_*"
+      register: existing_keys
+
+    - name: Restore SSH host keys from secrets
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "/etc/ssh/{{ item.path | basename }}"
+        remote_src: yes
+        mode: "0600"
+      loop: "{{ existing_keys.files }}"
+      when: existing_keys.files | length > 0
+
+    - name: Fix permissions on restored keys
+      ansible.builtin.shell: |
+        chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
+        chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
+      changed_when: false
+      when: existing_keys.files | length > 0
+
+    - name: Generate SSH host keys
+      ansible.builtin.shell: ssh-keygen -A
+      changed_when: true
+      when: existing_keys.files | length == 0
+
+    - name: Copy SSH host keys to secrets
+      ansible.builtin.shell: |
+        cp /etc/ssh/ssh_host_* /secrets/ 2>/dev/null || true
+        chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
+        chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
+      changed_when: false
+
+- name: Setup Docker socket access
+  block:
+    - name: Check if Docker socket exists
+      ansible.builtin.stat:
+        path: /var/run/docker.sock
+      register: docker_socket
+
+    - name: Get Docker socket GID
+      ansible.builtin.stat:
+        path: /var/run/docker.sock
+      register: docker_socket_stat
+      when: docker_socket.stat.exists and docker_socket.stat.issock
+
+    - name: Create docker group with socket GID
+      ansible.builtin.group:
+        name: docker
+        gid: "{{ docker_socket_stat.stat.gid }}"
+        state: present
+      when:
+        - docker_socket.stat.exists
+        - docker_socket.stat.issock
+        - docker_socket_stat.stat.gid is defined
+
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: user
+        groups: docker
+        append: yes
+      when:
+        - docker_socket.stat.exists
+        - docker_socket.stat.issock
+
+- name: Setup sudo configuration
+  block:
+    - name: Remove old sudo config
+      ansible.builtin.file:
+        path: /etc/sudoers.d/user-admin
+        state: absent
+
+    - name: Check if ADMIN_PASSWORD is set
+      ansible.builtin.set_fact:
+        admin_password: "{{ lookup('env', 'ADMIN_PASSWORD') }}"
+
+    - name: Configure passwordless sudo (no ADMIN_PASSWORD)
+      ansible.builtin.copy:
+        content: "user ALL=(ALL) NOPASSWD:ALL\n"
+        dest: /etc/sudoers.d/user-admin
+        mode: "0440"
+      when: admin_password | length == 0
+
+    - name: Configure password-protected sudo (ADMIN_PASSWORD set)
+      block:
+        - name: Add sudo rule
+          ansible.builtin.copy:
+            content: "user ALL=(ALL) ALL\n"
+            dest: /etc/sudoers.d/user-admin
+            mode: "0440"
+
+        - name: Set user password
+          ansible.builtin.user:
+            name: user
+            password: "{{ admin_password | password_hash('sha512') }}"
+      when: admin_password | length > 0
+
+- name: Setup APT sandbox
+  block:
+    - name: Create APT cache directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - /var/cache/apt/archives/partial
+        - /var/lib/apt/lists/partial
+
+    - name: Clean up APT partial directories
+      ansible.builtin.shell: |
+        find /var/cache/apt/archives/partial /var/lib/apt/lists/partial \
+            -maxdepth 1 -type f -delete 2>/dev/null || true
+      changed_when: false
+
+    - name: Configure APT sandbox user
+      ansible.builtin.copy:
+        content: 'APT::Sandbox::User "root";'
+        dest: /etc/apt/apt.conf.d/99sandbox-user
+        mode: "0644"
+
+- name: Setup SSH authorized keys
+  block:
+    - name: Check SSH_PUBLIC_KEY environment variable
+      ansible.builtin.set_fact:
+        ssh_public_key: "{{ lookup('env', 'SSH_PUBLIC_KEY') }}"
+
+    - name: Check if SSH key is already saved
+      ansible.builtin.stat:
+        path: /secrets/.env
+      register: secrets_file_stat
+
+    - name: Validate and save SSH public key
+      block:
+        - name: Validate SSH key format
+          ansible.builtin.set_fact:
+            key_valid: "{{ ssh_public_key.startswith('ssh-') or ssh_public_key.startswith('ecdsa-') or ssh_public_key.startswith('sk-') }}"
+
+        - name: Save SSH key to secrets
+          ansible.builtin.shell: |
+            mkdir -p /secrets
+            printf 'SSH_PUBLIC_KEY=%s\n' "{{ ssh_public_key }}" > /secrets/.env
+            chmod 600 /secrets/.env
+          when: key_valid | bool
+          changed_when: false
+      when:
+        - ssh_public_key | length > 0
+        - not secrets_file_stat.stat.exists
+
+    - name: Load SSH key from environment or secrets
+      block:
+        - name: Use SSH_PUBLIC_KEY from environment
+          ansible.builtin.set_fact:
+            final_ssh_key: "{{ ssh_public_key }}"
+          when: ssh_public_key | length > 0
+
+        - name: Load SSH key from secrets file
+          ansible.builtin.shell: |
+            grep -m1 '^SSH_PUBLIC_KEY=' /secrets/.env 2>/dev/null \
+                | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true
+          register: secrets_key_result
+          changed_when: false
+          when: ssh_public_key | length == 0 and secrets_file_stat.stat.exists
+
+        - name: Set final SSH key from secrets
+          ansible.builtin.set_fact:
+            final_ssh_key: "{{ secrets_key_result.stdout }}"
+          when:
+            - ssh_public_key | length == 0
+            - secrets_file_stat.stat.exists
+
+        - name: Add SSH key to authorized_keys
+          ansible.builtin.shell: |
+            su -s /bin/bash user -c "
+              mkdir -p /home/user/.ssh
+              printf '%s\n' '{{ final_ssh_key }}' > /home/user/.ssh/authorized_keys
+              chmod 600 /home/user/.ssh/authorized_keys
+            "
+          when: final_ssh_key | length > 0
+          changed_when: false
+      when: ssh_public_key | length > 0 or secrets_file_stat.stat.exists

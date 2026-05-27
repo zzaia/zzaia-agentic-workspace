@@ -7,4 +7,4 @@ if [ -z "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
   while :; do sleep 3600; done
 fi
 
-exec npx -y supergateway@latest --port 3005 --outputTransport streamableHttp --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}\""
+exec supergateway --port 3005 --outputTransport streamableHttp --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}\""

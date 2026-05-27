@@ -1,0 +1,30 @@
+---
+# Play 1: System setup and user creation (as root — entrypoint runs as root, no become needed)
+- name: System and user setup
+  hosts: local
+  gather_facts: yes
+  roles:
+    - { role: system, tags: [system] }
+    - user-setup
+
+# Play 2: User-level tool installation
+- name: User-level tool installation
+  hosts: local
+  become: yes
+  become_user: user
+  gather_facts: no
+  roles:
+    - vscode-cli
+    - node
+    - dotnet
+    - python
+    - cli
+    - path-config
+
+# Play 3: Root-level post-installation (credentials, GPU — entrypoint runs as root, no become needed)
+- name: Root-level post-installation
+  hosts: local
+  gather_facts: no
+  roles:
+    - credentials
+    - gpu

@@ -1,0 +1,24 @@
+---
+- name: Check conda binary
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/miniforge3/bin/conda"
+  register: conda_stat
+
+- name: Download Miniforge installer
+  ansible.builtin.get_url:
+    url: "https://github.com/conda-forge/miniforge/releases/download/{{ miniforge_version }}/Miniforge3-Linux-x86_64.sh"
+    dest: /tmp/miniforge.sh
+    mode: "0755"
+  when: not conda_stat.stat.exists
+
+- name: Install Miniforge
+  ansible.builtin.shell:
+    cmd: bash /tmp/miniforge.sh -b -p "{{ install_prefix }}/miniforge3"
+    creates: "{{ install_prefix }}/miniforge3/bin/conda"
+  when: not conda_stat.stat.exists
+
+- name: Remove installer
+  ansible.builtin.file:
+    path: /tmp/miniforge.sh
+    state: absent
+  when: not conda_stat.stat.exists

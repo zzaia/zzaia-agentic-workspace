@@ -1,0 +1,48 @@
+---
+- name: Create venv-system conda environment
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/bin/conda create -n venv-system python={{ python_version }} pip -y"
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/python"
+
+- name: Upgrade pip
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install --upgrade pip --quiet"
+  changed_when: false
+
+- name: Install base packages
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
+      fastapi=={{ fastapi_version }}
+      uvicorn=={{ uvicorn_version }}
+      "httpx[http2]"
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/uvicorn"
+
+- name: Install headroom-ai (CPU mode)
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
+      headroom-ai[code]=={{ headroom_ai_version }}
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
+  when: gpu_enabled | string != 'true'
+
+- name: Install torch (GPU mode)
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
+      torch=={{ torch_version }} torchvision torchaudio
+      --index-url https://download.pytorch.org/whl/cu121
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/torch/__init__.py"
+  when: gpu_enabled | string == 'true'
+
+- name: Install headroom-ai with ML (GPU mode)
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
+      headroom-ai[ml]=={{ headroom_ai_version }}
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
+  when: gpu_enabled | string == 'true'
