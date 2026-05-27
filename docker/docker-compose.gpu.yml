@@ -27,6 +27,7 @@ services:
         GPU_ENABLED: "true"
     environment:
       - GPU_ENABLED=true
+      - HEADROOM_KOMPRESS_BACKEND=pytorch
     deploy:
       resources:
         reservations:
