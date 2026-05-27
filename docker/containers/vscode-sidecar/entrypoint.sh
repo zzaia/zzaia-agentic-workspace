@@ -21,10 +21,10 @@ vscode::setup_env() {
 
 vscode::install_cli() {
     if ! command -v code >/dev/null 2>&1; then
-        echo "VS Code CLI not found — installing..."
-        curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C /usr/local/bin \
-            && echo "VS Code CLI installed." \
-            || { echo "ERROR: VS Code CLI install failed." >&2; exit 1; }
+        echo "ERROR: VS Code CLI not found in PATH." >&2
+        echo "  workspace-server may not have completed runtime setup yet." >&2
+        echo "  Ensure workspace-server container has finished bootstrap." >&2
+        exit 1
     fi
 }
 

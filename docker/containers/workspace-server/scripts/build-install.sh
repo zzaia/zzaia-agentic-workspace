@@ -16,7 +16,6 @@ main() {
     log_info "Starting Docker build-time system installation..."
 
     system::install_apt_packages
-    system::install_vscode_cli
 
     log_success "Build-time system installation complete"
 }

@@ -2,7 +2,6 @@
   "name": "ZZAIA Agentic Workspace",
   "remoteUser": "user",
   "workspaceFolder": "/home/user/workspace",
-  "postAttachCommand": "bash -c 'code /home/user/*.code-workspace'",
   "customizations": {
     "vscode": {
       "extensions": [

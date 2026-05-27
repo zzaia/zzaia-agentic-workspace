@@ -26,12 +26,14 @@ system::install_apt_packages() {
 
 # ── VS Code CLI ───────────────────────────────────────────────────────────────
 system::install_vscode_cli() {
-    if [ -f /usr/local/bin/code ]; then
+    local install_dir="${INSTALL_PREFIX:-.}/.local/bin"
+    if [ -f "$install_dir/code" ]; then
         log_info "VS Code CLI already installed"
         return 0
     fi
 
-    log_info "Installing VS Code CLI..."
-    curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C /usr/local/bin
+    log_info "Installing VS Code CLI to $install_dir..."
+    mkdir -p "$install_dir"
+    curl -fsSL "https://update.code.visualstudio.com/latest/cli-linux-x64/stable" | tar xz -C "$install_dir"
     log_success "VS Code CLI installed"
 }

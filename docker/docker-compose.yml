@@ -393,6 +393,7 @@ services:
       - OPENAI_BASE_URL=http://ml-server:8787
       - GEMINI_API_BASE=http://ml-server:8787
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
+      - VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX=true
     networks:
       - mcp
     cap_drop:
@@ -495,6 +496,55 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30m
+    depends_on:
+      workspace-server:
+        condition: service_healthy
+
+  tunnel-sidecar:
+    build:
+      context: ..
+      dockerfile: docker/containers/tunnel-sidecar/Dockerfile
+    image: zzaia-tunnel-sidecar:latest
+    profiles: ["tunnel"]
+    volumes:
+      - workspace-home:/home/user
+      - workspace-tools:/opt/tools:ro
+    environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
+      - VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
+      - ADO_MCP_AUTH_TOKEN=${ADO_MCP_AUTH_TOKEN:-}
+      - AZURE_DEVOPS_ORGANIZATION=${AZURE_DEVOPS_ORGANIZATION:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+      - ANTHROPIC_BASE_URL=http://ml-server:8787
+      - OPENAI_BASE_URL=http://ml-server:8787
+      - GEMINI_API_BASE=http://ml-server:8787
+    networks:
+      - mcp
+    user: root
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'code tunnel' > /dev/null"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
     depends_on:
       workspace-server:
         condition: service_healthy
