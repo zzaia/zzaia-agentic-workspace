@@ -27,16 +27,22 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as an HTTP call via `/capability:postman:request`, query the specified `--debug-sources` for diagnostics, and return a concise step report.
+Execute a single BDD step as an HTTP call via `/capability:postman:request`, query the specified `--debug-sources` for diagnostics afterwards, and return a concise step report.
 
 ## EXECUTION
 
-1. **Execute Step**
+1. **Resolve Authentication**
+
+   - Call `/behavior:workspace:ask-user-question --question "Does this API require authentication? If yes, provide the Bearer token (or leave blank to skip)"`
+   - If a token is provided, include `Authorization: Bearer <token>` in all subsequent requests
+
+2. **Execute Step**
 
    - Call `/capability:postman:request --spec "<method, full-url, headers, body>"` to run the HTTP call
    - Capture: response status, body, response time
+   - If response is `401 Unauthorized`, call `/behavior:workspace:ask-user-question --question "Got 401 — provide a valid Bearer token to retry"` and re-execute with the new token
 
-2. **Debug Sources** — route by `--debug-sources`:
+3. **Debug Sources** — route by `--debug-sources`:
 
    | Debug Source  | Capability call                                                                     |
    |---------------|-------------------------------------------------------------------------------------|
@@ -46,7 +52,7 @@ Execute a single BDD step as an HTTP call via `/capability:postman:request`, que
    | `postgresql`  | `/capability:postgresql:debug [--connection-name <application>] [--table <source>]` |
    | `docker`      | `/capability:docker:debug [--container <source>]`                                   |
 
-3. **Report Step Result**
+4. **Report Step Result**
 
    - Return: step name, result (pass/fail), response time, diagnostic findings
 

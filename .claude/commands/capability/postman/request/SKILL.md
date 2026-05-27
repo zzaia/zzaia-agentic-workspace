@@ -13,7 +13,7 @@ Execute an HTTP call via Newman CLI. Sends requests with full support for method
 
 1. **Parse** the request specification from `--spec`
 2. **Build** a minimal Postman collection JSON in memory
-3. **Run** `newman run <collection.json> --reporters cli,json` via Bash
+3. **Run** `npx newman run <collection.json> --reporters cli,json` via Bash
 4. **Return** the response with status, headers, and body
 
 ## WORKFLOW
