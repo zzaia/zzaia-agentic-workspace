@@ -111,8 +111,8 @@ PROFILE_FLAGS=""
 if [ -n "${DEPLOY_PROFILES:-}" ]; then
     for p in $DEPLOY_PROFILES; do
         case "$p" in
-            vscode|devcontainer|jupyter) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
-            *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer, jupyter" ;;
+            vscode|devcontainer|jupyter|tunnel) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+            *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer, jupyter, tunnel" ;;
         esac
     done
 fi
@@ -128,4 +128,5 @@ echo "✓ Workspace started. Access:"
 echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "${DEPLOY_PROFILES:-}" == *vscode* ]] && echo "  VS Code: http://localhost:$VSCODE_PORT"
 [[ "${DEPLOY_PROFILES:-}" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
+[[ "${DEPLOY_PROFILES:-}" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME' or https://vscode.dev/tunnel/$WORKSPACE_NAME"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"

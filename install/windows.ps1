@@ -123,11 +123,11 @@ try {
     $profileArgs = @()
     if (-not [string]::IsNullOrWhiteSpace($DEPLOY_PROFILES)) {
         foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
-            if ($p -match '^(vscode|devcontainer|jupyter)$') {
+            if ($p -match '^(vscode|devcontainer|jupyter|tunnel)$') {
                 $profileArgs += '--profile'
                 $profileArgs += $p
             } else {
-                Write-Warning "Unknown server profile '$p' — valid: vscode, devcontainer, jupyter"
+                Write-Warning "Unknown server profile '$p' — valid: vscode, devcontainer, jupyter, tunnel"
             }
         }
     }
@@ -151,6 +151,7 @@ try {
     Write-Host "  SSH: ssh -p $($env:SSH_PORT) user@localhost"
     if ($DEPLOY_PROFILES -match 'vscode') { Write-Host "  VS Code: http://localhost:$($env:VSCODE_PORT)" }
     if ($DEPLOY_PROFILES -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
+    if ($DEPLOY_PROFILES -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$env:WORKSPACE_NAME' or https://vscode.dev/tunnel/$env:WORKSPACE_NAME" }
     Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$($env:ASPIRE_DASHBOARD_PORT)"
 }
 finally {

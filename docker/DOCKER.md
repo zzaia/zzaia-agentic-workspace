@@ -73,8 +73,8 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
 | `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
-| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
-| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
+| `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
+| `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar, tunnel-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
 | `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
 
 ### Home volume seeding
@@ -83,7 +83,7 @@ On the **first start with an empty home volume**, Docker copies the image's `/ho
 
 - Home configs, SSH configs, Claude auth tokens, and workspace seeds are copied once on first start
 - `workspace-server` owns and manages the shared `workspace-home` volume — it starts first and runs initialization
-- `vscode-sidecar`, `containers-dev-sidecar`, and `jupyter-sidecar` depend on `workspace-server: condition: service_healthy` and mount the same shared home
+- `vscode-sidecar`, `containers-dev-sidecar`, `jupyter-sidecar`, and `tunnel-sidecar` depend on `workspace-server: condition: service_healthy` and mount the same shared home
 - Home contents persist across restarts and container recreation
 
 ### Tools volume installation
@@ -227,7 +227,7 @@ docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml -p 
 Instead of each container needing its own CUDA base image, CUDA libraries are installed once in the shared `workspace-tools` volume:
 
 - `workspace-server` installs `cuda-runtime` and `cuda-nvcc` via conda into `/opt/tools/miniforge3/` when `GPU_ENABLED=true`
-- All sidecars (vscode-sidecar, containers-dev-sidecar, jupyter-sidecar) mount `/opt/tools` and inherit the CUDA installation via existing PATH/LD_LIBRARY_PATH
+- All sidecars (vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) mount `/opt/tools` and inherit the CUDA installation via existing PATH/LD_LIBRARY_PATH
 - NVIDIA Container Toolkit injects `libcuda.so.1` (driver stub) per-container when GPU devices are bound in compose
 - All containers with GPU_ENABLED=true reserve all available NVIDIA GPUs
 
@@ -307,6 +307,7 @@ docker/
     ├── ml-server/          — ML inference server (headroom-ai, FastAPI)
     ├── jupyter-sidecar/    — Jupyter notebook server
     ├── containers-dev-sidecar/  — Dev containers CLI host
+    ├── tunnel-sidecar/         — VS Code tunnel relay (Microsoft relay, no ports needed)
     ├── dind/               — Custom Docker-in-Docker with NVIDIA Container Toolkit support
     │   ├── Dockerfile      — DinD image extending docker:28.1.1-dind with toolkit installation
     │   ├── entrypoint.sh   — Custom entrypoint: conditionally installs NVIDIA toolkit if GPU_ENABLED=true
