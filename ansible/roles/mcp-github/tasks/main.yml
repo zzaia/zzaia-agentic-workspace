@@ -1,0 +1,48 @@
+---
+- name: Verify Node.js availability
+  stat:
+    path: /opt/tools/.npm-global/bin/npx
+  register: npx_stat
+  failed_when: not npx_stat.stat.exists
+  changed_when: false
+
+- name: Create env file for mcp-github
+  copy:
+    content: |
+      GITHUB_PERSONAL_ACCESS_TOKEN={{ github_personal_access_token | default('') }}
+    dest: /etc/zzaia/mcp-github.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart mcp-github
+
+- name: Create systemd service for mcp-github
+  copy:
+    content: |
+      [Unit]
+      Description=ZZAIA MCP GitHub Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=user
+      EnvironmentFile=/etc/zzaia/mcp-github.env
+      ExecStart=/usr/bin/npx -y supergateway@latest --port 3005 --outputTransport streamableHttp --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}\""
+      Restart=on-failure
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/zzaia-mcp-github.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable mcp-github service
+  systemd:
+    name: zzaia-mcp-github
+    enabled: yes
+    daemon_reload: yes

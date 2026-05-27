@@ -1,0 +1,48 @@
+---
+- name: Verify Node.js availability
+  stat:
+    path: /opt/tools/.npm-global/bin/npx
+  register: npx_stat
+  failed_when: not npx_stat.stat.exists
+  changed_when: false
+
+- name: Create env file for mcp-newrelic
+  copy:
+    content: |
+      NEW_RELIC_API_KEY={{ new_relic_api_key | default('') }}
+    dest: /etc/zzaia/mcp-newrelic.env
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart mcp-newrelic
+
+- name: Create systemd service for mcp-newrelic
+  copy:
+    content: |
+      [Unit]
+      Description=ZZAIA MCP New Relic Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=user
+      EnvironmentFile=/etc/zzaia/mcp-newrelic.env
+      ExecStart=/usr/bin/npx -y supergateway@latest --port 3004 --outputTransport streamableHttp --stateful --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --header \"Api-Key: ${NEW_RELIC_API_KEY}\""
+      Restart=on-failure
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/zzaia-mcp-newrelic.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable mcp-newrelic service
+  systemd:
+    name: zzaia-mcp-newrelic
+    enabled: yes
+    daemon_reload: yes

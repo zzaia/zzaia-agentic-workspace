@@ -1,0 +1,10 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart mcp-tavily
+  systemd:
+    name: zzaia-mcp-tavily
+    state: restarted
+    enabled: yes

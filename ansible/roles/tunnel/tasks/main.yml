@@ -1,0 +1,26 @@
+---
+# tunnel role: Set up VS Code Tunnel daemon
+# References: docker/containers/tunnel-sidecar/entrypoint.sh
+
+- name: Ensure code CLI is available
+  shell: command -v code
+  register: code_cli_check
+  failed_when: code_cli_check.rc != 0
+  changed_when: false
+
+- name: Create VS Code Tunnel systemd service
+  template:
+    src: tunnel.service.j2
+    dest: /etc/systemd/system/vscode-tunnel.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: tunnel_service
+
+- name: Enable and start VS Code Tunnel service
+  systemd:
+    name: vscode-tunnel
+    daemon_reload: yes
+    enabled: yes
+    state: started
+  when: tunnel_service is changed

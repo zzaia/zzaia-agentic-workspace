@@ -1,0 +1,19 @@
+[Unit]
+Description=Jupyter Lab
+After=network.target
+Documentation=https://jupyter.org/
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c 'export NVM_DIR="{{ install_prefix }}/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use; export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH; exec {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/jupyter lab --no-browser --ip=0.0.0.0 --port={{ jupyter_port }} --NotebookApp.token="" --NotebookApp.password="" --notebook-dir=/home/user/{{ workspace_name }}'
+User=user
+Group=user
+WorkingDirectory=/home/user/{{ workspace_name }}
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jupyter
+
+[Install]
+WantedBy=multi-user.target

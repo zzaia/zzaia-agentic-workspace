@@ -1,0 +1,71 @@
+---
+# devcontainer role: Pre-cache VS Code Server and seed devcontainer config
+# References: docker/containers/containers-dev-sidecar/entrypoint.sh
+
+- name: Ensure code CLI is available
+  shell: command -v code
+  register: code_cli_check
+  failed_when: code_cli_check.rc != 0
+  changed_when: false
+
+- name: Create VS Code Server cache directory
+  file:
+    path: /home/user/.vscode-server/bin
+    state: directory
+    owner: user
+    group: user
+    mode: "0755"
+
+- name: Get VS Code commit hash
+  shell: |
+    export NVM_DIR="{{ install_prefix }}/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
+    export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH
+    runuser -u user -- code --version 2>/dev/null | sed -n '2p' || echo ""
+  register: vscode_commit_hash
+  changed_when: false
+
+- name: Check if VS Code Server already cached
+  stat:
+    path: "/home/user/.vscode-server/bin/{{ vscode_commit_hash.stdout }}/server.sh"
+  register: vscode_server_cached
+  when: vscode_commit_hash.stdout != ""
+
+- name: Download and cache VS Code Server
+  shell: |
+    set -e
+    COMMIT="{{ vscode_commit_hash.stdout }}"
+    SERVER_DIR="/home/user/.vscode-server/bin/$COMMIT"
+    mkdir -p "$SERVER_DIR"
+
+    if curl -fsSL "https://update.code.visualstudio.com/commit:$COMMIT/server-linux-x64/stable" \
+        | tar xz --strip-components=1 -C "$SERVER_DIR/"; then
+      echo "VS Code Server cached successfully"
+    else
+      echo "WARN: Failed to cache VS Code Server; Dev Containers may download it on first attach"
+      exit 0
+    fi
+
+    chown -R user:user /home/user/.vscode-server 2>/dev/null || true
+  when:
+    - vscode_commit_hash.stdout != ""
+    - not vscode_server_cached.stat.exists
+  register: vscode_server_cache
+
+- name: Create .devcontainer directory
+  file:
+    path: /home/user/.devcontainer
+    state: directory
+    owner: user
+    group: user
+    mode: "0755"
+
+- name: Seed devcontainer.json
+  copy:
+    src: devcontainer.json
+    dest: /home/user/.devcontainer/devcontainer.json
+    owner: user
+    group: user
+    mode: "0644"
+    force: no
+  register: devcontainer_config

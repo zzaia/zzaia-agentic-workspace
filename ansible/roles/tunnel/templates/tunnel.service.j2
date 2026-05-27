@@ -1,0 +1,17 @@
+[Unit]
+Description=VS Code Tunnel
+After=network.target
+Documentation=https://code.visualstudio.com/docs/remote/tunnels
+
+[Service]
+Type=simple
+ExecStart=/bin/bash -c 'export NVM_DIR="{{ install_prefix }}/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use; export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH; export VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1; exec runuser -u user -- /usr/bin/code tunnel --name {{ workspace_name }} --accept-server-license-terms'
+User=root
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vscode-tunnel
+
+[Install]
+WantedBy=multi-user.target

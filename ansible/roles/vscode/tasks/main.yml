@@ -1,0 +1,89 @@
+---
+# vscode role: Start VS Code Server on workspace VM
+# References: docker/containers/vscode-sidecar/entrypoint.sh
+
+- name: Ensure code CLI is available
+  shell: command -v code
+  register: code_cli_check
+  failed_when: code_cli_check.rc != 0
+  changed_when: false
+
+- name: Create VS Code Server data directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: user
+    group: user
+    mode: "0755"
+  loop:
+    - /home/user/.vscode-server/data/Machine
+    - /home/user/.vscode-server/extensions
+
+- name: Create VS Code Server Machine settings
+  copy:
+    dest: /home/user/.vscode-server/data/Machine/settings.json
+    owner: user
+    group: user
+    mode: "0644"
+    force: no
+    content: |
+      {
+        "python.defaultInterpreterPath": "{{ install_prefix }}/miniforge3/bin/python",
+        "python.terminal.activateEnvironment": false
+      }
+
+- name: Trigger VS Code Server download
+  shell: |
+    set -e
+    export NVM_DIR="{{ install_prefix }}/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
+    export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH
+    export HOME=/home/user
+    export BROWSER=/usr/local/bin/browser-print
+
+    runuser -u user -- code serve-web \
+      --host 127.0.0.1 \
+      --port 19999 \
+      --without-connection-token \
+      --accept-server-license-terms \
+      --server-data-dir /home/user/.vscode-server &
+    DOWNLOAD_PID=$!
+
+    for i in $(seq 1 60); do
+      if curl -s http://127.0.0.1:19999 -o /dev/null 2>/dev/null; then
+        echo "VS Code download triggered"
+        break
+      fi
+      sleep 1
+    done
+
+    for i in $(seq 1 600); do
+      if runuser -u user -- find /home/user/.vscode/cli/serve-web -name code-server -type f 2>/dev/null | grep -v '\.staging' | grep -q .; then
+        echo "VS Code Server binary found"
+        break
+      fi
+      sleep 3
+    done
+
+    kill $DOWNLOAD_PID 2>/dev/null || true
+    wait $DOWNLOAD_PID 2>/dev/null || true
+  become: yes
+  register: code_download
+  changed_when: false
+
+- name: Create VS Code Server systemd service
+  template:
+    src: vscode.service.j2
+    dest: /etc/systemd/system/vscode.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: vscode_service
+
+- name: Enable and start VS Code Server service
+  systemd:
+    name: vscode
+    daemon_reload: yes
+    enabled: yes
+    state: started
+  when: vscode_service is changed

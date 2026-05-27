@@ -1,0 +1,10 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart mcp-github
+  systemd:
+    name: zzaia-mcp-github
+    state: restarted
+    enabled: yes

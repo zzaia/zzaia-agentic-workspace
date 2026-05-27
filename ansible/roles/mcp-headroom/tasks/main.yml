@@ -1,0 +1,37 @@
+---
+- name: Verify Node.js availability
+  stat:
+    path: /opt/tools/.npm-global/bin/npx
+  register: npx_stat
+  failed_when: not npx_stat.stat.exists
+  changed_when: false
+
+- name: Create systemd service for mcp-headroom
+  copy:
+    content: |
+      [Unit]
+      Description=ZZAIA MCP Headroom Server
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=user
+      ExecStart=/usr/bin/npx -y supergateway@latest --port 3008 --outputTransport streamableHttp --stateful --stdio "headroom mcp serve --proxy-url http://localhost:8787"
+      Restart=on-failure
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    dest: /etc/systemd/system/zzaia-mcp-headroom.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable mcp-headroom service
+  systemd:
+    name: zzaia-mcp-headroom
+    enabled: yes
+    daemon_reload: yes

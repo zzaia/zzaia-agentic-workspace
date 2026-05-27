@@ -1,0 +1,56 @@
+---
+# Play 1: Workspace VM — System setup and tool installation
+- name: Workspace setup and tools
+  hosts: workspace
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - system
+    - user-setup
+    - { role: vscode-cli, become_user: user }
+    - { role: node, become_user: user }
+    - { role: dotnet, become_user: user }
+    - { role: python, become_user: user }
+    - { role: cli, become_user: user }
+    - { role: path-config, become_user: user }
+    - { role: credentials, tags: [credentials] }
+    - { role: gpu, tags: [gpu] }
+    - { role: vscode, tags: [vscode] }
+    - { role: jupyter, tags: [jupyter] }
+    - { role: tunnel, tags: [tunnel] }
+    - { role: devcontainer, tags: [devcontainer] }
+
+# Play 2: ML server — Miniforge, headroom proxy, FastAPI
+- name: ML server
+  hosts: ml
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - { role: ml-server, tags: [ml-server] }
+
+# Play 3: MCP services — Tavily, GitHub, Azure DevOps, Postman, New Relic, Playwright, Headroom
+- name: MCP services
+  hosts: workspace:mcp
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - { role: mcp-tavily, tags: [mcp, mcp-tavily] }
+    - { role: mcp-github, tags: [mcp, mcp-github] }
+    - { role: mcp-azure-devops, tags: [mcp, mcp-azure-devops] }
+    - { role: mcp-postman, tags: [mcp, mcp-postman] }
+    - { role: mcp-newrelic, tags: [mcp, mcp-newrelic] }
+    - { role: mcp-playwright, tags: [mcp, mcp-playwright] }
+    - { role: mcp-headroom, tags: [mcp, mcp-headroom] }
+
+# Play 4: Databases — Qdrant, Neo4j (can run on workspace or dedicated databases host)
+- name: Databases
+  hosts: databases:workspace
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - { role: database-qdrant, tags: [databases, qdrant] }
+    - { role: database-neo4j, tags: [databases, neo4j] }
