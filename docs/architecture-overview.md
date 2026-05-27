@@ -119,7 +119,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `mcp-newrelic` | 3004 | `NEW_RELIC_API_KEY` | Opt-in |
 | `mcp-github` | 3005 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Opt-in |
 | `mcp-playwright` | 3006 | None | Always-on, headless Chromium |
-| `aspire-mcp` | 3007 | None | Always-on, internal to workspace |
+| `mcp-headroom` | 3008 | None | Always-on, MCP gateway for ml-server (Headroom proxy) |
 
 - The `workspace` container holds zero API key environment variables for MCP integrations
 - Each opt-in sidecar guards its own key: if empty, the process exits cleanly (code 0)
@@ -169,18 +169,19 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 006: Decoupled Server Containers with Optional Profiles
 
-**Decision**: The workspace runs as a set of containers where `workspace-server` is the always-on authoritative container. Optional servers (`vscode-server`, `containers-dev-server`) depend on workspace-server and share its home volume.
+**Decision**: The workspace runs as a set of containers where `workspace-server` is the always-on authoritative container. Optional servers (`vscode-sidecar`, `containers-dev-sidecar`, `jupyter-sidecar`, `tunnel-sidecar`) depend on workspace-server and share its home volume.
 
 | Server | Container | Profile | Purpose |
 |--------|-----------|---------|---------|
-| Primary workspace | `workspace-server` | _(none, always starts)_ | SSH daemon + tool installation + shared home owner |
-| Browser IDE | `vscode-server` | `vscode` | `code serve-web` on port 8080 |
-| Dev Containers | `containers-dev-server` | `devcontainer` | Dev Containers attachment support |
+| Primary workspace | `workspace-server` | _(none, always starts)_ | SSH daemon + Ansible bootstrap + shared home owner |
+| Browser IDE | `vscode-sidecar` | `vscode` | `code serve-web` on VSCODE_PORT |
+| Dev Containers | `containers-dev-sidecar` | `devcontainer` | VS Code Dev Containers extension attachment |
+| Jupyter | `jupyter-sidecar` | `jupyter` | JupyterLab on JUPYTER_PORT |
+| VS Code Tunnel | `tunnel-sidecar` | `tunnel` | VS Code Tunnel for remote access via vscode.dev |
 
 - `workspace-server` always starts — it owns the shared `workspace-home` volume and exposes SSH
-- `vscode-server` and `containers-dev-server` use `FROM ubuntu:24.04` (NOT workspace-server) — minimal base images
-- Both optional servers depend on `workspace-server: condition: service_healthy` — they start only after workspace-server completes tool installation
-- All three containers share `workspace-home` — one consistent home directory, credentials, and tool installations
+- All optional servers depend on `workspace-server: condition: service_healthy` — they start only after workspace-server completes Ansible bootstrap
+- All containers share `workspace-home` — one consistent home directory, credentials, and tool installations
 - SSH-only deployment: leave `server-profiles` empty — only `workspace-server` starts
 - Profiles are read from `server-profiles` Bitwarden secret at startup time; installation scripts build dynamic `--profile` flags
 
@@ -188,32 +189,30 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 007: Tool Provisioning via Modular Shell Scripts and Dockerfile
+### ADR 007: Tool Provisioning via Ansible Roles
 
-**Decision**: Workspace tools are provisioned in two phases: build-time system tools via `build-install.sh` (Dockerfile), and user-space tools at workspace-server startup via `runtime-install.sh` (entrypoint).
+**Decision**: Tool installation uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in three plays: system setup (root), user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root).
 
-- `build-install.sh` installs system-level tools as root (Azure CLI, tectonic, VS Code CLI, apt packages)
-- `runtime-install.sh` installs user-space tools to `/home/user` (Node.js, .NET, gh, agent CLIs, conda, pip packages) using sourced modules under `scripts/packages/`
-- Version pins live in `scripts/versions.env` — single file to bump tool versions
-- Miniforge3 (conda) is the sole Python provider
-- workspace-server runs runtime-install during entrypoint; optional servers skip it (tools already in shared home)
+- Roles: `system`, `user-setup`, `vscode-cli`, `node`, `dotnet`, `python`, `cli`, `path-config`, `credentials`, `gpu`
+- Version pins live in `docker/containers/workspace-server/ansible/group_vars/all.yml` — single file to bump tool versions
+- All user-space tools install to `INSTALL_PREFIX=/opt/tools` (separate volume from /home/user)
+- Bootstrap marker: `/opt/tools/.bootstrap/tools.ready`
+- workspace-server runs Ansible playbook during entrypoint; optional servers skip it (tools already in shared tools volume)
 
-**Rationale**: Eliminates `mise` as a third-party dependency from the critical startup path. Two explicit scripts with bash module organization make the installation surface auditable and easy to extend.
+**Rationale**: Ansible replaces shell script + mise with a declarative, modular, industry-standard infrastructure tool. Roles are composable, reusable, and idempotent. All tool versions centralized in a single YAML file.
 
 ---
 
-### ADR 007A: Claude Code Plugin — Commands, Agents, and MCP via Marketplace
+### ADR 007A: MCP Transport via supergateway (streamableHttp)
 
-**Decision**: Claude Code commands, sub-agents, and MCP server configuration are distributed exclusively through the Claude Code plugin marketplace mechanism, not via Dockerfile `COPY` into the home seed.
+**Decision**: All MCP containers use `supergateway` with `--outputTransport streamableHttp` (NOT SSE) for robust, long-lived connections without buffering.
 
-- The repo root contains a `.claude-plugin/plugin.json` manifest defining the plugin identity and component paths
-- `plugin.json` references `./agents/claude/.claude/commands/` for commands, `./agents/claude/.claude/agents/` for agents, and `./agents/claude/.mcp.json` for MCP servers — `agents/claude/.mcp.json` is the single source of truth
-- At container first startup, `setup-credentials.sh` runs `claude plugin marketplace add` and `claude plugin install` **after** writing `CLAUDE_CODE_OAUTH_TOKEN` to `~/.claude/.credentials.json`, so the plugin install has valid auth
-- `claude plugin marketplace add <repo>#feature/improve-agentic-system` fetches the branch and installs into the user scope (`~/.claude/settings.json`)
-- `claude plugin sync` propagates all registered components to both the Claude CLI and the Claude VS Code extension
-- Other agents (Gemini, Codex, Copilot) continue to use Dockerfile `COPY` into `/opt/zzaia/home-seed/` because they have no equivalent plugin marketplace mechanism
+- supergateway@3.4.3 pre-installed at build time in all MCP container images
+- Streamable HTTP transport provides line-by-line streaming without buffering delays
+- Eliminates SSE (Server-Sent Events) complexity and connection pooling issues
+- Workspace container connects to MCP sidecars via internal network (localhost within Compose bridge)
 
-**Rationale**: The marketplace approach decouples Claude's configuration lifecycle from Docker image rebuilds. Updating commands, agents, or MCP servers only requires pushing a new commit to the branch — users receive the update via `claude plugin update` without any image change. A Dockerfile `COPY` would hardcode the config at build time and prevent this update path.
+**Rationale**: streamableHttp provides deterministic, low-latency streaming suitable for high-frequency tool calls. Simpler protocol reduces debugging burden and eliminates connection state issues.
 
 ---
 
@@ -237,7 +236,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 009: Workspace-Server as Authoritative Owner
 
-**Decision**: `workspace-server` is the sole installer and authoritative owner of the shared `workspace-home` volume. Other servers (vscode-server, containers-dev-server) use minimal base images and depend on workspace-server.
+**Decision**: `workspace-server` is the sole installer and authoritative owner of the shared volumes. Optional sidecars (`vscode-sidecar`, `containers-dev-sidecar`, `jupyter-sidecar`, `tunnel-sidecar`) use minimal base images and depend on workspace-server.
 
 - VS Code profile ("Main - Zzaia"), extensions, and settings are baked into the image once
 - All containers mount shared `workspace-home` volume → single `.vscode-server/extensions` directory
@@ -294,10 +293,10 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 011A: Single Main AppHost and On-Demand Dashboard
 
-**Decision**: The workspace uses a single main AppHost orchestrator. The dashboard is the AppHost-native local dashboard and is exposed outside the container via `vscode-server` port mapping.
+**Decision**: The workspace uses a single main AppHost orchestrator. The dashboard is the AppHost-native local dashboard and is exposed outside the container via `vscode-sidecar` port mapping.
 
 - No standalone `aspire-dashboard` service exists in Docker Compose
-- `vscode-server` maps `${ASPIRE_DASHBOARD_PORT}` to AppHost dashboard port `17001`
+- `vscode-sidecar` maps `${ASPIRE_DASHBOARD_PORT}` to AppHost dashboard port `17001`
 - Dashboard is available only when the AppHost is running
 - Future applications should be integrated into the same main AppHost model instead of introducing independent dashboard control planes
 
@@ -402,62 +401,73 @@ C4Container
             Container(rtk, "rtk", "Rust binary in-image", "Bash hook intercepts command outputs — 81% avg compression")
         }
 
-        Container(ws, "workspace-server", "Ubuntu 24.04", "SSH :2222 + tool installer + agent runtime (Claude/Gemini/Codex/Copilot)")
-        Container(vscode, "vscode-server", "Ubuntu 24.04 minimal", "code serve-web :8080 [profile: vscode], depends on workspace-server")
-        Container(devcontainer, "containers-dev-server", "Ubuntu 24.04 minimal", "Dev Containers support [profile: devcontainer], depends on workspace-server")
+        Container(dind, "dind-server", "Docker-in-Docker", "Docker daemon (privileged), no ports exposed")
+        Container(ws, "workspace-server", "Ubuntu 24.04", "SSH :2222 + Ansible bootstrap + agent runtime (Claude/Gemini/Codex/Copilot)")
+        Container(vscode, "vscode-sidecar", "Ubuntu 24.04 minimal", "code serve-web :VSCODE_PORT [profile: vscode], depends on workspace-server")
+        Container(devcontainer, "containers-dev-sidecar", "Ubuntu 24.04 minimal", "Dev Containers support [profile: devcontainer], depends on workspace-server")
+        Container(jupyter, "jupyter-sidecar", "Ubuntu 24.04", "JupyterLab :JUPYTER_PORT [profile: jupyter], depends on workspace-server")
+        Container(tunnel, "tunnel-sidecar", "Ubuntu 24.04", "VS Code Tunnel [profile: tunnel], depends on workspace-server")
 
         System_Boundary(primary, "Layer 1 — Primary (Automatic via Headroom proxy)") {
-            Container(headroom, "headroom", "Headroom proxy --memory --code-graph", "HTTP proxy :8787 — compression + memory injection + code-graph [always-on]")
-            Container(qdrant, "qdrant", "Qdrant v1.17", "Vector DB :6333 — semantic cache + memory embeddings + code-graph")
-            Container(neo4j, "neo4j", "Neo4j 5.15", "Graph DB :7687 — knowledge graph + code-graph")
+            Container(mlserver, "ml-server", "ghcr.io/chopratejas/headroom", "HTTP proxy :8787 — compression + memory injection + code-graph [always-on]")
+            Container(mcpheadroom, "mcp-headroom", "node:lts-alpine + supergateway@3.4.3", "MCP gateway for ml-server :3008 [always-on, non-root uid=999]")
+            Container(qdrant, "database-qdrant", "Qdrant v1.17.1", "Vector DB :6333 — semantic cache + memory embeddings + code-graph [non-root uid=999]")
+            Container(neo4j, "database-neo4j", "Neo4j 5.14.0", "Graph DB :7687 — knowledge graph + code-graph")
         }
 
         System_Boundary(supplementary, "Layer 2 — Supplementary (Agent-initiated via MCP)") {
-            Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Structured memory queries, Postgres + Qdrant backend, MCP :5005 [Phase 2]")
-            Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Code graph queries — tree-sitter AST parsing, KûzuDB/Neo4j [Phase 3]")
+            Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Structured memory queries, Postgres + Qdrant backend, MCP :5005 [Phase 2 — not yet implemented]")
+            Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Code graph queries — tree-sitter AST parsing, KûzuDB/Neo4j [Phase 3 — not yet implemented]")
         }
 
-        Container(tavily, "mcp-tavily", "node:alpine + supergateway", "Holds TAVILY_API_KEY, exposes SSE :3001")
-        Container(ado, "mcp-azure-devops", "node:alpine + supergateway", "Holds ADO_MCP_AUTH_TOKEN, exposes SSE :3002")
-        Container(postman, "mcp-postman", "node:alpine + supergateway", "Holds POSTMAN_API_KEY, exposes SSE :3003")
-        Container(newrelic, "mcp-newrelic", "node:alpine + supergateway", "Holds NEW_RELIC_API_KEY, exposes SSE :3004")
-        Container(ghsidecar, "mcp-github", "node:alpine + supergateway", "Holds GITHUB_PERSONAL_ACCESS_TOKEN, exposes SSE :3005")
-        Container(playwright, "mcp-playwright", "playwright/mcp", "Headless Chromium, always-on, SSE :3006")
-        Container(aspireds, "aspire-dashboard", "dotnet/aspire-dashboard", "OTLP receiver + telemetry UI, always-on, :18888")
+        Container(tavily, "mcp-tavily", "node:lts-alpine + supergateway@3.4.3", "Holds TAVILY_API_KEY, streamableHttp :3001 [USER node]")
+        Container(ado, "mcp-azure-devops", "node:lts-alpine + supergateway@3.4.3", "Holds ADO_MCP_AUTH_TOKEN, streamableHttp :3002 [USER node]")
+        Container(postman, "mcp-postman", "node:lts-alpine + supergateway@3.4.3", "Holds POSTMAN_API_KEY, streamableHttp :3003 [USER node]")
+        Container(newrelic, "mcp-newrelic", "node:lts-alpine + supergateway@3.4.3", "Holds NEW_RELIC_API_KEY, streamableHttp :3004 [USER node]")
+        Container(ghsidecar, "mcp-github", "node:lts-alpine + supergateway@3.4.3", "Holds GITHUB_PERSONAL_ACCESS_TOKEN, streamableHttp :3005 [USER node]")
+        Container(playwright, "mcp-playwright", "custom playwright image", "Headless Chromium, always-on, streamableHttp :3006 [USER node]")
     }
 
     System_Boundary(host, "Docker Host") {
-        ContainerDb(home, "<workspace>-home", "Named volume", "Shared home dir — tools, .vscode-server/, .claude/, agent configs, auth tokens, repos")
+        ContainerDb(home, "<workspace>-home", "Named volume", "Shared home dir — .vscode-server/, .claude/, agent configs, auth tokens, workspace repos")
+        ContainerDb(tools, "<workspace>-tools", "Named volume", "Runtime tools at /opt/tools — Node.js, .NET, Python, CLIs (Ansible-installed)")
         ContainerDb(secrets, "<workspace>-secrets", "Named volume", "SSH host keys and public key")
-        Container(dockersock, "/var/run/docker.sock", "Unix socket", "Docker API access for agent-initiated ops")
+        ContainerDb(mltools, "<workspace>-ml-tools", "Named volume", "Headroom ML tools and model cache")
     }
 
-    Rel(dev, ws, "SSH terminal / VS Code Remote SSH / Dev Containers", "127.0.0.1:SSH_PORT")
+    Rel(dev, ws, "SSH terminal / VS Code Remote SSH", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
     Rel(dev, devcontainer, "Dev Containers attach", "Docker socket")
+    Rel(dev, jupyter, "JupyterLab", "127.0.0.1:JUPYTER_PORT")
     Rel(ws, rtk, "Bash hook intercepts outputs", "stdin/stdout at shell level")
-    Rel(ws, vscode, "Shares workspace-home volume", "named volume /home/user")
-    Rel(ws, devcontainer, "Shares workspace-home volume", "named volume /home/user")
+    Rel(ws, vscode, "Shares workspace-home + tools volumes", "named volumes")
+    Rel(ws, devcontainer, "Shares workspace-home + tools volumes", "named volumes")
+    Rel(ws, jupyter, "Shares workspace-home + tools volumes", "named volumes")
     Rel(vscode, ws, "Depends on", "service_healthy")
     Rel(devcontainer, ws, "Depends on", "service_healthy")
-    Rel(ws, headroom, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
-    Rel(headroom, qdrant, "Compression + memory + code-graph", "semantic search :6333")
-    Rel(headroom, neo4j, "Knowledge graph + code-graph", "Bolt :7687")
-    Rel(headroom, home, "Background file watcher", "code-graph on workspace-home volume")
+    Rel(jupyter, ws, "Depends on", "service_healthy")
+    Rel(tunnel, ws, "Depends on", "service_healthy")
+    Rel(ws, mlserver, "All AI API calls (Anthropic + OpenAI + Gemini)", "ANTHROPIC_BASE_URL / OPENAI_BASE_URL / GEMINI_API_BASE :8787")
+    Rel(mlserver, qdrant, "Compression + memory + code-graph", "semantic search :6333")
+    Rel(mlserver, neo4j, "Knowledge graph + code-graph", "Bolt :7687")
+    Rel(mlserver, home, "Background file watcher", "code-graph on workspace-home volume")
+    Rel(ws, mcpheadroom, "MCP tool calls via headroom", "streamableHttp :3008")
+    Rel(mcpheadroom, mlserver, "Proxies MCP to Headroom", "HTTP :8787")
     Rel(ws, openmemory, "MCP tool calls (Phase 2)", "search_memory / add_memories :5005")
     Rel(openmemory, qdrant, "Semantic memory index", "vector DB :6333")
     Rel(ws, codegraph, "MCP tool calls (Phase 3)", "find_callers / class_hierarchy / call_chain")
     Rel(codegraph, home, "Parse source files", "named volume /home/user")
-    Rel(ws, tavily, "MCP tool calls", "SSE mcp network")
-    Rel(ws, ado, "MCP tool calls", "SSE mcp network")
-    Rel(ws, postman, "MCP tool calls", "SSE mcp network")
-    Rel(ws, newrelic, "MCP tool calls", "SSE mcp network")
-    Rel(ws, ghsidecar, "MCP tool calls", "SSE mcp network")
-    Rel(ws, playwright, "MCP tool calls", "SSE mcp network")
-    Rel(ws, aspireds, "OTLP telemetry", "AppHost → :18889")
-    Rel(ws, home, "Home directory + tools + repos", "named volume /home/user")
+    Rel(ws, tavily, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, ado, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, postman, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, newrelic, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, ghsidecar, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, playwright, "MCP tool calls", "streamableHttp mcp network")
+    Rel(ws, dind, "Docker API", "tcp://dind-server:2375")
+    Rel(ws, home, "Home directory", "named volume /home/user")
+    Rel(ws, tools, "Tools volume", "named volume /opt/tools")
     Rel(ws, secrets, "SSH keys", "named volume /secrets")
-    Rel(ws, dockersock, "Docker API", "bind mount")
+    Rel(mlserver, mltools, "ML model cache", "named volume /opt/ml-tools")
     Rel(vscode, home, "Read VS Code state + configs", "named volume /home/user")
     Rel(devcontainer, home, "Read home state + workspace", "named volume /home/user")
 
@@ -475,11 +485,21 @@ zzaia-agentic-workspace/
 │   └── copilot/             # GitHub Copilot — .github/copilot-instructions.md
 ├── vscode/                  # VS Code profile — settings, extensions, launch configs, workspace file
 ├── docker/
-│   ├── Dockerfile           # Single image — Ubuntu 24.04, system tools, SSH, VS Code CLI, scripts
 │   ├── docker-compose.yml   # Stack — workspace-server + optional servers + headroom + 8 sidecars
-│   ├── entrypoint.sh        # workspace-server startup: setup-user → runtime-install → setup-credentials → sshd
+│   ├── docker-compose.gpu.yml # GPU overlay for NVIDIA hosts (opt-in)
+│   ├── Makefile             # Docker build and compose helper commands
 │   ├── sshd_config          # SSH daemon hardening config
-│   └── scripts/             # Installation scripts (build-install.sh, runtime-install.sh, packages/)
+│   └── containers/
+│       ├── workspace-server/   # Dockerfile, entrypoint.sh, scripts/, ansible/
+│       ├── ml-server/
+│       ├── database-qdrant/
+│       ├── database-neo4j/
+│       ├── dind-server/
+│       ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
+│       └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
+├── install/
+│   ├── ubuntu.sh            # Bitwarden-based deployment script (apt, curl, docker compose)
+│   └── windows.ps1          # PowerShell deployment script (Bitwarden, docker compose)
 ├── docs/
 │   ├── architecture-overview.md  # This document
 │   └── bdd-scenarios.md          # BDD scenarios for all workspace features
@@ -495,45 +515,43 @@ zzaia-agentic-workspace/
 
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
-| `rtk` | Binary in workspace image | Shell command output compression | always (in-image) | N/A — Layer 0, not a compose service |
-| `workspace-server` | SSH daemon, tool installer, agent runtime, Aspire MCP | 2222 (SSH) | _(none)_ | Always starts, owns shared home |
-| `vscode-server` | Browser VS Code (`code serve-web`) | 8080 | `vscode` | Opt-in via `server-profiles` secret, depends on workspace-server healthy |
-| `containers-dev-server` | Dev Containers support | stdin (MCP) | `devcontainer` | Opt-in via `server-profiles` secret, depends on workspace-server healthy |
-| **Layer 1 — Primary** | | | | |
-| `headroom` | Triple-stack proxy: compression + memory injection + code-graph | 8787 (internal) | always | |
-| `qdrant` | Vector DB — semantic cache + memory embeddings + code-graph | 6333 (internal) | always |
-| `neo4j` | Knowledge graph — shared by Headroom memory and code-graph | 7687 (internal) | always |
-| **Layer 2 — Supplementary** | | | |
-| `openmemory-mcp` | Structured memory queries (Phase 2) — Postgres + Qdrant backend | 5005 (MCP) | always |
-| `code-graph-mcp` | Code graph queries (Phase 3) — tree-sitter AST parsing | stdio (MCP) | always |
-| **Other MCP Adapters** | | | |
-| `mcp-tavily` | Web search MCP adapter | 3001 (internal) | conditional |
-| `mcp-azure-devops` | Azure DevOps MCP adapter | 3002 (internal) | conditional |
-| `mcp-postman` | Postman MCP adapter | 3003 (internal) | conditional |
-| `mcp-newrelic` | New Relic MCP adapter | 3004 (internal) | conditional |
-| `mcp-github` | GitHub MCP adapter | 3005 (internal) | conditional |
-| `mcp-playwright` | Headless Chromium MCP | 3006 (internal) | always |
-| `aspire-dashboard` | OTLP telemetry receiver + UI | 18888 | always |
+| `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure |
+| `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
+| `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
+| `database-qdrant` | Vector DB (Qdrant v1.17.1) | 6333 (internal) | always | Semantic cache + memory embeddings + code-graph, non-root: uid=999(qdrant) |
+| `database-neo4j` | Knowledge graph (Neo4j 5.14.0) | 7687/7474 (internal) | always | Knowledge graph + code-graph backend |
+| `mcp-headroom` | MCP gateway for ml-server (supergateway → ml-server) | 3008 (internal) | always | Non-root: uid=999(headroom) |
+| `mcp-playwright` | Headless Chromium MCP | 3006 (internal) | always | node:lts-alpine + supergateway, non-root: USER node |
+| `vscode-sidecar` | Browser VS Code (`code serve-web`) | VSCODE_PORT | `vscode` | Opt-in, depends on workspace-server healthy |
+| `jupyter-sidecar` | JupyterLab | JUPYTER_PORT | `jupyter` | Opt-in, depends on workspace-server healthy |
+| `containers-dev-sidecar` | Dev Containers support | stdin | `devcontainer` | Opt-in, depends on workspace-server healthy |
+| `tunnel-sidecar` | VS Code Tunnel (remote access via vscode.dev) | — | `tunnel` | Opt-in, depends on workspace-server healthy |
+| **Conditional MCP Adapters** | | | | |
+| `mcp-tavily` | Web search MCP adapter (node:lts-alpine + supergateway) | 3001 (internal) | conditional | USER node, idle if no TAVILY_API_KEY |
+| `mcp-azure-devops` | Azure DevOps MCP adapter (node:lts-alpine + supergateway) | 3002 (internal) | conditional | USER node, idle if no ADO_MCP_AUTH_TOKEN |
+| `mcp-postman` | Postman MCP adapter (node:lts-alpine + supergateway) | 3003 (internal) | conditional | USER node, idle if no POSTMAN_API_KEY |
+| `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, idle if no NEW_RELIC_API_KEY |
+| `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, idle if no GITHUB_PERSONAL_ACCESS_TOKEN |
 
 ### Shared State (Named Volumes)
 
 | Volume | Mount | Contents |
 |--------|-------|----------|
 | `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, VS Code state, workspace repos |
-| `<ws>-tools` | `/opt/tools` (workspace-server rw, vscode-server and containers-dev-server :ro) | Runtime tools: Node.js, .NET, Python, CLIs |
+| `<ws>-tools` | `/opt/tools` (workspace-server rw, optional servers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed) |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
-| `<ws>-headroom-qdrant` | `/qdrant/storage` | Vector embeddings for headroom and openmemory |
-| `<ws>-headroom-neo4j` | `/data` | Knowledge graph for headroom retrieval |
-| `<ws>-openmemory-data` | `/var/lib/postgresql/data` | OpenMemory Postgres persistent memory store (Phase 2, not yet implemented) |
-| `<ws>-code-graph-db` | `/data/code-graph` | CodeGraphContext graph index (Phase 3, not yet implemented) |
+| `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
+| `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
 
 ### Connection Types
 
 | Type | Entry Point | Notes |
 |------|-------------|-------|
 | SSH | `workspace:2222` | sshd with pubkey auth |
-| Browser | `vscode-server:8080` | `code serve-web`, no token (profile: vscode) |
-| Dev Containers | Docker socket → workspace | `devcontainer.json` in image |
+| Browser | `vscode-sidecar:VSCODE_PORT` | `code serve-web`, no token (profile: vscode) |
+| Jupyter | `jupyter-sidecar:JUPYTER_PORT` | JupyterLab (profile: jupyter) |
+| VS Code Tunnel | `tunnel-sidecar` | vscode.dev/tunnel/$WORKSPACE_NAME (profile: tunnel) |
+| Dev Containers | Docker socket → workspace | `devcontainer.json` in image (profile: devcontainer) |
 | VS Code Remote SSH | `workspace:2222` | Remote SSH extension |
 
 ## Technology Stack
@@ -543,19 +561,19 @@ zzaia-agentic-workspace/
 | Container runtime | Docker Desktop (Linux / macOS / Windows) |
 | Workspace OS | Ubuntu 24.04 LTS |
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
-| Developer UI | `code serve-web` (Microsoft VS Code) + OpenSSH |
+| Developer UI | Browser (code serve-web), SSH terminal, VS Code Dev Containers, VS Code Tunnel |
 | Dev Containers | `devcontainer.json` embedded in workspace image |
 | **Layer 0 — Shell I/O Compression** | |
 | **RTK** | **Rust Token Killer binary (in-image) — 81% avg token reduction on command outputs via bash hook intercepts** |
 | **Layer 1 — Primary (Automatic)** | |
-| **Headroom proxy** | **Triple-stack: compression (34–90% tokens, <5ms) + memory injection + code-graph, passthrough guarantee** |
+| **ml-server** | **Headroom AI proxy: triple-stack compression (34–90% tokens, <5ms) + memory injection + code-graph, passthrough guarantee** |
 | **Vector DB (Qdrant)** | **Semantic cache (compression) + memory embeddings + code-graph index** |
 | **Graph DB (Neo4j)** | **Knowledge graph (memory + code-graph), shared backing for primary layer** |
 | **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
 | **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
 | **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
-| Tool provisioning | `build-install.sh` + `runtime-install.sh` (node, dotnet, agent CLIs) + Miniforge3 (Python/conda) |
-| MCP bridge | supergateway (stdio → SSE) + native MCP servers (openmemory, codegraph) |
+| Tool provisioning | Ansible roles (workspace-server): system, user-setup, vscode-cli, node, dotnet, python, cli, path-config, credentials, gpu; version pins in `group_vars/all.yml` |
+| MCP bridge | supergateway@3.4.3 (streamableHttp transport, pre-installed at build time) |
 | Multi-tenancy | Docker Compose project namespacing |
 | Secret lifecycle | Process env → one-time file write → sealed |
 | Telemetry | .NET Aspire Standalone Dashboard (OTLP receiver) |
@@ -565,12 +583,13 @@ zzaia-agentic-workspace/
 | Threat | Mitigation |
 |--------|-----------|
 | Agent exfiltrates API keys | Keys never in workspace container env after startup |
-| Agent modifies host filesystem | Only `/secrets` and `/home/user/workspace` volumes mounted; `cap_drop: ALL` |
+| Agent modifies host filesystem | Only `/secrets` and `/home/user` volumes mounted; `cap_drop: ALL` |
 | Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
 | Secret visible in terminal | Env vars ephemeral after startup; SSH key persisted at `/secrets/.env` (root-owned, mode 600) |
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
 | Port scanning from container | MCP ports bound to internal network only |
-| VS Code server compromise | `vscode-server` container has no secrets — mounts workspace-home read-only for VS Code state |
+| MCP container compromise | All MCP containers run as non-root (USER node / uid=999); isolation via bridge network |
+| Database container compromise | qdrant runs as uid=999(qdrant); neo4j isolated volume; no mount-out capabilities |
 
 ## Related Documentation
 

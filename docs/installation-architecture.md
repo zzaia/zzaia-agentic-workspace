@@ -1,80 +1,86 @@
 # ZZAIA Agentic Workspace — Installation Architecture
 
-Ubuntu 24.04-based Docker container for multi-agent agentic development workspace. Removes `mise` (version manager/task runner) and replaces it with two purpose-built shell scripts using official package sources: `build-install.sh` (Dockerfile build time) and `runtime-install.sh` (workspace-server entrypoint, installs to /home/user). Single-source version pinning via `versions.env`.
+Ubuntu 24.04-based Docker container for multi-agent agentic development workspace. Tool provisioning uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in three plays: system setup (root), user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root). All user-space tools install to a separate volume for easy management. Single-source version pinning via `group_vars/all.yml`.
 
 ---
 
-### ADR 001: Remove mise — Two-Script Installation Model
+### ADR 001: Ansible-based Tool Provisioning
 
-**Decision**: Replace `mise.toml` + `mise` binary with two dedicated shell scripts: `build-install.sh` (Dockerfile build time) and `runtime-install.sh` (workspace-server entrypoint, installs to /home/user).
+**Decision**: Use Ansible roles for all tool provisioning, replacing mise + shell scripts. Roles run inside workspace-server container at startup via entrypoint playbook execution.
 
-- `mise` conflates version management and task running into a single dependency
-- Removes external apt keyring and mise GPG key from the image
-- Build-time script runs as root, installs to system paths (`/usr/local/bin`, `/usr/share/keyrings`)
-- Runtime script runs as user in `workspace-server` container entrypoint, installs to `/home/user` (shared Docker volume mounted by all server containers)
-- Both scripts source a `versions.env` file for pinning tool versions — single place to bump
-- Runtime script supports `--upgrade` flag to bypass idempotency marker
+- Roles organized by tool group: `system`, `user-setup`, `vscode-cli`, `node`, `dotnet`, `python`, `cli`, `path-config`, `credentials`, `gpu`
+- Three plays: system setup (root), user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), credentials/GPU (root)
+- Build-time: Ansible pre-installed; playbook templates in image
+- Runtime: `workspace-server` entrypoint runs Ansible playbook (`site.yml`)
+- Version pins in `docker/containers/workspace-server/ansible/group_vars/all.yml` — single place to bump all versions
+- Bootstrap marker at `/opt/tools/.bootstrap/tools.ready` tracks installation state; hash mismatch on startup triggers re-install
+- Idempotent: Ansible ensures desired state; can re-run safely
 
-**Rationale**: Eliminates a third-party dependency from the critical startup path, makes the installation surface explicit and auditable, simplifies debugging (plain bash, no plugin resolution or trust prompts).
-
----
-
-### ADR 002: Bash Module Pattern for Package Organization
-
-**Decision**: Organize install functions into sourced module files under `scripts/packages/` — one file per tool group. Each file exposes named functions sourced by the top-level scripts.
-
-- `packages/system.sh` — apt packages, Azure CLI, tectonic (build-time)
-- `packages/node.sh` — Node.js 22 tarball + npm globals (claude-code, mmdc, codex, gemini-cli)
-- `packages/dotnet.sh` — .NET 10 SDK + aspire CLI + aspirate tool
-- `packages/python.sh` — Miniforge, pip packages, conda envs (venv-analytics, venv-development)
-- `packages/cli.sh` — gh CLI, k6, d2, dapr, RTK binary
-- `packages/vscode.sh` — VS Code extensions installer
-
-Adding or removing a package = add/remove one function in the relevant module + one call in the orchestrating script.
-
-**Rationale**: Mirrors class-per-responsibility in OOP. Each module is independently readable, testable, and editable without touching other tools.
+**Rationale**: Ansible is industry-standard infrastructure automation. Replaces shell scripts + mise complexity with declarative, modular, reusable roles. Centralized version management. Role composition enables easy extension.
 
 ---
 
-### ADR 003: INSTALL_PREFIX Pattern and Dual Volumes
+### ADR 002: Ansible Roles for Tool Organization
 
-**Decision**: Tools install to `/opt/tools` (INSTALL_PREFIX=/opt/tools) in a separate `workspace-tools` volume. User configs and repos stay in `/home/user` (`workspace-home` volume). Both volumes are shared by all server containers.
+**Decision**: Organize tool installation into separate Ansible roles under `docker/containers/workspace-server/ansible/roles/` — one role per tool group or concern.
 
-- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/opt/tools` and `HOME=/home/user` during entrypoint
-- `workspace-tools` volume (read-write for workspace-server, read-only for vscode-server and containers-dev-server) holds all runtime tools: Node.js, .NET, Python, CLIs
-- `workspace-home` volume (shared read-write) holds user configs, credentials, workspace repos, and .vscode-server state
-- `configure_path()` writes `.bashrc`/`.profile` to `/home/user` — tools path references `/opt/tools`
-- All server containers share both `/home/user` and `/opt/tools` — single consistent environment across SSH, browser, and Dev Containers
-- `workspace-server` depends on no other servers; `vscode-server` and `containers-dev-server` depend on `workspace-server: condition: service_healthy`
+- `roles/system/` — apt packages, system config (build-time via root play)
+- `roles/user-setup/` — user creation, home directory setup
+- `roles/vscode-cli/` — VS Code CLI installation
+- `roles/node/` — Node.js via NVM + npm globals (claude-code, mmdc, codex, gemini-cli)
+- `roles/dotnet/` — .NET SDK + aspire + aspirate tools
+- `roles/python/` — Miniforge3, pip packages, conda environments
+- `roles/cli/` — gh CLI, k6, d2, dapr, RTK binary, docker CLI, azure-cli
+- `roles/path-config/` — writes ~/.bashrc and ~/.profile with correct PATH
+- `roles/credentials/` — Claude, GitHub, Azure authentication setup
+- `roles/gpu/` — CUDA/GPU support (optional, becomes_user: root)
 
-**Rationale**: Separates tools (immutable after install, can be rebuilt) from user state (configs, credentials, repos). Allows vscode-server and containers-dev-server to mount tools read-only. Simplifies home reset (delete home volume without deleting tools). Faster restart of optional servers (tools already present).
+Each role is independently reusable, testable, and composable. Roles called in `site.yml` three-play structure.
 
----
-
-### ADR 004: Idempotent Bootstrap with Script-Hash Marker
-
-**Decision**: Replace bootstrap marker `~/.bootstrap/mise.ready` with `~/.bootstrap/tools.ready`. The marker stores a hash of `runtime-install.sh`. If the script changes, the hash mismatch triggers a re-install on next container start.
-
-- `runtime-install.sh --upgrade` flag bypasses the marker entirely for explicit upgrades
-- Equivalent of the former `mise upgrade` task
-- Existing `retry_with_backoff` utility from `common.sh` reused for flaky network installs
-
-**Rationale**: Guarantees idempotency across restarts while detecting when the install spec itself changes — preventing stale tool state in long-running containers.
+**Rationale**: Ansible roles enforce separation of concerns. Each role has its own vars, handlers, tasks, and templates. Highly reusable; can extract to role library.
 
 ---
 
-### ADR 005: workspace-server Entrypoint Installation Pattern
+### ADR 003: Dual Volume Pattern for Tools and Home
 
-**Decision**: Tool installation is merged into the `workspace-server` container entrypoint, which runs: setup-user → runtime-install → setup-credentials → sshd.
+**Decision**: Tools install to `/opt/tools` (INSTALL_PREFIX=/opt/tools) in a separate `<ws>-tools` volume. User configs and repos stay in `/home/user` (`<ws>-home` volume). Both volumes are shared by all server containers.
 
-- `workspace-server` runs `runtime-install.sh` with `INSTALL_PREFIX=/opt/tools` and `HOME=/home/user` during entrypoint startup (as the `user` account)
-- `configure_path()` writes the PATH block to `/home/user/.bashrc` and `/home/user/.profile` (referencing `/opt/tools` tools)
-- Bootstrap hash marker (`/opt/tools/.bootstrap/tools.ready`) gates re-runs across volume recreations and detects spec changes
-- Other servers (`vscode-server`, `containers-dev-server`) depend on `workspace-server: condition: service_healthy` — they start only after tool installation completes
-- `workspace-server` owns both the `workspace-home` and `workspace-tools` volumes — it performs initial seeding and tool installation
-- `flock` file locking removed entirely — there is only one installer (workspace-server)
+- `workspace-server` runs Ansible playbook with `INSTALL_PREFIX=/opt/tools` during entrypoint
+- `<ws>-tools` volume (read-write for workspace-server, read-only for vscode-sidecar/jupyter-sidecar/etc.) holds all runtime tools: Node.js, .NET, Python, CLIs
+- `<ws>-home` volume (shared read-write) holds user configs, credentials, workspace repos, and VS Code state
+- Ansible `path-config` role writes `.bashrc`/`.profile` to `/home/user` — tools PATH references `/opt/tools`
+- All server containers share both `/home/user` and `/opt/tools` — single consistent environment across SSH, browser, Dev Containers, Jupyter
+- `workspace-server` depends on no other servers; optional sidecars depend on `workspace-server: condition: service_healthy`
 
-**Rationale**: All-in-one pattern. `workspace-server` is the authoritative owner of shared volumes. No separate init container or volume orchestration needed. Installation failures are clear in workspace-server logs. Optional servers have fast startup (tools already present in workspace-tools volume). Dual volumes allow clean home reset without rebuilding tools.
+**Rationale**: Separates tools (immutable after install, can be rebuilt) from user state (configs, credentials, repos). Allows optional sidecars to mount tools read-only. Simplifies home reset (delete home volume without deleting tools). Faster restart of optional sidecars (tools already present).
+
+---
+
+### ADR 004: Idempotent Bootstrap with Hash Marker
+
+**Decision**: Bootstrap marker at `/opt/tools/.bootstrap/tools.ready` stores a hash of the Ansible playbook configuration. If the playbook or group_vars changes, the hash mismatch triggers a re-run on next container start.
+
+- Idempotency: Ansible tasks are inherently idempotent; re-running does no harm if tools already installed
+- Hash-based detection: marker compares SHA256 of `site.yml` + `group_vars/all.yml`; mismatch triggers full re-run
+- Upgrade path: update `group_vars/all.yml` version pins; hash mismatch triggers re-install on next container start
+- Explicit force: `docker exec <container> ansible-playbook -i inventory.ini site.yml` re-runs playbook manually
+
+**Rationale**: Guarantees idempotency and freshness. Ansible's built-in check mode can detect drift. Version bumps in `group_vars/all.yml` flow through automatically on next startup.
+
+---
+
+### ADR 005: workspace-server Entrypoint Ansible Execution
+
+**Decision**: Tool installation via Ansible is executed in the `workspace-server` container entrypoint, which runs: setup-user → ansible-playbook → setup-credentials → sshd.
+
+- `workspace-server` entrypoint runs `ansible-playbook -i inventory.ini site.yml` with `INSTALL_PREFIX=/opt/tools` during startup
+- Playbook execution happens as `user` account for user-space tools; root for system tools via Ansible `become:`
+- Bootstrap hash marker (`/opt/tools/.bootstrap/tools.ready`) gates re-runs and detects playbook/group_vars changes
+- Optional sidecars (vscode-sidecar, jupyter-sidecar, etc.) depend on `workspace-server: condition: service_healthy` — they start only after tool installation completes
+- `workspace-server` owns both the `<ws>-home` and `<ws>-tools` volumes — it performs initial seeding and tool installation
+- Volume mounts configured for group_vars and role discovery during playbook execution
+
+**Rationale**: Ansible-driven pattern. `workspace-server` is the authoritative owner of shared volumes. Playbook runs once per startup; Ansible handles idempotency. Installation failures are clear in workspace-server logs. Optional sidecars have fast startup (tools already in `<ws>-tools` volume). Dual volumes allow clean home reset.
 
 ---
 
@@ -207,63 +213,81 @@ docker compose ... @profileArgs up -d
 
 ```
 docker/
-├── Dockerfile                         # Single image: Ubuntu 24.04 + system tools + scripts
-├── entrypoint.sh                      # workspace-server startup: setup-user → runtime-install → setup-credentials → sshd
-├── scripts/
-│   ├── common.sh                      # logging, retry, ensure_dir utilities
-│   ├── versions.env                   # NODE_VERSION=24, DOTNET_VERSION=10, etc.
-│   ├── build-install.sh               # Dockerfile RUN target (root, system paths)
-│   ├── runtime-install.sh             # workspace-server entrypoint (user, /home/user)
-│   ├── setup-user.sh                  # Home seed, docker socket, sudo
-│   ├── setup-credentials.sh           # Claude, GitHub, Azure auth setup
-│   └── packages/
-│       ├── system.sh                  # apt packages, tectonic
-│       ├── node.sh                    # Node.js 24 tarball + npm globals
-│       ├── dotnet.sh                  # .NET 10 SDK + aspire + aspirate
-│       ├── python.sh                  # Miniforge, pip, conda environments, azure-cli
-│       ├── cli.sh                     # gh, k6, d2, dapr, RTK
-│       └── vscode.sh                  # VS Code extensions
-├── docker-compose.yml                 # workspace-server + optional servers + MCP sidecars
-└── sshd_config                        # SSH daemon config
+├── docker-compose.yml                 # workspace-server + optional sidecars + headroom + MCP adapters
+├── docker-compose.gpu.yml             # GPU overlay (opt-in)
+├── Makefile                           # Docker build and compose helpers
+├── sshd_config                        # SSH daemon config
+└── containers/
+    ├── workspace-server/
+    │   ├── Dockerfile                 # Ubuntu 24.04, system tools, Ansible
+    │   ├── entrypoint.sh              # workspace-server startup: setup-user → ansible-playbook → setup-credentials → sshd
+    │   ├── scripts/
+    │   │   ├── setup-user.sh          # Home seed, docker socket, sudo
+    │   │   └── setup-credentials.sh   # Claude, GitHub, Azure auth setup
+    │   └── ansible/
+    │       ├── site.yml               # Main playbook (3 plays: system, user-tools, credentials/gpu)
+    │       ├── ansible.cfg            # Ansible config
+    │       ├── inventory.ini           # Inventory (localhost)
+    │       ├── group_vars/
+    │       │   └── all.yml            # Version pins and variables for all roles
+    │       └── roles/
+    │           ├── system/            # System packages, config (root play)
+    │           ├── user-setup/        # User creation, home directory
+    │           ├── vscode-cli/        # VS Code CLI
+    │           ├── node/              # Node.js + npm globals
+    │           ├── dotnet/            # .NET SDK + aspire + aspirate
+    │           ├── python/            # Miniforge3 + pip + conda envs
+    │           ├── cli/               # gh, k6, d2, dapr, RTK, docker CLI, azure-cli
+    │           ├── path-config/       # .bashrc, .profile PATH setup
+    │           ├── credentials/       # Claude, GitHub, Azure auth
+    │           └── gpu/               # CUDA/GPU support (optional)
+    ├── ml-server/
+    ├── database-qdrant/
+    ├── database-neo4j/
+    ├── dind-server/
+    ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
+    └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
 ```
 
 ## Architecture Components
 
 ### Build-time Components (Docker image layer)
 
-- **build-install.sh**: Installs system-level tools during `docker build` as root. Sources `packages/system.sh`. Runs once during image construction.
-- **VS Code CLI**: Downloaded from update.code.visualstudio.com, placed in `/usr/local/bin` for vscode-server support
-- **tectonic**: LaTeX engine from drop.tectonic-typesetting.org, moved to `/usr/local/bin` for document rendering
-- **plantuml, tmux**: Installed via apt as system packages for diagram rendering and terminal multiplexing
-- **System-wide miniforge3**: Installed at `/usr/local/miniforge3` for system PATH availability at build time
+- **Dockerfile**: Ubuntu 24.04 base + pre-installed Ansible + playbook/role copies + other system packages
+- **Ansible**: Pre-installed in image; site.yml, roles/, and group_vars/ copied into image at build time
+- **supergateway@3.4.3**: Pre-installed globally for MCP container execution (streamableHttp transport)
 
 ### Runtime Components (workspace-server entrypoint)
 
-- **workspace-server entrypoint**: Merges all initialization: `setup-user.sh` → `runtime-install.sh` → `setup-credentials.sh` → sshd startup. Runs once at container startup.
-- **runtime-install.sh**: Orchestrates user-space tool installation. Sources all `packages/*.sh` modules and respects `versions.env` pins. Runs in `workspace-server` entrypoint with `INSTALL_PREFIX=/home/user` as the `user` account.
-- **versions.env**: Single-file version pin registry for all tools. Bump version here to trigger automatic upgrade on next `workspace-server` start (delete `workspace-home` volume to force).
-- **configure_path()**: Function that writes canonical PATH to both `.bashrc` and `.profile` (INSTALL_PREFIX=/home/user). All server containers source the shared `.bashrc` on login.
-- **packages/*.sh modules**: Six sourced modules, each responsible for one tool category. Added/removed independently without affecting other installations.
+- **workspace-server entrypoint**: Merges all initialization: `setup-user.sh` → `ansible-playbook` → `setup-credentials.sh` → sshd startup. Runs once at container startup.
+- **ansible-playbook execution**: Orchestrates three-play playbook (system, user-tools, credentials/gpu). Respects version pins in `group_vars/all.yml`. Runs as `user` for user-space tools; `become: root` for system tasks.
+- **group_vars/all.yml**: Single-file version pin registry for all tools (NODE_VERSION, DOTNET_VERSION, PYTHON_VERSION, etc.). Bump versions here to trigger automatic upgrade on next `workspace-server` start.
+- **path-config role**: Writes canonical PATH to both `.bashrc` and `.profile` (INSTALL_PREFIX=/opt/tools). All server containers source the shared `.bashrc` on login.
+- **roles/ directory**: 10 roles, each responsible for one tool category or concern (system, user-setup, node, dotnet, python, cli, vscode-cli, path-config, credentials, gpu). Added/removed independently.
 
 ### Infrastructure
 
-- **Shared Home Volume** (`/home/user`): Single Docker volume shared across all server containers (workspace-server, vscode-server, containers-dev-server). Contains user configs, credentials, workspace repos, and all runtime tools. Owned by workspace-server during initialization.
-- **Bootstrap Marker** (`/home/user/.bootstrap/tools.ready`): Stores SHA256 hash of `runtime-install.sh`. Hash mismatch on startup triggers full re-installation, detecting spec changes.
-- **entrypoint.sh** (workspace-server): Orchestrates startup sequence: `setup-user.sh` → `runtime-install.sh` → `setup-credentials.sh` → sshd startup
-- **Dependency ordering**: workspace-server starts immediately (no dependencies). vscode-server and containers-dev-server depend on `workspace-server: condition: service_healthy` and skip their own tool installation (tools already in shared home)
+- **Shared Home Volume** (`<ws>-home`, mount `/home/user`): Single Docker volume shared across all server containers (workspace-server, vscode-sidecar, jupyter-sidecar, etc.). Contains user configs, credentials, workspace repos, and VS Code state. Owned by workspace-server during initialization.
+- **Shared Tools Volume** (`<ws>-tools`, mount `/opt/tools`): Read-write for workspace-server, read-only for optional sidecars. Contains all runtime tools installed by Ansible. Survives volume recreation.
+- **Bootstrap Marker** (`/opt/tools/.bootstrap/tools.ready`): Stores SHA256 hash of `site.yml` + `group_vars/all.yml`. Hash mismatch on startup triggers Ansible playbook re-run, detecting spec changes.
+- **entrypoint.sh** (workspace-server): Orchestrates startup sequence: `setup-user.sh` → `ansible-playbook -i inventory.ini site.yml` → `setup-credentials.sh` → sshd startup
+- **Dependency ordering**: workspace-server starts immediately (no dependencies). Optional sidecars depend on `workspace-server: condition: service_healthy` and skip tool installation (tools already in shared `<ws>-tools` volume)
 
 ## Technology Stack
 
 | Layer | Technologies |
 |-------|-------------|
 | Base OS | Ubuntu 24.04 LTS |
+| Tool Provisioning | Ansible roles (site.yml, 3-play structure) |
+| Version Pins | `ansible/group_vars/all.yml` (centralized version registry) |
 | System Tools | Docker CE CLI, tectonic (LaTeX), plantuml, tmux, VS Code CLI, system miniforge3 (/usr/local/miniforge3) |
 | JavaScript Runtime | Node.js 24 (nodejs.org tarball) + npm globals (claude-code, mmdc, codex, gemini-cli) |
 | .NET Runtime | .NET 10 SDK (dotnet-install.sh) + aspire CLI + aspirate tool |
 | Python Runtime | Miniforge (conda-forge) + pip packages + conda envs (venv-analytics, venv-development) + Azure CLI (pip) |
-| CLI Tools | gh CLI (GitHub), k6 (load testing), d2 (diagrams), dapr (distributed app runtime), RTK (Rust binary) |
-| IDE | vscode-server (browser, optional) + SSH daemon access (always-on) |
-| Scripting | Bash 5 with sourced module pattern, official installers for all tools |
+| CLI Tools | gh CLI (GitHub), k6 (load testing), d2 (diagrams), dapr (distributed app runtime), RTK (Rust binary), docker CLI, azure-cli |
+| IDE | vscode-sidecar (browser, optional) + jupyter-sidecar (optional) + SSH daemon (always-on) |
+| Orchestration | Ansible (infrastructure automation, role-based, idempotent) |
+| Bootstrap | Hash-based marker detection in entrypoint; re-runs Ansible if playbook/group_vars change |
 
 ## Related Documentation
 

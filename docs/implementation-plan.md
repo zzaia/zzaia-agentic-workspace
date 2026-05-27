@@ -12,7 +12,7 @@ updated: 2026-05-04
 
 Decouple VS Code browser UI from workspace container, add Dev Containers support, integrate always-on Headroom AI proxy (with Qdrant vector DB for compression), add OpenMemory MCP for session memory, add CodeGraphContext for workspace semantic search, and fix missing VS Code extension installations. This modernizes the Docker architecture to support multiple development modes (browser, SSH, Dev Containers) with independent failure domains and comprehensive AI proxy + memory + search infrastructure.
 
-**Effort**: 39 points (parallel) | **Tech**: Docker, Docker Compose, VS Code, Headroom AI proxy, OpenMemory MCP, CodeGraphContext, mise
+**Effort**: 39 points (parallel) | **Tech**: Docker, Docker Compose, VS Code, Headroom AI proxy, OpenMemory MCP, CodeGraphContext, Ansible roles
 
 > Effort estimated using Fibonacci sequence: 1, 2, 3, 5, 8, 13, 21, 34, 55
 
@@ -297,19 +297,21 @@ gantt
 
 **Container Orchestration**: Docker, Docker Compose, Compose profiles
 
-**Development Environments**: VS Code browser (serve-web), VS Code SSH attach, VS Code Dev Containers
+**Development Environments**: VS Code browser (serve-web), VS Code SSH attach, VS Code Dev Containers, JupyterLab, VS Code Tunnel
 
 **AI Proxy**: Headroom (ghcr.io/chopratejas/headroom:latest) with context compression
 
-**Vector DB**: Qdrant v1.17.1 (Phase 1: used by Headroom; Phase 2: shared with OpenMemory session memory)
+**Vector DB**: Qdrant v1.17.1 (used by Headroom + supplementary layers)
 
-**Knowledge Graph**: Neo4j 5.24 (Phase 1: used by Headroom for knowledge graph memory)
+**Knowledge Graph**: Neo4j 5.14.0 (used by Headroom for knowledge graph memory)
 
 **Session Memory**: OpenMemory MCP (Phase 2: skpassegna/openmemory-mcp:latest) with Postgres + Qdrant backing
 
 **Workspace Search**: CodeGraphContext MCP (Phase 3: mekayelanik/codegraphcontext-mcp:stable) HTTP endpoint on port 8045
 
-**Tool Management**: mise for VS Code extensions and tool versioning
+**Tool Management**: Ansible roles (system, user-setup, vscode-cli, node, dotnet, python, cli, path-config, credentials, gpu)
+
+**Version Pins**: group_vars/all.yml (centralized version registry)
 
 **Health Monitoring**: TCP/HTTP healthchecks, depends_on service_healthy condition
 
@@ -441,7 +443,17 @@ gantt
 
 4. ~~**Phase 2B** (devcontainer.json)~~ — ✅ **COMPLETE**
 
-5. **Additional improvements delivered** (beyond original plan):
+5. ✅ **Phase 4 (Runtime Validation) — COMPLETE (2026-05-27)**:
+   - ✅ Full stack deployed: 12/12 containers healthy (`docker compose up -d`)
+   - ✅ Workspace Ansible bootstrap: `ok=85 changed=20 failed=0`
+   - ✅ All tool binaries verified: node v24.16.0, dotnet 10.0.300, conda 26.3.2, claude v2.1.143, gh 2.92.0, code 1.121.0
+   - ✅ ANTHROPIC_BASE_URL, OPENAI_BASE_URL, GEMINI_API_BASE resolve to http://ml-server:8787
+   - ✅ mcp-headroom (supergateway@3.4.3) healthy on port 3008
+   - ✅ All MCP containers running as non-root (USER node / uid=999)
+   - ✅ database-qdrant running as uid=999(qdrant)
+   - ✅ Neo4j using server.* memory settings (no deprecated dbms.* warnings)
+
+6. **Additional improvements delivered** (beyond original plan):
    - RTK installation moved from Dockerfile root `RUN` to `mise.toml` `[tasks.rtk]` (cleaner, runs as `user`)
    - Aspire Dashboard polling loop removed from `entrypoint.sh`; replaced with `depends_on: aspire-dashboard: condition: service_healthy` in Compose
    - Headroom MCP server added to all agent configs (Gemini, Codex, Copilot) — Claude already had it
