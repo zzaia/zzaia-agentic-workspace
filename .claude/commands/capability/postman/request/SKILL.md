@@ -1,34 +1,20 @@
 ---
 name: capability:postman:request
-description: Execute HTTP calls via Postman runner
+description: Execute HTTP calls via Newman CLI runner
 argument-hint: "--spec <payload> [--description <text>]"
 user-invocable: true
-agent: zzaia-workspace-manager
-metadata:
-  parameters:
-    - name: spec
-      description: Resource specification payload (method, URL, headers, body)
-      required: true
-    - name: description
-      description: Broader description of what to do within this action
-      required: false
 ---
 
 ## PURPOSE
 
-Execute an HTTP call via Postman runner. Sends requests with full support for methods, URLs, headers, and body payloads.
+Execute an HTTP call via Newman CLI. Sends requests with full support for methods, URLs, headers, and body payloads.
 
 ## EXECUTION
 
 1. **Parse** the request specification from `--spec`
-2. **Execute** the HTTP call using Postman MCP
-3. **Return** the response with status, headers, and body
-
-## DELEGATION
-
-**MANDATORY**: Always invoke the agents defined in this command's frontmatter for their designated responsibilities. Never skip, replace, or simulate their behavior directly.
-
-- `zzaia-workspace-manager` — Execute HTTP request via Postman runner
+2. **Build** a minimal Postman collection JSON in memory
+3. **Run** `newman run <collection.json> --reporters cli,json` via Bash
+4. **Return** the response with status, headers, and body
 
 ## WORKFLOW
 
@@ -36,17 +22,16 @@ Execute an HTTP call via Postman runner. Sends requests with full support for me
 sequenceDiagram
     participant U as User
     participant C as Command
-    participant W as zzaia-workspace-manager
 
     U->>C: /capability:postman:request --spec <payload>
-    C->>W: Execute HTTP request
-    W-->>C: Response (status, headers, body)
+    C->>C: Build collection JSON
+    C->>C: newman run --reporters cli,json
     C-->>U: HTTP response result
 ```
 
 ## ACCEPTANCE CRITERIA
 
-- HTTP request executes via Postman MCP
+- HTTP request executes via Newman CLI
 - Response includes status code, headers, and body
 - Supports all HTTP methods (GET, POST, PUT, DELETE, PATCH, etc.)
 - Handles request headers and body payload

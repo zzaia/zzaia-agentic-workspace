@@ -74,11 +74,27 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
    - If `--ref-url` provided: Call `/behavior:websearch --query <ref-url>`
    - Compile retrieved content into testing context
 
-3. **Generate BDD Documentation**: Translate acceptance criteria and child work items into BDD scenarios
+3. **Generate BDD Documentation**: Translate acceptance criteria and child work items into detailed BDD scenarios with full API metadata
 
    - Call `/behavior:management:business --context "<work-item-details + child-work-items>" --description "<provided-description>"`
    - Produce Given/When/Then scenarios appropriate for `--type` (API flows for e2e, UI flows for ui, contract flows for integration)
-   - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field acceptance-criteria` to write BDD as the Test Case steps
+   - **Each scenario MUST include the following detail level:**
+     - Full API call block per `When` step: HTTP method, full URL with path/query parameters, all required headers (Authorization scheme, Content-Type, Accept), request body schema with field types and example values (for POST/PUT/PATCH)
+     - Expected HTTP status code per `Then` step
+     - Full response schema with all field names, types, and constraints (required/nullable)
+     - Explicit validation assertions: what to assert, how to compare, and what constitutes a pass (e.g., `assert response.every(x => x.isActive === true)`)
+     - Codebase reference: controller file path and line number where the endpoint is defined
+     - Business rule(s) enforced by this scenario (BR-XX)
+   - For `e2e` type: include a curl-equivalent example block per scenario for direct reproducibility
+   - For scenarios covering multiple data combinations (e.g., validating all payment systems): use `Scenario Outline` with an `Examples` table listing every expected value
+   - Call `/capability:document:write --template bdd-scenarios --title "BDD Scenarios: <work-item-title>" --work-item <test-case> --target-field acceptance-criteria` to write BDD as the Test Case acceptance criteria
+   - Call `/capability:document:write --template bdd-scenarios --title "BDD Steps: <work-item-title>" --work-item <test-case> --target-field steps` to write each BDD scenario as a structured Test Case Step: **Action** = Given/When block (full API call with curl), **Expected Result** = Then block (assertions and response schema). One step per scenario, using the Azure DevOps Steps field (Microsoft.VSTS.TCM.Steps)
+   - After writing acceptance criteria and steps, call `/capability:document:write --template bdd-scenarios --title "BDD Metadata: <work-item-title>" --work-item <test-case> --target-field discussion` to post a supplemental comment containing:
+     - Endpoint catalog table (method, route, controller file:line, response type)
+     - Full DTO/response schemas with all field names and types
+     - Authentication requirements (scheme, token source)
+     - Business rules mapping (rule ID → scenario name)
+     - Out-of-scope items and deferred edge cases
    - **MANDATORY**: Do NOT proceed to testing before user confirmation
 
 4. **Validate BDD**: Confirm generated BDD scenarios are correct before testing
@@ -161,7 +177,9 @@ sequenceDiagram
     W->>BDD: --context <details+children> --description <ctx>
     BDD-->>W: BDD scenarios (Given/When/Then)
     W->>DW: --template bdd-scenarios --title "BDD: <title>" --work-item <test-case> --target-field acceptance-criteria
-    DW-->>W: BDD written to Test Case steps
+    DW-->>W: BDD written to acceptance criteria
+    W->>DW: --template bdd-scenarios --title "BDD Steps: <title>" --work-item <test-case> --target-field steps
+    DW-->>W: Structured steps written to Test Case Steps field (Action + Expected Result per scenario)
     W->>U: /behavior:workspace:ask-user-question (review Test Case BDD & confirm)
     U-->>W: Confirmed
     alt user requests changes
@@ -190,7 +208,7 @@ sequenceDiagram
 
 - Work item and all child work items retrieved with non-empty description
 - Test Case resolved: existing one loaded if `--test-case` provided, otherwise a new Test Case created as child of the work item
-- BDD scenarios generated appropriate to the test type and written to Test Case steps
+- BDD scenarios generated appropriate to the test type and written to both Test Case acceptance criteria and Test Case Steps field (Microsoft.VSTS.TCM.Steps)
 - Each BDD step executed in sequence with diagnostics collected per step regardless of pass/fail
 - Concise step report displayed in prompt after each step execution
 - All step findings correlated and classified by severity
