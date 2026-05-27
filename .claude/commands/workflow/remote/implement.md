@@ -82,7 +82,7 @@ Execute a complete implementation workflow that orchestrates multiple developmen
 
    - Call `/behavior:development:review --target repo --path ./workspace/<repo>.worktrees/<working-branch>`
    - Generate numbered issue list from review output
-   - Call `/capability:document:write --template pull-request-review --title "Review: <work-item-title>" --pr <pr-id> --target-field comment` to post the review with numbered issues to the PR
+   - Call `/behavior:devops:pull-request --action update --portal <portal> --project <project> --repo <repo> --pr <pr-id> --publish-review true` to post the review as inline code-line comments on the PR
    - If `--auto-continue` is set, skip the question and proceed automatically to fix all issues
    - Otherwise call `/behavior:workspace:ask-user-question --question "Review posted to PR. How would you like to proceed?" --options "Fix all issues; Continue without fixing; <Any user input>"`
 
@@ -186,7 +186,7 @@ sequenceDiagram
 - Implementation executes with full work item context and SDD documentation
 - Initial implementation committed and pushed before PR creation
 - Draft pull request created linking feature branch to target branch with work item reference
-- Review findings posted to PR as numbered issue list using `pull-request-review` template via `/capability:document:write`
+- Review findings posted to PR as inline code-line comments via `/behavior:devops:pull-request --publish-review true`
 - When `--auto-continue` is set, review confirmation is skipped and all issues are fixed automatically
 - When interactive, user chooses between fixing all issues, continuing without fixes, or providing custom input
 - All review issues implemented and committed with conventional format referencing work item
