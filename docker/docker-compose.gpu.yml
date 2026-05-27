@@ -30,7 +30,10 @@ services:
       - HEADROOM_KOMPRESS_BACKEND=pytorch
     deploy:
       resources:
+        limits:
+          memory: 4G
         reservations:
+          memory: 2G
           devices:
             - driver: nvidia
               count: all

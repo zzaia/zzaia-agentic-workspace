@@ -105,24 +105,27 @@ install_venv_system() {
 # ── Bootstrap venv-system with hash-based marker ───────────────────────────────
 bootstrap_venv_system() {
     local script_hash
+    local script_hash env_hash combined_hash
     script_hash=$(sha256sum "$0" | awk '{print $1}')
+    env_hash=$(printf "GPU_ENABLED=%s" "${GPU_ENABLED:-false}" | sha256sum | awk '{print $1}')
+    combined_hash="${script_hash}-${env_hash}"
 
     mkdir -p "$INSTALL_PREFIX/.bootstrap"
 
     if [ -f "$BOOTSTRAP_MARKER" ]; then
         local stored_hash
         stored_hash=$(cat "$BOOTSTRAP_MARKER" 2>/dev/null || echo "")
-        if [ "$stored_hash" = "$script_hash" ]; then
+        if [ "$stored_hash" = "$combined_hash" ]; then
             log_info "venv-system already bootstrapped (hash match)"
             return 0
         fi
-        log_warn "Script changed — reinstalling venv-system"
+        log_warn "Config changed (script or GPU_ENABLED) — reinstalling venv-system"
     fi
 
     install_miniforge
     install_venv_system
 
-    echo "$script_hash" > "$BOOTSTRAP_MARKER"
+    echo "$combined_hash" > "$BOOTSTRAP_MARKER"
     log_success "venv-system bootstrap complete"
 }
 
