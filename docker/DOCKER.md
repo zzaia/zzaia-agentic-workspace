@@ -26,9 +26,14 @@ The workspace requires the following host software:
 See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short version:
 
 ```bash
-WORKSPACE_NAME="my-org"  SSH_PUBLIC_KEY="ssh-ed25519 AAAA..."  VSCODE_PORT=8080  SSH_PORT=2222
+export WORKSPACE_NAME="my-org"
+export SSH_PUBLIC_KEY="ssh-ed25519 AAAA..."
+export VAULT_ROOT_TOKEN="$(openssl rand -hex 32)"
+export BWS_ACCESS_TOKEN="<your-machine-account-token>"
+export VSCODE_PORT=8080
+export SSH_PORT=2222
 # ... set other optional API keys
-docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" --env-file <(...) up -d
+docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" up -d
 ```
 
 After the first run, start and stop the workspace from **Docker Desktop** or:
@@ -72,10 +77,11 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 
 | Volume alias | Docker volume name | Mount path | Contents | Lifecycle |
 |---|---|---|---|---|
-| `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key, persisted env | Independent |
+| `workspace-secrets` | `<WORKSPACE_NAME>-secrets` | `/secrets` (all servers) | SSH public key | Independent |
 | `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
 | `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar, tunnel-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
 | `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
+| `vault-data` | `<WORKSPACE_NAME>-vault-data` | `/vault/file` (vault-server) | HashiCorp Vault KV v2 secret store | Persists across restarts |
 
 ### Home volume seeding
 
@@ -140,7 +146,22 @@ docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 
 ---
 
-## MCP Services and Proxy
+## Secrets and Vault
+
+**vault-server** is the central secret store:
+
+| Service | Port | Role |
+|---------|------|------|
+| vault-server | 8200 | HashiCorp Vault KV v2 — single combined container holding all secrets, synced at startup from deploy script env vars |
+
+**Secret distribution pattern**:
+- At deploy time: deploy script receives secrets via `BWS_ACCESS_TOKEN` (Bitwarden Secrets Manager)
+- Secrets are passed only to vault-server container
+- Vault-server stores all secrets in Vault KV v2 on startup
+- All other containers fetch only their needed secrets from Vault at runtime via `VAULT_TOKEN` + `VAULT_ADDR=http://vault-server:8200`
+- Vault UI exposed at `http://localhost:8200/ui` (localhost only)
+
+**MCP Services and Proxy**
 
 **Proxy server** runs as the central bridge for LLM API calls:
 
@@ -150,7 +171,7 @@ docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 
 Each MCP server runs as an isolated sidecar container on the internal `mcp` Docker network. Ports are not exposed to the host. If a secret is not provided, the sidecar exits cleanly (code 0) and does not restart.
 
-| Service | Port | Secret |
+| Service | Port | Secret (fetched from Vault) |
 |---------|------|--------|
 | mcp-tavily | 3001 | `TAVILY_API_KEY` |
 | mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |

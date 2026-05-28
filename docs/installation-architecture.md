@@ -159,25 +159,25 @@ C4Container
 
 ## Server Profiles
 
-The workspace supports optional Docker Compose profiles controlled by the `server-profiles` Bitwarden secret. This enables flexible deployment without hardcoding which server types run.
+The workspace supports optional Docker Compose profiles controlled by the `DEPLOY_PROFILES` environment variable. This enables flexible deployment without hardcoding which server types run.
 
 ### Profile Types
 
 | Profile | Server Type | Purpose |
 |---------|------------|---------|
-| `vscode` | `vscode-server` | Browser-based VS Code IDE on `VSCODE_PORT` (8080 default) |
-| `devcontainer` | `containers-dev-server` | VS Code Dev Containers extension attachment |
+| `vscode` | `vscode-sidecar` | Browser-based VS Code IDE on `VSCODE_PORT` (8080 default) |
+| `devcontainer` | `containers-dev-sidecar` | VS Code Dev Containers extension attachment |
 | _(none — always starts)_ | `workspace-server` | SSH daemon, tool installation, shared home owner |
 
 ### Usage
 
 #### Installation Scripts
 
-Both Ubuntu and Windows installation scripts read the `server-profiles` Bitwarden secret and build dynamic `--profile` flags:
+Both Ubuntu and Windows installation scripts read the `DEPLOY_PROFILES` environment variable and build dynamic `--profile` flags:
 
 ```bash
-# Ubuntu/Mac: install/ubuntu.sh
-DEPLOY_PROFILES=$(fetch_secret "server-profiles")  # e.g., "vscode devcontainer"
+# Ubuntu/Mac: deploy/ubuntu.sh
+DEPLOY_PROFILES=$(bws secret list --output json | jq -r '.[] | select(.key=="DEPLOY_PROFILES") | .value')  # e.g., "vscode devcontainer"
 for p in $DEPLOY_PROFILES; do
     PROFILE_FLAGS="$PROFILE_FLAGS --profile $p"
 done
@@ -185,8 +185,8 @@ docker compose ... $PROFILE_FLAGS up -d
 ```
 
 ```powershell
-# Windows: install/windows.ps1
-$DEPLOY_PROFILES = Get-VaultSecret $items "server-profiles"  # e.g., "vscode"
+# Windows: deploy/windows.ps1
+$DEPLOY_PROFILES = (bws secret list --output json | ConvertFrom-Json | Where-Object { $_.key -eq "DEPLOY_PROFILES" }).value  # e.g., "vscode"
 foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
     $profileArgs += '--profile', $p
 }
@@ -195,15 +195,14 @@ docker compose ... @profileArgs up -d
 
 #### Examples
 
-- **SSH-only mode**: Leave `server-profiles` empty in Bitwarden — only `workspace-server` starts (lightest footprint)
-- **Browser IDE**: Set `server-profiles` to `vscode` — start both `workspace-server` and `vscode-server`
-- **Dev Containers**: Set `server-profiles` to `devcontainer` — start both `workspace-server` and `containers-dev-server`
-- **Full setup**: Set `server-profiles` to `vscode devcontainer` — start all three servers
+- **SSH-only mode**: Omit `DEPLOY_PROFILES` or leave empty — only `workspace-server` starts (lightest footprint)
+- **Browser IDE**: Set `DEPLOY_PROFILES` to `vscode` — start both `workspace-server` and `vscode-sidecar`
+- **Dev Containers**: Set `DEPLOY_PROFILES` to `devcontainer` — start both `workspace-server` and `containers-dev-sidecar`
+- **Full setup**: Set `DEPLOY_PROFILES` to `vscode devcontainer` — start all three servers
 
-### Bitwarden Secret
+### Bitwarden Secrets Manager
 
-**Vault Item Name:** `server-profiles`  
-**Field:** `notes` or `password`  
+**Secret Key:** `DEPLOY_PROFILES`  
 **Format:** Space-separated profile names (e.g., `vscode devcontainer`)  
 **Optional:** Yes — if empty or missing, only SSH access is available (workspace-server always runs)
 
@@ -213,11 +212,13 @@ docker compose ... @profileArgs up -d
 
 ```
 docker/
-├── docker-compose.yml                 # workspace-server + optional sidecars + headroom + MCP adapters
+├── docker-compose.yml                 # vault-server + workspace-server + optional sidecars + headroom + MCP adapters
 ├── docker-compose.gpu.yml             # GPU overlay (opt-in)
 ├── Makefile                           # Docker build and compose helpers
 ├── sshd_config                        # SSH daemon config
 └── containers/
+    ├── vault-server/
+    │   └── Dockerfile                 # HashiCorp Vault (file backend)
     ├── workspace-server/
     │   ├── Dockerfile                 # Ubuntu 24.04, system tools, Ansible
     │   ├── entrypoint.sh              # workspace-server startup: setup-user → ansible-playbook → setup-credentials → sshd
@@ -247,6 +248,11 @@ docker/
     ├── dind-server/
     ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
     └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
+
+deploy/
+├── ubuntu.sh                          # Ubuntu/WSL deployment script (bws, curl, docker compose)
+├── mac.sh                             # macOS deployment script (delegates to ubuntu.sh)
+└── windows.ps1                        # PowerShell deployment script (bws, docker compose)
 ```
 
 ## Architecture Components

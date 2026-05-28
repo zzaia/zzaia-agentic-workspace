@@ -107,24 +107,26 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 002: MCP Sidecar Pattern for Secret Segregation
+### ADR 002: Central Vault with Sidecar Fetching
 
-**Decision**: Every external API integration runs as a dedicated sidecar container receiving exactly one secret via environment variable.
+**Decision**: vault-server holds all secrets in HashiCorp Vault KV v2. At startup, the deploy script pushes all secrets to vault-server. MCP sidecars fetch only their needed secret at runtime via Vault API.
 
-| Sidecar | Port | Secret | Notes |
-|---------|------|--------|-------|
-| `mcp-tavily` | 3001 | `TAVILY_API_KEY` | Opt-in |
-| `mcp-azure-devops` | 3002 | `ADO_MCP_AUTH_TOKEN` | Opt-in |
-| `mcp-postman` | 3003 | `POSTMAN_API_KEY` | Opt-in |
-| `mcp-newrelic` | 3004 | `NEW_RELIC_API_KEY` | Opt-in |
-| `mcp-github` | 3005 | `GITHUB_PERSONAL_ACCESS_TOKEN` | Opt-in |
-| `mcp-playwright` | 3006 | None | Always-on, headless Chromium |
-| `mcp-headroom` | 3008 | None | Always-on, MCP gateway for ml-server (Headroom proxy) |
+| Service | Port | Role | Notes |
+|---------|------|------|-------|
+| `vault-server` | 8200 | Central secret store (Vault KV v2) | Always-on; receives secrets at startup; syncs to named volume |
+| `mcp-tavily` | 3001 | Fetches `TAVILY_API_KEY` from Vault | Opt-in |
+| `mcp-azure-devops` | 3002 | Fetches `ADO_MCP_AUTH_TOKEN` from Vault | Opt-in |
+| `mcp-postman` | 3003 | Fetches `POSTMAN_API_KEY` from Vault | Opt-in |
+| `mcp-newrelic` | 3004 | Fetches `NEW_RELIC_API_KEY` from Vault | Opt-in |
+| `mcp-github` | 3005 | Fetches `GITHUB_PERSONAL_ACCESS_TOKEN` from Vault | Opt-in |
+| `mcp-playwright` | 3006 | No secrets required | Always-on, headless Chromium |
+| `mcp-headroom` | 3008 | No secrets required | Always-on, MCP gateway for ml-server |
 
-- The `workspace` container holds zero API key environment variables for MCP integrations
-- Each opt-in sidecar guards its own key: if empty, the process exits cleanly (code 0)
+- The `workspace` container holds zero API key environment variables
+- MCP sidecars fetch secrets at runtime: `VAULT_ADDR=http://vault-server:8200`, `VAULT_TOKEN` injected at startup
+- Vault UI at `http://localhost:8200/ui` (localhost only) for inspection and audit logs
 
-**Rationale**: Sidecar-per-secret is the minimal surface area principle applied to secrets.
+**Rationale**: Central vault eliminates secret duplication and enables audit logging. Sidecars fetch only what they need at runtime, not at startup.
 
 ---
 
@@ -139,14 +141,17 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 004: One-Time Secret Injection with Post-Startup Inaccessibility
+### ADR 004: Deploy-Time Secret Injection with Vault Storage
 
-**Decision**: Secrets are passed via environment variables at `docker compose up` time. On first start, only the SSH public key is written to `/secrets/.env` (mode 600). On all subsequent starts, the file already exists and env vars are ignored.
+**Decision**: Secrets are provided via Bitwarden Secrets Manager (`BWS_ACCESS_TOKEN`) at deploy time. The deploy script fetches all secrets and passes them only to vault-server. Vault-server syncs to Vault KV v2 on startup; other containers never receive secrets directly.
 
-- Secrets exist only in the process environment during the first startup
-- SSH terminal, vscode-server terminal, and agent shell have no access to API keys after startup
+- Deploy script: `bws secret list --output json` → env vars (keys match secret names)
+- Only vault-server receives secrets as environment variables during startup
+- vault-server syncs to Vault and persists to named volume (`{WORKSPACE_NAME}-vault-data`)
+- `BWS_ACCESS_TOKEN` unset after `docker compose up` completes
+- All other containers fetch secrets at runtime via `VAULT_ADDR` + `VAULT_TOKEN`
 
-**Rationale**: One-time injection eliminates the need for a secrets manager while maintaining the invariant that API keys are not queryable from within the workspace after startup.
+**Rationale**: Centralized vault eliminates secret visibility in workspace containers. Enables audit logging and permission-based secret access. Persistent Vault storage survives container restarts.
 
 ---
 
@@ -497,9 +502,10 @@ zzaia-agentic-workspace/
 │       ├── dind-server/
 │       ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
 │       └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
-├── install/
-│   ├── ubuntu.sh            # Bitwarden-based deployment script (apt, curl, docker compose)
-│   └── windows.ps1          # PowerShell deployment script (Bitwarden, docker compose)
+├── deploy/
+│   ├── ubuntu.sh            # Bitwarden Secrets Manager deployment script (apt, curl, docker compose)
+│   ├── mac.sh               # macOS deployment script (delegates to ubuntu.sh)
+│   └── windows.ps1          # PowerShell deployment script (Bitwarden Secrets Manager, docker compose)
 ├── docs/
 │   ├── architecture-overview.md  # This document
 │   └── bdd-scenarios.md          # BDD scenarios for all workspace features
@@ -515,6 +521,7 @@ zzaia-agentic-workspace/
 
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
+| `vault-server` | HashiCorp Vault (KV v2 secret store) | 8200 | always | Holds all secrets; UI at localhost:8200/ui; file backend in named volume |
 | `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure |
 | `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
 | `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
@@ -527,11 +534,11 @@ zzaia-agentic-workspace/
 | `containers-dev-sidecar` | Dev Containers support | stdin | `devcontainer` | Opt-in, depends on workspace-server healthy |
 | `tunnel-sidecar` | VS Code Tunnel (remote access via vscode.dev) | — | `tunnel` | Opt-in, depends on workspace-server healthy |
 | **Conditional MCP Adapters** | | | | |
-| `mcp-tavily` | Web search MCP adapter (node:lts-alpine + supergateway) | 3001 (internal) | conditional | USER node, idle if no TAVILY_API_KEY |
-| `mcp-azure-devops` | Azure DevOps MCP adapter (node:lts-alpine + supergateway) | 3002 (internal) | conditional | USER node, idle if no ADO_MCP_AUTH_TOKEN |
-| `mcp-postman` | Postman MCP adapter (node:lts-alpine + supergateway) | 3003 (internal) | conditional | USER node, idle if no POSTMAN_API_KEY |
-| `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, idle if no NEW_RELIC_API_KEY |
-| `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, idle if no GITHUB_PERSONAL_ACCESS_TOKEN |
+| `mcp-tavily` | Web search MCP adapter (node:lts-alpine + supergateway) | 3001 (internal) | conditional | USER node, fetches TAVILY_API_KEY from Vault |
+| `mcp-azure-devops` | Azure DevOps MCP adapter (node:lts-alpine + supergateway) | 3002 (internal) | conditional | USER node, fetches ADO_MCP_AUTH_TOKEN from Vault |
+| `mcp-postman` | Postman MCP adapter (node:lts-alpine + supergateway) | 3003 (internal) | conditional | USER node, fetches POSTMAN_API_KEY from Vault |
+| `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, fetches NEW_RELIC_API_KEY from Vault |
+| `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, fetches GITHUB_PERSONAL_ACCESS_TOKEN from Vault |
 
 ### Shared State (Named Volumes)
 
@@ -540,6 +547,7 @@ zzaia-agentic-workspace/
 | `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, VS Code state, workspace repos |
 | `<ws>-tools` | `/opt/tools` (workspace-server rw, optional servers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed) |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
+| `<ws>-vault-data` | `/vault/file` (vault-server) | HashiCorp Vault KV v2 secret store (file backend) |
 | `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
 | `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
 

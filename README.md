@@ -18,7 +18,7 @@
 | 2 | **Standardized Ubuntu environment** — the workspace runs inside a container on Ubuntu regardless of whether the host machine is Linux, macOS, or Windows. Every developer gets an identical, reproducible environment with no "works on my machine" surprises. |
 | 3 | **Local and remote access** — access the full VS Code IDE from a browser tab (no local installation required), connect over SSH, or deploy remotely and reach it from any device. Supports WASM-based browser access for fully server-side execution. |
 | 4 | **Long-lived authentication** — authenticate Claude Code once at deployment time using an OAuth refresh token, API key, or cloud provider credentials. Tokens auto-refresh across container restarts; you never see another login prompt during daily use. |
-| 5 | **Secret isolation** — each MCP server (Tavily, Azure DevOps, Postman, New Relic) runs as its own isolated sidecar container and receives only the secret it needs. The AI agent context never has access to credentials, eliminating a whole class of accidental secret leakage. |
+| 5 | **Secret isolation** — vault-server holds all secrets in HashiCorp Vault. MCP sidecars (Tavily, Azure DevOps, Postman, New Relic) fetch only their needed secret at runtime via Vault API. The AI agent context never has access to credentials, eliminating accidental secret leakage. |
 | 6 | **Confident agentic YOLO mode** — container isolation from the host system makes it genuinely safe to run Claude Code with `--dangerously-skip-permissions`. Autonomous agentic workflows execute without fear of unintended changes to the host or other projects. |
 | 7 | **Familiar VS Code experience** — the full VS Code feature set works in-browser: extensions marketplace, profiles, themes, keybindings, and other AI coding assistants such as GitHub Copilot, Gemini, and Codex run side-by-side with Claude Code. |
 | 8 | **Persistent customization** — optional admin access lets you install additional tools and change configurations inside the running container. All changes survive restarts because the home directory is backed by a persistent Docker volume. |
@@ -225,7 +225,7 @@ The `workspace/host/` directory contains a .NET Aspire AppHost — a template fo
 
 ## 🐳 Container
 
-The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed via modular shell scripts. MCP servers run as isolated sidecar containers — each receives only its own secret.
+The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed. A vault-server container holds all secrets in HashiCorp Vault. MCP servers run as isolated sidecars and fetch their needed secrets at runtime via Vault API.
 
 > See [docs/architecture-overview.md](docs/architecture-overview.md) for architectural decisions and security model.
 > See [docker/DOCKER.md](docker/DOCKER.md) for full setup details.

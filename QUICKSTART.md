@@ -9,7 +9,7 @@
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
-| **Bitwarden CLI** (optional) | Secret manager integration for automated setup | [bitwarden.com/help/cli](https://bitwarden.com/help/cli) |
+| **Bitwarden Secrets Manager CLI** (optional) | Secret manager integration for automated setup | [bitwarden.com/help/secrets-manager-cli](https://bitwarden.com/help/secrets-manager-cli/) |
 | **Enhanced Container Isolation (ECI)** *(optional)* | Enables unprivileged Docker-in-Docker sandboxing — Docker Desktop > Settings > General > "Use Enhanced Container Isolation" | [docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation](https://docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation/) |
 
 ---
@@ -90,6 +90,8 @@ You will need the following values before starting:
 | `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
+| `VAULT_ROOT_TOKEN` | ✅ | Vault bootstrap token for secret storage | Generate with `openssl rand -hex 32` |
+| `BWS_ACCESS_TOKEN` | ✅ | Bitwarden Secrets Manager machine account token | From Bitwarden Secrets Manager |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the Neo4j password for Headroom | Any string; leave empty for no sudo and default Neo4j password (`headroom`) |
 | `ANTHROPIC_API_KEY` | Optional | Claude API key — see Step 1 | [console.anthropic.com](https://console.anthropic.com) |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Optional | Long-lived OAuth token for Pro/Max — see Step 1 Option A | `claude setup-token` on host |
@@ -113,49 +115,50 @@ You will need the following values before starting:
 
 ## Step 3 — Start the Workspace
 
-### Option A — Automated (Bitwarden)
+### Option A — Automated (Bitwarden Secrets Manager)
 
-Pre-configure the following vault items in Bitwarden, then run the installation script:
+Set `BWS_ACCESS_TOKEN` environment variable, then run the deployment script:
 
-| Vault Item Name | Environment Variable | Required | Purpose |
-|---|---|---|---|
-| `workspace-name` | WORKSPACE_NAME | ✅ | Docker Compose project name |
-| `ssh-public-key` | SSH_PUBLIC_KEY | ✅ | Your SSH public key for container access |
-| `admin-password` | ADMIN_PASSWORD | | Sudo password for `user` account; also sets Neo4j password for Headroom |
-| `vscode-port` | VSCODE_PORT | | Host port for VS Code (default: 8080) |
-| `ssh-port` | SSH_PORT | | Host port for SSH (default: 2222) |
-| `aspire-dashboard-port` | ASPIRE_DASHBOARD_PORT | | Host port for Aspire dashboard (default: 18888) |
-| `anthropic-api-key` | ANTHROPIC_API_KEY | | Claude API key |
-| `claude-code-oauth-token` | CLAUDE_CODE_OAUTH_TOKEN | | Pro/Max OAuth token |
-| `openai-api-key` | OPENAI_API_KEY | | OpenAI API key |
-| `gemini-api-key` | GEMINI_API_KEY | | Google Gemini API key |
-| `github-pat` | GITHUB_PERSONAL_ACCESS_TOKEN | | GitHub Personal Access Token |
-| `tavily` | TAVILY_API_KEY | | Tavily API key |
-| `azure-devops-pat` | ADO_MCP_AUTH_TOKEN | | Azure DevOps Personal Access Token |
-| `azure-devops-org` | AZURE_DEVOPS_ORGANIZATION | | Azure DevOps organization name |
-| `postman` | POSTMAN_API_KEY | | Postman API key |
-| `new-relic` | NEW_RELIC_API_KEY | | New Relic API key |
-| `docker-registry` | DOCKER_REGISTRY | | Container registry hostname (e.g. `ghcr.io`) |
-| `docker-username` | DOCKER_USERNAME | | Registry login username |
-| `docker-password` | DOCKER_PASSWORD | | Registry login password or token |
-| `server-profiles` | DEPLOY_PROFILES | | Optional: space-separated profiles — `vscode`, `devcontainer` |
+```bash
+export BWS_ACCESS_TOKEN="<your-machine-account-token>"
+```
+
+The script fetches all secrets from Bitwarden Secrets Manager using `bws secret list --output json` and launches `docker compose`. Secrets are mapped as environment variables (e.g., secret key `ANTHROPIC_API_KEY` → env var `ANTHROPIC_API_KEY`).
+
+**Required secret keys in Bitwarden Secrets Manager:**
+- `WORKSPACE_NAME`
+- `SSH_PUBLIC_KEY`
+- `VAULT_ROOT_TOKEN` (or will be auto-generated)
+
+**Optional secret keys** (skip if not needed):
+- `ADMIN_PASSWORD`
+- `VSCODE_PORT`, `SSH_PORT`, `ASPIRE_DASHBOARD_PORT`
+- `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`
+- `OPENAI_API_KEY`, `GEMINI_API_KEY`
+- `GITHUB_PERSONAL_ACCESS_TOKEN`
+- `TAVILY_API_KEY`
+- `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION`
+- `POSTMAN_API_KEY`, `NEW_RELIC_API_KEY`
+- `DOCKER_REGISTRY`, `DOCKER_USERNAME`, `DOCKER_PASSWORD`
+- `DEPLOY_PROFILES` (space-separated: `vscode`, `devcontainer`)
 
 **Ubuntu / WSL:**
 ```bash
-./install/ubuntu.sh
+export BWS_ACCESS_TOKEN="<your-machine-account-token>"
+./deploy/ubuntu.sh
 ```
 
 **macOS:**
 ```bash
-./install/mac.sh
+export BWS_ACCESS_TOKEN="<your-machine-account-token>"
+./deploy/mac.sh
 ```
 
 **Windows:**
 ```powershell
-.\install\windows.ps1
+$env:BWS_ACCESS_TOKEN = "<your-machine-account-token>"
+.\deploy\windows.ps1
 ```
-
-The scripts fetch all secrets from Bitwarden and launch `docker compose`. Missing optional vault items are skipped without blocking startup.
 
 ---
 
@@ -168,6 +171,8 @@ Fill in your values and run the command for your platform. No files are written 
 ```bash
 export WORKSPACE_NAME="my-org"
 export SSH_PUBLIC_KEY=""
+export VAULT_ROOT_TOKEN=""
+export BWS_ACCESS_TOKEN=""
 export ADMIN_PASSWORD=""
 export ANTHROPIC_API_KEY=""
 export CLAUDE_CODE_OAUTH_TOKEN=""
@@ -211,7 +216,7 @@ docker compose \
     $PROFILE_FLAGS \
     up -d
 
-unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
+unset WORKSPACE_NAME SSH_PUBLIC_KEY VAULT_ROOT_TOKEN BWS_ACCESS_TOKEN ADMIN_PASSWORD \
       ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
       AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
       CLAUDE_CODE_USE_VERTEX ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
@@ -226,6 +231,8 @@ unset WORKSPACE_NAME SSH_PUBLIC_KEY ADMIN_PASSWORD \
 ```powershell
 $WORKSPACE_NAME                    = "my-org"
 $SSH_PUBLIC_KEY                    = ""
+$VAULT_ROOT_TOKEN                  = ""
+$BWS_ACCESS_TOKEN                  = ""
 $ADMIN_PASSWORD                    = ""
 $ANTHROPIC_API_KEY                 = ""
 $CLAUDE_CODE_OAUTH_TOKEN           = ""
@@ -252,6 +259,8 @@ $SSH_PORT                          = "2222"
 
 $env:WORKSPACE_NAME                    = $WORKSPACE_NAME
 $env:SSH_PUBLIC_KEY                    = $SSH_PUBLIC_KEY
+$env:VAULT_ROOT_TOKEN                  = $VAULT_ROOT_TOKEN
+$env:BWS_ACCESS_TOKEN                  = $BWS_ACCESS_TOKEN
 $env:ADMIN_PASSWORD                    = $ADMIN_PASSWORD
 $env:ANTHROPIC_API_KEY                 = $ANTHROPIC_API_KEY
 $env:CLAUDE_CODE_OAUTH_TOKEN           = $CLAUDE_CODE_OAUTH_TOKEN
@@ -292,7 +301,7 @@ docker compose `
     @profileArgs `
     up -d
 
-'WORKSPACE_NAME','SSH_PUBLIC_KEY','ADMIN_PASSWORD',
+'WORKSPACE_NAME','SSH_PUBLIC_KEY','VAULT_ROOT_TOKEN','BWS_ACCESS_TOKEN','ADMIN_PASSWORD',
 'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN',
 'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
 'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
@@ -314,8 +323,9 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 | **SSH** | `ssh -p <SSH_PORT> user@localhost` (default `2222`) |
 | **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
 | **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
+| **Vault UI** | `http://localhost:8200/ui` (localhost only) |
 
-Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running.
+Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
 
 ---
 
