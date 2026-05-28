@@ -114,13 +114,16 @@ write_kv workspace \
     AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION \
     ANTHROPIC_BEDROCK_BASE_URL CLAUDE_CODE_USE_VERTEX \
     ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
-    CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL
+    CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
+    GIT_SIDECAR_AGENT_PUBKEY
 
 write_kv mcp/tavily TAVILY_API_KEY
 write_kv mcp/azure-devops ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION
 write_kv mcp/postman POSTMAN_API_KEY
 write_kv mcp/newrelic NEW_RELIC_API_KEY
 write_kv mcp/github GITHUB_PERSONAL_ACCESS_TOKEN
+
+write_kv git GITHUB_SSH_DEPLOY_KEY ADO_SSH_DEPLOY_KEY
 
 unset WORKSPACE_NAME ADMIN_PASSWORD SSH_PUBLIC_KEY \
       ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
@@ -130,7 +133,8 @@ unset WORKSPACE_NAME ADMIN_PASSWORD SSH_PUBLIC_KEY \
       ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
       CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
       TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
-      POSTMAN_API_KEY NEW_RELIC_API_KEY
+      POSTMAN_API_KEY NEW_RELIC_API_KEY \
+      GITHUB_SSH_DEPLOY_KEY ADO_SSH_DEPLOY_KEY GIT_SIDECAR_AGENT_PUBKEY
 log "Secrets unset from process environment"
 
 # Create a token with the user-provided VAULT_ROOT_TOKEN value
@@ -160,6 +164,8 @@ vault policy write workspace-policy "${VAULT_POLICY_DIR}/workspace-policy.hcl" >
     log "workspace-policy written" || log "workspace-policy write skipped"
 vault policy write mcp-policy "${VAULT_POLICY_DIR}/mcp-policy.hcl" >/dev/null 2>&1 && \
     log "mcp-policy written" || log "mcp-policy write skipped"
+vault policy write git-sidecar-policy "${VAULT_POLICY_DIR}/git-sidecar-policy.hcl" >/dev/null 2>&1 && \
+    log "git-sidecar-policy written" || log "git-sidecar-policy write skipped"
 
 log "Creating AppRole roles..."
 vault write auth/approle/role/workspace-role \
@@ -171,6 +177,11 @@ vault write auth/approle/role/mcp-role \
     token_policies="mcp-policy" \
     token_ttl=24h token_max_ttl=24h \
     >/dev/null 2>&1 && log "mcp-role created/updated" || log "mcp-role skipped"
+
+vault write auth/approle/role/git-sidecar-role \
+    token_policies="git-sidecar-policy" \
+    token_ttl=24h token_max_ttl=24h \
+    >/dev/null 2>&1 && log "git-sidecar-role created/updated" || log "git-sidecar-role skipped"
 
 mkdir -p "${VAULT_DATA_DIR}/approle"
 WORKSPACE_ROLE_ID=$(vault read -field=role_id auth/approle/role/workspace-role/role-id 2>/dev/null || echo "")
@@ -187,6 +198,14 @@ if [ -n "$MCP_ROLE_ID" ] && [ -n "$MCP_SECRET" ]; then
     printf '%s' "$MCP_ROLE_ID" > "${VAULT_DATA_DIR}/approle/mcp-role-id"
     printf '%s' "$MCP_SECRET" > "${VAULT_DATA_DIR}/approle/mcp-secret-id"
     chmod 600 "${VAULT_DATA_DIR}/approle/mcp-role-id" "${VAULT_DATA_DIR}/approle/mcp-secret-id"
+fi
+
+GIT_SIDECAR_ROLE_ID=$(vault read -field=role_id auth/approle/role/git-sidecar-role/role-id 2>/dev/null || echo "")
+GIT_SIDECAR_SECRET=$(vault write -field=secret_id -f auth/approle/role/git-sidecar-role/secret-id 2>/dev/null || echo "")
+if [ -n "$GIT_SIDECAR_ROLE_ID" ] && [ -n "$GIT_SIDECAR_SECRET" ]; then
+    printf '%s' "$GIT_SIDECAR_ROLE_ID" > "${VAULT_DATA_DIR}/approle/git-sidecar-role-id"
+    printf '%s' "$GIT_SIDECAR_SECRET" > "${VAULT_DATA_DIR}/approle/git-sidecar-secret-id"
+    chmod 600 "${VAULT_DATA_DIR}/approle/git-sidecar-role-id" "${VAULT_DATA_DIR}/approle/git-sidecar-secret-id"
 fi
 
 log "Vault setup complete."
