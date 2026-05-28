@@ -5,9 +5,12 @@ tools: *
 model: haiku
 mcpServers: 
   - azure-devops
+  - github
   - new-relic
   - aws-sns-sqs
   - aws-postgres-sql
+  - aws-cloudwatch
+  - aws-cloudwatch-xray
 color: purple
 ---
 

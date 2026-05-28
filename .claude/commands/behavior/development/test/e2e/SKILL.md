@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:e2e
 description: Execute a single BDD step — call request capability then query debug source for diagnostics
-argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker> [--source-metadata <queue|table|container>] [--description <text>]"
+argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker|cloud-watch> [--source-metadata <queue|table|container|log-group>] [--description <text>]"
 user-invocable: true
 metadata:
   parameters:
@@ -15,7 +15,7 @@ metadata:
       description: Application name used for debug source filtering
       required: true
     - name: debug-sources
-      description: "Data source to debug: new-relic, sqs, postgresql, aspire, docker"
+      description: "Data source to debug: new-relic, sqs, postgresql, aspire, docker, cloud-watch"
       required: true
     - name: source-metadata
       description: "Source-specific metadata — queue name (sqs), table/query (postgresql), container name (docker)"
@@ -51,6 +51,7 @@ Execute a single BDD step as an HTTP call via `/capability:postman:request`, que
    | `sqs`         | `/capability:sqs:debug --queue-name <source>`                                       |
    | `postgresql`  | `/capability:postgresql:debug [--connection-name <application>] [--table <source>]` |
    | `docker`      | `/capability:docker:debug [--container <source>]`                                   |
+   | `cloud-watch` | `/capability:cloud-watch:debug --service-name <application> [--time-range 24]`      |
 
 4. **Report Step Result**
 
