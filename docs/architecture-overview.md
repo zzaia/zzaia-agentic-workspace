@@ -113,7 +113,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 | Service | Port | Role | Notes |
 |---------|------|------|-------|
-| `vault-server` | 8200 | Central secret store (Vault KV v2) | Always-on; receives secrets at startup; syncs to named volume |
+| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) | receives BWS_ACCESS_TOKEN only; fetches all secrets from Bitwarden at startup; stores in Vault KV v2 (encrypted at rest) |
 | `mcp-tavily` | 3001 | Fetches `TAVILY_API_KEY` from Vault | Opt-in |
 | `mcp-azure-devops` | 3002 | Fetches `ADO_MCP_AUTH_TOKEN` from Vault | Opt-in |
 | `mcp-postman` | 3003 | Fetches `POSTMAN_API_KEY` from Vault | Opt-in |
@@ -141,17 +141,19 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 004: Deploy-Time Secret Injection with Vault Storage
+### ADR 004: Deploy-Time Secret Bootstrap via Bitwarden to Vault
 
-**Decision**: Secrets are provided via Bitwarden Secrets Manager (`BWS_ACCESS_TOKEN`) at deploy time. The deploy script fetches all secrets and passes them only to vault-server. Vault-server syncs to Vault KV v2 on startup; other containers never receive secrets directly.
+**Decision**: Secrets are provided to vault-server via `BWS_ACCESS_TOKEN` at deploy time. vault-server fetches all secrets from Bitwarden Secrets Manager using the bws CLI at container startup and stores them in Vault KV v2 with AES-256-GCM encryption at rest.
 
-- Deploy script: `bws secret list --output json` → env vars (keys match secret names)
-- Only vault-server receives secrets as environment variables during startup
-- vault-server syncs to Vault and persists to named volume (`{WORKSPACE_NAME}-vault-data`)
-- `BWS_ACCESS_TOKEN` unset after `docker compose up` completes
-- All other containers fetch secrets at runtime via `VAULT_ADDR` + `VAULT_TOKEN`
+- Deploy script: passes only `BWS_ACCESS_TOKEN` to docker compose env
+- vault-server runs `bws secret list --output json` at startup
+- Secrets written to Vault KV paths: `secret/ai`, `secret/mcp/github`, `secret/mcp/azure-devops`, `secret/cloud`, `secret/integrations`, `secret/workspace`
+- Vault root token and unseal keys stored only in `/vault/data/.init` (inside the `{WORKSPACE_NAME}-vault-data` encrypted volume; chmod 600)
+- `BWS_ACCESS_TOKEN` unset inside vault-server after bootstrap completes
+- All other containers fetch secrets from Vault at runtime via `VAULT_ADDR=http://vault-server:8200` + AppRole/token auth
+- After bootstrap: all secrets managed via Vault UI at `http://localhost:${VAULT_PORT}/ui`
 
-**Rationale**: Centralized vault eliminates secret visibility in workspace containers. Enables audit logging and permission-based secret access. Persistent Vault storage survives container restarts.
+**Rationale**: Vault production mode with file backend provides AES-256-GCM encryption at rest — no secret ever touches host disk or .env files. Bitwarden is the single source of truth for secret values; Vault is the runtime secret store with audit logging and access policies.
 
 ---
 
@@ -521,7 +523,7 @@ zzaia-agentic-workspace/
 
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
-| `vault-server` | HashiCorp Vault (KV v2 secret store) | 8200 | always | Holds all secrets; UI at localhost:8200/ui; file backend in named volume |
+| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 | always | Bootstraps from Bitwarden at startup; UI at localhost:8200/ui; all secrets stored encrypted in named volume |
 | `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure |
 | `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
 | `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
@@ -547,7 +549,7 @@ zzaia-agentic-workspace/
 | `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, VS Code state, workspace repos |
 | `<ws>-tools` | `/opt/tools` (workspace-server rw, optional servers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed) |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
-| `<ws>-vault-data` | `/vault/file` (vault-server) | HashiCorp Vault KV v2 secret store (file backend) |
+| `<ws>-vault-data` | `/vault/data` (vault-server) | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); unseal keys at `/vault/data/.init` |
 | `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
 | `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
 
@@ -583,7 +585,7 @@ zzaia-agentic-workspace/
 | Tool provisioning | Ansible roles (workspace-server): system, user-setup, vscode-cli, node, dotnet, python, cli, path-config, credentials, gpu; version pins in `group_vars/all.yml` |
 | MCP bridge | supergateway@3.4.3 (streamableHttp transport, pre-installed at build time) |
 | Multi-tenancy | Docker Compose project namespacing |
-| Secret lifecycle | Process env → one-time file write → sealed |
+| Secret lifecycle | BWS_ACCESS_TOKEN → vault-server bws fetch → Vault KV (AES-256-GCM at rest) → unset; manage via Vault UI |
 | Telemetry | .NET Aspire Standalone Dashboard (OTLP receiver) |
 
 ## Security Model
@@ -593,11 +595,12 @@ zzaia-agentic-workspace/
 | Agent exfiltrates API keys | Keys never in workspace container env after startup |
 | Agent modifies host filesystem | Only `/secrets` and `/home/user` volumes mounted; `cap_drop: ALL` |
 | Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
-| Secret visible in terminal | Env vars ephemeral after startup; SSH key persisted at `/secrets/.env` (root-owned, mode 600) |
+| Secret visible in terminal | Vault auto-unseals using keys sealed in encrypted volume; no unseal key in .env |
 | Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
 | Port scanning from container | MCP ports bound to internal network only |
 | MCP container compromise | All MCP containers run as non-root (USER node / uid=999); isolation via bridge network |
 | Database container compromise | qdrant runs as uid=999(qdrant); neo4j isolated volume; no mount-out capabilities |
+| vault-server PAT exposure | vault-server is the only container that receives BWS_ACCESS_TOKEN; unset after bootstrap; no other container sees it |
 
 ## Related Documentation
 

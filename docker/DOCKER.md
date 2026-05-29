@@ -26,14 +26,8 @@ The workspace requires the following host software:
 See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short version:
 
 ```bash
-export WORKSPACE_NAME="my-org"
-export SSH_PUBLIC_KEY="ssh-ed25519 AAAA..."
-export VAULT_ROOT_TOKEN="$(openssl rand -hex 32)"
-export BWS_ACCESS_TOKEN="<your-machine-account-token>"
-export VSCODE_PORT=8080
-export SSH_PORT=2222
-# ... set other optional API keys
-docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" up -d
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
+# Prompts securely for BWS_ACCESS_TOKEN
 ```
 
 After the first run, start and stop the workspace from **Docker Desktop** or:
@@ -81,7 +75,7 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 | `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
 | `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar, tunnel-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
 | `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
-| `vault-data` | `<WORKSPACE_NAME>-vault-data` | `/vault/file` (vault-server) | HashiCorp Vault KV v2 secret store | Persists across restarts |
+| `vault-data` | `<WORKSPACE_NAME>-vault-data` | `/vault/data` (vault-server) | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); unseal keys at `/vault/data/.init` | Persists across restarts |
 
 ### Home volume seeding
 
@@ -152,14 +146,14 @@ docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 
 | Service | Port | Role |
 |---------|------|------|
-| vault-server | 8200 | HashiCorp Vault KV v2 — single combined container holding all secrets, synced at startup from deploy script env vars |
+| vault-server | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) — bootstrapped from Bitwarden Secrets Manager (bws) at container startup |
 
 **Secret distribution pattern**:
-- At deploy time: deploy script receives secrets via `BWS_ACCESS_TOKEN` (Bitwarden Secrets Manager)
+- At deploy time: deploy script passes `BWS_ACCESS_TOKEN` to vault-server container only
 - Secrets are passed only to vault-server container
-- Vault-server stores all secrets in Vault KV v2 on startup
-- All other containers fetch only their needed secrets from Vault at runtime via `VAULT_TOKEN` + `VAULT_ADDR=http://vault-server:8200`
-- Vault UI exposed at `http://localhost:8200/ui` (localhost only)
+- vault-server fetches secrets from Bitwarden using bws CLI at startup and stores them in Vault KV v2 (encrypted at rest)
+- All other containers fetch only their needed secrets from Vault at runtime via `VAULT_ADDR=http://vault-server:8200`
+- After bootstrap, manage secrets via Vault UI at `http://localhost:${VAULT_PORT}/ui`
 
 **MCP Services and Proxy**
 
@@ -302,13 +296,14 @@ Users can then start inner containers with `docker run --privileged` or `--gpus 
 | Docker sandbox | DinD via `runc` runtime; enable Docker Desktop ECI for unprivileged isolation (optional) |
 | Workspace secrets | SSH key only — no API keys in workspace container |
 | MCP secrets | Isolated per sidecar container, internal network only |
-| Secret handling | Injected in-memory at startup — no cleartext on host disk |
-| Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-secrets`), not host path |
+| Secret handling | vault-server fetches secrets from Bitwarden at startup — never written to host disk or .env files |
+| Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-vault-data`), not host path; Vault auto-unseals using keys sealed in encrypted volume |
 | Host network | Bridge only, workspace ports bound to `127.0.0.1` |
 | MCP ports | Internal only — not exposed to host |
 | Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
 | Root login | Disabled |
 | Sudo access | Passwordless by default; set `ADMIN_PASSWORD` to require password for sudo (restricts installs) |
+| vault-server PAT exposure | vault-server is the only container that receives BWS_ACCESS_TOKEN; unset after bootstrap; no other container sees it |
 
 ---
 

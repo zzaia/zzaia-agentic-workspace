@@ -173,24 +173,16 @@ The workspace supports optional Docker Compose profiles controlled by the `DEPLO
 
 #### Installation Scripts
 
-Both Ubuntu and Windows installation scripts read the `DEPLOY_PROFILES` environment variable and build dynamic `--profile` flags:
+Deploy scripts accept `DEPLOY_PROFILES` as a CLI parameter:
 
 ```bash
 # Ubuntu/Mac: deploy/ubuntu.sh
-DEPLOY_PROFILES=$(bws secret list --output json | jq -r '.[] | select(.key=="DEPLOY_PROFILES") | .value')  # e.g., "vscode devcontainer"
-for p in $DEPLOY_PROFILES; do
-    PROFILE_FLAGS="$PROFILE_FLAGS --profile $p"
-done
-docker compose ... $PROFILE_FLAGS up -d
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --profiles "vscode devcontainer"
 ```
 
 ```powershell
 # Windows: deploy/windows.ps1
-$DEPLOY_PROFILES = (bws secret list --output json | ConvertFrom-Json | Where-Object { $_.key -eq "DEPLOY_PROFILES" }).value  # e.g., "vscode"
-foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
-    $profileArgs += '--profile', $p
-}
-docker compose ... @profileArgs up -d
+.\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Profiles "vscode,devcontainer"
 ```
 
 #### Examples
@@ -200,11 +192,9 @@ docker compose ... @profileArgs up -d
 - **Dev Containers**: Set `DEPLOY_PROFILES` to `devcontainer` — start both `workspace-server` and `containers-dev-sidecar`
 - **Full setup**: Set `DEPLOY_PROFILES` to `vscode devcontainer` — start all three servers
 
-### Bitwarden Secrets Manager
+### Deploy Profiles
 
-**Secret Key:** `DEPLOY_PROFILES`  
-**Format:** Space-separated profile names (e.g., `vscode devcontainer`)  
-**Optional:** Yes — if empty or missing, only SSH access is available (workspace-server always runs)
+`DEPLOY_PROFILES` is passed as a CLI parameter (`--profiles`) to the deploy script, not as a Bitwarden secret. Only `BWS_ACCESS_TOKEN` is a secret required at deploy time.
 
 ---
 

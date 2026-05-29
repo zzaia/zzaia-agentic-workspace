@@ -9,7 +9,7 @@
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
-| **Bitwarden Secrets Manager CLI** (optional) | Secret manager integration for automated setup | [bitwarden.com/help/secrets-manager-cli](https://bitwarden.com/help/secrets-manager-cli/) |
+| **Bitwarden Secrets Manager CLI** | Secret manager — provides machine account token for secret bootstrap | [bitwarden.com/help/secrets-manager-cli](https://bitwarden.com/help/secrets-manager-cli/) |
 | **Enhanced Container Isolation (ECI)** *(optional)* | Enables unprivileged Docker-in-Docker sandboxing — Docker Desktop > Settings > General > "Use Enhanced Container Isolation" | [docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation](https://docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation/) |
 
 ---
@@ -90,26 +90,11 @@ You will need the following values before starting:
 | `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
-| `VAULT_ROOT_TOKEN` | ✅ | Vault bootstrap token for secret storage | Generate with `openssl rand -hex 32` |
-| `BWS_ACCESS_TOKEN` | ✅ | Bitwarden Secrets Manager machine account token | From Bitwarden Secrets Manager |
+| `ASPIRE_DASHBOARD_PORT` | ✅ | Host port for Aspire telemetry dashboard | Default: `18888` |
+| `BWS_ACCESS_TOKEN` | ✅ | Bitwarden Secrets Manager machine account token — provided at deploy time; vault-server fetches all API keys and credentials from Bitwarden at container startup | From Bitwarden Secrets Manager |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the Neo4j password for Headroom | Any string; leave empty for no sudo and default Neo4j password (`headroom`) |
-| `ANTHROPIC_API_KEY` | Optional | Claude API key — see Step 1 | [console.anthropic.com](https://console.anthropic.com) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | Optional | Long-lived OAuth token for Pro/Max — see Step 1 Option A | `claude setup-token` on host |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` | Optional | AWS Bedrock auth — see Step 1 | AWS IAM credentials |
-| `ANTHROPIC_BEDROCK_BASE_URL` | Optional | Custom Bedrock endpoint | AWS console |
-| `CLAUDE_CODE_USE_VERTEX` / `ANTHROPIC_VERTEX_PROJECT_ID` / `CLOUD_ML_REGION` | Optional | Google Vertex AI auth — see Step 1 | GCP console |
-| `CLAUDE_CODE_USE_FOUNDRY` / `AZURE_FOUNDRY_BASE_URL` | Optional | Azure AI Foundry auth — see Step 1 | Azure portal |
-| `OPENAI_API_KEY` | Optional | OpenAI API key for Codex CLI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
-| `GEMINI_API_KEY` | Optional | Google Gemini API key for Gemini CLI | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | Optional | GitHub PAT for GitHub MCP + Copilot CLI | [GitHub → Settings → Personal Access Tokens](https://github.com/settings/tokens) |
-| `ASPIRE_DASHBOARD_PORT` | Optional | Host port for Aspire telemetry dashboard | Default: `18888` |
-| `TAVILY_API_KEY` | Optional | Tavily API key | [tavily.com](https://tavily.com) |
-| `ADO_MCP_AUTH_TOKEN` | Optional | Azure DevOps Personal Access Token | [Azure DevOps → User Settings → Personal Access Tokens](https://dev.azure.com) |
-| `AZURE_DEVOPS_ORGANIZATION` | Optional | Azure DevOps organization name (e.g. `my-org`) | Azure DevOps URL: `dev.azure.com/<org>` |
-| `POSTMAN_API_KEY` | Optional | Postman API key | [postman.com → Account Settings → API Keys](https://postman.com) |
-| `NEW_RELIC_API_KEY` | Optional | New Relic User API key | [New Relic → API Keys](https://one.newrelic.com/admin-portal/api-keys) |
 
-> MCP integrations are optional — leave any key empty and that sidecar exits cleanly without restarting.
+All API keys, PATs, and cloud credentials are stored in Vault. Configure them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
 
 ---
 
@@ -117,91 +102,42 @@ You will need the following values before starting:
 
 ### Option A — Automated (Bitwarden Secrets Manager)
 
-Set `BWS_ACCESS_TOKEN` environment variable, then run the deployment script:
-
-```bash
-export BWS_ACCESS_TOKEN="<your-machine-account-token>"
-```
-
-The script fetches all secrets from Bitwarden Secrets Manager using `bws secret list --output json` and launches `docker compose`. Secrets are mapped as environment variables (e.g., secret key `ANTHROPIC_API_KEY` → env var `ANTHROPIC_API_KEY`).
-
-**Required secret keys in Bitwarden Secrets Manager:**
-- `WORKSPACE_NAME`
-- `SSH_PUBLIC_KEY`
-- `VAULT_ROOT_TOKEN` (or will be auto-generated)
-
-**Optional secret keys** (skip if not needed):
-- `ADMIN_PASSWORD`
-- `VSCODE_PORT`, `SSH_PORT`, `ASPIRE_DASHBOARD_PORT`
-- `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`
-- `OPENAI_API_KEY`, `GEMINI_API_KEY`
-- `GITHUB_PERSONAL_ACCESS_TOKEN`
-- `TAVILY_API_KEY`
-- `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION`
-- `POSTMAN_API_KEY`, `NEW_RELIC_API_KEY`
-- `DOCKER_REGISTRY`, `DOCKER_USERNAME`, `DOCKER_PASSWORD`
-- `DEPLOY_PROFILES` (space-separated: `vscode`, `devcontainer`)
+Run the deployment script with CLI parameters. The script prompts securely for `BWS_ACCESS_TOKEN`, generates `docker/.env` (no secrets), starts the stack, and vault-server bootstraps all secrets from Bitwarden internally.
 
 **Ubuntu / WSL:**
 ```bash
-export BWS_ACCESS_TOKEN="<your-machine-account-token>"
-./deploy/ubuntu.sh
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
 ```
 
 **macOS:**
 ```bash
-export BWS_ACCESS_TOKEN="<your-machine-account-token>"
-./deploy/mac.sh
+./deploy/mac.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
 ```
 
 **Windows:**
 ```powershell
-$env:BWS_ACCESS_TOKEN = "<your-machine-account-token>"
-.\deploy\windows.ps1
+.\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
+
+Optional flags: `--gpu`, `--profiles vscode devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
 
 ---
 
 ### Option B — Manual
 
-Fill in your values and run the command for your platform. No files are written to disk.
+Fill in your values and run the command for your platform. No secrets are written to `.env` files. Secrets are managed via Vault UI after bootstrap — not via environment variables.
 
 #### Ubuntu / macOS / WSL
 
 ```bash
 export WORKSPACE_NAME="my-org"
 export SSH_PUBLIC_KEY=""
-export VAULT_ROOT_TOKEN=""
 export BWS_ACCESS_TOKEN=""
 export ADMIN_PASSWORD=""
-export ANTHROPIC_API_KEY=""
-export CLAUDE_CODE_OAUTH_TOKEN=""
-export AWS_ACCESS_KEY_ID=""
-export AWS_SECRET_ACCESS_KEY=""
-export AWS_REGION=""
-export ANTHROPIC_BEDROCK_BASE_URL=""
-export CLAUDE_CODE_USE_VERTEX=""
-export ANTHROPIC_VERTEX_PROJECT_ID=""
-export CLOUD_ML_REGION=""
-export CLAUDE_CODE_USE_FOUNDRY=""
-export AZURE_FOUNDRY_BASE_URL=""
-export OPENAI_API_KEY=""
-export GEMINI_API_KEY=""
-export GITHUB_PERSONAL_ACCESS_TOKEN=""
-export ASPIRE_DASHBOARD_PORT="18888"
-export TAVILY_API_KEY=""
-export ADO_MCP_AUTH_TOKEN=""
-export AZURE_DEVOPS_ORGANIZATION=""
-export POSTMAN_API_KEY=""
-export NEW_RELIC_API_KEY=""
 export VSCODE_PORT="8080"
 export SSH_PORT="2222"
+export ASPIRE_DASHBOARD_PORT="18888"
 export DEPLOY_PROFILES="vscode"  # space-separated: vscode, devcontainer, or both
-
-docker compose \
-    -f "./docker/docker-compose.yml" \
-    -p "$WORKSPACE_NAME" \
-    up -d
 
 # Build profile flags dynamically
 PROFILE_FLAGS=""
@@ -216,74 +152,28 @@ docker compose \
     $PROFILE_FLAGS \
     up -d
 
-unset WORKSPACE_NAME SSH_PUBLIC_KEY VAULT_ROOT_TOKEN BWS_ACCESS_TOKEN ADMIN_PASSWORD \
-      ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN \
-      AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION ANTHROPIC_BEDROCK_BASE_URL \
-      CLAUDE_CODE_USE_VERTEX ANTHROPIC_VERTEX_PROJECT_ID CLOUD_ML_REGION \
-      CLAUDE_CODE_USE_FOUNDRY AZURE_FOUNDRY_BASE_URL \
-      OPENAI_API_KEY GEMINI_API_KEY GITHUB_PERSONAL_ACCESS_TOKEN ASPIRE_DASHBOARD_PORT \
-      TAVILY_API_KEY ADO_MCP_AUTH_TOKEN AZURE_DEVOPS_ORGANIZATION \
-      POSTMAN_API_KEY NEW_RELIC_API_KEY VSCODE_PORT SSH_PORT DEPLOY_PROFILES
+unset WORKSPACE_NAME SSH_PUBLIC_KEY BWS_ACCESS_TOKEN ADMIN_PASSWORD \
+      VSCODE_PORT SSH_PORT ASPIRE_DASHBOARD_PORT DEPLOY_PROFILES
 ```
 
 #### Windows
 
 ```powershell
-$WORKSPACE_NAME                    = "my-org"
-$SSH_PUBLIC_KEY                    = ""
-$VAULT_ROOT_TOKEN                  = ""
-$BWS_ACCESS_TOKEN                  = ""
-$ADMIN_PASSWORD                    = ""
-$ANTHROPIC_API_KEY                 = ""
-$CLAUDE_CODE_OAUTH_TOKEN           = ""
-$AWS_ACCESS_KEY_ID                 = ""
-$AWS_SECRET_ACCESS_KEY             = ""
-$AWS_REGION                        = ""
-$ANTHROPIC_BEDROCK_BASE_URL        = ""
-$CLAUDE_CODE_USE_VERTEX            = ""
-$ANTHROPIC_VERTEX_PROJECT_ID       = ""
-$CLOUD_ML_REGION                   = ""
-$CLAUDE_CODE_USE_FOUNDRY           = ""
-$AZURE_FOUNDRY_BASE_URL            = ""
-$OPENAI_API_KEY                    = ""
-$GEMINI_API_KEY                    = ""
-$GITHUB_PERSONAL_ACCESS_TOKEN      = ""
-$ASPIRE_DASHBOARD_PORT             = "18888"
-$TAVILY_API_KEY                    = ""
-$ADO_MCP_AUTH_TOKEN                = ""
-$AZURE_DEVOPS_ORGANIZATION         = ""
-$POSTMAN_API_KEY                   = ""
-$NEW_RELIC_API_KEY                 = ""
-$VSCODE_PORT                       = "8080"
-$SSH_PORT                          = "2222"
+$WORKSPACE_NAME            = "my-org"
+$SSH_PUBLIC_KEY            = ""
+$BWS_ACCESS_TOKEN          = ""
+$ADMIN_PASSWORD            = ""
+$VSCODE_PORT               = "8080"
+$SSH_PORT                  = "2222"
+$ASPIRE_DASHBOARD_PORT     = "18888"
 
-$env:WORKSPACE_NAME                    = $WORKSPACE_NAME
-$env:SSH_PUBLIC_KEY                    = $SSH_PUBLIC_KEY
-$env:VAULT_ROOT_TOKEN                  = $VAULT_ROOT_TOKEN
-$env:BWS_ACCESS_TOKEN                  = $BWS_ACCESS_TOKEN
-$env:ADMIN_PASSWORD                    = $ADMIN_PASSWORD
-$env:ANTHROPIC_API_KEY                 = $ANTHROPIC_API_KEY
-$env:CLAUDE_CODE_OAUTH_TOKEN           = $CLAUDE_CODE_OAUTH_TOKEN
-$env:AWS_ACCESS_KEY_ID                 = $AWS_ACCESS_KEY_ID
-$env:AWS_SECRET_ACCESS_KEY             = $AWS_SECRET_ACCESS_KEY
-$env:AWS_REGION                        = $AWS_REGION
-$env:ANTHROPIC_BEDROCK_BASE_URL        = $ANTHROPIC_BEDROCK_BASE_URL
-$env:CLAUDE_CODE_USE_VERTEX            = $CLAUDE_CODE_USE_VERTEX
-$env:ANTHROPIC_VERTEX_PROJECT_ID       = $ANTHROPIC_VERTEX_PROJECT_ID
-$env:CLOUD_ML_REGION                   = $CLOUD_ML_REGION
-$env:CLAUDE_CODE_USE_FOUNDRY           = $CLAUDE_CODE_USE_FOUNDRY
-$env:AZURE_FOUNDRY_BASE_URL            = $AZURE_FOUNDRY_BASE_URL
-$env:OPENAI_API_KEY                    = $OPENAI_API_KEY
-$env:GEMINI_API_KEY                    = $GEMINI_API_KEY
-$env:GITHUB_PERSONAL_ACCESS_TOKEN      = $GITHUB_PERSONAL_ACCESS_TOKEN
-$env:ASPIRE_DASHBOARD_PORT             = $ASPIRE_DASHBOARD_PORT
-$env:TAVILY_API_KEY                    = $TAVILY_API_KEY
-$env:ADO_MCP_AUTH_TOKEN                = $ADO_MCP_AUTH_TOKEN
-$env:AZURE_DEVOPS_ORGANIZATION         = $AZURE_DEVOPS_ORGANIZATION
-$env:POSTMAN_API_KEY                   = $POSTMAN_API_KEY
-$env:NEW_RELIC_API_KEY                 = $NEW_RELIC_API_KEY
-$env:VSCODE_PORT                       = $VSCODE_PORT
-$env:SSH_PORT                          = $SSH_PORT
+$env:WORKSPACE_NAME            = $WORKSPACE_NAME
+$env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
+$env:BWS_ACCESS_TOKEN          = $BWS_ACCESS_TOKEN
+$env:ADMIN_PASSWORD            = $ADMIN_PASSWORD
+$env:VSCODE_PORT               = $VSCODE_PORT
+$env:SSH_PORT                  = $SSH_PORT
+$env:ASPIRE_DASHBOARD_PORT     = $ASPIRE_DASHBOARD_PORT
 
 # Build profile flags dynamically
 $DEPLOY_PROFILES = "vscode"  # space-separated: vscode, devcontainer, or both
@@ -301,14 +191,8 @@ docker compose `
     @profileArgs `
     up -d
 
-'WORKSPACE_NAME','SSH_PUBLIC_KEY','VAULT_ROOT_TOKEN','BWS_ACCESS_TOKEN','ADMIN_PASSWORD',
-'ANTHROPIC_API_KEY','CLAUDE_CODE_OAUTH_TOKEN',
-'AWS_ACCESS_KEY_ID','AWS_SECRET_ACCESS_KEY','AWS_REGION','ANTHROPIC_BEDROCK_BASE_URL',
-'CLAUDE_CODE_USE_VERTEX','ANTHROPIC_VERTEX_PROJECT_ID','CLOUD_ML_REGION',
-'CLAUDE_CODE_USE_FOUNDRY','AZURE_FOUNDRY_BASE_URL',
-'OPENAI_API_KEY','GEMINI_API_KEY','GITHUB_PERSONAL_ACCESS_TOKEN','ASPIRE_DASHBOARD_PORT',
-'TAVILY_API_KEY','ADO_MCP_AUTH_TOKEN','AZURE_DEVOPS_ORGANIZATION',
-'POSTMAN_API_KEY','NEW_RELIC_API_KEY','VSCODE_PORT','SSH_PORT' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+'WORKSPACE_NAME','SSH_PUBLIC_KEY','BWS_ACCESS_TOKEN','ADMIN_PASSWORD',
+'VSCODE_PORT','SSH_PORT','ASPIRE_DASHBOARD_PORT','DEPLOY_PROFILES' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
 ```
 
 After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
@@ -385,6 +269,7 @@ All configured tools should show as connected. Then verify commands are availabl
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
 | Terminal `claude` shows onboarding wizard | Home volume was created before the fix — delete `<WORKSPACE_NAME>-home` volume and restart, or run `claude setup-token` inside the container |
 | Extension auth error: `invalid header value` | `CLAUDE_CODE_OAUTH_TOKEN` contains a newline from terminal line-wrap — remove all line breaks from the token and recreate the container |
+| Vault UI shows 'sealed' | vault-server auto-unseals on startup using keys in vault-data volume. Check logs: `docker logs <WORKSPACE_NAME>-vault-server-1` |
 
 ---
 
@@ -417,32 +302,14 @@ Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-t
 
 ## Secret Rotation
 
-To rotate a secret, re-run the Step 2 command with the updated value. Docker will recreate only the containers whose environment changed.
-
-To recreate a single service without restarting the whole stack, set the updated variable and run:
+To update secrets (API keys, PATs, cloud credentials), log in to the Vault UI at `http://localhost:${VAULT_PORT}/ui` using the root token stored in the `vault-data` volume:
 
 ```bash
-# Ubuntu / macOS — rotate a single MCP service
-NEW_VALUE="new-key-here"
-
-export TAVILY_API_KEY="$NEW_VALUE"
-docker compose \
-    -f "./docker/docker-compose.yml" \
-    -p "$WORKSPACE_NAME" \
-    up -d --force-recreate mcp-tavily
-unset TAVILY_API_KEY
+# Retrieve root token from vault-data volume
+docker run --rm -v <WORKSPACE_NAME>-vault-data:/vault/data alpine cat /vault/data/.init | grep root_token
 ```
 
-```powershell
-# Windows — rotate a single MCP service
-$env:TAVILY_API_KEY = "new-key-here"
-# set other vars as needed...
-
-docker compose `
-    -f ".\docker\docker-compose.yml" `
-    -p $env:WORKSPACE_NAME `
-    up -d --force-recreate mcp-tavily
-```
+Then navigate to the secret path in Vault UI and update the value. MCP sidecar containers re-fetch secrets at next restart.
 
 > Multiple volumes exist per workspace, each with an independent lifecycle:
 >
@@ -451,6 +318,7 @@ docker compose `
 > | `<WORKSPACE_NAME>-secrets` | SSH public key, persisted env | Rotate SSH key |
 > | `<WORKSPACE_NAME>-home` | Home directory (user config, credentials, workspace repos) | Reset all user state |
 > | `<WORKSPACE_NAME>-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next workspace-server start |
+> | `<WORKSPACE_NAME>-vault-data` | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); init/unseal keys at `/vault/data/.init` | Reset Vault secrets (caution: loses all stored values) |
 >
 > ```bash
 > # Rotate SSH key only
@@ -463,7 +331,7 @@ docker compose `
 > docker volume rm <WORKSPACE_NAME>-tools
 >
 > # Full decommission
-> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools
+> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools <WORKSPACE_NAME>-vault-data
 > ```
 
 ---

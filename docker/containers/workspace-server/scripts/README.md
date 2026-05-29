@@ -98,12 +98,11 @@ Then:    /usr/sbin/sshd -D      # SSH daemon (blocking)
 
 ### Optional (Credentials)
 - `CLAUDE_CODE_OAUTH_TOKEN` — Claude OAuth access token
-- `GITHUB_PERSONAL_ACCESS_TOKEN` — GitHub PAT (for gh CLI, git, gh-copilot)
-- `ADO_MCP_AUTH_TOKEN` — Azure DevOps PAT for private repositories
+- `GITHUB_PERSONAL_ACCESS_TOKEN` — GitHub PAT (for gh CLI, git, gh-copilot); also fetched from Vault KV by setup-credentials.sh
+- `ADO_MCP_AUTH_TOKEN` — Azure DevOps PAT for private repositories; fetched from Vault KV by setup-credentials.sh
 - `ADMIN_PASSWORD` — User password for sudo/login (default: none; passwordless sudo always enabled)
 
-### Optional (Tools)
-- `GITHUB_PERSONAL_ACCESS_TOKEN` — Also used for higher API limits in tool installation
+Credentials (GITHUB_PERSONAL_ACCESS_TOKEN, ADO_MCP_AUTH_TOKEN) are fetched from Vault KV at workspace-server startup via `setup-credentials.sh`, not passed as direct docker env vars.
 
 ---
 
