@@ -27,7 +27,7 @@ See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short 
 
 ```bash
 ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
-# Prompts securely for BWS_ACCESS_TOKEN
+# Prompts for BWS_ACCESS_TOKEN (optional — press Enter to configure secrets via Vault UI after startup)
 ```
 
 After the first run, start and stop the workspace from **Docker Desktop** or:

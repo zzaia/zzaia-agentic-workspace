@@ -67,13 +67,16 @@ Write-Host ''
 Write-Host '         ⚡  Agentic Workspace  ⚡'
 Write-Host ''
 
+$BwsMode = "bitwarden"
 if ([string]::IsNullOrWhiteSpace($env:BWS_ACCESS_TOKEN)) {
-    $BWS_ACCESS_TOKEN = Read-Host "Bitwarden Secrets Manager Access Token" -AsSecureString
-    if ($null -eq $BWS_ACCESS_TOKEN -or $BWS_ACCESS_TOKEN.Length -eq 0) {
-        Write-Error "Error: BWS_ACCESS_TOKEN is required"
-        exit 1
+    $BWS_ACCESS_TOKEN = Read-Host "Bitwarden Secrets Manager Access Token (press Enter to skip — use Vault UI)" -AsSecureString
+    $BwsPlain = [System.Net.NetworkCredential]::new('', $BWS_ACCESS_TOKEN).Password
+    if ([string]::IsNullOrWhiteSpace($BwsPlain)) {
+        $BwsMode = "manual"
+        $env:BWS_ACCESS_TOKEN = ""
+    } else {
+        $env:BWS_ACCESS_TOKEN = $BwsPlain
     }
-    $env:BWS_ACCESS_TOKEN = [System.Net.NetworkCredential]::new('', $BWS_ACCESS_TOKEN).Password
 } else {
     Write-Host "Using BWS_ACCESS_TOKEN from environment"
 }
@@ -115,12 +118,6 @@ if ($GPU_ENABLED -eq "true") {
 
 Write-Host ""
 Write-Host "Starting workspace..."
-$env:BWS_ACCESS_TOKEN = if ([string]::IsNullOrWhiteSpace($env:BWS_ACCESS_TOKEN)) {
-    $BWS_ACCESS_TOKEN = Read-Host "Bitwarden Secrets Manager Access Token" -AsSecureString
-    [System.Net.NetworkCredential]::new('', $BWS_ACCESS_TOKEN).Password
-} else {
-    $env:BWS_ACCESS_TOKEN
-}
 
 docker compose `
     -f (Join-Path $ScriptDir "docker\docker-compose.yml") `
@@ -140,4 +137,12 @@ if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels ex
 Write-Host "  Vault UI: http://localhost:$VaultPort/ui"
 Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$AspireDashboardPort"
 Write-Host ""
-Write-Host "Configure secrets in Vault UI after login with the root token stored in vault-data volume."
+if ($BwsMode -eq "manual") {
+    Write-Host "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
+    Write-Host "  1. Wait ~30s for vault-server to initialize, then open http://localhost:$VaultPort/ui"
+    Write-Host "  2. Get root token: docker exec ${WorkspaceName}-vault-server-1 cat /vault/data/.init | jq -r .root_token"
+    Write-Host "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
+} else {
+    Write-Host "Secrets bootstrapped from Bitwarden. Manage via Vault UI with root token:"
+    Write-Host "  docker exec ${WorkspaceName}-vault-server-1 cat /vault/data/.init | jq -r .root_token"
+}

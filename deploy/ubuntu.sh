@@ -100,9 +100,11 @@ echo ""
 echo "         ⚡  Agentic Workspace  ⚡"
 echo ""
 
+BWS_MODE="bitwarden"
 if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
-    read -s -p "Bitwarden Secrets Manager Access Token: " BWS_ACCESS_TOKEN
-    [ -z "$BWS_ACCESS_TOKEN" ] && echo "Error: BWS_ACCESS_TOKEN is required" && exit 1
+    read -s -p "Bitwarden Secrets Manager Access Token (press Enter to skip — use Vault UI): " BWS_ACCESS_TOKEN
+    echo ""
+    [ -z "$BWS_ACCESS_TOKEN" ] && BWS_MODE="manual"
 fi
 
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -149,4 +151,12 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
 echo ""
-echo "Configure secrets in Vault UI after login with the root token stored in vault-data volume."
+if [ "$BWS_MODE" = "manual" ]; then
+    echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
+    echo "  1. Wait ~30s for vault-server to initialize, then open http://localhost:$VAULT_PORT/ui"
+    echo "  2. Get root token: docker exec ${WORKSPACE_NAME}-vault-server-1 cat /vault/data/.init | grep root_token"
+    echo "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
+else
+    echo "Secrets bootstrapped from Bitwarden. Manage via Vault UI with root token:"
+    echo "  docker exec ${WORKSPACE_NAME}-vault-server-1 cat /vault/data/.init | grep root_token"
+fi

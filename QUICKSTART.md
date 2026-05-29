@@ -9,7 +9,7 @@
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
-| **Bitwarden Secrets Manager CLI** | Secret manager — provides machine account token for secret bootstrap | [bitwarden.com/help/secrets-manager-cli](https://bitwarden.com/help/secrets-manager-cli/) |
+| **Bitwarden Secrets Manager** *(optional)* | Automated secret bootstrap — vault-server runs the bws CLI internally at startup; no host installation required | [bitwarden.com/products/secrets-manager](https://bitwarden.com/products/secrets-manager/) |
 | **Enhanced Container Isolation (ECI)** *(optional)* | Enables unprivileged Docker-in-Docker sandboxing — Docker Desktop > Settings > General > "Use Enhanced Container Isolation" | [docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation](https://docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation/) |
 
 ---
@@ -91,18 +91,16 @@ You will need the following values before starting:
 | `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
 | `ASPIRE_DASHBOARD_PORT` | ✅ | Host port for Aspire telemetry dashboard | Default: `18888` |
-| `BWS_ACCESS_TOKEN` | ✅ | Bitwarden Secrets Manager machine account token — provided at deploy time; vault-server fetches all API keys and credentials from Bitwarden at container startup | From Bitwarden Secrets Manager |
+| `BWS_ACCESS_TOKEN` | Optional | Bitwarden Secrets Manager machine account token — if provided, vault-server bootstraps all secrets from Bitwarden automatically; if skipped, secrets are entered manually via Vault UI after first boot | From Bitwarden Secrets Manager; press Enter to skip |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the Neo4j password for Headroom | Any string; leave empty for no sudo and default Neo4j password (`headroom`) |
 
-All API keys, PATs, and cloud credentials are stored in Vault. Configure them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
+All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
 
 ---
 
 ## Step 3 — Start the Workspace
 
-### Option A — Automated (Bitwarden Secrets Manager)
-
-Run the deployment script with CLI parameters. The script prompts securely for `BWS_ACCESS_TOKEN`, generates `docker/.env` (no secrets), starts the stack, and vault-server bootstraps all secrets from Bitwarden internally.
+Run the deploy script for your platform. The script prompts securely for `BWS_ACCESS_TOKEN` (press Enter to skip and configure secrets manually via Vault UI after startup).
 
 **Ubuntu / WSL:**
 ```bash
@@ -119,81 +117,11 @@ Run the deployment script with CLI parameters. The script prompts securely for `
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-Optional flags: `--gpu`, `--profiles vscode devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
+Optional flags: `--gpu`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
 
----
+**With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
 
-### Option B — Manual
-
-Fill in your values and run the command for your platform. No secrets are written to `.env` files. Secrets are managed via Vault UI after bootstrap — not via environment variables.
-
-#### Ubuntu / macOS / WSL
-
-```bash
-export WORKSPACE_NAME="my-org"
-export SSH_PUBLIC_KEY=""
-export BWS_ACCESS_TOKEN=""
-export ADMIN_PASSWORD=""
-export VSCODE_PORT="8080"
-export SSH_PORT="2222"
-export ASPIRE_DASHBOARD_PORT="18888"
-export DEPLOY_PROFILES="vscode"  # space-separated: vscode, devcontainer, or both
-
-# Build profile flags dynamically
-PROFILE_FLAGS=""
-for p in $DEPLOY_PROFILES; do
-    case "$p" in
-        vscode|devcontainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
-    esac
-done
-docker compose \
-    -f "./docker/docker-compose.yml" \
-    -p "$WORKSPACE_NAME" \
-    $PROFILE_FLAGS \
-    up -d
-
-unset WORKSPACE_NAME SSH_PUBLIC_KEY BWS_ACCESS_TOKEN ADMIN_PASSWORD \
-      VSCODE_PORT SSH_PORT ASPIRE_DASHBOARD_PORT DEPLOY_PROFILES
-```
-
-#### Windows
-
-```powershell
-$WORKSPACE_NAME            = "my-org"
-$SSH_PUBLIC_KEY            = ""
-$BWS_ACCESS_TOKEN          = ""
-$ADMIN_PASSWORD            = ""
-$VSCODE_PORT               = "8080"
-$SSH_PORT                  = "2222"
-$ASPIRE_DASHBOARD_PORT     = "18888"
-
-$env:WORKSPACE_NAME            = $WORKSPACE_NAME
-$env:SSH_PUBLIC_KEY            = $SSH_PUBLIC_KEY
-$env:BWS_ACCESS_TOKEN          = $BWS_ACCESS_TOKEN
-$env:ADMIN_PASSWORD            = $ADMIN_PASSWORD
-$env:VSCODE_PORT               = $VSCODE_PORT
-$env:SSH_PORT                  = $SSH_PORT
-$env:ASPIRE_DASHBOARD_PORT     = $ASPIRE_DASHBOARD_PORT
-
-# Build profile flags dynamically
-$DEPLOY_PROFILES = "vscode"  # space-separated: vscode, devcontainer, or both
-$profileArgs = @()
-foreach ($p in ($DEPLOY_PROFILES -split '\s+')) {
-    if ($p -match '^(vscode|devcontainer)$') {
-        $profileArgs += '--profile'
-        $profileArgs += $p
-    }
-}
-
-docker compose `
-    -f ".\docker\docker-compose.yml" `
-    -p $WORKSPACE_NAME `
-    @profileArgs `
-    up -d
-
-'WORKSPACE_NAME','SSH_PUBLIC_KEY','BWS_ACCESS_TOKEN','ADMIN_PASSWORD',
-'VSCODE_PORT','SSH_PORT','ASPIRE_DASHBOARD_PORT','DEPLOY_PROFILES' | ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
-```
+**Without token** (press Enter) — vault-server starts with an empty KV store. The script prints the root token retrieval command and the KV paths to populate via Vault UI.
 
 After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
 
@@ -279,15 +207,15 @@ Each workspace gets its own isolated Docker Compose stack identified by `WORKSPA
 
 ```bash
 # Workspace 1 — default ports
-export WORKSPACE_NAME="org-one"  VSCODE_PORT=8080  SSH_PORT=2222  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d
+./deploy/ubuntu.sh --workspace-name org-one --ssh-public-key "ssh-ed25519 AAAA..." \
+    --vscode-port 8080 --ssh-port 2222
 
 # Workspace 2 — different ports
-export WORKSPACE_NAME="org-two"  VSCODE_PORT=8081  SSH_PORT=2223  # ... other vars
-docker compose -f "./docker/docker-compose.yml" -p "$WORKSPACE_NAME" up -d
+./deploy/ubuntu.sh --workspace-name org-two --ssh-public-key "ssh-ed25519 AAAA..." \
+    --vscode-port 8081 --ssh-port 2223
 ```
 
-Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, and separate internal networks.
+Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, separate Vault volumes, and separate internal networks.
 
 **Recommended port assignments:**
 

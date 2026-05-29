@@ -140,7 +140,7 @@ write_vault_kv_path() {
 
 bootstrap_secrets_from_bws() {
     if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
-        log_info "BWS_ACCESS_TOKEN not set, skipping secret bootstrap"
+        log_warn "BWS_ACCESS_TOKEN not set — Vault started empty. Add secrets via Vault UI: http://localhost:${VAULT_PORT:-8200}/ui"
         return 0
     fi
 
