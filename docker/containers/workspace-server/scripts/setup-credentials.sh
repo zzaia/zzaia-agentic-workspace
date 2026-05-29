@@ -1,5 +1,5 @@
 #!/bin/bash
-# setup-credentials.sh — Authentication setup (Claude, GitHub, Azure DevOps)
+# setup-credentials.sh — Authentication setup (Claude, Git via sidecar)
 set -euo pipefail
 
 # shellcheck source=common.sh
@@ -48,38 +48,60 @@ setup_claude_credentials() {
     log_success "Claude CLI authenticated"
 }
 
-# ── GitHub authentication and extensions ──────────────────────────────────────
-setup_github_credentials() {
-    if [ -z "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
-        log_warn "GITHUB_PERSONAL_ACCESS_TOKEN not set, skipping GitHub auth"
+# ── Git sidecar SSH authentication ───────────────────────────────────────────
+setup_git_sidecar_authentication() {
+    if [ -z "${VAULT_ADDR:-}" ] || [ -z "${VAULT_TOKEN:-}" ]; then
+        log_warn "VAULT_ADDR or VAULT_TOKEN not set, skipping git-sidecar auth"
         return 0
     fi
-    
-    log_info "Configuring GitHub authentication..."
-    
-    GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_PERSONAL_ACCESS_TOKEN" \
-    su -s /bin/bash user -c "
-        export HOME=/home/user
-        export NVM_DIR=/opt/tools/.nvm
-        [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"
-        export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:\$PATH
-        export GITHUB_TOKEN=\"\$GITHUB_PERSONAL_ACCESS_TOKEN\"
 
-        # Authenticate gh CLI
-        echo \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" | gh auth login --with-token 2>/dev/null || true
+    log_info "Configuring git-sidecar SSH authentication..."
 
-        # Upgrade any existing extensions
-        gh extension upgrade --all 2>/dev/null || true
+    # Fetch workspace secrets from Vault (includes GIT_SIDECAR_AGENT_KEY)
+    WORKSPACE_RESPONSE=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/secret/data/workspace" 2>/dev/null || echo '{}')
 
-        # Configure git credential helper
-        git config --global credential.https://github.com.helper store
-        grep -qF \"github.com\" /home/user/.git-credentials 2>/dev/null \
-            || printf \"https://x-access-token:%s@github.com\\n\" \"\$GITHUB_PERSONAL_ACCESS_TOKEN\" \
-               >> /home/user/.git-credentials
-        chmod 600 /home/user/.git-credentials
-    "
-    
-    log_success "GitHub authenticated"
+    if [ "$WORKSPACE_RESPONSE" = '{}' ]; then
+        log_warn "Could not fetch workspace secrets from Vault, skipping git-sidecar setup"
+        return 0
+    fi
+
+    # Extract GIT_SIDECAR_AGENT_KEY from Vault response (using jq for proper unescaping)
+    GIT_SIDECAR_AGENT_KEY=$(printf '%s' "$WORKSPACE_RESPONSE" | jq -r '.data.data.GIT_SIDECAR_AGENT_KEY // empty' 2>/dev/null || echo "")
+
+    if [ -z "$GIT_SIDECAR_AGENT_KEY" ]; then
+        log_warn "GIT_SIDECAR_AGENT_KEY not found in Vault, skipping git-sidecar setup"
+        return 0
+    fi
+
+    GIT_SIDECAR_AGENT_KEY="$GIT_SIDECAR_AGENT_KEY" \
+    su -s /bin/bash user -c '
+        mkdir -p /home/user/.ssh
+
+        printf "%s\n" "$GIT_SIDECAR_AGENT_KEY" > /home/user/.ssh/id_rsa_git_sidecar
+        chmod 600 /home/user/.ssh/id_rsa_git_sidecar
+
+        cat >> /home/user/.ssh/config << EOF
+Host git-sidecar
+  HostName git-sidecar
+  Port 2223
+  User git
+  IdentityFile ~/.ssh/id_rsa_git_sidecar
+  StrictHostKeyChecking accept-new
+  IdentitiesOnly yes
+EOF
+        chmod 600 /home/user/.ssh/config
+
+        git config --global --add "url.git@git-sidecar:github/.insteadOf" "https://github.com/"
+        git config --global --add "url.git@git-sidecar:github/.insteadOf" "git@github.com:"
+        git config --global --add "url.git@git-sidecar:ado/.insteadOf" "git@ssh.dev.azure.com:v3/"
+        git config --global --add "url.git@git-sidecar:ado/.insteadOf" "https://dev.azure.com/"
+    '
+
+    # Unset the variable immediately after use
+    unset GIT_SIDECAR_AGENT_KEY
+
+    log_success "Git-sidecar SSH authentication configured"
 }
 
 # ── Claude Code plugin installation ──────────────────────────────────────────
@@ -97,33 +119,11 @@ setup_claude_plugins() {
       || log_warn "Claude Code plugin install failed; MCP config and settings are pre-seeded"
 }
 
-# ── Azure DevOps git credentials ──────────────────────────────────────────────
-setup_azure_devops_credentials() {
-    if [ -z "${ADO_MCP_AUTH_TOKEN:-}" ]; then
-        log_warn "ADO_MCP_AUTH_TOKEN not set, skipping Azure DevOps auth"
-        return 0
-    fi
-    
-    log_info "Configuring Azure DevOps git credentials..."
-    
-    ADO_MCP_AUTH_TOKEN="$ADO_MCP_AUTH_TOKEN" \
-    su -s /bin/bash user -c "
-        git config --global credential.https://dev.azure.com.helper store
-        grep -qF \"dev.azure.com\" /home/user/.git-credentials 2>/dev/null \
-            || printf \"https://anything:%s@dev.azure.com\n\" \"\$ADO_MCP_AUTH_TOKEN\" \
-               >> /home/user/.git-credentials
-        chmod 600 /home/user/.git-credentials
-    "
-    
-    log_success "Azure DevOps authenticated"
-}
-
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
     apply_workspace_templating
     setup_claude_credentials
-    setup_github_credentials
-    setup_azure_devops_credentials
+    setup_git_sidecar_authentication
     setup_claude_plugins
 
     log_success "All credentials configured"

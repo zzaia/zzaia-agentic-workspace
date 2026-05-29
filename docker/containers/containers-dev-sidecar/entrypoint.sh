@@ -7,7 +7,8 @@ export WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 
 USER_RUN=()
 
-devcontainer::setup_env() {
+# ── Setup environment ─────────────────────────────────────────────────────────
+setup_env() {
     export NVM_DIR="/opt/tools/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
     export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
@@ -16,7 +17,8 @@ devcontainer::setup_env() {
     USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH")
 }
 
-devcontainer::install_cli() {
+# ── Verify VS Code CLI ────────────────────────────────────────────────────────
+verify_cli() {
     if ! command -v code >/dev/null 2>&1; then
         echo "ERROR: VS Code CLI not found in PATH." >&2
         echo "  workspace-server may not have completed runtime setup yet." >&2
@@ -25,44 +27,41 @@ devcontainer::install_cli() {
     fi
 }
 
-devcontainer::cache_server() {
+# ── Cache VS Code server ──────────────────────────────────────────────────────
+cache_server() {
     echo "Caching VS Code Desktop Server for Dev Containers..."
 
-    # Get commit hash from code --version
-    local COMMIT
-    COMMIT=$(runuser -u user -- code --version 2>/dev/null | sed -n '2p')
+    local commit
+    commit=$(runuser -u user -- code --version 2>/dev/null | sed -n '2p')
 
-    if [ -z "$COMMIT" ]; then
+    if [ -z "$commit" ]; then
         echo "WARN: Could not determine VS Code commit hash; skipping server cache." >&2
         return 0
     fi
 
-    local SERVER_DIR="/home/user/.vscode-server/bin/$COMMIT"
+    local server_dir="/home/user/.vscode-server/bin/$commit"
 
-    # Check if server already cached
-    if [ -f "$SERVER_DIR/server.sh" ]; then
-        echo "VS Code Server for commit $COMMIT already cached."
+    if [ -f "$server_dir/server.sh" ]; then
+        echo "VS Code Server for commit $commit already cached."
         return 0
     fi
 
-    # Download and extract server
-    echo "Downloading VS Code Server for commit $COMMIT..."
-    mkdir -p "$SERVER_DIR"
+    echo "Downloading VS Code Server for commit $commit..."
+    mkdir -p "$server_dir"
 
-    if curl -fsSL "https://update.code.visualstudio.com/commit:$COMMIT/server-linux-x64/stable" \
-        | tar xz --strip-components=1 -C "$SERVER_DIR/"; then
+    if curl -fsSL "https://update.code.visualstudio.com/commit:$commit/server-linux-x64/stable" \
+        | tar xz --strip-components=1 -C "$server_dir/"; then
         echo "VS Code Server cached successfully."
     else
         echo "WARN: Failed to cache VS Code Server; Dev Containers may download it on first attach." >&2
         return 0
     fi
 
-    # Set ownership
     chown -R user:user /home/user/.vscode-server 2>/dev/null || true
 }
 
-devcontainer::seed_config() {
-    # Install devcontainer config into shared home if not already present
+# ── Seed dev container config ─────────────────────────────────────────────────
+seed_config() {
     if [ ! -f /home/user/.devcontainer/devcontainer.json ]; then
         mkdir -p /home/user/.devcontainer
         cp /opt/zzaia/devcontainer.json /home/user/.devcontainer/devcontainer.json
@@ -71,11 +70,12 @@ devcontainer::seed_config() {
     fi
 }
 
+# ── Main entry point ──────────────────────────────────────────────────────────
 main() {
-    devcontainer::setup_env
-    devcontainer::install_cli
-    devcontainer::cache_server
-    devcontainer::seed_config
+    setup_env
+    verify_cli
+    cache_server
+    seed_config
     echo "Dev Containers ready — container available for Dev Containers connection"
     exec sleep infinity
 }

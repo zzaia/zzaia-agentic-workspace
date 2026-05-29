@@ -1,6 +1,6 @@
 FROM node:lts-alpine
 
-RUN npm install -g supergateway@3.4.3
+RUN apk add --no-cache bash && npm install -g supergateway@3.4.3
 
 COPY docker/containers/mcp-newrelic/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
