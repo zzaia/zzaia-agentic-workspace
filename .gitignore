@@ -215,7 +215,6 @@ __marimo__/
 !docs/
 !commands/
 !deploy/
-!ansible/
 !LICENSE
 !README.md
 !QUICKSTART.md
