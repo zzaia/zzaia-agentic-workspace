@@ -113,7 +113,8 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 | Service | Port | Role | Notes |
 |---------|------|------|-------|
-| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) | receives BWS_ACCESS_TOKEN only; fetches all secrets from Bitwarden at startup; stores in Vault KV v2 (encrypted at rest) |
+| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) | receives BWS_ACCESS_TOKEN only; fetches all secrets from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth |
+| `git-sidecar` | 2223 (SSH) | SSH git proxy — workspace agents clone/push private repos | Fetches SSH pubkey + PATs from Vault; ForceCommand restricts every session to `git-proxy-cmd`; no PAT ever visible in agent terminal |
 | `mcp-tavily` | 3001 | Fetches `TAVILY_API_KEY` from Vault | Opt-in |
 | `mcp-azure-devops` | 3002 | Fetches `ADO_MCP_AUTH_TOKEN` from Vault | Opt-in |
 | `mcp-postman` | 3003 | Fetches `POSTMAN_API_KEY` from Vault | Opt-in |
@@ -143,17 +144,39 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 004: Deploy-Time Secret Bootstrap via Bitwarden to Vault
 
-**Decision**: Secrets are provided to vault-server via `BWS_ACCESS_TOKEN` at deploy time. vault-server fetches all secrets from Bitwarden Secrets Manager using the bws CLI at container startup and stores them in Vault KV v2 with AES-256-GCM encryption at rest.
+**Decision**: Secrets are provided to vault-server via `BWS_ACCESS_TOKEN` at deploy time. vault-server performs a full initialization sequence at container startup: initialize Vault, unseal, enable KV v2, generate SSH keypair, bootstrap secrets from Bitwarden, configure AppRole auth.
 
-- Deploy script: passes only `BWS_ACCESS_TOKEN` to docker compose env
-- vault-server runs `bws secret list --output json` at startup
-- Secrets written to Vault KV paths: `secret/ai`, `secret/mcp/github`, `secret/mcp/azure-devops`, `secret/cloud`, `secret/integrations`, `secret/workspace`
-- Vault root token and unseal keys stored only in `/vault/data/.init` (inside the `{WORKSPACE_NAME}-vault-data` encrypted volume; chmod 600)
-- `BWS_ACCESS_TOKEN` unset inside vault-server after bootstrap completes
-- All other containers fetch secrets from Vault at runtime via `VAULT_ADDR=http://vault-server:8200` + AppRole/token auth
-- After bootstrap: all secrets managed via Vault UI at `http://localhost:${VAULT_PORT}/ui`
+**vault-server startup sequence:**
 
-**Rationale**: Vault production mode with file backend provides AES-256-GCM encryption at rest — no secret ever touches host disk or .env files. Bitwarden is the single source of truth for secret values; Vault is the runtime secret store with audit logging and access policies.
+1. Start Vault in background → `vault operator init` (1 key share, threshold 1)
+2. Store root token + unseal key in `/vault/data/.init` (chmod 600, inside encrypted volume)
+3. `vault operator unseal` using the stored key
+4. Enable KV v2 secret engine at `secret/`
+5. Generate ed25519 SSH keypair; write `GIT_SIDECAR_AGENT_KEY` + `GIT_SIDECAR_AGENT_PUBKEY` to `secret/workspace`
+6. If `BWS_ACCESS_TOKEN` set: run `bws secret list --output json` and write all secrets to KV paths (see below); unset token
+7. Enable AppRole auth method; bind `git-sidecar-policy` to read `secret/workspace`, `secret/mcp/github`, `secret/mcp/azure-devops`
+8. Kill background Vault; restart as foreground PID 1
+
+**Vault KV paths:**
+
+| Path | Contents |
+|------|---------|
+| `secret/ai` | `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY` |
+| `secret/mcp/github` | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| `secret/mcp/azure-devops` | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
+| `secret/cloud` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, Bedrock/Vertex/Foundry vars |
+| `secret/integrations` | `POSTMAN_API_KEY`, `NEW_RELIC_API_KEY` |
+| `secret/workspace` | `GIT_SIDECAR_AGENT_KEY` (private), `GIT_SIDECAR_AGENT_PUBKEY` (public) |
+
+**AppRole policies:**
+
+| Policy | Paths |
+|--------|-------|
+| `git-sidecar-policy` | `secret/data/workspace` (read), `secret/data/mcp/github` (read), `secret/data/mcp/azure-devops` (read) |
+| `mcp-policy` | `secret/data/mcp/*` (read) |
+| `workspace-policy` | `secret/data/workspace/*` (read), `secret/data/infra/*` (read) |
+
+**Rationale**: Vault production mode with file backend provides AES-256-GCM encryption at rest — no secret ever touches host disk or .env files. Bitwarden is an optional single source of truth for initial secret values; Vault is the runtime secret store with audit logging and access policies. The SSH keypair generation inside vault-server eliminates the chicken-and-egg problem of distributing git-sidecar credentials.
 
 ---
 
@@ -367,6 +390,59 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
+### ADR 015: git-sidecar — SSH Proxy to Isolate Git PATs from Agent Containers
+
+**Decision**: Private repository access (GitHub, Azure DevOps) is routed through a dedicated `git-sidecar` SSH proxy container. Agents clone and push using an SSH URL — they never receive or store a PAT.
+
+**Problem**: Without a proxy, agents would need to embed PATs directly in clone URLs:
+
+```bash
+# Rejected pattern — PAT visible in shell history, ps aux, and agent context
+git clone https://x-access-token:ghp_XXXX@github.com/my-org/my-repo
+```
+
+This violates PADR 007 (secrets never in agent context) and PADR 005 (secrets inaccessible after startup). The PAT would appear in:
+- Shell history (`~/.bash_history`)
+- Process table (`ps aux`) during clone
+- Agent context window if the command is shown in output
+- Docker inspect on the container env if passed as an env var
+
+**Solution — `git-sidecar` SSH relay:**
+
+- Agent uses a credential-free SSH URL: `ssh://git@git-sidecar:2223/github/my-org/my-repo`
+- `git-sidecar` fetches `GITHUB_PERSONAL_ACCESS_TOKEN` and `ADO_MCP_AUTH_TOKEN` from Vault at startup; writes to `/home/git/.git-proxy/tokens` (chmod 600, never env vars)
+- Every SSH session is locked to `git-proxy-cmd` via `ForceCommand` in `authorized_keys` — no shell, no port forwarding
+- `git-proxy-cmd` validates the path prefix (`github/` or `ado/`), injects the PAT into the upstream HTTPS URL internally, and proxies `git-upload-pack` / `git-receive-pack`
+- The PAT is consumed inside the proxy process and never returned to the caller
+
+**Authentication chain:**
+
+```
+workspace-server                git-sidecar                    GitHub / ADO
+      │                              │                              │
+      │  ssh git@git-sidecar:2223    │                              │
+      │  /github/my-org/my-repo ───► │  git clone (internal)        │
+      │                              │  https://token@github.com ──►│
+      │  git pack data ◄─────────────│  pack data ◄─────────────────│
+```
+
+- workspace-server authenticates with the ed25519 private key stored in Vault (`secret/workspace.GIT_SIDECAR_AGENT_KEY`), injected by Ansible credentials role at startup; unset from env after use
+- git-sidecar only accepts the matching public key (`GIT_SIDECAR_AGENT_PUBKEY` from Vault) — no other key can connect
+- Host keys are persisted in a named volume (`git-sidecar-hostkeys`) so `known_hosts` entries survive container restarts
+
+**URL routing:**
+
+| Agent SSH path | Upstream |
+|----------------|---------|
+| `github/<owner>/<repo>` | `https://x-access-token:<PAT>@github.com/<owner>/<repo>.git` |
+| `ado/<org>/<project>/<repo>` | `https://anything:<TOKEN>@dev.azure.com/<org>/<project>/_git/<repo>` |
+
+**Idle mode**: If `GIT_SIDECAR_AGENT_PUBKEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, or `ADO_MCP_AUTH_TOKEN` are absent from Vault, git-sidecar enters idle mode (sleeps indefinitely, exits cleanly on SIGTERM). The SSH daemon does not start; workspace agents can still operate without git access.
+
+**Rationale**: The SSH proxy pattern is the only approach that satisfies all three constraints simultaneously: (1) agents need to clone private repos, (2) PATs must never appear in the agent environment or terminal, (3) no special agent instrumentation or code changes. The `ForceCommand` SSH restriction provides defense-in-depth — even if an attacker obtains the private key, they can only execute `git-proxy-cmd`, not gain shell access.
+
+---
+
 ## C4 Context Diagram
 
 ```mermaid
@@ -523,7 +599,8 @@ zzaia-agentic-workspace/
 
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
-| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 | always | Bootstraps from Bitwarden at startup; UI at localhost:8200/ui; all secrets stored encrypted in named volume |
+| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 | always | Bootstraps from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth; UI at localhost:8200/ui |
+| `git-sidecar` | SSH git proxy — routes clone/push to GitHub and Azure DevOps via PAT injection | 2223 (SSH, internal) | always | ForceCommand restricts every session to `git-proxy-cmd`; PATs never exposed to agents |
 | `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure |
 | `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
 | `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
@@ -550,6 +627,7 @@ zzaia-agentic-workspace/
 | `<ws>-tools` | `/opt/tools` (workspace-server rw, optional servers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed) |
 | `<ws>-secrets` | `/secrets` | SSH host keys and public key |
 | `<ws>-vault-data` | `/vault/data` (vault-server) | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); unseal keys at `/vault/data/.init` |
+| `git-sidecar-hostkeys` | `/etc/ssh` (git-sidecar) | SSH host keys for the git-sidecar daemon — persisted so client known_hosts entries survive container restarts |
 | `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
 | `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
 
