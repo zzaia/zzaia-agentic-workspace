@@ -54,7 +54,7 @@ The objective of this workflow is to check for inconsistencies, quality issues, 
 
 | `--type` | Scope | Tool |
 |----------|-------|------|
-| `e2e` | API end-to-end interaction — validates backend contracts and service flows | Direct API Calls |
+| `e2e` | API end-to-end interaction — validates backend contracts and service flows | Newman CLI |
 | `ui` | Browser/UI interaction — validates user-facing flows via browser automation | Playwright |
 
 ## WORKFLOW PHASES

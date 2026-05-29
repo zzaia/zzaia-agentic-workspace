@@ -11,6 +11,7 @@ mcpServers:
   - aws-postgres-sql
   - aws-cloudwatch
   - aws-cloudwatch-xray
+  - aws-ecs
 color: purple
 ---
 

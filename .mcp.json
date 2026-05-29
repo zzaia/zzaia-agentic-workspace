@@ -93,6 +93,17 @@
         "AWS_REGION": "${AWS_REGION}",
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
+    },
+    "aws-ecs": {
+      "command": "uvx",
+      "args": ["awslabs.ecs-mcp-server@latest"],
+      "env": {
+        "AWS_ACCESS_KEY_ID": "${AWS_ACCESS_KEY_ID}",
+        "AWS_SECRET_ACCESS_KEY": "${AWS_SECRET_ACCESS_KEY}",
+        "AWS_REGION": "${AWS_REGION}",
+        "ALLOW_WRITE": "false",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
     }
   }
 }
