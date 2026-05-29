@@ -1,13 +1,12 @@
 FROM hashicorp/vault:latest
 
-LABEL org.opencontainers.image.title="ZZAIA Vault with Secret Sync"
-LABEL org.opencontainers.image.description="HashiCorp Vault with automatic environment variable secret sync"
+LABEL org.opencontainers.image.title="ZZAIA Vault Production"
+LABEL org.opencontainers.image.description="HashiCorp Vault production mode with Bitwarden secret bootstrap"
 
-# vault image (Alpine) ships with wget but not curl or jq — install jq and bash
 USER root
-RUN apk add --no-cache bash jq
+RUN apk add --no-cache bash jq curl openssh-keygen && \
+    curl -L https://github.com/bitwarden/sdk-sm/releases/latest/download/bws-x86_64-unknown-linux-musl.tar.gz | tar xz -C /usr/local/bin/ bws
 
-# Copy Vault configuration and entrypoint with correct permissions
 COPY docker/containers/vault-server/vault.hcl /vault/config/vault.hcl
 COPY docker/containers/vault-server/common.sh /vault/common.sh
 COPY docker/containers/vault-server/entrypoint.sh /vault/entrypoint.sh

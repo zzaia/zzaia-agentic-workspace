@@ -8,4 +8,4 @@ listener "tcp" {
 }
 
 ui = true
-api_addr = "http://vault-server:8200"
+api_addr = "http://0.0.0.0:8200"

@@ -14,33 +14,9 @@ services:
     volumes:
       - vault-data:/vault/data
     environment:
-      - VAULT_PORT=${VAULT_PORT:-8200}
       - VAULT_ADDR=http://0.0.0.0:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
-      - VAULT_ROOT_TOKEN=${VAULT_ROOT_TOKEN:-}
-      # secrets to sync into vault KV
-      - WORKSPACE_NAME=${WORKSPACE_NAME:-}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GITHUB_PERSONAL_ACCESS_TOKEN=${GITHUB_PERSONAL_ACCESS_TOKEN:-}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - AWS_REGION=${AWS_REGION:-}
-      - ANTHROPIC_BEDROCK_BASE_URL=${ANTHROPIC_BEDROCK_BASE_URL:-}
-      - CLAUDE_CODE_USE_VERTEX=${CLAUDE_CODE_USE_VERTEX:-}
-      - ANTHROPIC_VERTEX_PROJECT_ID=${ANTHROPIC_VERTEX_PROJECT_ID:-}
-      - CLOUD_ML_REGION=${CLOUD_ML_REGION:-}
-      - CLAUDE_CODE_USE_FOUNDRY=${CLAUDE_CODE_USE_FOUNDRY:-}
-      - AZURE_FOUNDRY_BASE_URL=${AZURE_FOUNDRY_BASE_URL:-}
-      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
-      - ADO_MCP_AUTH_TOKEN=${ADO_MCP_AUTH_TOKEN:-}
-      - AZURE_DEVOPS_ORGANIZATION=${AZURE_DEVOPS_ORGANIZATION:-}
-      - POSTMAN_API_KEY=${POSTMAN_API_KEY:-}
-      - NEW_RELIC_API_KEY=${NEW_RELIC_API_KEY:-}
+      - VAULT_PORT=${VAULT_PORT:-8200}
+      - BWS_ACCESS_TOKEN=${BWS_ACCESS_TOKEN:-}
     networks:
       - mcp
     cap_add:
@@ -108,7 +84,6 @@ services:
       - DOCKER_HOST=tcp://dind-server:2375
       - GPU_ENABLED=${GPU_ENABLED:-false}
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://ml-server:8787
       - OPENAI_BASE_URL=http://ml-server:8787
@@ -248,7 +223,6 @@ services:
     image: zzaia-mcp-tavily:latest
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
@@ -274,7 +248,6 @@ services:
     image: zzaia-mcp-azure-devops:latest
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
@@ -300,7 +273,6 @@ services:
     image: zzaia-mcp-postman:latest
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
@@ -326,7 +298,6 @@ services:
     image: zzaia-mcp-newrelic:latest
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
@@ -352,7 +323,6 @@ services:
     image: zzaia-mcp-github:latest
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
@@ -380,7 +350,6 @@ services:
       - git-sidecar-hostkeys:/etc/ssh
     environment:
       - VAULT_ADDR=http://vault-server:8200
-      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
     networks:
       - mcp
     restart: unless-stopped
