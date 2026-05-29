@@ -1,0 +1,8 @@
+---
+- name: Download and install bws CLI
+  ansible.builtin.unarchive:
+    src: "https://github.com/bitwarden/sdk-sm/releases/latest/download/bws-x86_64-unknown-linux-musl.tar.gz"
+    dest: /usr/local/bin
+    remote_src: yes
+    mode: '0755'
+  when: lookup('env', 'BWS_ACCESS_TOKEN') | length > 0

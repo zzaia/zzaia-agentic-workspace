@@ -144,6 +144,11 @@ bootstrap_secrets_from_bws() {
         return 0
     fi
 
+    if ! command -v bws >/dev/null 2>&1; then
+        log_warn "bws CLI not available in this image — Vault started empty. Add secrets via Vault UI: http://localhost:${VAULT_PORT:-8200}/ui"
+        return 0
+    fi
+
     log_info "Bootstrapping secrets from Bitwarden Secrets Manager..."
 
     local root_token bws_output
@@ -230,6 +235,16 @@ EOF
     log_success "AppRole auth method configured"
 }
 
+install_bws_if_needed() {
+    if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+        return 0
+    fi
+    log_info "Installing bws CLI via Ansible..."
+    ansible-playbook -i /vault/ansible/inventory.ini /vault/ansible/site.yml >/dev/null 2>&1 \
+        && log_success "bws CLI installed" \
+        || log_warn "bws CLI install failed — will operate in manual Vault UI mode"
+}
+
 start_vault_foreground() {
     log_info "Starting Vault server in foreground (PID 1)..."
     exec vault server -config="${VAULT_CONFIG_DIR}/vault.hcl"
@@ -238,6 +253,7 @@ start_vault_foreground() {
 main() {
     log_info "Initializing Vault production setup..."
 
+    install_bws_if_needed
     start_vault_background
     init_vault_if_needed
     unseal_vault
