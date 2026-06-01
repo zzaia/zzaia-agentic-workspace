@@ -20,12 +20,33 @@ log_info()    { echo -e "${_B}[mcp-azure-devops]${_N} $*"; }
 log_warn()    { echo -e "${_Y}[mcp-azure-devops] WARN:${_N} $*" >&2; }
 log_success() { echo -e "${_G}[mcp-azure-devops] ✓${_N} $*"; }
 
+# ── AppRole login ─────────────────────────────────────────────────────────────
+vault_approle_login() {
+    local cred_file="/secrets/vault-approle-mcp.env"
+    [ -f "$cred_file" ] || return 1
+    local role_id secret_id
+    role_id=$(grep '^VAULT_ROLE_ID=' "$cred_file" | cut -d= -f2-)
+    secret_id=$(grep '^VAULT_SECRET_ID=' "$cred_file" | cut -d= -f2-)
+    [ -n "$role_id" ] && [ -n "$secret_id" ] || return 1
+    local resp
+    resp=$(wget -q -O - \
+        --post-data="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
+        --header="Content-Type: application/json" \
+        "${VAULT_ADDR}/v1/auth/approle/login" 2>/dev/null || echo '{}')
+    VAULT_TOKEN=$(printf '%s' "$resp" | jq -r '.auth.client_token // empty' 2>/dev/null || echo "")
+    [ -n "$VAULT_TOKEN" ] && export VAULT_TOKEN && return 0 || return 1
+}
+
 # ── Fetch secrets ─────────────────────────────────────────────────────────────
 fetch_secrets() {
     log_info "Fetching secrets from Vault..."
 
     local ado_mcp_auth_token=""
     local azure_devops_organization=""
+
+    if [ -n "${VAULT_ADDR:-}" ]; then
+        vault_approle_login || log_warn "AppRole login failed — secrets will be empty"
+    fi
 
     if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
         local vault_data
@@ -36,6 +57,7 @@ fetch_secrets() {
         azure_devops_organization=$(printf '%s' "$vault_data" | jq -r '.data.data.AZURE_DEVOPS_ORGANIZATION // empty' 2>/dev/null || echo "")
     fi
 
+    unset VAULT_TOKEN
     export ADO_MCP_AUTH_TOKEN="$ado_mcp_auth_token"
     export AZURE_DEVOPS_ORGANIZATION="$azure_devops_organization"
 

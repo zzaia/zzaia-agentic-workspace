@@ -57,20 +57,21 @@ setup_ssh_host_keys() {
     command -v ssh-keygen >/dev/null 2>&1 || { log_info "ssh-keygen not available — skipping (non-SSH container)"; return 0; }
     log_info "Setting up SSH host keys..."
 
+    local ssh_key_store="/var/lib/workspace/ssh-hostkeys"
     ensure_dir "/run/sshd"
-    ensure_dir "/secrets" "root:root" "700"
+    ensure_dir "$ssh_key_store" "root:root" "700"
 
-    if compgen -G "/secrets/ssh_host_*" > /dev/null 2>&1; then
-        log_info "Restoring SSH keys from secrets volume"
-        cp /secrets/ssh_host_* /etc/ssh/
+    if compgen -G "${ssh_key_store}/ssh_host_*" > /dev/null 2>&1; then
+        log_info "Restoring SSH keys from sshkeys volume"
+        cp "${ssh_key_store}"/ssh_host_* /etc/ssh/
         chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
         chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
     else
         log_info "Generating new SSH host keys..."
         ssh-keygen -A
-        cp /etc/ssh/ssh_host_* /secrets/ 2>/dev/null || true
-        chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
-        chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
+        cp /etc/ssh/ssh_host_* "${ssh_key_store}/" 2>/dev/null || true
+        chmod 600 "${ssh_key_store}"/ssh_host_*_key 2>/dev/null || true
+        chmod 644 "${ssh_key_store}"/ssh_host_*_key.pub 2>/dev/null || true
     fi
 
     log_success "SSH host keys ready"
@@ -133,7 +134,7 @@ setup_ssh_auth() {
             key_to_write=""
         fi
         if [ -n "$key_to_write" ]; then
-            ensure_dir "/secrets" "root:root" "700"
+            ensure_dir "/var/lib/workspace/ssh-hostkeys" "root:root" "700"
             printf 'SSH_PUBLIC_KEY=%s\n' "$key_to_write" > "$SECRETS_FILE"
             chmod 600 "$SECRETS_FILE"
         fi

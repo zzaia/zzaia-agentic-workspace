@@ -11,6 +11,9 @@ param(
     [switch] $Gpu = $false,
 
     [Parameter(Mandatory = $false)]
+    [switch] $NoBws = $false,
+
+    [Parameter(Mandatory = $false)]
     [int] $VaultPort = 8200,
 
     [Parameter(Mandatory = $false)]
@@ -37,6 +40,7 @@ Options:
   -WorkspaceName NAME              Workspace name (required)
   -SshPublicKey KEY                SSH public key (required)
   -Gpu                             Enable GPU support (default: $false)
+  -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
   -VaultPort PORT                  Vault server port (default: 8200)
   -SshPort PORT                    SSH server port (default: 2222)
   -VscodePort PORT                 VS Code server port (default: 8080)
@@ -47,6 +51,7 @@ Options:
 Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Gpu -Profiles vscode
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -NoBws
 '@
 }
 
@@ -68,7 +73,10 @@ Write-Host '         ⚡  Agentic Workspace  ⚡'
 Write-Host ''
 
 $BwsMode = "bitwarden"
-if ([string]::IsNullOrWhiteSpace($env:BWS_ACCESS_TOKEN)) {
+if ($NoBws) {
+    $env:BWS_ACCESS_TOKEN = ""
+    $BwsMode = "manual"
+} elseif ([string]::IsNullOrWhiteSpace($env:BWS_ACCESS_TOKEN)) {
     $BWS_ACCESS_TOKEN = Read-Host "Bitwarden Secrets Manager Access Token (press Enter to skip — use Vault UI)" -AsSecureString
     $BwsPlain = [System.Net.NetworkCredential]::new('', $BWS_ACCESS_TOKEN).Password
     if ([string]::IsNullOrWhiteSpace($BwsPlain)) {

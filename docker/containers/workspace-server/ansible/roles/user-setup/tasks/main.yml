@@ -85,21 +85,21 @@
         state: directory
         mode: "0755"
 
-    - name: Create /secrets directory
+    - name: Create SSH host key store directory (dedicated sshkeys volume)
       ansible.builtin.file:
-        path: /secrets
+        path: /var/lib/workspace/ssh-hostkeys
         state: directory
         owner: root
         group: root
         mode: "0700"
 
-    - name: Check for existing SSH keys in secrets
+    - name: Check for existing SSH keys in sshkeys volume
       ansible.builtin.find:
-        path: /secrets
+        path: /var/lib/workspace/ssh-hostkeys
         pattern: "ssh_host_*"
       register: existing_keys
 
-    - name: Restore SSH host keys from secrets
+    - name: Restore SSH host keys from sshkeys volume
       ansible.builtin.copy:
         src: "{{ item.path }}"
         dest: "/etc/ssh/{{ item.path | basename }}"
@@ -120,11 +120,11 @@
       changed_when: true
       when: existing_keys.files | length == 0
 
-    - name: Copy SSH host keys to secrets
+    - name: Copy SSH host keys to sshkeys volume for persistence
       ansible.builtin.shell: |
-        cp /etc/ssh/ssh_host_* /secrets/ 2>/dev/null || true
-        chmod 600 /secrets/ssh_host_*_key 2>/dev/null || true
-        chmod 644 /secrets/ssh_host_*_key.pub 2>/dev/null || true
+        cp /etc/ssh/ssh_host_* /var/lib/workspace/ssh-hostkeys/ 2>/dev/null || true
+        chmod 600 /var/lib/workspace/ssh-hostkeys/ssh_host_*_key 2>/dev/null || true
+        chmod 644 /var/lib/workspace/ssh-hostkeys/ssh_host_*_key.pub 2>/dev/null || true
       changed_when: false
 
 - name: Setup Docker socket access
@@ -224,7 +224,7 @@
 
     - name: Check if SSH key is already saved
       ansible.builtin.stat:
-        path: /secrets/.env
+        path: /var/lib/workspace/ssh-hostkeys/authorized.env
       register: secrets_file_stat
 
     - name: Validate and save SSH public key
@@ -233,11 +233,10 @@
           ansible.builtin.set_fact:
             key_valid: "{{ ssh_public_key.startswith('ssh-') or ssh_public_key.startswith('ecdsa-') or ssh_public_key.startswith('sk-') }}"
 
-        - name: Save SSH key to secrets
+        - name: Save SSH key to sshkeys volume
           ansible.builtin.shell: |
-            mkdir -p /secrets
-            printf 'SSH_PUBLIC_KEY=%s\n' "{{ ssh_public_key }}" > /secrets/.env
-            chmod 600 /secrets/.env
+            printf 'SSH_PUBLIC_KEY=%s\n' "{{ ssh_public_key }}" > /var/lib/workspace/ssh-hostkeys/authorized.env
+            chmod 600 /var/lib/workspace/ssh-hostkeys/authorized.env
           when: key_valid | bool
           changed_when: false
       when:
@@ -251,15 +250,15 @@
             final_ssh_key: "{{ ssh_public_key }}"
           when: ssh_public_key | length > 0
 
-        - name: Load SSH key from secrets file
+        - name: Load SSH key from sshkeys volume
           ansible.builtin.shell: |
-            grep -m1 '^SSH_PUBLIC_KEY=' /secrets/.env 2>/dev/null \
+            grep -m1 '^SSH_PUBLIC_KEY=' /var/lib/workspace/ssh-hostkeys/authorized.env 2>/dev/null \
                 | sed 's/^SSH_PUBLIC_KEY=//;s/^"//;s/"$//' || true
           register: secrets_key_result
           changed_when: false
           when: ssh_public_key | length == 0 and secrets_file_stat.stat.exists
 
-        - name: Set final SSH key from secrets
+        - name: Set final SSH key from sshkeys volume
           ansible.builtin.set_fact:
             final_ssh_key: "{{ secrets_key_result.stdout }}"
           when:

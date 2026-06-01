@@ -9,6 +9,7 @@ Options:
   --workspace-name NAME         Workspace name (required)
   --ssh-public-key KEY          SSH public key (required)
   --gpu                         Enable GPU support (default: false)
+  --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --vault-port PORT             Vault server port (default: 8200)
   --ssh-port PORT               SSH server port (default: 2222)
   --vscode-port PORT            VS Code server port (default: 8080)
@@ -20,12 +21,14 @@ Options:
 Examples:
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --gpu --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --no-bws
 EOF
 }
 
 WORKSPACE_NAME=""
 SSH_PUBLIC_KEY=""
 GPU_ENABLED="false"
+NO_BWS="false"
 VAULT_PORT="8200"
 SSH_PORT="2222"
 VSCODE_PORT="8080"
@@ -45,6 +48,10 @@ while [ $# -gt 0 ]; do
             ;;
         --gpu)
             GPU_ENABLED="true"
+            shift
+            ;;
+        --no-bws)
+            NO_BWS="true"
             shift
             ;;
         --vault-port)
@@ -101,7 +108,10 @@ echo "         ⚡  Agentic Workspace  ⚡"
 echo ""
 
 BWS_MODE="bitwarden"
-if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+if [ "$NO_BWS" = "true" ]; then
+    BWS_ACCESS_TOKEN=""
+    BWS_MODE="manual"
+elif [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
     read -s -p "Bitwarden Secrets Manager Access Token (press Enter to skip — use Vault UI): " BWS_ACCESS_TOKEN
     echo ""
     [ -z "$BWS_ACCESS_TOKEN" ] && BWS_MODE="manual"

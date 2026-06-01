@@ -13,10 +13,10 @@ services:
       - "127.0.0.1:${VAULT_PORT:-8200}:8200"
     volumes:
       - vault-data:/vault/data
+      - workspace-credentials:/secrets
     environment:
       - VAULT_ADDR=http://0.0.0.0:8200
       - VAULT_PORT=${VAULT_PORT:-8200}
-      - BWS_ACCESS_TOKEN=${BWS_ACCESS_TOKEN:-}
     networks:
       - mcp
     cap_add:
@@ -26,13 +26,13 @@ services:
       resources:
         limits:
           memory: 256M
-          cpus: '0.25'
+          cpus: '0.5'
     healthcheck:
-      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 2>&1 | grep -q 'Initialized.*true'"]
+      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 2>&1 | grep -q 'Sealed.*false' && [ -f /secrets/vault-approle-mcp.env ]"]
       interval: 10s
       timeout: 5s
       retries: 10
-      start_period: 60s
+      start_period: 90s
 
   dind-server:
     build:
@@ -73,9 +73,10 @@ services:
     ports:
       - "127.0.0.1:${SSH_PORT:-2222}:${SSH_PORT:-2222}"
     volumes:
-      - workspace-secrets:/secrets
+      - workspace-credentials:/secrets
       - workspace-home:/home/user
       - workspace-tools:/opt/tools
+      - workspace-sshkeys:/var/lib/workspace/ssh-hostkeys
     environment:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - INSTALL_PREFIX=/opt/tools
@@ -119,7 +120,7 @@ services:
       dind-server:
         condition: service_healthy
       ml-server:
-        condition: service_healthy
+        condition: service_started
       mcp-playwright:
         condition: service_healthy
       mcp-headroom:
@@ -221,6 +222,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-tavily/Dockerfile
     image: zzaia-mcp-tavily:latest
+    volumes:
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -246,6 +249,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-azure-devops/Dockerfile
     image: zzaia-mcp-azure-devops:latest
+    volumes:
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -271,6 +276,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-postman/Dockerfile
     image: zzaia-mcp-postman:latest
+    volumes:
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -296,6 +303,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-newrelic/Dockerfile
     image: zzaia-mcp-newrelic:latest
+    volumes:
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -321,6 +330,8 @@ services:
       context: ..
       dockerfile: docker/containers/mcp-github/Dockerfile
     image: zzaia-mcp-github:latest
+    volumes:
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -348,6 +359,7 @@ services:
     image: zzaia-git-sidecar:latest
     volumes:
       - git-sidecar-hostkeys:/etc/ssh
+      - workspace-credentials:/secrets:ro
     environment:
       - VAULT_ADDR=http://vault-server:8200
     networks:
@@ -584,12 +596,14 @@ services:
 volumes:
   vault-data:
     name: ${WORKSPACE_NAME:-zzaia}-vault-data
-  workspace-secrets:
-    name: ${WORKSPACE_NAME:-zzaia}-secrets
+  workspace-credentials:
+    name: ${WORKSPACE_NAME:-zzaia}-credentials
   workspace-home:
     name: ${WORKSPACE_NAME:-zzaia}-home
   workspace-tools:
     name: ${WORKSPACE_NAME:-zzaia}-tools
+  workspace-sshkeys:
+    name: ${WORKSPACE_NAME:-zzaia}-sshkeys
   ml-tools:
     name: ${WORKSPACE_NAME:-zzaia}-ml-tools
   database-qdrant:

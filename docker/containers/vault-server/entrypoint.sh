@@ -17,7 +17,11 @@ health_check() {
     local max_attempts=60
     local attempt=0
     while [ $attempt -lt $max_attempts ]; do
-        if vault status -address="${VAULT_ADDR}" >/dev/null 2>&1; then
+        # vault status: 0=init+unsealed, 1=error, 2=init or sealed
+        # Use || to prevent set -e from triggering on non-zero exit
+        local status_code=0
+        vault status -address="${VAULT_ADDR}" >/dev/null 2>&1 || status_code=$?
+        if [ "$status_code" -eq 0 ] || [ "$status_code" -eq 2 ]; then
             return 0
         fi
         attempt=$((attempt + 1))
@@ -29,10 +33,12 @@ health_check() {
 
 start_vault_background() {
     log_info "Starting Vault server in background..."
-    vault server -config="${VAULT_CONFIG_DIR}/vault.hcl" >/dev/null 2>&1 &
+    vault server -config="${VAULT_CONFIG_DIR}/vault.hcl" >> /tmp/vault.log 2>&1 &
     VAULT_BG_PID=$!
     if ! health_check; then
         log_error "Failed to start Vault"
+        log_error "Vault server log:"
+        cat /tmp/vault.log >&2
         kill "$VAULT_BG_PID" 2>/dev/null || true
         return 1
     fi
@@ -42,14 +48,36 @@ start_vault_background() {
 init_vault_if_needed() {
     log_info "Checking Vault initialization status..."
 
-    if vault status -address="${VAULT_ADDR}" 2>&1 | grep -q "Initialized.*true"; then
-        log_info "Vault already initialized"
+    # Check if init file exists (persistent marker that vault was initialized)
+    if [ -f "${VAULT_INIT_FILE}" ]; then
+        log_info "Vault already initialized (init file exists)"
+        return 0
+    fi
+
+    log_info "Init file not found at ${VAULT_INIT_FILE}, checking vault status..."
+    # Use || true to prevent set -e from triggering on exit code 2 (sealed/uninitialized)
+    local status_output=""
+    status_output=$(vault status -address="${VAULT_ADDR}" 2>&1) || true
+
+    # Check if initialized=true appears anywhere in the output
+    if echo "$status_output" | grep -i "^initialized" | grep -qi "true"; then
+        log_info "Vault already initialized according to status"
         return 0
     fi
 
     log_info "Initializing Vault..."
     local init_output
-    init_output=$(vault operator init -key-shares=1 -key-threshold=1 -format=json -address="${VAULT_ADDR}")
+    init_output=$(vault operator init -key-shares=1 -key-threshold=1 -format=json -address="${VAULT_ADDR}" 2>&1)
+
+    if echo "$init_output" | grep -q "already initialized"; then
+        log_info "Vault operator init reports already initialized"
+        # Try to extract root token from existing init file if available
+        if [ ! -f "${VAULT_INIT_FILE}" ]; then
+            log_error "Vault is initialized but init file not found"
+            return 1
+        fi
+        return 0
+    fi
 
     echo "$init_output" > "${VAULT_INIT_FILE}"
     chmod 600 "${VAULT_INIT_FILE}"
@@ -155,7 +183,11 @@ bootstrap_secrets_from_bws() {
     root_token=$(jq -r '.root_token' "${VAULT_INIT_FILE}")
     export VAULT_TOKEN="$root_token"
 
-    bws_output=$(bws secret list --output json)
+    if ! bws_output=$(bws secret list --output json 2>&1); then
+        log_warn "bws secret list failed — ${bws_output}. Vault started empty. Add secrets via Vault UI."
+        unset BWS_ACCESS_TOKEN
+        return 0
+    fi
 
     local ai_args=()
     for key in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY TAVILY_API_KEY; do
@@ -200,43 +232,62 @@ bootstrap_secrets_from_bws() {
 }
 
 setup_approle_if_needed() {
-    log_info "Checking AppRole auth method..."
+    log_info "Setting up AppRole auth and service credentials..."
 
     local root_token
     root_token=$(jq -r '.root_token' "${VAULT_INIT_FILE}")
     export VAULT_TOKEN="$root_token"
 
-    if vault auth list -address="${VAULT_ADDR}" 2>&1 | grep -q '^approle/'; then
-        log_info "AppRole auth method already enabled"
-        return 0
+    # Enable AppRole if not already
+    if ! vault auth list -address="${VAULT_ADDR}" 2>&1 | grep -q '^approle/'; then
+        vault auth enable -address="${VAULT_ADDR}" approle >/dev/null
+        log_info "AppRole auth method enabled"
     fi
 
-    log_info "Enabling AppRole auth method..."
-    vault auth enable -address="${VAULT_ADDR}" approle >/dev/null
+    # Apply all policy files
+    for policy_file in /vault/policies/*.hcl; do
+        local pname
+        pname=$(basename "$policy_file" .hcl)
+        vault policy write -address="${VAULT_ADDR}" "$pname" "$policy_file" >/dev/null
+        log_info "Applied policy: ${pname}"
+    done
 
-    log_info "Creating git-sidecar-policy..."
-    cat > /tmp/git-sidecar-policy.hcl << 'EOF'
-path "secret/data/workspace/*" {
-  capabilities = ["read", "list"]
-}
+    # Create AppRole roles and write credentials to shared /secrets volume
+    mkdir -p /secrets && chmod 755 /secrets
 
-path "secret/data/mcp/github/*" {
-  capabilities = ["read", "list"]
-}
+    local mapping role policy cred_file role_id secret_id
+    for mapping in "git-sidecar:git-sidecar-policy" "mcp:mcp-policy" "workspace:workspace-policy"; do
+        role="${mapping%%:*}"
+        policy="${mapping##*:}"
+        cred_file="/secrets/vault-approle-${role}.env"
 
-path "secret/data/mcp/azure-devops/*" {
-  capabilities = ["read", "list"]
-}
-EOF
+        if ! vault read -address="${VAULT_ADDR}" "auth/approle/role/${role}" >/dev/null 2>&1; then
+            vault write -address="${VAULT_ADDR}" "auth/approle/role/${role}" \
+                token_policies="${policy}" \
+                token_ttl=1h \
+                token_max_ttl=4h \
+                secret_id_ttl=0 >/dev/null
+            log_info "Created AppRole role: ${role}"
+        fi
 
-    vault policy write -address="${VAULT_ADDR}" git-sidecar-policy /tmp/git-sidecar-policy.hcl >/dev/null
-    rm -f /tmp/git-sidecar-policy.hcl
+        # Refresh secret_id on each vault startup
+        role_id=$(vault read -address="${VAULT_ADDR}" -field=role_id "auth/approle/role/${role}/role-id")
+        secret_id=$(vault write -address="${VAULT_ADDR}" -field=secret_id -f "auth/approle/role/${role}/secret-id")
 
-    log_success "AppRole auth method configured"
+        printf 'VAULT_ROLE_ID=%s\nVAULT_SECRET_ID=%s\n' "$role_id" "$secret_id" > "$cred_file"
+        chmod 644 "$cred_file"
+        log_info "AppRole credentials written: ${cred_file}"
+    done
+
+    log_success "AppRole configured — credentials in /secrets/vault-approle-*.env"
 }
 
 install_bws_if_needed() {
     if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
+        return 0
+    fi
+    if command -v bws >/dev/null 2>&1; then
+        log_info "bws CLI already installed"
         return 0
     fi
     log_info "Installing bws CLI via Ansible..."
@@ -262,10 +313,19 @@ main() {
     bootstrap_secrets_from_bws
     setup_approle_if_needed
 
-    kill "$VAULT_BG_PID" 2>/dev/null || true
-    sleep 2
+    log_success "Vault setup complete. Vault is running as background process."
+    log_info "Vault is running (PID $VAULT_BG_PID). Entrypoint will monitor it."
 
-    start_vault_foreground
+    # Keep entrypoint alive while monitoring vault process; unseal on restart
+    while true; do
+        if ! kill -0 "$VAULT_BG_PID" 2>/dev/null; then
+            log_error "Vault process died (PID $VAULT_BG_PID). Restarting vault..."
+            if start_vault_background; then
+                unseal_vault || log_warn "Re-unseal failed — vault may be inaccessible"
+            fi
+        fi
+        sleep 5
+    done
 }
 
 main "$@"

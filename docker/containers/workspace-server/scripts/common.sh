@@ -4,7 +4,7 @@ set -euo pipefail
 
 # ── Default values ────────────────────────────────────────────────────────────
 WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
-SECRETS_FILE="/secrets/.env"
+SECRETS_FILE="/var/lib/workspace/ssh-hostkeys/authorized.env"
 
 # ── Color output (optional, can be disabled) ──────────────────────────────────
 if [ -t 1 ]; then
