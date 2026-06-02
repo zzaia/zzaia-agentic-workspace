@@ -49,7 +49,7 @@
       {{ install_prefix }}/miniforge3/envs/venv-analytics/bin/pip install
       torch=={{ torch_version }} torchvision torchaudio
       headroom-ai[ml]=={{ headroom_ai_version }}
-      --index-url https://download.pytorch.org/whl/cu121
+      --extra-index-url https://download.pytorch.org/whl/cu121
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-analytics/lib/python{{ python_version }}/site-packages/torch/__init__.py"
   when: gpu_enabled | string == 'true'

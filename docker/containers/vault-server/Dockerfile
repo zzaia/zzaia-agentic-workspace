@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.title="ZZAIA Vault Production"
 LABEL org.opencontainers.image.description="HashiCorp Vault production mode with Bitwarden secret bootstrap"
 
 USER root
-RUN apk add --no-cache bash jq curl openssh-keygen ansible-core
+RUN apk add --no-cache bash jq curl openssh-keygen unzip ansible-core
 
 COPY docker/containers/vault-server/vault.hcl /vault/config/vault.hcl
 COPY docker/containers/vault-server/common.sh /vault/common.sh

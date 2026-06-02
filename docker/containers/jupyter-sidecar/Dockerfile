@@ -5,10 +5,10 @@ ARG JUPYTER_PORT=8888
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     BROWSER=/usr/local/bin/browser-print \
-    PATH=/opt/tools/miniforge3/envs/venv-analytics/bin:/opt/tools/miniforge3/bin:/opt/tools/.local/bin:$PATH
+    PATH=/opt/tools/miniforge3/envs/venv-analytics/bin:/opt/tools/miniforge3/bin:/opt/tools/.npm-global/bin:/opt/tools/.local/bin:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl python3-pip \
+        ca-certificates curl python3-pip git openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install ansible-core --break-system-packages

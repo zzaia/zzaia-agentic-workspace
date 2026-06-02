@@ -1,7 +1,8 @@
 ---
+# Release assets changed from .tar.gz to .zip and include version in filename since bws-v1.0.0
 - name: Download and install bws CLI
   ansible.builtin.unarchive:
-    src: "https://github.com/bitwarden/sdk-sm/releases/latest/download/bws-x86_64-unknown-linux-musl.tar.gz"
+    src: "https://github.com/bitwarden/sdk-sm/releases/download/bws-v{{ bws_version }}/bws-x86_64-unknown-linux-musl-{{ bws_version }}.zip"
     dest: /usr/local/bin
     remote_src: yes
     mode: '0755'

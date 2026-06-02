@@ -14,6 +14,8 @@ services:
     volumes:
       - vault-data:/vault/data
       - workspace-credentials:/secrets
+    secrets:
+      - bws_token
     environment:
       - VAULT_ADDR=http://0.0.0.0:8200
       - VAULT_PORT=${VAULT_PORT:-8200}
@@ -617,3 +619,7 @@ volumes:
 networks:
   mcp:
     driver: bridge
+
+secrets:
+  bws_token:
+    file: ${BWS_SECRET_FILE:-/dev/null}

@@ -282,6 +282,15 @@ setup_approle_if_needed() {
     log_success "AppRole configured — credentials in /secrets/vault-approle-*.env"
 }
 
+load_bws_token() {
+    # Compose secrets mount to /run/secrets/ as tmpfs — never on disk, not in docker inspect
+    local token_file="/run/secrets/bws_token"
+    if [ -f "$token_file" ] && [ -s "$token_file" ]; then
+        BWS_ACCESS_TOKEN=$(cat "$token_file")
+        export BWS_ACCESS_TOKEN
+    fi
+}
+
 install_bws_if_needed() {
     if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
         return 0
@@ -304,6 +313,7 @@ start_vault_foreground() {
 main() {
     log_info "Initializing Vault production setup..."
 
+    load_bws_token
     install_bws_if_needed
     start_vault_background
     init_vault_if_needed

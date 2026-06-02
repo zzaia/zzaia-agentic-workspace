@@ -14,7 +14,8 @@ COPY docker/containers/git-sidecar/git-proxy-cmd.sh /usr/local/bin/git-proxy-cmd
 
 RUN mkdir -p /app && \
     chmod +x /app/entrypoint.sh /usr/local/bin/git-proxy-cmd /app/common.sh && \
-    chmod 600 /etc/ssh/sshd_config
+    chmod 600 /etc/ssh/sshd_config && \
+    ln -s /app/common.sh /usr/local/bin/common.sh
 
 EXPOSE 2223
 

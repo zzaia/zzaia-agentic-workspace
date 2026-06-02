@@ -15,6 +15,8 @@ RUN apt-get update \
         curl \
         util-linux \
         libicu74 \
+        git \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \

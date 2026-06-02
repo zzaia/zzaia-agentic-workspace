@@ -52,6 +52,8 @@ fetch_vault_credentials() {
 
     export CLAUDE_CODE_OAUTH_TOKEN
     CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "$ai_data" | jq -r '.data.data.CLAUDE_CODE_OAUTH_TOKEN // empty' 2>/dev/null || echo "")
+    export ANTHROPIC_API_KEY
+    ANTHROPIC_API_KEY=$(printf '%s' "$ai_data" | jq -r '.data.data.ANTHROPIC_API_KEY // empty' 2>/dev/null || echo "")
     export GITHUB_PERSONAL_ACCESS_TOKEN
     GITHUB_PERSONAL_ACCESS_TOKEN=$(printf '%s' "$github_data" | jq -r '.data.data.GITHUB_PERSONAL_ACCESS_TOKEN // empty' 2>/dev/null || echo "")
     export ADO_MCP_AUTH_TOKEN
@@ -108,10 +110,22 @@ Host git-sidecar
 EOF
         chmod 600 /home/user/.ssh/config
 
-        git config --global --add "url.git@git-sidecar:github/.insteadOf" "https://github.com/" 2>/dev/null || true
-        git config --global --add "url.git@git-sidecar:github/.insteadOf" "git@github.com:" 2>/dev/null || true
-        git config --global --add "url.git@git-sidecar:ado/.insteadOf" "https://dev.azure.com/" 2>/dev/null || true
+        # Reset git-sidecar insteadOf entries clean on each start (prevents duplicates on volume persistence)
+        git config --global --remove-section "url.git@git-sidecar:github/" 2>/dev/null || true
+        git config --global --remove-section "url.git@git-sidecar:ado/" 2>/dev/null || true
+        git config --global --add "url.git@git-sidecar:github/.insteadOf" "https://github.com/"
+        git config --global --add "url.git@git-sidecar:github/.insteadOf" "git@github.com:"
+        git config --global --add "url.git@git-sidecar:ado/.insteadOf" "https://dev.azure.com/"
+        git config --global --add "url.git@git-sidecar:ado/.insteadOf" "git@ssh.dev.azure.com:v3/"
     '
+
+    # Add org-specific ADO insteadOf when AZURE_DEVOPS_ORGANIZATION is known (handles user@host URL format)
+    if [ -n "${AZURE_DEVOPS_ORGANIZATION:-}" ]; then
+        ADO_ORG="${AZURE_DEVOPS_ORGANIZATION}" \
+        su -s /bin/bash user -c '
+            git config --global --add "url.git@git-sidecar:ado/.insteadOf" "https://${ADO_ORG}@dev.azure.com/" 2>/dev/null || true
+        '
+    fi
 
     unset GIT_SIDECAR_AGENT_KEY
     log_success "Git-sidecar SSH routing configured"

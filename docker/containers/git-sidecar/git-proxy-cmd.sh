@@ -51,15 +51,13 @@ build_upstream_url() {
     case "$path" in
         github/*)
             local repo="${path#github/}"
+            repo="${repo%.git}"  # strip trailing .git to avoid double suffix
             echo "https://x-access-token:${GITHUB_PAT}@github.com/${repo}.git"
             ;;
         ado/*)
+            # Pass through full path — preserves _git/ segment already present in URL rewrites
             local rest="${path#ado/}"
-            local org="${rest%%/*}"
-            local rest2="${rest#*/}"
-            local project="${rest2%%/*}"
-            local repo="${rest2#*/}"
-            echo "https://anything:${ADO_TOKEN}@dev.azure.com/${org}/${project}/_git/${repo}"
+            echo "https://anything:${ADO_TOKEN}@dev.azure.com/${rest}"
             ;;
         *)
             log_error "Unknown path prefix: $path"
@@ -71,38 +69,39 @@ build_upstream_url() {
 # ── Serve upload-pack ─────────────────────────────────────────────────────────
 serve_upload_pack() {
     local upstream_url="$1"
-    local tmpdir
-    tmpdir=$(mktemp -d /tmp/git-proxy.XXXXXX)
-    trap 'rm -rf "$tmpdir"' EXIT
+    _proxy_tmpdir=$(mktemp -d /tmp/git-proxy.XXXXXX)
+    trap 'rm -rf "${_proxy_tmpdir:-}"' EXIT
 
     GIT_TERMINAL_PROMPT=0 \
-    git clone --quiet --mirror "$upstream_url" "$tmpdir/r.git" 2>/dev/null || {
+    git clone --quiet --mirror "$upstream_url" "$_proxy_tmpdir/r.git" 2>/dev/null || {
         log_error "Remote repository not found or access denied"
         exit 128
     }
-    git-upload-pack "$tmpdir/r.git"
+    git-upload-pack "$_proxy_tmpdir/r.git"
 }
 
 # ── Serve receive-pack ────────────────────────────────────────────────────────
 serve_receive_pack() {
     local upstream_url="$1"
-    local tmpdir
-    tmpdir=$(mktemp -d /tmp/git-proxy.XXXXXX)
-    trap 'rm -rf "$tmpdir"' EXIT
+    _proxy_tmpdir=$(mktemp -d /tmp/git-proxy.XXXXXX)
+    trap 'rm -rf "${_proxy_tmpdir:-}"' EXIT
 
     GIT_TERMINAL_PROMPT=0 \
-    git clone --quiet --mirror "$upstream_url" "$tmpdir/r.git" 2>/dev/null || {
-        git init --bare "$tmpdir/r.git" >/dev/null 2>&1
+    git clone --quiet --mirror "$upstream_url" "$_proxy_tmpdir/r.git" 2>/dev/null || {
+        git init --bare "$_proxy_tmpdir/r.git" >/dev/null 2>&1
     }
-    git-receive-pack "$tmpdir/r.git"
+    git-receive-pack "$_proxy_tmpdir/r.git"
 
     local push_err
     push_err=$(GIT_TERMINAL_PROMPT=0 \
-        git -C "$tmpdir/r.git" push --quiet --mirror "$upstream_url" 2>&1) || {
+        git -C "$_proxy_tmpdir/r.git" push --quiet --mirror "$upstream_url" 2>&1) || {
         log_error "Upstream push failed: $push_err"
         exit 1
     }
 }
+
+# Script-level cleanup dir — persists after function returns so EXIT trap can access it
+_proxy_tmpdir=""
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {

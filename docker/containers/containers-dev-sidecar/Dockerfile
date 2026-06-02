@@ -8,6 +8,8 @@ RUN apt-get update \
         ca-certificates \
         curl \
         libicu74 \
+        git \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Match workspace-server user uid

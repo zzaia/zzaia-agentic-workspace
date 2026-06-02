@@ -134,7 +134,9 @@ EOF
 
 PROFILE_FLAGS=""
 if [ -n "$DEPLOY_PROFILES" ]; then
-    for p in $DEPLOY_PROFILES; do
+    # Support both comma-separated and space-separated profile lists
+    normalized_profiles=$(echo "$DEPLOY_PROFILES" | tr ',' ' ')
+    for p in $normalized_profiles; do
         case "$p" in
             vscode|devcontainer|jupyter|tunnel) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
             *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer, jupyter, tunnel" ;;
@@ -145,12 +147,22 @@ fi
 GPU_COMPOSE_FLAG=""
 [ "$GPU_ENABLED" = "true" ] && GPU_COMPOSE_FLAG="-f ${SCRIPT_DIR}/../docker/docker-compose.gpu.yml"
 
+# Write BWS token to a tmpfile sourced by Compose secrets — token reaches vault-server
+# via tmpfs /run/secrets/ (never in docker inspect, never in container env)
+BWS_SECRET_FILE=""
+if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
+    BWS_SECRET_FILE=$(mktemp)
+    chmod 600 "$BWS_SECRET_FILE"
+    printf '%s' "$BWS_ACCESS_TOKEN" > "$BWS_SECRET_FILE"
+    export BWS_SECRET_FILE
+    unset BWS_ACCESS_TOKEN
+    trap 'rm -f "$BWS_SECRET_FILE"; unset BWS_SECRET_FILE' EXIT
+fi
+
 echo ""
 echo "Starting workspace..."
-export BWS_ACCESS_TOKEN
 # shellcheck disable=SC2086
 docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
-unset BWS_ACCESS_TOKEN
 
 echo ""
 echo "✓ Workspace started. Access:"
