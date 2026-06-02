@@ -1,11 +1,11 @@
 FROM maximhq/bifrost:latest
 
-RUN apt-get update && apt-get install -y --no-install-recommends bash jq wget && rm -rf /var/lib/apt/lists/*
+USER root
+RUN apk add --no-cache bash jq curl python3
 
 COPY docker/containers/bifrost-server/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-COPY docker/containers/bifrost-server/config.json /config.json
+COPY docker/containers/bifrost-server/auth_proxy.py /auth_proxy.py
+RUN chmod +x /entrypoint.sh && mkdir -p /app/data
 
 EXPOSE 8080
 

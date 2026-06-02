@@ -72,7 +72,9 @@ validate_secrets() {
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting New Relic MCP server..."
-    exec supergateway --port 3004 --outputTransport streamableHttp --stateful --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ --header \"Api-Key: ${NEW_RELIC_API_KEY}\""
+    exec supergateway --port 3004 --outputTransport streamableHttp --stateful \
+        --header "Api-Key: ${NEW_RELIC_API_KEY}" \
+        --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

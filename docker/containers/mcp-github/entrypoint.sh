@@ -72,7 +72,9 @@ validate_secrets() {
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting GitHub MCP server..."
-    exec supergateway --port 3005 --outputTransport streamableHttp --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ --header \"Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}\""
+    exec supergateway --port 3005 --outputTransport streamableHttp \
+        --header "Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}" \
+        --stdio "npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

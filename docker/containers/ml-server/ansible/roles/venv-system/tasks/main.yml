@@ -24,6 +24,7 @@
     cmd: >
       {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
       headroom-ai[code]=={{ headroom_ai_version }}
+      hnswlib
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
   when: gpu_enabled | string != 'true'

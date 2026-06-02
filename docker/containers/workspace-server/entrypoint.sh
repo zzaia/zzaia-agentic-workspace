@@ -49,6 +49,13 @@ fetch_vault_credentials() {
     export GIT_SIDECAR_AGENT_KEY
     GIT_SIDECAR_AGENT_KEY=$(printf '%s' "$ws_data" | jq -r '.data.data.GIT_SIDECAR_AGENT_KEY // empty' 2>/dev/null || echo "")
 
+    # Fetch ADO organization for org-specific git insteadOf routing
+    local ado_data
+    ado_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
+        "${vault}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
+    export AZURE_DEVOPS_ORGANIZATION
+    AZURE_DEVOPS_ORGANIZATION=$(printf '%s' "$ado_data" | jq -r '.data.data.AZURE_DEVOPS_ORGANIZATION // empty' 2>/dev/null || echo "")
+
     unset vault_token
     log_success "Vault credentials loaded"
 }
