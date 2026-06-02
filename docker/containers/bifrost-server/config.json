@@ -1,0 +1,27 @@
+{
+  "providers": {
+    "anthropic": {
+      "type": "anthropic",
+      "api_key": "env.ANTHROPIC_EFFECTIVE_KEY"
+    },
+    "openai": {
+      "type": "openai",
+      "api_key": "env.OPENAI_API_KEY"
+    },
+    "gemini": {
+      "type": "gemini",
+      "api_key": "env.GEMINI_API_KEY"
+    }
+  },
+  "routes": {
+    "/anthropic": {
+      "target_provider": "anthropic"
+    },
+    "/genai": {
+      "target_provider": "gemini"
+    },
+    "/": {
+      "target_provider": "openai"
+    }
+  }
+}

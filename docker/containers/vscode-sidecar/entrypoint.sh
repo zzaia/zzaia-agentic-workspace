@@ -30,21 +30,6 @@ verify_cli() {
     fi
 }
 
-# ── Setup Claude credentials ──────────────────────────────────────────────────
-setup_claude_credentials() {
-    if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
-        local cred_file="/home/user/.claude/.credentials.json"
-        if [ -f "$cred_file" ]; then
-            local token
-            token=$(grep -oP '"accessToken":"\K[^"]+' "$cred_file" 2>/dev/null || true)
-            if [ -n "$token" ]; then
-                export CLAUDE_CODE_OAUTH_TOKEN="$token"
-                USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" BROWSER="$BROWSER" CLAUDE_CODE_OAUTH_TOKEN="$token")
-            fi
-        fi
-    fi
-}
-
 # ── Prepare directories ───────────────────────────────────────────────────────
 prepare_directories() {
     "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data/Machine /home/user/.vscode-server/extensions
@@ -163,7 +148,6 @@ install_extensions() {
 main() {
     setup_env
     verify_cli
-    setup_claude_credentials
     prepare_directories
     discover_server
     start_server

@@ -41,25 +41,6 @@ fetch_vault_credentials() {
     fi
 
     local vault="${VAULT_ADDR:-http://vault-server:8200}"
-    local ai_data github_data ado_data
-
-    ai_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
-        "${vault}/v1/secret/data/ai" 2>/dev/null || echo '{}')
-    github_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
-        "${vault}/v1/secret/data/mcp/github" 2>/dev/null || echo '{}')
-    ado_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
-        "${vault}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
-
-    export CLAUDE_CODE_OAUTH_TOKEN
-    CLAUDE_CODE_OAUTH_TOKEN=$(printf '%s' "$ai_data" | jq -r '.data.data.CLAUDE_CODE_OAUTH_TOKEN // empty' 2>/dev/null || echo "")
-    export ANTHROPIC_API_KEY
-    ANTHROPIC_API_KEY=$(printf '%s' "$ai_data" | jq -r '.data.data.ANTHROPIC_API_KEY // empty' 2>/dev/null || echo "")
-    export GITHUB_PERSONAL_ACCESS_TOKEN
-    GITHUB_PERSONAL_ACCESS_TOKEN=$(printf '%s' "$github_data" | jq -r '.data.data.GITHUB_PERSONAL_ACCESS_TOKEN // empty' 2>/dev/null || echo "")
-    export ADO_MCP_AUTH_TOKEN
-    ADO_MCP_AUTH_TOKEN=$(printf '%s' "$ado_data" | jq -r '.data.data.ADO_MCP_AUTH_TOKEN // empty' 2>/dev/null || echo "")
-    export AZURE_DEVOPS_ORGANIZATION
-    AZURE_DEVOPS_ORGANIZATION=$(printf '%s' "$ado_data" | jq -r '.data.data.AZURE_DEVOPS_ORGANIZATION // empty' 2>/dev/null || echo "")
 
     # Fetch git-sidecar agent key for SSH routing setup
     local ws_data

@@ -128,6 +128,32 @@ services:
       mcp-headroom:
         condition: service_healthy
 
+  bifrost-server:
+    build:
+      context: ..
+      dockerfile: docker/containers/bifrost-server/Dockerfile
+    image: zzaia-bifrost-server:latest
+    environment:
+      - VAULT_ADDR=http://vault-server:8200
+      - VAULT_TOKEN=${VAULT_ROOT_TOKEN:-}
+    networks:
+      - mcp
+    restart: unless-stopped
+    depends_on:
+      vault-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   ml-server:
     build:
       context: ..
@@ -144,6 +170,9 @@ services:
       - PORT=8787
       - HEADROOM_TELEMETRY=off
       - HEADROOM_MIN_TOKENS=1
+      - ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic
+      - GEMINI_TARGET_API_URL=http://bifrost-server:8080/genai
+      - OPENAI_TARGET_API_URL=http://bifrost-server:8080
     volumes:
       - workspace-home:/workspace:ro
       - ml-tools:/opt/ml-tools
@@ -151,6 +180,8 @@ services:
       - mcp
     restart: unless-stopped
     depends_on:
+      bifrost-server:
+        condition: service_healthy
       database-qdrant:
         condition: service_started
       database-neo4j:
@@ -421,6 +452,8 @@ services:
           memory: 256M
           cpus: '0.1'
     depends_on:
+      bifrost-server:
+        condition: service_healthy
       ml-server:
         condition: service_healthy
     healthcheck:
