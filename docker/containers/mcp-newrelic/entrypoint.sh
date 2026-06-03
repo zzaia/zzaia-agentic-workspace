@@ -71,10 +71,16 @@ validate_secrets() {
 
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
+    # Wrapper passes auth header to mcp-remote without exposing token in supergateway logs
+    cat > /tmp/mcp-runner.sh << 'EOF'
+#!/bin/sh
+exec npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/ \
+    --header "Api-Key: ${NEW_RELIC_API_KEY}"
+EOF
+    chmod +x /tmp/mcp-runner.sh
     log_info "Starting New Relic MCP server..."
     exec supergateway --port 3004 --outputTransport streamableHttp --stateful \
-        --header "Api-Key: ${NEW_RELIC_API_KEY}" \
-        --stdio "npx -y mcp-remote@latest https://mcp.newrelic.com/mcp/"
+        --stdio "/tmp/mcp-runner.sh"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────
