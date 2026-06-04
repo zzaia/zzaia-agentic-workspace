@@ -87,6 +87,16 @@ This hierarchy enables complex automation through composition without coupling l
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
 
+## MCP via Bifrost Code Mode
+
+When tools available are `listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode` — bifrost Code Mode is active:
+- `listToolFiles()` → discover available tool servers
+- `readToolFile(name)` → load compact Python function signatures
+- `getToolDocs(name, fn)` → get detailed docs for a specific function
+- `executeToolCode(code)` → run Python orchestration code in sandbox
+
+Rules: use `result["key"]` syntax (not dot notation), no async/await, assign final output to `result` variable. `headroom` tools are available directly (not through Code Mode).
+
 ## MANDATORY DEFINITIONS
 
 Those definitions must be ALWAYS be applied and never be removed or altered from this document by the /init command;

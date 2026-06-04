@@ -6,29 +6,9 @@ args = ["agent", "mcp"]
 command = "npx"
 args = ["-y", "supergateway", "--streamableHttp", "http://mcp-headroom:3008/mcp"]
 
-[mcp_servers.tavily]
+[mcp_servers.bifrost]
 command = "npx"
-args = ["-y", "supergateway", "--streamableHttp", "http://mcp-tavily:3001/mcp"]
-
-[mcp_servers.azure-devops]
-command = "npx"
-args = ["-y", "supergateway", "--streamableHttp", "http://mcp-azure-devops:3002/mcp"]
-
-[mcp_servers.postman]
-command = "npx"
-args = ["-y", "supergateway", "--streamableHttp", "http://mcp-postman:3003/mcp"]
-
-[mcp_servers.new-relic]
-command = "npx"
-args = ["-y", "supergateway", "--streamableHttp", "http://mcp-newrelic:3004/mcp"]
-
-[mcp_servers.github]
-command = "npx"
-args = ["-y", "supergateway", "--streamableHttp", "http://mcp-github:3005/mcp"]
-
-[mcp_servers.playwright]
-command = "npx"
-args = ["-y", "supergateway", "--sse", "http://mcp-playwright:3006/sse"]
+args = ["-y", "supergateway", "--streamableHttp", "http://bifrost-server:8080/mcp"]
 
 [hooks.before_tool_use]
 command = "if command -v rtk &>/dev/null; then rtk hook claude; else cat; fi"

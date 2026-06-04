@@ -8,15 +8,21 @@ Multi-agent orchestration system for multi-language development workflows across
 
 ## Available MCP Tools
 
-Seven MCP servers are provisioned for workspace development:
+Three MCP connections are configured:
 
-- **tavily** — Web search, content extraction, and crawling
-- **azure-devops** — Repository, pipeline, work item, and wiki management
-- **postman** — API testing, collection, and environment management
-- **new-relic** — Monitoring, diagnostics, and observability
-- **github** — GitHub repository and issue operations
-- **playwright** — Browser automation, screenshots, and DOM inspection
-- **aspire** — AppHost resource inspection, container management, and telemetry
+- **bifrost** — MCP gateway aggregating all work tools via Code Mode (tavily, azure-devops, postman, new-relic, github, playwright)
+- **headroom** — Memory context injection (direct, not through bifrost)
+- **aspire** — AppHost resource inspection, container management, and telemetry (local CLI)
+
+## MCP via Bifrost Code Mode
+
+When tools available are `listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode` — bifrost Code Mode is active:
+- `listToolFiles()` → discover available tool servers
+- `readToolFile(name)` → load compact Python function signatures
+- `getToolDocs(name, fn)` → get detailed docs for a specific function
+- `executeToolCode(code)` → run Python orchestration code in sandbox
+
+Rules: use `result["key"]` syntax (not dot notation), no async/await, assign final output to `result` variable. `headroom` tools are available directly (not through Code Mode).
 
 ## Development Workflow
 
