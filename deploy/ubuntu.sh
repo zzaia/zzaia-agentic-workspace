@@ -164,6 +164,12 @@ echo "Starting workspace..."
 # shellcheck disable=SC2086
 docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
 
+# Second pass: start any containers left in Created state after slow deps (ml-server) become healthy
+echo "Waiting for slow dependencies and starting remaining containers..."
+# shellcheck disable=SC2086
+docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d --wait --timeout 900 2>/dev/null || \
+docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
+
 echo ""
 echo "✓ Workspace started. Access:"
 echo "  SSH: ssh -p $SSH_PORT user@localhost"
