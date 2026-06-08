@@ -1,6 +1,6 @@
 FROM node:lts-alpine
 
-RUN apk add --no-cache bash jq && npm install -g supergateway@3.4.3 && npm install -g --ignore-scripts @postman/postman-mcp-server@latest
+RUN apk add --no-cache bash jq && npm install -g supergateway@3.4.3 @opentelemetry/auto-instrumentations-node && npm install -g --ignore-scripts @postman/postman-mcp-server@latest
 
 COPY docker/containers/mcp-postman/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

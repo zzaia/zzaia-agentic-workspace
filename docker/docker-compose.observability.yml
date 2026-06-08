@@ -1,0 +1,257 @@
+# docker-compose.observability.yml — Observability override: merge with docker-compose.yml to enable SigNoz stack
+# Usage: docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml -p "$WORKSPACE_NAME" up -d
+# Requirements:
+#   - Docker host must have /var/lib/docker/containers accessible (standard Docker Engine)
+#   - Minimum 4 GB RAM recommended for SigNoz + ClickHouse
+
+services:
+  # Override bifrost-server to wait for SigNoz and enable OTEL
+  bifrost-server:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=bifrost-server
+    depends_on:
+      observability-signoz:
+        condition: service_healthy
+
+  # Override ml-server to wait for SigNoz and enable OTEL
+  ml-server:
+    environment:
+      - HEADROOM_OTEL_METRICS_ENABLED=1
+      - HEADROOM_OTEL_METRICS_EXPORTER=otlp_http
+      - HEADROOM_OTEL_METRICS_ENDPOINT=http://observability-signoz:4318/v1/metrics
+      - HEADROOM_OTEL_SERVICE_NAME=ml-server
+      - HEADROOM_LANGFUSE_ENABLED=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=ml-server
+    depends_on:
+      observability-signoz:
+        condition: service_healthy
+
+  mcp-tavily:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-tavily
+
+  mcp-azure-devops:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-azure-devops
+
+  mcp-postman:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-postman
+
+  mcp-newrelic:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-newrelic
+
+  mcp-github:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-github
+
+  mcp-playwright:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-playwright
+
+  mcp-headroom:
+    environment:
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-headroom
+
+  vault-server:
+    environment:
+      - VAULT_PROMETHEUS_RETENTION_TIME=30s
+
+  workspace-server:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=workspace-server
+
+  database-neo4j:
+    environment:
+      - NEO4J_metrics_prometheus_enabled=true
+      - NEO4J_metrics_prometheus_endpoint=0.0.0.0:2004
+
+  git-sidecar:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=git-sidecar
+
+  vscode-sidecar:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vscode-sidecar
+
+  jupyter-sidecar:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=jupyter-sidecar
+
+  containers-dev-sidecar:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=containers-dev-sidecar
+
+  tunnel-sidecar:
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=tunnel-sidecar
+
+  observability-signoz:
+    image: signoz/signoz:latest
+    container_name: signoz
+    networks:
+      - mcp
+    ports:
+      - "127.0.0.1:3301:3301"
+      - "4317:4317"
+      - "4318:4318"
+      - "3100:3100"
+    environment:
+      - CLICKHOUSE_HOST=signoz-db
+      - CLICKHOUSE_PORT=9000
+    volumes:
+      - signoz-db-data:/var/lib/clickhouse
+    depends_on:
+      - signoz-db
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2.0'
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3301/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  signoz-db:
+    image: clickhouse/clickhouse-server:latest
+    container_name: signoz-db
+    networks:
+      - mcp
+    environment:
+      CLICKHOUSE_DB: signoz
+    volumes:
+      - signoz-db-data:/var/lib/clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  observability-fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: fluent-bit
+    networks:
+      - mcp
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+    depends_on:
+      observability-signoz:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD", "fluent-bit", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  observability-otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - mcp
+    depends_on:
+      observability-signoz:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  observability-cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    networks:
+      - mcp
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.2'
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  signoz-db-data:
+    name: ${WORKSPACE_NAME:-zzaia}-signoz-db-data

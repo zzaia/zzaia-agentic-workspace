@@ -25,6 +25,7 @@
 | 9 | **Cost-effective Pro and Max subscription support** — Claude Code works with Anthropic Pro and Max subscriptions, not only pay-per-token API keys. Teams can maximize the value of existing plans rather than paying separately for every token consumed by automation. |
 | 10 | **Full development lifecycle automation** — the workspace ships with pre-composed commands and skills that cover the entire lifecycle: repository management, implementation, testing, code review, architecture documentation, and release — all in a semi-automated, agent-driven workflow. |
 | 11 | **Deep Azure DevOps integration** — built-in remote commands connect directly to Azure DevOps for reading and updating work items, triggering and diagnosing pipelines, creating and reviewing pull requests, and navigating wikis — all without leaving the workspace terminal. |
+| 12 | **Opt-in full-stack observability** — activate SigNoz (logs + metrics + traces) with a single `--observability` flag at deploy time. Fluent Bit collects all Docker container logs, cAdvisor provides container resource metrics, and the OTel Collector scrapes Qdrant/Neo4j/Vault. Zero overhead when disabled — the base stack is unaffected. |
 
 ## 🚀 Quick Start
 

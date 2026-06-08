@@ -19,12 +19,17 @@
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/uvicorn"
 
-- name: Install headroom-ai (CPU mode)
+- name: Install headroom-ai with OTEL (CPU mode)
   ansible.builtin.shell:
     cmd: >
       {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
-      headroom-ai[code]=={{ headroom_ai_version }}
+      headroom-ai[code,otel]=={{ headroom_ai_version }}
       hnswlib
+      opentelemetry-sdk
+      opentelemetry-exporter-otlp-proto-grpc
+      opentelemetry-instrumentation-httpx
+      opentelemetry-instrumentation-fastapi
+      opentelemetry-distro
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
   when: gpu_enabled | string != 'true'
@@ -39,12 +44,17 @@
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/torch/__init__.py"
   when: gpu_enabled | string == 'true'
 
-- name: Install headroom-ai with ML (GPU mode)
+- name: Install headroom-ai with ML and OTEL (GPU mode)
   ansible.builtin.shell:
     cmd: >
       {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
-      headroom-ai[ml]=={{ headroom_ai_version }}
+      headroom-ai[ml,otel]=={{ headroom_ai_version }}
       hnswlib
+      opentelemetry-sdk
+      opentelemetry-exporter-otlp-proto-grpc
+      opentelemetry-instrumentation-httpx
+      opentelemetry-instrumentation-fastapi
+      opentelemetry-distro
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
   when: gpu_enabled | string == 'true'

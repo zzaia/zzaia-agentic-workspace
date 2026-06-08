@@ -159,7 +159,7 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-Optional flags: `--gpu`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
+Optional flags: `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
 
 **With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
 
@@ -178,6 +178,7 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 | **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
 | **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
 | **Vault UI** | `http://localhost:8200/ui` (localhost only) |
+| **SigNoz UI** (observability) | `http://localhost:3301` — only when `--observability` was used at startup |
 
 Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
 
@@ -234,6 +235,7 @@ All configured tools should show as connected. Then verify commands are availabl
 | MCP shows disconnected | MCP packages are pre-installed in sidecar images (no runtime npx). Wait ~15s for Vault secret fetch + supergateway init, then retry `/mcp`. If a sidecar has no secret configured in Vault it enters idle mode (expected) |
 | Workspace slow to start | workspace-server runs tool installation on first boot; headroom waits for qdrant/neo4j — allow up to 90s on first boot |
 | Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
+| SigNoz shows no data | Allow 2–3 min after startup for ClickHouse initialization; check `docker logs signoz` |
 | Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-server-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |

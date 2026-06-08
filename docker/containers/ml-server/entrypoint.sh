@@ -36,7 +36,7 @@ start_headroom() {
     log_info "Starting headroom proxy..."
 
     local venv="${INSTALL_PREFIX}/miniforge3/envs/venv-system"
-    exec "${venv}/bin/headroom" proxy "$@"
+    exec "${venv}/bin/opentelemetry-instrument" "${venv}/bin/headroom" proxy "$@"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

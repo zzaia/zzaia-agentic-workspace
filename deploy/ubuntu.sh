@@ -9,6 +9,7 @@ Options:
   --workspace-name NAME         Workspace name (required)
   --ssh-public-key KEY          SSH public key (required)
   --gpu                         Enable GPU support (default: false)
+  --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --vault-port PORT             Vault server port (default: 8200)
   --ssh-port PORT               SSH server port (default: 2222)
@@ -21,6 +22,7 @@ Options:
 Examples:
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --gpu --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --no-bws
 EOF
 }
@@ -28,6 +30,7 @@ EOF
 WORKSPACE_NAME=""
 SSH_PUBLIC_KEY=""
 GPU_ENABLED="false"
+OBSERVABILITY_ENABLED="false"
 NO_BWS="false"
 VAULT_PORT="8200"
 SSH_PORT="2222"
@@ -48,6 +51,10 @@ while [ $# -gt 0 ]; do
             ;;
         --gpu)
             GPU_ENABLED="true"
+            shift
+            ;;
+        --observability)
+            OBSERVABILITY_ENABLED="true"
             shift
             ;;
         --no-bws)
@@ -124,6 +131,7 @@ cat > "$ENV_FILE" << EOF
 WORKSPACE_NAME=$WORKSPACE_NAME
 SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY
 GPU_ENABLED=$GPU_ENABLED
+OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VAULT_PORT
 SSH_PORT=$SSH_PORT
 VSCODE_PORT=$VSCODE_PORT
@@ -147,6 +155,9 @@ fi
 GPU_COMPOSE_FLAG=""
 [ "$GPU_ENABLED" = "true" ] && GPU_COMPOSE_FLAG="-f ${SCRIPT_DIR}/../docker/docker-compose.gpu.yml"
 
+OBSERVABILITY_COMPOSE_FLAG=""
+[ "$OBSERVABILITY_ENABLED" = "true" ] && OBSERVABILITY_COMPOSE_FLAG="-f ${SCRIPT_DIR}/../docker/docker-compose.observability.yml"
+
 # Write BWS token to a tmpfile sourced by Compose secrets — token reaches vault-server
 # via tmpfs /run/secrets/ (never in docker inspect, never in container env)
 BWS_SECRET_FILE=""
@@ -162,7 +173,7 @@ fi
 echo ""
 echo "Starting workspace..."
 # shellcheck disable=SC2086
-docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
+docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG $OBSERVABILITY_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
 
 echo ""
 echo "✓ Workspace started. Access:"
@@ -172,6 +183,7 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:3301"
 echo ""
 if [ "$BWS_MODE" = "manual" ]; then
     echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"

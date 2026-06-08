@@ -478,6 +478,35 @@ workspace-server                git-sidecar                    GitHub / ADO
 
 ---
 
+### ADR 016: Opt-In Observability Stack (SigNoz + Fluent Bit + OTel Collector + cAdvisor)
+
+**Decision**: All observability infrastructure is opt-in via `docker-compose.observability.yml` overlay, activated by `--observability` flag at deploy time. The base `docker-compose.yml` has zero observability configuration.
+
+**Components:**
+
+| Component | Purpose | Port | Notes |
+|-----------|---------|------|-------|
+| `observability-signoz` | Unified logs + metrics + traces backend | 3301 (UI), 4317 (OTLP gRPC), 4318 (OTLP HTTP), 3100 (Loki) | ClickHouse-backed, web UI for querying logs, metrics, traces |
+| `signoz-db` | ClickHouse data store for SigNoz | internal | 2G RAM allocation, encrypted volume mount |
+| `observability-fluent-bit` | Docker container log collector | — | Tails `/var/lib/docker/containers/*/*.log` → SigNoz Loki :3100 |
+| `observability-otel-collector` | Prometheus scraper | — | Scrapes qdrant, neo4j, vault, cAdvisor → SigNoz OTLP gRPC :4317 |
+| `observability-cadvisor` | Container resource metrics | 8080 (internal) | CPU, memory, network, I/O per container; privileged access |
+
+**OTEL Instrumentation — Services with observability env vars (only when overlay active):**
+
+| Service | Instrumentation | Env Vars |
+|---------|-----------------|----------|
+| `bifrost-server` | OTEL SDK | `OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-otel-collector:4317` |
+| `ml-server` | Headroom native OTEL metrics | `HEADROOM_OTEL_METRICS_ENABLED=1` + OTEL endpoint vars |
+| 7× MCP services | Node.js auto-instrumentation | `NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register` + OTEL endpoint vars; `@opentelemetry/auto-instrumentations-node` pre-installed in all 7 Dockerfiles |
+| `vault-server` | Prometheus metrics endpoint | `VAULT_PROMETHEUS_RETENTION_TIME=30s` |
+| Sidecars (workspace-server, git-sidecar, vscode-sidecar, jupyter-sidecar, containers-dev-sidecar, tunnel-sidecar) | OTEL endpoint consumption | OTEL endpoint env vars injected when overlay active |
+| `database-neo4j` | Prometheus metrics | `NEO4J_metrics_prometheus_enabled=true` |
+
+**Rationale**: Opt-in pattern ensures zero resource overhead when observability is not needed. The base stack is completely unaffected. Activation pattern matches the GPU overlay (`docker-compose.gpu.yml` + `--gpu` flag) for consistency. SigNoz provides a unified backend for logs, metrics, and traces with a local web UI — no external SaaS required. Fluent Bit, OTel Collector, and cAdvisor are industry-standard collection agents, ensuring portability if observability needs to move to a different backend in the future.
+
+---
+
 ## C4 Context Diagram
 
 ```mermaid
@@ -605,6 +634,9 @@ zzaia-agentic-workspace/
 ├── docker/
 │   ├── docker-compose.yml   # Stack — workspace-server + optional servers + headroom + 8 sidecars
 │   ├── docker-compose.gpu.yml # GPU overlay for NVIDIA hosts (opt-in)
+│   ├── docker-compose.observability.yml  # Observability overlay (opt-in, activated by --observability flag)
+│   ├── fluent-bit.conf                   # Fluent Bit Docker log collection config
+│   ├── otel-collector-config.yaml        # OTel Collector Prometheus scraper config
 │   ├── Makefile             # Docker build and compose helper commands
 │   ├── sshd_config          # SSH daemon hardening config
 │   └── containers/
@@ -653,6 +685,12 @@ zzaia-agentic-workspace/
 | `mcp-postman` | Postman MCP adapter (node:lts-alpine + supergateway) | 3003 (internal) | conditional | USER node, fetches POSTMAN_API_KEY from Vault |
 | `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, fetches NEW_RELIC_API_KEY from Vault |
 | `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, fetches GITHUB_PERSONAL_ACCESS_TOKEN from Vault |
+| **Observability (opt-in)** | | | | |
+| `observability-signoz` | Unified observability backend (logs/metrics/traces) | 3301 (UI), 4317, 4318, 3100 | opt-in | ClickHouse-backed; web UI at http://localhost:3301 (only when observability overlay is active) |
+| `signoz-db` | ClickHouse storage for SigNoz | internal | opt-in | Database backend with 2G RAM allocation (only when observability overlay is active) |
+| `observability-fluent-bit` | Docker log collector → SigNoz Loki | — | opt-in | Tails Docker container logs via host bind mount (only when observability overlay is active) |
+| `observability-otel-collector` | Prometheus scraper → SigNoz OTLP | — | opt-in | Scrapes qdrant, neo4j, vault, cAdvisor metrics (only when observability overlay is active) |
+| `observability-cadvisor` | Container resource metrics | 8080 (internal) | opt-in | Privileged container collecting CPU, memory, network, I/O metrics (only when observability overlay is active) |
 
 ### Shared State (Named Volumes)
 
@@ -665,6 +703,7 @@ zzaia-agentic-workspace/
 | `git-sidecar-hostkeys` | `/etc/ssh` (git-sidecar) | SSH host keys for the git-sidecar daemon — persisted so client known_hosts entries survive container restarts |
 | `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
 | `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
+| `<ws>-signoz-db-data` | `/var/lib/clickhouse` (signoz-db) | SigNoz ClickHouse data (only present when observability overlay is active) |
 
 ### Connection Types
 
@@ -695,6 +734,11 @@ zzaia-agentic-workspace/
 | **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
 | **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
 | **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
+| **Observability (opt-in)** | |
+| **SigNoz** | **Unified logs + metrics + traces backend (ClickHouse-backed, OTLP receiver, Loki-compatible, Web UI :3301)** |
+| **Fluent Bit** | **Docker container log collection → SigNoz Loki endpoint** |
+| **OTel Collector** | **Prometheus scraper (qdrant, neo4j, vault, cAdvisor) → SigNoz OTLP gRPC** |
+| **cAdvisor** | **Container resource metrics (CPU, memory, network, I/O) for all containers** |
 | Tool provisioning | Ansible roles (workspace-server): system, user-setup, vscode-cli, node, dotnet, python, cli, path-config, credentials, gpu; version pins in `group_vars/all.yml` |
 | MCP bridge | supergateway@3.4.3 (streamableHttp transport, pre-installed at build time) |
 | Multi-tenancy | Docker Compose project namespacing |

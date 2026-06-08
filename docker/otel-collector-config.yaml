@@ -1,0 +1,38 @@
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'database-qdrant'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['database-qdrant:6333']
+          metrics_path: /metrics
+        - job_name: 'database-neo4j'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['database-neo4j:2004']
+          metrics_path: /metrics
+        - job_name: 'vault-server'
+          scrape_interval: 60s
+          static_configs:
+            - targets: ['vault-server:8200']
+          metrics_path: /v1/sys/metrics
+          params:
+            format: ['prometheus']
+        - job_name: 'cadvisor'
+          scrape_interval: 30s
+          static_configs:
+            - targets: ['observability-cadvisor:8080']
+          metrics_path: /metrics
+
+exporters:
+  otlp:
+    endpoint: observability-signoz:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      exporters: [otlp]

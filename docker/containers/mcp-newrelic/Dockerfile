@@ -1,6 +1,6 @@
 FROM node:lts-alpine
 
-RUN apk add --no-cache bash jq && npm install -g supergateway@3.4.3
+RUN apk add --no-cache bash jq && npm install -g supergateway@3.4.3 @opentelemetry/auto-instrumentations-node
 
 COPY docker/containers/mcp-newrelic/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -11,6 +11,9 @@ param(
     [switch] $Gpu = $false,
 
     [Parameter(Mandatory = $false)]
+    [switch] $Observability = $false,
+
+    [Parameter(Mandatory = $false)]
     [switch] $NoBws = $false,
 
     [Parameter(Mandatory = $false)]
@@ -40,6 +43,7 @@ Options:
   -WorkspaceName NAME              Workspace name (required)
   -SshPublicKey KEY                SSH public key (required)
   -Gpu                             Enable GPU support (default: $false)
+  -Observability                   Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: $false)
   -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
   -VaultPort PORT                  Vault server port (default: 8200)
   -SshPort PORT                    SSH server port (default: 2222)
@@ -51,6 +55,7 @@ Options:
 Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Gpu -Profiles vscode
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Observability
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -NoBws
 '@
 }
@@ -90,6 +95,7 @@ if ($NoBws) {
 }
 
 $GPU_ENABLED = if ($Gpu) { "true" } else { "false" }
+$OBSERVABILITY_ENABLED = if ($Observability) { "true" } else { "false" }
 
 $ScriptDir = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $ScriptDir "docker\.env"
@@ -98,6 +104,7 @@ $EnvFile = Join-Path $ScriptDir "docker\.env"
 WORKSPACE_NAME=$WorkspaceName
 SSH_PUBLIC_KEY=$SshPublicKey
 GPU_ENABLED=$GPU_ENABLED
+OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VaultPort
 SSH_PORT=$SshPort
 VSCODE_PORT=$VscodePort
@@ -124,12 +131,18 @@ if ($GPU_ENABLED -eq "true") {
     $gpuComposeArgs = @('-f', (Join-Path $ScriptDir "docker\docker-compose.gpu.yml"))
 }
 
+$observabilityComposeArgs = @()
+if ($OBSERVABILITY_ENABLED -eq "true") {
+    $observabilityComposeArgs = @('-f', (Join-Path $ScriptDir "docker\docker-compose.observability.yml"))
+}
+
 Write-Host ""
 Write-Host "Starting workspace..."
 
 docker compose `
     -f (Join-Path $ScriptDir "docker\docker-compose.yml") `
     @gpuComposeArgs `
+    @observabilityComposeArgs `
     -p $WorkspaceName `
     @profileArgs `
     up -d
@@ -144,6 +157,7 @@ if ($Profiles -match 'devcontainer') { Write-Host "  Dev Container: attach via V
 if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$WorkspaceName'" }
 Write-Host "  Vault UI: http://localhost:$VaultPort/ui"
 Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$AspireDashboardPort"
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://localhost:3301" }
 Write-Host ""
 if ($BwsMode -eq "manual") {
     Write-Host "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
