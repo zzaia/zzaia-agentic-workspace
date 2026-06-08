@@ -251,11 +251,11 @@ deploy/
 
 - **Dockerfile**: Ubuntu 24.04 base + pre-installed Ansible + playbook/role copies + other system packages
 - **Ansible**: Pre-installed in image; site.yml, roles/, and group_vars/ copied into image at build time
-- **supergateway@3.4.3**: Pre-installed globally for MCP container execution (streamableHttp transport)
+- **supergateway@3.4.3**: Pre-installed globally in all MCP container images. Flags: `--outputTransport streamableHttp --stateful`. Stateful mode creates one isolated child process per client session — safe for concurrent multi-agent connections. Clients must send `Accept: application/json, text/event-stream`.
 
 ### Runtime Components (workspace-server entrypoint)
 
-- **workspace-server entrypoint**: Merges all initialization: `setup-user.sh` → `ansible-playbook` → `setup-credentials.sh` → sshd startup. Runs once at container startup.
+- **workspace-server entrypoint**: Orchestrates startup: `fetch_vault_credentials` → `bootstrap_workspace` (Ansible) → `setup_profile_env` (AI proxy vars to `.profile`) → `setup_mcp_config` (direct MCP server entries + bifrost virtual key header into `.mcp.json`) → `setup_git_sidecar` → sshd. Runs on every container start (idempotent). All sidecars inherit `.mcp.json` and `.profile` via the shared `workspace-home` volume.
 - **ansible-playbook execution**: Orchestrates three-play playbook (system, user-tools, credentials/gpu). Respects version pins in `group_vars/all.yml`. Runs as `user` for user-space tools; `become: root` for system tasks.
 - **group_vars/all.yml**: Single-file version pin registry for all tools (NODE_VERSION, DOTNET_VERSION, PYTHON_VERSION, etc.). Bump versions here to trigger automatic upgrade on next `workspace-server` start.
 - **path-config role**: Writes canonical PATH to both `.bashrc` and `.profile` (INSTALL_PREFIX=/opt/tools). All server containers source the shared `.bashrc` on login.

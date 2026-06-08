@@ -72,7 +72,7 @@ validate_secrets() {
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting Tavily MCP server..."
-    exec supergateway --port 3001 --outputTransport streamableHttp --stdio "npx -y tavily-mcp@latest"
+    exec supergateway --port 3001 --outputTransport streamableHttp --stateful --stdio "tavily-mcp"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

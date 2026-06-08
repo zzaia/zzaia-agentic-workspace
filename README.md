@@ -295,18 +295,23 @@ workspace/               # Multi-repository workspace
 
 ## 🔌 MCP Tools Integration
 
-External service integrations via Model Context Protocol servers configured in [`.mcp.json`](agents/claude/.mcp.json).
+External service integrations via Model Context Protocol servers. Each runs as an isolated sidecar container and fetches its own secret from Vault at startup. Tools are wired into `.mcp.json` on the shared `workspace-home` volume by the workspace-server entrypoint — all agent containers (workspace-server, vscode-sidecar, jupyter-sidecar, containers-dev-sidecar) inherit the config automatically.
 
-| Tool | Purpose | Env Var |
-|------|---------|---------|
-| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` |
-| **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
-| **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` |
-| **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` |
-| **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` |
-| **Playwright** | Browser automation, screenshots | None (always-on sidecar) |
-| **Aspire** | AppHost resource inspection and control | None (workspace process) |
-| **Aspire Dashboard** | Distributed telemetry, traces, logs | None (always-on sidecar, port 18888) |
+| Tool | Purpose | Secret | Transport |
+|------|---------|--------|-----------|
+| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` | direct `mcp-tavily:3001` |
+| **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` | direct `mcp-azure-devops:3002` |
+| **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` | direct `mcp-postman:3003` |
+| **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` | direct `mcp-newrelic:3004` |
+| **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` | direct `mcp-github:3005` |
+| **Playwright** | Browser automation, screenshots | None (always-on) | direct `mcp-playwright:3006` |
+| **Headroom** | Context compression proxy tools | None (always-on) | direct `mcp-headroom:3008` |
+| **bifrost** | Code Mode (Starlark sandbox tools) | virtual key `sk-bf-workspace-agent-001` | `bifrost-server:8080/mcp` |
+| **Aspire** | AppHost resource inspection | None (workspace process) | stdio |
+
+> All sidecar MCP servers use `supergateway@3.4.3 --stateful --outputTransport streamableHttp`. Stateful mode creates one isolated child process per client session, enabling safe concurrent use by multiple agent containers. Secrets never leave the sidecar containers.
+>
+> **bifrost Code Mode** exposes Starlark sandbox tools at its `/mcp` endpoint (not upstream MCP server tools). Upstream tools reach agents via direct connections above. See [ADR 007B](docs/architecture-overview.md) for the full architecture.
 
 ## 🛡️ Quality Standards
 

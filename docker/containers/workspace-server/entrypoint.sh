@@ -119,6 +119,75 @@ EOF
     log_success "Git-sidecar SSH routing configured"
 }
 
+# ── Export AI proxy env vars to login shells ──────────────────────────────────
+# Writes proxy-only values (no real secrets) to ~/.profile so all login shells
+# (SSH, VS Code terminal, Jupyter) get the correct ANTHROPIC_BASE_URL for ml-server.
+setup_profile_env() {
+    local begin_marker="# BEGIN ZZAIA AI PROXY"
+    local end_marker="# END ZZAIA AI PROXY"
+    local anthropic_base="${ANTHROPIC_BASE_URL:-http://ml-server:8787}"
+    local anthropic_key="${ANTHROPIC_API_KEY:-}"
+    local openai_base="${OPENAI_BASE_URL:-http://ml-server:8787}"
+    local openai_key="${OPENAI_API_KEY:-proxy-handled}"
+    local gemini_base="${GOOGLE_GEMINI_BASE_URL:-http://ml-server:8787}"
+    local gemini_key="${GEMINI_API_KEY:-}"
+
+    # Must run as user — workspace-home volume is not writable by root
+    ANTHROPIC_BASE_URL="$anthropic_base" \
+    ANTHROPIC_API_KEY="$anthropic_key" \
+    OPENAI_BASE_URL="$openai_base" \
+    OPENAI_API_KEY="$openai_key" \
+    GEMINI_BASE_URL="$gemini_base" \
+    GEMINI_API_KEY="$gemini_key" \
+    su -s /bin/bash user -c '
+        profile_file="/home/user/.profile"
+        sed -i "/# BEGIN ZZAIA AI PROXY/,/# END ZZAIA AI PROXY/d" "$profile_file" 2>/dev/null || true
+        printf "\n# BEGIN ZZAIA AI PROXY\n"                            >> "$profile_file"
+        printf "export ANTHROPIC_BASE_URL=%s\n"   "$ANTHROPIC_BASE_URL" >> "$profile_file"
+        printf "export ANTHROPIC_API_KEY=%s\n"    "$ANTHROPIC_API_KEY"  >> "$profile_file"
+        printf "export OPENAI_BASE_URL=%s\n"      "$OPENAI_BASE_URL"    >> "$profile_file"
+        printf "export OPENAI_API_KEY=%s\n"       "$OPENAI_API_KEY"     >> "$profile_file"
+        printf "export GOOGLE_GEMINI_BASE_URL=%s\n" "$GEMINI_BASE_URL"  >> "$profile_file"
+        printf "export GEMINI_API_BASE=%s\n"      "$GEMINI_BASE_URL"    >> "$profile_file"
+        printf "export GEMINI_API_KEY=%s\n"       "$GEMINI_API_KEY"     >> "$profile_file"
+        printf "# END ZZAIA AI PROXY\n"                                >> "$profile_file"
+    '
+
+    log_success "AI proxy environment configured in user profile"
+}
+
+# ── Configure MCP servers in .mcp.json ───────────────────────────────────────
+# Merges direct MCP server connections into .mcp.json so Claude Code can reach
+# all upstream MCP tools. bifrost's /mcp endpoint only exposes Code Mode tools;
+# upstream tools (tavily, azure_devops, etc.) require direct connections.
+setup_mcp_config() {
+    local bifrost_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
+
+    BIFROST_WORKSPACE_KEY="$bifrost_key" su -s /bin/bash user -c '
+        mcp_file="/home/user/.mcp.json"
+        [ -f "$mcp_file" ] || echo "{}" > "$mcp_file"
+        python3 -c "
+import json, os
+key = os.environ[\"BIFROST_WORKSPACE_KEY\"]
+with open(\"/home/user/.mcp.json\") as f:
+    cfg = json.load(f)
+servers = cfg.setdefault(\"mcpServers\", {})
+# bifrost Code Mode entry (with auth for virtual key lookup)
+servers[\"bifrost\"] = {\"type\": \"http\", \"url\": \"http://bifrost-server:8080/mcp\", \"headers\": {\"x-api-key\": key}}
+# Direct MCP server connections — secrets stay in containers, no keys in this file
+servers.setdefault(\"tavily\",      {\"type\": \"http\", \"url\": \"http://mcp-tavily:3001/mcp\"})
+servers.setdefault(\"azure_devops\",{\"type\": \"http\", \"url\": \"http://mcp-azure-devops:3002/mcp\"})
+servers.setdefault(\"postman\",     {\"type\": \"http\", \"url\": \"http://mcp-postman:3003/mcp\"})
+servers.setdefault(\"github\",      {\"type\": \"http\", \"url\": \"http://mcp-github:3005/mcp\"})
+servers.setdefault(\"playwright\",  {\"type\": \"http\", \"url\": \"http://mcp-playwright:3006/mcp\"})
+with open(\"/home/user/.mcp.json\", \"w\") as f:
+    json.dump(cfg, f, indent=2)
+"
+    '
+
+    log_success "MCP server connections configured in .mcp.json"
+}
+
 # ── Mark bootstrap ready ──────────────────────────────────────────────────────
 mark_bootstrap_ready() {
     su -s /bin/bash user -c "mkdir -p ${INSTALL_PREFIX}/.bootstrap && touch ${INSTALL_PREFIX}/.bootstrap/tools.ready"
@@ -137,6 +206,8 @@ main() {
 
     fetch_vault_credentials
     bootstrap_workspace
+    setup_profile_env
+    setup_mcp_config
     setup_git_sidecar
     cleanup_secrets
     mark_bootstrap_ready

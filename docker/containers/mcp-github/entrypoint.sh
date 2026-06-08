@@ -74,12 +74,12 @@ start_server() {
     # Wrapper passes auth header to mcp-remote without exposing token in supergateway logs
     cat > /tmp/mcp-runner.sh << 'EOF'
 #!/bin/sh
-exec npx -y mcp-remote@latest https://api.githubcopilot.com/mcp/ \
+exec mcp-remote https://api.githubcopilot.com/mcp/ \
     --header "Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
 EOF
     chmod +x /tmp/mcp-runner.sh
     log_info "Starting GitHub MCP server..."
-    exec supergateway --port 3005 --outputTransport streamableHttp \
+    exec supergateway --port 3005 --outputTransport streamableHttp --stateful \
         --stdio "/tmp/mcp-runner.sh"
 }
 

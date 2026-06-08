@@ -79,6 +79,9 @@ start_auth_proxy() {
 generate_config() {
     local providers=""
     local sep=""
+    # Bifrost virtual key for workspace MCP access — must have sk-bf- prefix.
+    # Used by workspace containers to authenticate the /mcp endpoint.
+    local workspace_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
 
     if [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ]; then
         providers="${providers}${sep}
@@ -102,6 +105,18 @@ generate_config() {
 {
   "\$schema": "https://www.getbifrost.ai/schema",
   "providers": {${providers}
+  },
+  "governance": {
+    "virtual_keys": [
+      {
+        "id": "workspace-agent",
+        "name": "Workspace Agent",
+        "value": "${workspace_key}",
+        "provider_configs": [
+          { "provider": "anthropic", "allowed_models": ["*"], "key_ids": ["*"] }
+        ]
+      }
+    ]
   },
   "mcp": {
     "client_configs": [

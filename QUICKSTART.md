@@ -231,7 +231,7 @@ All configured tools should show as connected. Then verify commands are availabl
 
 | Symptom | Fix |
 |---------|-----|
-| MCP shows disconnected | Wait ~30s for sidecar containers to finish npx install, then retry `/mcp` |
+| MCP shows disconnected | MCP packages are pre-installed in sidecar images (no runtime npx). Wait ~15s for Vault secret fetch + supergateway init, then retry `/mcp`. If a sidecar has no secret configured in Vault it enters idle mode (expected) |
 | Workspace slow to start | workspace-server runs tool installation on first boot; headroom waits for qdrant/neo4j — allow up to 90s on first boot |
 | Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
 | Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-server-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |

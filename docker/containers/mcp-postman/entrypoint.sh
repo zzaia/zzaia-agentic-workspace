@@ -72,7 +72,7 @@ validate_secrets() {
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting Postman MCP server..."
-    exec supergateway --port 3003 --outputTransport streamableHttp --stdio "npx -y @postman/postman-mcp-server --minimal --region us"
+    exec supergateway --port 3003 --outputTransport streamableHttp --stateful --stdio "postman-mcp-server --minimal --region us"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

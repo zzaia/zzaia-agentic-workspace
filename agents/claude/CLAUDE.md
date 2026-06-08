@@ -87,15 +87,20 @@ This hierarchy enables complex automation through composition without coupling l
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
 
-## MCP via Bifrost Code Mode
+## MCP Tool Architecture
 
-When tools available are `listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode` — bifrost Code Mode is active:
-- `listToolFiles()` → discover available tool servers
-- `readToolFile(name)` → load compact Python function signatures
-- `getToolDocs(name, fn)` → get detailed docs for a specific function
-- `executeToolCode(code)` → run Python orchestration code in sandbox
+MCP tools reach Claude Code through two paths:
 
-Rules: use `result["key"]` syntax (not dot notation), no async/await, assign final output to `result` variable. `headroom` tools are available directly (not through Code Mode).
+**Direct MCP connections** (primary — in `.mcp.json`):
+- `tavily`, `azure_devops`, `postman`, `github`, `playwright` — each server runs as an isolated sidecar container; secrets fetched from Vault at startup; tools available immediately without bifrost involvement.
+- `headroom`, `bifrost` — infrastructure servers (see below).
+
+**bifrost Code Mode** (`bifrost` entry in `.mcp.json`):
+- bifrost's `/mcp` endpoint exposes **Code Mode tools only** (`listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode`) for Starlark sandbox execution. It does NOT proxy upstream MCP server tools.
+- The `bifrost` entry authenticates with virtual key `sk-bf-workspace-agent-001` via `x-api-key` header.
+- Upstream tools (tavily, azure_devops, etc.) are accessible through bifrost when it is used as `ANTHROPIC_BASE_URL`; in the current headroom-proxy setup they are accessed via direct connections above.
+
+`headroom` tools are available directly (not through bifrost Code Mode).
 
 ## MANDATORY DEFINITIONS
 

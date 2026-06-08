@@ -76,7 +76,7 @@ validate_secrets() {
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting Azure DevOps MCP server..."
-    exec supergateway --port 3002 --outputTransport streamableHttp --stdio "npx -y @azure-devops/mcp@next ${AZURE_DEVOPS_ORGANIZATION} -a envvar"
+    exec supergateway --port 3002 --outputTransport streamableHttp --stateful --stdio "mcp-server-azuredevops ${AZURE_DEVOPS_ORGANIZATION} -a envvar"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

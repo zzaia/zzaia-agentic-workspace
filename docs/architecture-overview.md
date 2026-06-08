@@ -12,7 +12,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 - Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot are all installed and configured
 - Each agent has its own native config folder and project instruction file under `agents/<agent>/`
-- All agents share the same MCP tool surface via SSE endpoints
+- All agents share the same MCP tool surface via direct streamableHttp connections declared in `.mcp.json` (shared `workspace-home` volume)
 - Adopting a new agent means adding its CLI binary and native config — nothing else changes
 
 **Rationale**: Multi-agent workspaces maximize optionality. Teams can choose the best agent for each task without reconfiguring the environment.
@@ -191,7 +191,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | OpenAI Codex | `codex` (npm) | `agents/codex/.codex/` | `agents/codex/AGENTS.md` |
 | GitHub Copilot | `gh copilot` | `agents/copilot/.github/` | `agents/copilot/.github/copilot-instructions.md` |
 
-- All agents share the same MCP SSE endpoints — configured once, available everywhere
+- All agents share the same MCP tool surface — `.mcp.json` on the shared `workspace-home` volume is configured once by workspace-server at startup
 
 **Rationale**: Multi-agent support preserves team optionality. The shared MCP surface means integrations are configured once.
 
@@ -233,16 +233,51 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 007A: MCP Transport via supergateway (streamableHttp)
+### ADR 007A: MCP Transport via supergateway (streamableHttp, stateful)
 
-**Decision**: All MCP containers use `supergateway` with `--outputTransport streamableHttp` (NOT SSE) for robust, long-lived connections without buffering.
+**Decision**: All MCP containers use `supergateway@3.4.3` with `--outputTransport streamableHttp --stateful` for robust, session-isolated, long-lived connections.
 
-- supergateway@3.4.3 pre-installed at build time in all MCP container images
-- Streamable HTTP transport provides line-by-line streaming without buffering delays
-- Eliminates SSE (Server-Sent Events) complexity and connection pooling issues
-- Workspace container connects to MCP sidecars via internal network (localhost within Compose bridge)
+- `--outputTransport streamableHttp` (not SSE): line-by-line streaming, no buffering delays, clients must send `Accept: application/json, text/event-stream`
+- `--stateful`: one isolated child process per client session (identified by `Mcp-Session-Id` header). Multiple agent containers (workspace-server, vscode-sidecar, jupyter-sidecar, containers-dev-sidecar) connect concurrently — each session is fully independent. Stateless mode (one process per HTTP request) caused process crashes on disconnect and orphan leaks under concurrent agent load (#138, #143)
+- supergateway@3.4.3 is the stable rollback from v3.3.0 which introduced concurrency regressions
 
-**Rationale**: streamableHttp provides deterministic, low-latency streaming suitable for high-frequency tool calls. Simpler protocol reduces debugging burden and eliminates connection state issues.
+**Rationale**: Stateful per-session isolation is required for multi-agent environments. Stateless mode is parallel-safe in theory but crashes under real concurrent disconnects. streamableHttp eliminates SSE buffering and connection pooling complexity.
+
+---
+
+### ADR 007B: bifrost MCP Architecture — Code Mode vs Direct Connections
+
+**Decision**: bifrost's `/mcp` MCP endpoint exposes **Code Mode tools only** (Starlark sandbox). Upstream MCP server tools are accessed via direct connections in `.mcp.json`.
+
+**bifrost `/mcp` endpoint behavior:**
+- Returns Code Mode meta-tools (`listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode`) for Starlark-based tool execution
+- Does NOT proxy or aggregate tools from upstream MCP servers (tavily, azure_devops, etc.)
+- Requires a valid bifrost virtual key (`sk-bf-workspace-agent-001`) in the `x-api-key` header to resolve the session
+
+**Upstream MCP tool access (two modes):**
+
+| Mode | How tools reach agents | When to use |
+|------|----------------------|-------------|
+| Direct connections in `.mcp.json` | Claude Code connects to each MCP sidecar at `http://mcp-{name}:{port}/mcp` | Current setup — workspace uses `ml-server:8787` (headroom proxy) as `ANTHROPIC_BASE_URL` |
+| bifrost as `ANTHROPIC_BASE_URL` | bifrost injects all connected MCP server tools into every Anthropic API response automatically | When bifrost replaces headroom proxy as the AI gateway |
+
+**Current `.mcp.json` entries per workspace agent:**
+
+| Entry | URL | Purpose |
+|-------|-----|---------|
+| `bifrost` | `http://bifrost-server:8080/mcp` + `x-api-key` header | Code Mode Starlark tools |
+| `tavily` | `http://mcp-tavily:3001/mcp` | 5 search/crawl tools |
+| `azure_devops` | `http://mcp-azure-devops:3002/mcp` | 90 work item / pipeline tools |
+| `postman` | `http://mcp-postman:3003/mcp` | 41 API testing tools |
+| `github` | `http://mcp-github:3005/mcp` | 47 GitHub Copilot tools |
+| `playwright` | `http://mcp-playwright:3006/mcp` | 23 browser automation tools |
+| `headroom` | `http://mcp-headroom:3008/mcp` | Context compression tools |
+
+**setup_mcp_config()** in workspace-server entrypoint merges these entries into `/home/user/.mcp.json` at every startup (idempotent, shared `workspace-home` volume → all sidecar containers inherit the config).
+
+**bifrost virtual key**: `sk-bf-workspace-agent-001` (static, `sk-bf-` prefix required by bifrost). Registered in `governance.virtual_keys` with `allow_on_all_virtual_keys: true` on all MCP client configs. Not a secret — no real credential is exposed.
+
+**Rationale**: Separating direct MCP connections from bifrost Code Mode gives agents the full tool surface without coupling to bifrost's inference path. Direct connections are simpler, resilient to bifrost restart, and avoid the overhead of routing every tool call through the AI gateway. Code Mode remains available for Starlark-based orchestration when needed.
 
 ---
 
