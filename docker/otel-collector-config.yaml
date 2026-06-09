@@ -7,11 +7,6 @@ receivers:
           static_configs:
             - targets: ['database-qdrant:6333']
           metrics_path: /metrics
-        - job_name: 'database-neo4j'
-          scrape_interval: 30s
-          static_configs:
-            - targets: ['database-neo4j:2004']
-          metrics_path: /metrics
         - job_name: 'vault-server'
           scrape_interval: 60s
           static_configs:
@@ -27,7 +22,7 @@ receivers:
 
 exporters:
   otlp:
-    endpoint: observability-signoz:4317
+    endpoint: signoz-otel-collector:4317
     tls:
       insecure: true
 

@@ -5,79 +5,130 @@
 #   - Minimum 4 GB RAM recommended for SigNoz + ClickHouse
 
 services:
-  # Override bifrost-server to wait for SigNoz and enable OTEL
+  # Override bifrost-server to wait for SigNoz OTel collector and enable OTEL
   bifrost-server:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=bifrost-server
     depends_on:
-      observability-signoz:
+      signoz-otel-collector:
         condition: service_healthy
 
-  # Override ml-server to wait for SigNoz and enable OTEL
+  # Override ml-server to wait for SigNoz OTel collector and enable OTEL
   ml-server:
     environment:
       - HEADROOM_OTEL_METRICS_ENABLED=1
       - HEADROOM_OTEL_METRICS_EXPORTER=otlp_http
-      - HEADROOM_OTEL_METRICS_ENDPOINT=http://observability-signoz:4318/v1/metrics
+      - HEADROOM_OTEL_METRICS_ENDPOINT=http://signoz-otel-collector:4318/v1/metrics
       - HEADROOM_OTEL_SERVICE_NAME=ml-server
       - HEADROOM_LANGFUSE_ENABLED=false
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=ml-server
     depends_on:
-      observability-signoz:
+      signoz-otel-collector:
         condition: service_healthy
 
   mcp-tavily:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-tavily
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3001,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-azure-devops:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-azure-devops
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3002,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-postman:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-postman
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3003,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-newrelic:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-newrelic
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3004,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-github:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-github
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3005,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-playwright:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-playwright
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3006,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   mcp-headroom:
     environment:
+      - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-headroom
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3008,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   vault-server:
     environment:
@@ -85,44 +136,85 @@ services:
 
   workspace-server:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=workspace-server
 
-  database-neo4j:
-    environment:
-      - NEO4J_metrics_prometheus_enabled=true
-      - NEO4J_metrics_prometheus_endpoint=0.0.0.0:2004
-
   git-sidecar:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=git-sidecar
 
   vscode-sidecar:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=vscode-sidecar
 
   jupyter-sidecar:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=jupyter-sidecar
 
   containers-dev-sidecar:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=containers-dev-sidecar
 
   tunnel-sidecar:
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://observability-signoz:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=tunnel-sidecar
+
+  signoz-schema-migrator:
+    image: signoz/signoz-schema-migrator:latest
+    container_name: signoz-schema-migrator
+    command:
+      - "sync"
+      - "--dsn=tcp://signoz-db:9000/?username=default&password=signoz"
+      - "--replication=false"
+    networks:
+      - mcp
+    depends_on:
+      signoz-db:
+        condition: service_healthy
+    restart: "no"
+
+  signoz-otel-collector:
+    image: signoz/signoz-otel-collector:latest
+    container_name: signoz-otel-collector
+    command:
+      - "--config=/etc/otel/config.yaml"
+      - "--clickhouse-dsn=tcp://signoz-db:9000/?username=default&password=signoz"
+      - "--clickhouse-replication=false"
+    volumes:
+      - ./signoz-otel-collector-config.yaml:/etc/otel/config.yaml:ro
+    networks:
+      - mcp
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      signoz-db:
+        condition: service_healthy
+      signoz-schema-migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo >/dev/tcp/localhost/13133"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   observability-signoz:
     image: signoz/signoz:latest
@@ -130,17 +222,17 @@ services:
     networks:
       - mcp
     ports:
-      - "127.0.0.1:3301:3301"
-      - "4317:4317"
-      - "4318:4318"
-      - "3100:3100"
+      - "127.0.0.1:3301:8080"
     environment:
-      - CLICKHOUSE_HOST=signoz-db
-      - CLICKHOUSE_PORT=9000
+      - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://signoz-db:9000?username=default&password=signoz
+      - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
+      - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
+      - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET:-changeme-set-SIGNOZ_JWT_SECRET-in-env}
     volumes:
-      - signoz-db-data:/var/lib/clickhouse
+      - signoz-data:/var/lib/signoz
     depends_on:
-      - signoz-db
+      signoz-db:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -148,7 +240,7 @@ services:
           memory: 3G
           cpus: '2.0'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3301/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -160,9 +252,11 @@ services:
     networks:
       - mcp
     environment:
-      CLICKHOUSE_DB: signoz
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: signoz
     volumes:
       - signoz-db-data:/var/lib/clickhouse
+      - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
     restart: unless-stopped
     deploy:
       resources:
@@ -170,7 +264,7 @@ services:
           memory: 2G
           cpus: '1.0'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
+      test: ["CMD", "wget", "--user=default", "--password=signoz", "-qO-", "http://localhost:8123/ping"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -185,8 +279,9 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./fluent-bit-parsers.conf:/fluent-bit/etc/parsers.conf:ro
     depends_on:
-      observability-signoz:
+      signoz-otel-collector:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -195,7 +290,7 @@ services:
           memory: 64M
           cpus: '0.1'
     healthcheck:
-      test: ["CMD", "fluent-bit", "--version"]
+      test: ["CMD", "/fluent-bit/bin/fluent-bit", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -210,7 +305,7 @@ services:
     networks:
       - mcp
     depends_on:
-      observability-signoz:
+      signoz-otel-collector:
         condition: service_healthy
     restart: unless-stopped
     deploy:
@@ -219,7 +314,7 @@ services:
           memory: 128M
           cpus: '0.2'
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:13133/"]
+      test: ["CMD", "/otelcol-contrib", "--version"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -253,5 +348,7 @@ services:
       start_period: 15s
 
 volumes:
+  signoz-data:
+    name: ${WORKSPACE_NAME:-zzaia}-signoz-data
   signoz-db-data:
     name: ${WORKSPACE_NAME:-zzaia}-signoz-db-data

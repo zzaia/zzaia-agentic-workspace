@@ -175,6 +175,8 @@ services:
       - PORT=8787
       - HEADROOM_TELEMETRY=off
       - HEADROOM_MIN_TOKENS=1
+      - OTEL_TRACES_EXPORTER=none
+      - OTEL_METRICS_EXPORTER=none
       - ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic
       - GEMINI_TARGET_API_URL=http://bifrost-server:8080/genai
       - OPENAI_TARGET_API_URL=http://bifrost-server:8080
