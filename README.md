@@ -25,7 +25,7 @@
 | 9 | **Cost-effective Pro and Max subscription support** — Claude Code works with Anthropic Pro and Max subscriptions, not only pay-per-token API keys. Teams can maximize the value of existing plans rather than paying separately for every token consumed by automation. |
 | 10 | **Full development lifecycle automation** — the workspace ships with pre-composed commands and skills that cover the entire lifecycle: repository management, implementation, testing, code review, architecture documentation, and release — all in a semi-automated, agent-driven workflow. |
 | 11 | **Deep Azure DevOps integration** — built-in remote commands connect directly to Azure DevOps for reading and updating work items, triggering and diagnosing pipelines, creating and reviewing pull requests, and navigating wikis — all without leaving the workspace terminal. |
-| 12 | **Opt-in full-stack observability** — activate SigNoz (logs + metrics + traces) with a single `--observability` flag at deploy time. Fluent Bit collects all Docker container logs, cAdvisor provides container resource metrics, and the OTel Collector scrapes Qdrant/Neo4j/Vault. Zero overhead when disabled — the base stack is unaffected. |
+| 12 | **Opt-in full-stack observability** — activate SigNoz (logs + metrics + traces) with a single `--observability` flag at deploy time. Fluent Bit collects all Docker container logs (per-workspace isolation via docker metadata filtering), cAdvisor provides container resource metrics, and the OTel Collector scrapes Qdrant/Neo4j/Vault. SigNoz admin account and API token for MCP server are auto-provisioned at deploy time. Zero overhead when disabled — the base stack is unaffected. |
 
 ## 🚀 Quick Start
 
@@ -307,6 +307,7 @@ External service integrations via Model Context Protocol servers. Each runs as a
 | **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` | direct `mcp-github:3005` |
 | **Playwright** | Browser automation, screenshots | None (always-on) | direct `mcp-playwright:3006` |
 | **Headroom** | Context compression proxy tools | None (always-on) | direct `mcp-headroom:3008` |
+| **SigNoz** | Query logs, metrics, and traces via SigNoz | `SIGNOZ_MCP_API_KEY` (auto-provisioned) | direct `mcp-signoz:3009` |
 | **bifrost** | Code Mode (Starlark sandbox tools) | virtual key `sk-bf-workspace-agent-001` | `bifrost-server:8080/mcp` |
 | **Aspire** | AppHost resource inspection | None (workspace process) | stdio |
 

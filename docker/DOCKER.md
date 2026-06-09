@@ -28,6 +28,10 @@ See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short 
 ```bash
 ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
 # Prompts for BWS_ACCESS_TOKEN (optional — press Enter to configure secrets via Vault UI after startup)
+
+# With observability enabled:
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3301
+# SigNoz UI admin account and API token are auto-provisioned at deploy time
 ```
 
 After the first run, start and stop the workspace from **Docker Desktop** or:
@@ -186,6 +190,44 @@ git clone ssh://git@git-sidecar:2223/ado/my-org/my-project/my-repo
 
 If `GIT_SIDECAR_AGENT_PUBKEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, or `ADO_MCP_AUTH_TOKEN` are missing from Vault, git-sidecar enters idle mode (exits cleanly on SIGTERM) and does not start the SSH daemon.
 
+---
+
+## Observability — SigNoz Stack
+
+When deployed with `--observability`, the workspace includes a full observability stack: SigNoz (logs, metrics, traces UI), Fluent Bit (log collection), OTel Collector (metric and trace aggregation), and cAdvisor (container metrics).
+
+### SigNoz Auto-Provisioning
+
+At deploy time, if `--observability` is enabled:
+
+1. **Health check:** Deploy script waits for SigNoz UI to be healthy (`/api/v1/health`)
+2. **Admin account:** Creates `admin@<WORKSPACE_NAME>.local` account with a random strong password
+3. **MCP API token:** Generates a Personal Access Token (PAT) with ADMIN role for the `mcp-signoz` server
+4. **Credentials saved:** `SIGNOZ_ADMIN_EMAIL` and `SIGNOZ_MCP_API_KEY` are written to `.env` and survive re-deployments
+
+Re-running the deploy script on an existing workspace is idempotent — it skips provisioning if the MCP API key already exists.
+
+### Fluent Bit Log Isolation
+
+Fluent Bit reads all Docker container logs from `/var/lib/docker/containers/*/` but filters by workspace using docker metadata enrichment and a grep filter:
+
+1. **docker_metadata filter:** Enriches each log record with `container_name` from the Docker socket
+2. **grep filter:** Keeps only logs where `container_name` matches `/${WORKSPACE_NAME}-*` (Docker Compose prefixes container names with the project name)
+3. **DB persistence:** Fluent Bit state is stored in `/var/lib/fluent-bit/state/` on a named Docker volume, so logs are never re-read on restart
+
+This ensures each workspace's Fluent Bit instance only forwards logs from its own containers to SigNoz, even if multiple compose stacks run on the same Docker host.
+
+### Port Configuration
+
+Use the `--signoz-port` deploy flag (default: 3301) to customize the SigNoz UI port:
+
+```bash
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3400
+# SigNoz UI: http://localhost:3400
+```
+
+---
+
 **MCP Services and Proxy**
 
 **Proxy server** runs as the central bridge for LLM API calls:
@@ -202,6 +244,7 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | mcp-postman | 3003 | `POSTMAN_API_KEY` |
 | mcp-newrelic | 3004 | `NEW_RELIC_API_KEY` |
+| mcp-signoz | 3009 | `SIGNOZ_MCP_API_KEY` (auto-provisioned at deploy time when `--observability` enabled) |
 
 `playwright` and `aspire` run as local stdio servers inside the workspace container (no secrets required).
 

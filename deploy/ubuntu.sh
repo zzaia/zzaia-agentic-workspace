@@ -13,6 +13,7 @@ Options:
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --vault-port PORT             Vault server port (default: 8200)
   --ssh-port PORT               SSH server port (default: 2222)
+  --signoz-port PORT            SigNoz UI port (default: 3301)
   --vscode-port PORT            VS Code server port (default: 8080)
   --aspire-dashboard-port PORT  Aspire Dashboard port (default: 18890)
   --jupyter-port PORT           Jupyter port (default: 8888)
@@ -22,7 +23,7 @@ Options:
 Examples:
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --gpu --profiles vscode
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3301
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --no-bws
 EOF
 }
@@ -34,6 +35,7 @@ OBSERVABILITY_ENABLED="false"
 NO_BWS="false"
 VAULT_PORT="8200"
 SSH_PORT="2222"
+SIGNOZ_PORT="3301"
 VSCODE_PORT="8080"
 ASPIRE_DASHBOARD_PORT="18890"
 JUPYTER_PORT="8888"
@@ -67,6 +69,10 @@ while [ $# -gt 0 ]; do
             ;;
         --ssh-port)
             SSH_PORT="$2"
+            shift 2
+            ;;
+        --signoz-port)
+            SIGNOZ_PORT="$2"
             shift 2
             ;;
         --vscode-port)
@@ -127,12 +133,15 @@ fi
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../docker/.env"
 
-# Preserve SIGNOZ_JWT_SECRET across re-deployments; generate once if missing
+# Preserve SIGNOZ_JWT_SECRET and SIGNOZ_ADMIN_PASSWORD across re-deployments; generate once if missing
 SIGNOZ_JWT_SECRET=""
+SIGNOZ_ADMIN_PASSWORD=""
 if [ -f "$ENV_FILE" ]; then
     SIGNOZ_JWT_SECRET=$(grep '^SIGNOZ_JWT_SECRET=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+    SIGNOZ_ADMIN_PASSWORD=$(grep '^SIGNOZ_ADMIN_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
 fi
 [ -z "$SIGNOZ_JWT_SECRET" ] && SIGNOZ_JWT_SECRET=$(openssl rand -hex 32)
+[ -z "$SIGNOZ_ADMIN_PASSWORD" ] && SIGNOZ_ADMIN_PASSWORD="Admin@$(openssl rand -hex 8)!"
 
 cat > "$ENV_FILE" << EOF
 WORKSPACE_NAME=$WORKSPACE_NAME
@@ -141,11 +150,13 @@ GPU_ENABLED=$GPU_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VAULT_PORT
 SSH_PORT=$SSH_PORT
+SIGNOZ_PORT=$SIGNOZ_PORT
 VSCODE_PORT=$VSCODE_PORT
 ASPIRE_DASHBOARD_PORT=$ASPIRE_DASHBOARD_PORT
 JUPYTER_PORT=$JUPYTER_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
+SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
 EOF
 
 PROFILE_FLAGS=""
@@ -191,7 +202,7 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
-[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:3301"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:$SIGNOZ_PORT"
 echo ""
 if [ "$BWS_MODE" = "manual" ]; then
     echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"

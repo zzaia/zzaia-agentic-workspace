@@ -130,6 +130,40 @@ services:
       retries: 5
       start_period: 60s
 
+  mcp-signoz:
+    build:
+      context: ..
+      dockerfile: docker/containers/mcp-signoz/Dockerfile
+    image: zzaia-mcp-signoz:latest
+    environment:
+      - NODE_PATH=/usr/local/lib/node_modules
+      - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - SIGNOZ_URL=http://signoz-server:8080
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=mcp-signoz
+    networks:
+      - mcp
+    volumes:
+      - signoz-mcp-creds:/signoz-data:ro
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD-SHELL", "NODE_OPTIONS= node -e \"const net=require('net');const s=net.connect(3009,'127.0.0.1',()=>{s.destroy();process.exit(0)}).on('error',()=>process.exit(0))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    depends_on:
+      signoz-server:
+        condition: service_healthy
+      signoz-otel-collector:
+        condition: service_healthy
+
   vault-server:
     environment:
       - VAULT_PROMETHEUS_RETENTION_TIME=30s
@@ -216,20 +250,26 @@ services:
       retries: 5
       start_period: 30s
 
-  observability-signoz:
-    image: signoz/signoz:latest
+  signoz-server:
+    build:
+      context: ..
+      dockerfile: docker/containers/signoz-server/Dockerfile
+    image: zzaia-signoz-server:latest
     container_name: signoz
     networks:
       - mcp
     ports:
-      - "127.0.0.1:3301:8080"
+      - "127.0.0.1:${SIGNOZ_PORT:-3301}:8080"
     environment:
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://signoz-db:9000?username=default&password=signoz
       - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
       - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
       - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET:-changeme-set-SIGNOZ_JWT_SECRET-in-env}
+      - WORKSPACE_NAME=${WORKSPACE_NAME}
+      - SIGNOZ_ADMIN_PASSWORD=${SIGNOZ_ADMIN_PASSWORD:-Admin@zzaia1234!}
     volumes:
       - signoz-data:/var/lib/signoz
+      - signoz-mcp-creds:/signoz-data
     depends_on:
       signoz-db:
         condition: service_healthy
@@ -277,9 +317,12 @@ services:
       - mcp
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./fluent-bit-parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - ./fluent-bit-docker-meta.lua:/fluent-bit/etc/fluent-bit-docker-meta.lua:ro
+      - fluent-bit-state:/var/lib/fluent-bit/state
+    environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME}
     depends_on:
       signoz-otel-collector:
         condition: service_healthy
@@ -350,5 +393,9 @@ services:
 volumes:
   signoz-data:
     name: ${WORKSPACE_NAME:-zzaia}-signoz-data
+  signoz-mcp-creds:
+    name: ${WORKSPACE_NAME:-zzaia}-signoz-mcp-creds
   signoz-db-data:
     name: ${WORKSPACE_NAME:-zzaia}-signoz-db-data
+  fluent-bit-state:
+    name: ${WORKSPACE_NAME:-zzaia}-fluent-bit-state

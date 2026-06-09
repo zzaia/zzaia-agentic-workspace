@@ -23,6 +23,9 @@ param(
     [int] $SshPort = 2222,
 
     [Parameter(Mandatory = $false)]
+    [int] $SignozPort = 3301,
+
+    [Parameter(Mandatory = $false)]
     [int] $VscodePort = 8080,
 
     [Parameter(Mandatory = $false)]
@@ -47,6 +50,7 @@ Options:
   -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
   -VaultPort PORT                  Vault server port (default: 8200)
   -SshPort PORT                    SSH server port (default: 2222)
+  -SignozPort PORT                 SigNoz UI port (default: 3301)
   -VscodePort PORT                 VS Code server port (default: 8080)
   -AspireDashboardPort PORT        Aspire Dashboard port (default: 18890)
   -JupyterPort PORT                Jupyter port (default: 8888)
@@ -55,7 +59,7 @@ Options:
 Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Gpu -Profiles vscode
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Observability
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Observability -SignozPort 3301
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -NoBws
 '@
 }
@@ -100,6 +104,26 @@ $OBSERVABILITY_ENABLED = if ($Observability) { "true" } else { "false" }
 $ScriptDir = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $ScriptDir "docker\.env"
 
+# Preserve SIGNOZ_JWT_SECRET and SIGNOZ_ADMIN_PASSWORD across re-deployments
+$SIGNOZ_JWT_SECRET = ""
+$SIGNOZ_ADMIN_PASSWORD = ""
+if (Test-Path $EnvFile) {
+    $envContent = Get-Content $EnvFile -Raw
+    if ($envContent -match "SIGNOZ_JWT_SECRET=(.+)") {
+        $SIGNOZ_JWT_SECRET = $matches[1].Trim()
+    }
+    if ($envContent -match "SIGNOZ_ADMIN_PASSWORD=(.+)") {
+        $SIGNOZ_ADMIN_PASSWORD = $matches[1].Trim()
+    }
+}
+if ([string]::IsNullOrWhiteSpace($SIGNOZ_JWT_SECRET)) {
+    $SIGNOZ_JWT_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | % {[char]$_})
+}
+if ([string]::IsNullOrWhiteSpace($SIGNOZ_ADMIN_PASSWORD)) {
+    $randomPart = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | % {[char]$_})
+    $SIGNOZ_ADMIN_PASSWORD = "Admin@$randomPart!"
+}
+
 @"
 WORKSPACE_NAME=$WorkspaceName
 SSH_PUBLIC_KEY=$SshPublicKey
@@ -107,10 +131,13 @@ GPU_ENABLED=$GPU_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VaultPort
 SSH_PORT=$SshPort
+SIGNOZ_PORT=$SignozPort
 VSCODE_PORT=$VscodePort
 ASPIRE_DASHBOARD_PORT=$AspireDashboardPort
 JUPYTER_PORT=$JupyterPort
 DEPLOY_PROFILES=$Profiles
+SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
+SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
 "@ | Out-File -FilePath $EnvFile -Encoding UTF8
 
 $profileArgs = @()
@@ -157,7 +184,7 @@ if ($Profiles -match 'devcontainer') { Write-Host "  Dev Container: attach via V
 if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$WorkspaceName'" }
 Write-Host "  Vault UI: http://localhost:$VaultPort/ui"
 Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$AspireDashboardPort"
-if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://localhost:3301" }
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://localhost:$SignozPort" }
 Write-Host ""
 if ($BwsMode -eq "manual") {
     Write-Host "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
