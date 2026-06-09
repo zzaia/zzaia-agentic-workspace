@@ -96,7 +96,7 @@
     },
     "aws-ecs": {
       "command": "uvx",
-      "args": ["awslabs.ecs-mcp-server@latest"],
+      "args": ["--from", "awslabs-ecs-mcp-server@latest", "ecs-mcp-server"],
       "env": {
         "AWS_ACCESS_KEY_ID": "${AWS_ACCESS_KEY_ID}",
         "AWS_SECRET_ACCESS_KEY": "${AWS_SECRET_ACCESS_KEY}",

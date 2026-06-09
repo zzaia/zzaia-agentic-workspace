@@ -3,6 +3,7 @@ name: behavior:development:test:e2e
 description: Execute a single BDD step — call request capability then query debug source for diagnostics
 argument-hint: "--step <bdd-step> --environment <url> --application <app> --debug-sources <new-relic|sqs|postgresql|aspire|docker|cloud-watch> [--source-metadata <queue|table|container|log-group>] [--description <text>]"
 user-invocable: true
+pagent: zzaia-tester-specialist
 metadata:
   parameters:
     - name: step
