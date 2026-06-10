@@ -11,6 +11,10 @@
     "bifrost": {
       "type": "http",
       "url": "http://bifrost-server:8080/mcp"
+    },
+    "mcp-codegraph": {
+      "type": "sse",
+      "url": "http://mcp-codegraph:8000/api/v1/mcp/sse"
     }
   }
 }

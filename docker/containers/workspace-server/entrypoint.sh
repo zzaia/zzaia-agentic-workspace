@@ -157,35 +157,25 @@ setup_profile_env() {
 }
 
 # ── Configure MCP servers in .mcp.json ───────────────────────────────────────
-# Merges direct MCP server connections into .mcp.json so Claude Code can reach
-# all upstream MCP tools. bifrost's /mcp endpoint only exposes Code Mode tools;
-# upstream tools (tavily, azure_devops, etc.) require direct connections.
+# Copies agents/claude/.mcp.json (home-seed) as the single source of truth,
+# then injects the runtime bifrost key (only value not present in the static file).
 setup_mcp_config() {
     local bifrost_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
 
     BIFROST_WORKSPACE_KEY="$bifrost_key" su -s /bin/bash user -c '
-        mcp_file="/home/user/.mcp.json"
-        [ -f "$mcp_file" ] || echo "{}" > "$mcp_file"
+        cp /opt/zzaia/home-seed/.mcp.json /home/user/.mcp.json
         python3 -c "
 import json, os
 key = os.environ[\"BIFROST_WORKSPACE_KEY\"]
 with open(\"/home/user/.mcp.json\") as f:
     cfg = json.load(f)
-servers = cfg.setdefault(\"mcpServers\", {})
-# bifrost Code Mode entry (with auth for virtual key lookup)
-servers[\"bifrost\"] = {\"type\": \"http\", \"url\": \"http://bifrost-server:8080/mcp\", \"headers\": {\"x-api-key\": key}}
-# Direct MCP server connections — secrets stay in containers, no keys in this file
-servers.setdefault(\"tavily\",      {\"type\": \"http\", \"url\": \"http://mcp-tavily:3001/mcp\"})
-servers.setdefault(\"azure_devops\",{\"type\": \"http\", \"url\": \"http://mcp-azure-devops:3002/mcp\"})
-servers.setdefault(\"postman\",     {\"type\": \"http\", \"url\": \"http://mcp-postman:3003/mcp\"})
-servers.setdefault(\"github\",      {\"type\": \"http\", \"url\": \"http://mcp-github:3005/mcp\"})
-servers.setdefault(\"playwright\",  {\"type\": \"http\", \"url\": \"http://mcp-playwright:3006/mcp\"})
+cfg[\"mcpServers\"][\"bifrost\"][\"headers\"] = {\"x-api-key\": key}
 with open(\"/home/user/.mcp.json\", \"w\") as f:
     json.dump(cfg, f, indent=2)
 "
     '
 
-    log_success "MCP server connections configured in .mcp.json"
+    log_success "MCP server connections configured from home-seed .mcp.json"
 }
 
 # ── Mark bootstrap ready ──────────────────────────────────────────────────────
