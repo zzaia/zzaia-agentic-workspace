@@ -11,6 +11,14 @@ processors:
     send_batch_size: 10000
     timeout: 10s
 
+  transform/resource_from_attrs:
+    log_statements:
+      - context: log
+        statements:
+          - set(resource.attributes["service.name"], attributes["container_name"]) where attributes["container_name"] != nil
+          - set(resource.attributes["container.name"], attributes["container_name"]) where attributes["container_name"] != nil
+          - delete_key(attributes, "container_name")
+
 exporters:
   clickhousetraces:
     datasource: tcp://signoz-db:9000/signoz_traces?username=default&password=signoz
@@ -53,5 +61,5 @@ service:
       exporters: [signozclickhousemetrics]
     logs:
       receivers: [otlp]
-      processors: [batch]
+      processors: [transform/resource_from_attrs, batch]
       exporters: [clickhouselogsexporter]

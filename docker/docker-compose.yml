@@ -86,6 +86,7 @@ services:
       - SSH_PORT=${SSH_PORT:-2222}
       - DOCKER_HOST=tcp://dind-server:2375
       - GPU_ENABLED=${GPU_ENABLED:-false}
+      - OBSERVABILITY_ENABLED=${OBSERVABILITY_ENABLED:-false}
       - VAULT_ADDR=http://vault-server:8200
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://ml-server:8787

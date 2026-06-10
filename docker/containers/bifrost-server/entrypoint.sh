@@ -33,7 +33,7 @@ vault_approle_login() {
 fetch_secrets() {
     log_info "Fetching secrets from Vault..."
 
-    local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key=""
+    local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key=""
 
     if [ -n "${VAULT_ADDR:-}" ]; then
         vault_approle_login || log_warn "AppRole login failed — no AI keys available"
@@ -47,9 +47,15 @@ fetch_secrets() {
         claude_oauth_token=$(printf '%s' "$vault_data" | jq -r '.data.data.CLAUDE_CODE_OAUTH_TOKEN // empty' 2>/dev/null || echo "")
         openai_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.OPENAI_API_KEY // empty' 2>/dev/null || echo "")
         gemini_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.GEMINI_API_KEY // empty' 2>/dev/null || echo "")
+        local integrations_data
+        integrations_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/integrations" 2>/dev/null || echo '{}')
+        new_relic_api_key=$(printf '%s' "$integrations_data" | jq -r '.data.data.NEW_RELIC_API_KEY // empty' 2>/dev/null || echo "")
     fi
 
     unset VAULT_TOKEN
+    export NEW_RELIC_API_KEY_AVAILABLE=""
+    [ -n "$new_relic_api_key" ] && export NEW_RELIC_API_KEY_AVAILABLE="true" && log_info "New Relic: API key available" || log_warn "New Relic: no API key — skipping newrelic MCP"
 
     if [ -n "$claude_oauth_token" ]; then
         export ANTHROPIC_EFFECTIVE_KEY="$claude_oauth_token"
@@ -79,9 +85,10 @@ start_auth_proxy() {
 generate_config() {
     local providers=""
     local sep=""
-    # Bifrost virtual key for workspace MCP access — must have sk-bf- prefix.
-    # Used by workspace containers to authenticate the /mcp endpoint.
     local workspace_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
+    local newrelic_entry=""
+    [ -n "${NEW_RELIC_API_KEY_AVAILABLE:-}" ] && \
+        newrelic_entry='      { "name": "newrelic", "connection_type": "http", "connection_string": "http://mcp-newrelic:3004/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
     if [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ]; then
         providers="${providers}${sep}
@@ -123,7 +130,7 @@ generate_config() {
       { "name": "tavily", "connection_type": "http", "connection_string": "http://mcp-tavily:3001/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
       { "name": "azure_devops", "connection_type": "http", "connection_string": "http://mcp-azure-devops:3002/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
       { "name": "postman", "connection_type": "http", "connection_string": "http://mcp-postman:3003/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "newrelic", "connection_type": "http", "connection_string": "http://mcp-newrelic:3004/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      ${newrelic_entry}
       { "name": "github", "connection_type": "http", "connection_string": "http://mcp-github:3005/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
       { "name": "playwright", "connection_type": "http", "connection_string": "http://mcp-playwright:3006/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }
     ]
