@@ -19,7 +19,12 @@ configure_gpu() {
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
     configure_gpu
-    exec "$@"
+    # When TLS is disabled, add TCP listener so Portainer and other clients can connect
+    if [ "${DOCKER_TLS_CERTDIR:-}" = "" ]; then
+        exec "$@" --host tcp://0.0.0.0:2375 --host unix:///var/run/docker.sock
+    else
+        exec "$@"
+    fi
 }
 
 main "$@"
