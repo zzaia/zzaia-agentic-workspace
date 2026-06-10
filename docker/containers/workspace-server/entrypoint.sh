@@ -195,10 +195,10 @@ main() {
     log_info "Workspace: $WORKSPACE_NAME"
 
     fetch_vault_credentials
+    setup_git_sidecar
     bootstrap_workspace
     setup_profile_env
     setup_mcp_config
-    setup_git_sidecar
     cleanup_secrets
     mark_bootstrap_ready
     start_sshd

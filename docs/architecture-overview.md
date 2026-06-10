@@ -258,28 +258,32 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 **Upstream MCP tool access (two modes):**
 
-| Mode | How tools reach agents | When to use |
-|------|----------------------|-------------|
-| Direct connections in `.mcp.json` | Claude Code connects to each MCP sidecar at `http://mcp-{name}:{port}/mcp` | Current setup — workspace uses `ml-server:8787` (headroom proxy) as `ANTHROPIC_BASE_URL` |
-| bifrost as `ANTHROPIC_BASE_URL` | bifrost injects all connected MCP server tools into every Anthropic API response automatically | When bifrost replaces headroom proxy as the AI gateway |
+**`.mcp.json` entries per workspace agent (single source: `agents/claude/.mcp.json`):**
 
-**Current `.mcp.json` entries per workspace agent:**
+| Entry | URL / Transport | Purpose |
+|-------|----------------|---------|
+| `aspire` | `aspire agent mcp` (stdio) | .NET Aspire MCP integration |
+| `headroom` | `http://mcp-headroom:3008/mcp` (streamableHttp) | Context compression tools |
+| `bifrost` | `http://bifrost-server:8080/mcp` + `x-api-key` header | Code Mode Starlark tools + upstream tool access |
+| `mcp-codegraph` | `http://mcp-codegraph:8000/api/v1/mcp/sse` (SSE) | 27 code graph tools (find_code, analyze_code_relationships, etc.) |
 
-| Entry | URL | Purpose |
-|-------|-----|---------|
-| `bifrost` | `http://bifrost-server:8080/mcp` + `x-api-key` header | Code Mode Starlark tools |
+**Tool access via bifrost Code Mode** (NOT direct `.mcp.json` connections):
+
+| Upstream | bifrost URL | Tools |
+|----------|-------------|-------|
 | `tavily` | `http://mcp-tavily:3001/mcp` | 5 search/crawl tools |
 | `azure_devops` | `http://mcp-azure-devops:3002/mcp` | 90 work item / pipeline tools |
 | `postman` | `http://mcp-postman:3003/mcp` | 41 API testing tools |
 | `github` | `http://mcp-github:3005/mcp` | 47 GitHub Copilot tools |
 | `playwright` | `http://mcp-playwright:3006/mcp` | 23 browser automation tools |
-| `headroom` | `http://mcp-headroom:3008/mcp` | Context compression tools |
 
-**setup_mcp_config()** in workspace-server entrypoint merges these entries into `/home/user/.mcp.json` at every startup (idempotent, shared `workspace-home` volume → all sidecar containers inherit the config).
+All upstream tools are configured as `is_code_mode_client: true` in bifrost — agents access them via Starlark `executeToolCode`, not as direct MCP connections.
 
-**bifrost virtual key**: `sk-bf-workspace-agent-001` (static, `sk-bf-` prefix required by bifrost). Registered in `governance.virtual_keys` with `allow_on_all_virtual_keys: true` on all MCP client configs. Not a secret — no real credential is exposed.
+**setup_mcp_config()** copies `agents/claude/.mcp.json` (the single source of truth, also deployed as `home-seed`) to `/home/user/.mcp.json`, then injects the runtime bifrost key via Python. All agent configs (copilot, gemini, codex) mirror the same server set.
 
-**Rationale**: Separating direct MCP connections from bifrost Code Mode gives agents the full tool surface without coupling to bifrost's inference path. Direct connections are simpler, resilient to bifrost restart, and avoid the overhead of routing every tool call through the AI gateway. Code Mode remains available for Starlark-based orchestration when needed.
+**bifrost virtual key**: `sk-bf-workspace-agent-001` (static, `sk-bf-` prefix required by bifrost). Not a secret — grants code mode tool access only within the internal Docker network.
+
+**Rationale**: Upstream tools (tavily, ADO, github, postman, playwright) go through bifrost Code Mode rather than direct agent connections. This keeps the agent `.mcp.json` minimal, enforces governance through bifrost policies, and avoids duplicating secret management across multiple direct connections. `mcp-codegraph` uses a direct SSE connection because it accesses the internal workspace volume and Neo4j — not an external API requiring bifrost governance.
 
 ---
 
@@ -405,7 +409,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ### ADR 014: Implementation Phases — Primary Layer (Phase 1) + Supplementary Layers (Phase 2/3)
 
-**Decision**: Implement the two-layer triple-stack architecture in three phases: Phase 1 deploys Headroom's full triple-stack primary layer, Phase 2 adds OpenMemory MCP, Phase 3 adds CodeGraphContext MCP.
+**Decision**: Implement the two-layer triple-stack architecture in three phases: Phase 1 deploys Headroom's full triple-stack primary layer, Phase 2 adds OpenMemory MCP, Phase 3 adds CodeGraphContext MCP (Phase 3 complete — `mcp-codegraph` deployed and running).
 
 **Phase 1 — Primary Layer (Automatic via Headroom proxy)**:
 - `headroom proxy --memory --code-graph` starts with all three features enabled
@@ -419,9 +423,11 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 - Uses same Qdrant + Postgres as Headroom's automatic layer
 - Provides fine-grained control vs. automatic injection
 
-**Phase 3 — Supplementary Layer: CodeGraphContext MCP**:
-- Agents explicitly call `find_callers`, `class_hierarchy` for code analysis
-- Complements Headroom's background file watcher with targeted queries
+**Phase 3 — Supplementary Layer: CodeGraphContext MCP** ✅ Implemented:
+- `mcp-codegraph` container (python:3.12-slim + codegraphcontext v0.4.x) — always-on, Neo4j backend
+- SSE MCP transport at `http://mcp-codegraph:8000/api/v1/mcp/sse` — 27 tools (find_code, analyze_code_relationships, execute_cypher_query, etc.)
+- Indexes workspace worktree repositories at startup; agents call tools explicitly for code analysis
+- Complements Headroom's background file watcher with targeted, structured code graph queries
 
 **Rationale**: Phased rollout enables validation of each layer independently. Primary layer (Headroom) provides automatic benefits to all agents. Supplementary layers (OpenMemory + CodeGraphContext) add explicit control for agents that need fine-grained access. Shared infrastructure (Qdrant + Neo4j) eliminates redundancy.
 
@@ -577,7 +583,7 @@ C4Container
 
         System_Boundary(supplementary, "Layer 2 — Supplementary (Agent-initiated via MCP)") {
             Container(openmemory, "openmemory-mcp", "skpassegna/openmemory-mcp", "Structured memory queries, Postgres + Qdrant backend, MCP :5005 [Phase 2 — not yet implemented]")
-            Container(codegraph, "code-graph-mcp", "python:3.12-slim + codegraphcontext", "Code graph queries — tree-sitter AST parsing, KûzuDB/Neo4j [Phase 3 — not yet implemented]")
+            Container(codegraph, "mcp-codegraph", "python:3.12-slim + codegraphcontext", "Code graph queries — tree-sitter AST parsing, Neo4j backend, SSE MCP :8000 [always-on]")
         }
 
         Container(tavily, "mcp-tavily", "node:lts-alpine + supergateway@3.4.3", "Holds TAVILY_API_KEY, streamableHttp :3001 [USER node]")

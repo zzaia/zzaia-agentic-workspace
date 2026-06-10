@@ -22,12 +22,7 @@ if [ -d "$WORKSPACE_PATH" ]; then
         for branch_dir in "$worktree_dir"/*; do
             if [ -d "$branch_dir" ] && [ -f "$branch_dir/.git" ]; then
                 echo "Indexing: $branch_dir"
-                cgc index "$branch_dir" \
-                    --backend neo4j \
-                    --neo4j-uri "$NEO4J_URI" \
-                    --neo4j-username "$NEO4J_USERNAME" \
-                    --neo4j-password "$NEO4J_PASSWORD" \
-                    2>&1 || echo "Warning: Failed to index $branch_dir"
+                cgc index "$branch_dir" 2>&1 || echo "Warning: Failed to index $branch_dir"
             fi
         done
     done
@@ -37,9 +32,4 @@ else
 fi
 
 echo "Starting CGC API server..."
-exec cgc api start \
-    --port "$CGC_PORT" \
-    --host "$CGC_HOST" \
-    --neo4j-uri "$NEO4J_URI" \
-    --neo4j-username "$NEO4J_USERNAME" \
-    --neo4j-password "$NEO4J_PASSWORD"
+exec cgc api start --port "$CGC_PORT" --host "$CGC_HOST"
