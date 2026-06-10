@@ -208,12 +208,14 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | Dev Containers | `containers-dev-sidecar` | `devcontainer` | VS Code Dev Containers extension attachment |
 | Jupyter | `jupyter-sidecar` | `jupyter` | JupyterLab on JUPYTER_PORT |
 | VS Code Tunnel | `tunnel-sidecar` | `tunnel` | VS Code Tunnel for remote access via vscode.dev |
+| Docker UI | `portainer-server` | `portainer` | Portainer CE browser UI for DinD container management on PORTAINER_PORT |
 
 - `workspace-server` always starts — it owns the shared `workspace-home` volume and exposes SSH
 - All optional servers depend on `workspace-server: condition: service_healthy` — they start only after workspace-server completes Ansible bootstrap
 - All containers share `workspace-home` — one consistent home directory, credentials, and tool installations
 - SSH-only deployment: leave `server-profiles` empty — only `workspace-server` starts
 - Profiles are read from `server-profiles` Bitwarden secret at startup time; installation scripts build dynamic `--profile` flags
+- `portainer-server` depends on `dind-server: condition: service_healthy`; connects via `DOCKER_HOST=tcp://dind-server:2375` (internal bridge, no socket mount)
 
 **Rationale**: Shared home eliminates configuration drift between access methods. workspace-server as authoritative owner simplifies initialization — tools, credentials, and home seed are set up once.
 

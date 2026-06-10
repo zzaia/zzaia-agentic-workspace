@@ -35,6 +35,9 @@ param(
     [int] $JupyterPort = 8888,
 
     [Parameter(Mandatory = $false)]
+    [int] $PortainerPort = 9000,
+
+    [Parameter(Mandatory = $false)]
     [string] $Profiles = ""
 )
 
@@ -54,7 +57,8 @@ Options:
   -VscodePort PORT                 VS Code server port (default: 8080)
   -AspireDashboardPort PORT        Aspire Dashboard port (default: 18890)
   -JupyterPort PORT                Jupyter port (default: 8888)
-  -Profiles PROFILES               Comma-separated server profiles: vscode,jupyter,devcontainer,tunnel
+  -PortainerPort PORT              Portainer UI port (default: 9000)
+  -Profiles PROFILES               Comma-separated server profiles: vscode,jupyter,devcontainer,tunnel,portainer
 
 Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
@@ -135,6 +139,7 @@ SIGNOZ_PORT=$SignozPort
 VSCODE_PORT=$VscodePort
 ASPIRE_DASHBOARD_PORT=$AspireDashboardPort
 JUPYTER_PORT=$JupyterPort
+PORTAINER_PORT=$PortainerPort
 DEPLOY_PROFILES=$Profiles
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
@@ -144,7 +149,7 @@ $profileArgs = @()
 if (-not [string]::IsNullOrWhiteSpace($Profiles)) {
     foreach ($p in ($Profiles -split ',')) {
         $p = $p.Trim()
-        if ($p -match '^(vscode|devcontainer|jupyter|tunnel)$') {
+        if ($p -match '^(vscode|devcontainer|jupyter|tunnel|portainer)$') {
             $profileArgs += '--profile'
             $profileArgs += $p
         } else {
@@ -183,6 +188,7 @@ if ($Profiles -match 'vscode') { Write-Host "  VS Code: http://localhost:$Vscode
 if ($Profiles -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
 if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$WorkspaceName'" }
 Write-Host "  Vault UI: http://localhost:$VaultPort/ui"
+if ($Profiles -match 'portainer') { Write-Host "  Portainer: http://localhost:$PortainerPort" }
 Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$AspireDashboardPort"
 if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://localhost:$SignozPort" }
 Write-Host ""

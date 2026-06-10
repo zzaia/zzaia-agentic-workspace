@@ -18,7 +18,8 @@ Options:
   --vscode-port PORT            VS Code server port (default: 8080)
   --aspire-dashboard-port PORT  Aspire Dashboard port (default: 18890)
   --jupyter-port PORT           Jupyter port (default: 8888)
-  --profiles PROFILES           Comma-separated server profiles: vscode, jupyter, devcontainer, tunnel
+  --portainer-port PORT         Portainer UI port (default: 9000)
+  --profiles PROFILES           Comma-separated server profiles: vscode, jupyter, devcontainer, tunnel, portainer
   --help                        Show this help message
 
 Examples:
@@ -41,6 +42,7 @@ MCP_SIGNOZ_PORT="3009"
 VSCODE_PORT="8080"
 ASPIRE_DASHBOARD_PORT="18890"
 JUPYTER_PORT="8888"
+PORTAINER_PORT="9000"
 DEPLOY_PROFILES=""
 
 while [ $# -gt 0 ]; do
@@ -91,6 +93,10 @@ while [ $# -gt 0 ]; do
             ;;
         --jupyter-port)
             JUPYTER_PORT="$2"
+            shift 2
+            ;;
+        --portainer-port)
+            PORTAINER_PORT="$2"
             shift 2
             ;;
         --profiles)
@@ -164,6 +170,7 @@ MCP_SIGNOZ_PORT=$MCP_SIGNOZ_PORT
 VSCODE_PORT=$VSCODE_PORT
 ASPIRE_DASHBOARD_PORT=$ASPIRE_DASHBOARD_PORT
 JUPYTER_PORT=$JUPYTER_PORT
+PORTAINER_PORT=$PORTAINER_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
@@ -176,7 +183,7 @@ if [ -n "$DEPLOY_PROFILES" ]; then
     normalized_profiles=$(echo "$DEPLOY_PROFILES" | tr ',' ' ')
     for p in $normalized_profiles; do
         case "$p" in
-            vscode|devcontainer|jupyter|tunnel) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
+            vscode|devcontainer|jupyter|tunnel|portainer) PROFILE_FLAGS="$PROFILE_FLAGS --profile $p" ;;
             *) echo "Warning: Unknown server profile '$p' — valid: vscode, devcontainer, jupyter, tunnel" ;;
         esac
     done
@@ -212,6 +219,7 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "$DEPLOY_PROFILES" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
+[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://localhost:$PORTAINER_PORT"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
 [ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:$SIGNOZ_PORT"
 [ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://localhost:$MCP_SIGNOZ_PORT/mcp"

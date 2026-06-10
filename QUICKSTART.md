@@ -178,6 +178,7 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 | **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
 | **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
 | **Vault UI** | `http://localhost:8200/ui` (localhost only) |
+| **Portainer** | `http://localhost:<PORTAINER_PORT>` (default `9000`) — requires `--profile portainer` at startup |
 | **SigNoz UI** (observability) | `http://localhost:3301` — only when `--observability` was used at startup |
 | **SigNoz MCP** (observability) | `http://localhost:3009/mcp` — streamableHttp MCP endpoint for external agents; port via `--mcp-signoz-port` |
 

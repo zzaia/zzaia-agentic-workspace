@@ -65,6 +65,35 @@ services:
       retries: 5
       start_period: 30s
 
+  portainer-server:
+    image: portainer/portainer-ce:latest
+    profiles: ["portainer"]
+    ports:
+      - "127.0.0.1:${PORTAINER_PORT:-9000}:9000"
+    environment:
+      - DOCKER_HOST=tcp://dind-server:2375
+    networks:
+      - mcp
+    volumes:
+      - portainer-data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      dind-server:
+        condition: service_healthy
+
   workspace-server:
     build:
       context: ..
@@ -86,7 +115,6 @@ services:
       - SSH_PORT=${SSH_PORT:-2222}
       - DOCKER_HOST=tcp://dind-server:2375
       - GPU_ENABLED=${GPU_ENABLED:-false}
-      - OBSERVABILITY_ENABLED=${OBSERVABILITY_ENABLED:-false}
       - VAULT_ADDR=http://vault-server:8200
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://ml-server:8787
@@ -674,6 +702,8 @@ volumes:
     name: ${WORKSPACE_NAME:-zzaia}-database-neo4j
   dind-storage:
     name: ${WORKSPACE_NAME:-zzaia}-dind-storage
+  portainer-data:
+    name: ${WORKSPACE_NAME:-zzaia}-portainer-data
   git-sidecar-hostkeys:
 
 networks:
