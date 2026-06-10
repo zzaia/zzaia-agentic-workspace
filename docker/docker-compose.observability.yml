@@ -36,6 +36,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-tavily
@@ -50,6 +51,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-azure-devops
@@ -64,6 +66,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-postman
@@ -78,6 +81,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-newrelic
@@ -92,6 +96,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-github
@@ -106,6 +111,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-playwright
@@ -120,6 +126,7 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-headroom
@@ -138,12 +145,15 @@ services:
     environment:
       - NODE_PATH=/usr/local/lib/node_modules
       - NODE_OPTIONS=--require @opentelemetry/auto-instrumentations-node/register
+      - OTEL_NODE_RESOURCE_DETECTORS=env,host,os,process,container
       - SIGNOZ_URL=http://signoz-server:8080
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://signoz-otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=mcp-signoz
     networks:
       - mcp
+    ports:
+      - "127.0.0.1:${MCP_SIGNOZ_PORT:-3009}:3009"
     volumes:
       - signoz-mcp-creds:/signoz-data:ro
     restart: unless-stopped
@@ -163,10 +173,6 @@ services:
         condition: service_healthy
       signoz-otel-collector:
         condition: service_healthy
-
-  vault-server:
-    environment:
-      - VAULT_PROMETHEUS_RETENTION_TIME=30s
 
   workspace-server:
     environment:
@@ -205,7 +211,7 @@ services:
       - OTEL_SERVICE_NAME=tunnel-sidecar
 
   signoz-schema-migrator:
-    image: signoz/signoz-schema-migrator:latest
+    image: signoz/signoz-schema-migrator:v0.144.5
     container_name: signoz-schema-migrator
     command:
       - "sync"
@@ -218,8 +224,27 @@ services:
         condition: service_healthy
     restart: "no"
 
+  signoz-schema-patch:
+    image: clickhouse/clickhouse-server:25.5
+    container_name: signoz-schema-patch
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for tbl in span_attributes span_attributes_keys distributed_span_attributes distributed_span_attributes_keys; do
+          clickhouse client --host signoz-db --user default --password signoz \
+            -q "ALTER TABLE signoz_traces.$${tbl} ON CLUSTER cluster MODIFY COLUMN tagType Enum8('tag'=1,'resource'=2,'scope'=3)" 2>/dev/null && echo "Patched signoz_traces.$${tbl}" || echo "Skip $${tbl} (already patched or missing)"
+        done
+    networks:
+      - mcp
+    depends_on:
+      signoz-db:
+        condition: service_healthy
+      signoz-schema-migrator:
+        condition: service_completed_successfully
+    restart: "no"
+
   signoz-otel-collector:
-    image: signoz/signoz-otel-collector:latest
+    image: signoz/signoz-otel-collector:v0.144.5
     container_name: signoz-otel-collector
     command:
       - "--config=/etc/otel/config.yaml"
@@ -236,6 +261,8 @@ services:
       signoz-db:
         condition: service_healthy
       signoz-schema-migrator:
+        condition: service_completed_successfully
+      signoz-schema-patch:
         condition: service_completed_successfully
     restart: unless-stopped
     deploy:
@@ -287,7 +314,7 @@ services:
       start_period: 120s
 
   signoz-db:
-    image: clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:25.5
     container_name: signoz-db
     networks:
       - mcp
@@ -297,11 +324,12 @@ services:
     volumes:
       - signoz-db-data:/var/lib/clickhouse
       - ./clickhouse-config.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse-users.xml:/etc/clickhouse-server/users.d/experimental.xml:ro
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G
           cpus: '1.0'
     healthcheck:
       test: ["CMD", "wget", "--user=default", "--password=signoz", "-qO-", "http://localhost:8123/ping"]
@@ -311,7 +339,7 @@ services:
       start_period: 60s
 
   observability-fluent-bit:
-    image: fluent/fluent-bit:latest
+    image: fluent/fluent-bit:5.0.7
     container_name: fluent-bit
     networks:
       - mcp
@@ -340,7 +368,7 @@ services:
       start_period: 10s
 
   observability-otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.127.0
     container_name: otel-collector
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
@@ -364,7 +392,7 @@ services:
       start_period: 15s
 
   observability-cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
     container_name: cadvisor
     networks:
       - mcp

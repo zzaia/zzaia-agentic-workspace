@@ -159,7 +159,7 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-Optional flags: `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--vscode-port 8080`, `--jupyter-port 8888`.
+Optional flags: `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`.
 
 **With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
 
@@ -179,6 +179,7 @@ After the first run, **start or stop the workspace from Docker Desktop** — no 
 | **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
 | **Vault UI** | `http://localhost:8200/ui` (localhost only) |
 | **SigNoz UI** (observability) | `http://localhost:3301` — only when `--observability` was used at startup |
+| **SigNoz MCP** (observability) | `http://localhost:3009/mcp` — streamableHttp MCP endpoint for external agents; port via `--mcp-signoz-port` |
 
 Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
 

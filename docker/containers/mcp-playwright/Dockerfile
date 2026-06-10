@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/playwright/mcp:latest
+FROM mcr.microsoft.com/playwright/mcp:v0.0.75
 
 USER root
-RUN npm install -g @opentelemetry/auto-instrumentations-node
+RUN npm install -g @opentelemetry/auto-instrumentations-node@0.76.0
 USER node
 
 ENTRYPOINT ["node", "/app/cli.js"]

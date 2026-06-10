@@ -1,4 +1,4 @@
-FROM maximhq/bifrost:latest
+FROM maximhq/bifrost:v1.5.11
 
 USER root
 RUN apk add --no-cache bash jq curl python3

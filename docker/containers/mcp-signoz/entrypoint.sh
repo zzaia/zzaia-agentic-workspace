@@ -38,15 +38,15 @@ validate_secrets() {
         while :; do sleep 3600 & wait $!; done
     fi
 
-    SIGNOZ_API_KEY=$(cat "$key_file")
-    export SIGNOZ_API_KEY
+    SIGNOZ_TOKEN=$(cat "$key_file")
+    export SIGNOZ_TOKEN
 }
 
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
     log_info "Starting SigNoz MCP server..."
     export SIGNOZ_URL="${SIGNOZ_URL:-http://signoz-server:8080}"
-    export SIGNOZ_API_KEY="${SIGNOZ_API_KEY}"
+    export SIGNOZ_TOKEN="${SIGNOZ_TOKEN}"
     exec supergateway --port 3009 --outputTransport streamableHttp --stateful --stdio "signoz-mcp-server"
 }
 

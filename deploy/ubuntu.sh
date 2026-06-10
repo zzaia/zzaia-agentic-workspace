@@ -14,6 +14,7 @@ Options:
   --vault-port PORT             Vault server port (default: 8200)
   --ssh-port PORT               SSH server port (default: 2222)
   --signoz-port PORT            SigNoz UI port (default: 3301)
+  --mcp-signoz-port PORT        SigNoz MCP port (default: 3009)
   --vscode-port PORT            VS Code server port (default: 8080)
   --aspire-dashboard-port PORT  Aspire Dashboard port (default: 18890)
   --jupyter-port PORT           Jupyter port (default: 8888)
@@ -36,6 +37,7 @@ NO_BWS="false"
 VAULT_PORT="8200"
 SSH_PORT="2222"
 SIGNOZ_PORT="3301"
+MCP_SIGNOZ_PORT="3009"
 VSCODE_PORT="8080"
 ASPIRE_DASHBOARD_PORT="18890"
 JUPYTER_PORT="8888"
@@ -73,6 +75,10 @@ while [ $# -gt 0 ]; do
             ;;
         --signoz-port)
             SIGNOZ_PORT="$2"
+            shift 2
+            ;;
+        --mcp-signoz-port)
+            MCP_SIGNOZ_PORT="$2"
             shift 2
             ;;
         --vscode-port)
@@ -136,12 +142,15 @@ ENV_FILE="${SCRIPT_DIR}/../docker/.env"
 # Preserve SIGNOZ_JWT_SECRET and SIGNOZ_ADMIN_PASSWORD across re-deployments; generate once if missing
 SIGNOZ_JWT_SECRET=""
 SIGNOZ_ADMIN_PASSWORD=""
+ADMIN_PASSWORD=""
 if [ -f "$ENV_FILE" ]; then
     SIGNOZ_JWT_SECRET=$(grep '^SIGNOZ_JWT_SECRET=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
     SIGNOZ_ADMIN_PASSWORD=$(grep '^SIGNOZ_ADMIN_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+    ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
 fi
 [ -z "$SIGNOZ_JWT_SECRET" ] && SIGNOZ_JWT_SECRET=$(openssl rand -hex 32)
 [ -z "$SIGNOZ_ADMIN_PASSWORD" ] && SIGNOZ_ADMIN_PASSWORD="Admin@$(openssl rand -hex 8)!"
+[ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin@$(openssl rand -hex 8)!"
 
 cat > "$ENV_FILE" << EOF
 WORKSPACE_NAME=$WORKSPACE_NAME
@@ -151,12 +160,14 @@ OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VAULT_PORT
 SSH_PORT=$SSH_PORT
 SIGNOZ_PORT=$SIGNOZ_PORT
+MCP_SIGNOZ_PORT=$MCP_SIGNOZ_PORT
 VSCODE_PORT=$VSCODE_PORT
 ASPIRE_DASHBOARD_PORT=$ASPIRE_DASHBOARD_PORT
 JUPYTER_PORT=$JUPYTER_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
+ADMIN_PASSWORD=$ADMIN_PASSWORD
 EOF
 
 PROFILE_FLAGS=""
@@ -192,7 +203,7 @@ fi
 echo ""
 echo "Starting workspace..."
 # shellcheck disable=SC2086
-docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG $OBSERVABILITY_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d
+docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG $OBSERVABILITY_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d --build
 
 echo ""
 echo "✓ Workspace started. Access:"
@@ -203,6 +214,7 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
 [ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:$SIGNOZ_PORT"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://localhost:$MCP_SIGNOZ_PORT/mcp"
 echo ""
 if [ "$BWS_MODE" = "manual" ]; then
     echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"

@@ -200,12 +200,13 @@ When deployed with `--observability`, the workspace includes a full observabilit
 
 At deploy time, if `--observability` is enabled:
 
-1. **Health check:** Deploy script waits for SigNoz UI to be healthy (`/api/v1/health`)
-2. **Admin account:** Creates `admin@<WORKSPACE_NAME>.local` account with a random strong password
-3. **MCP API token:** Generates a Personal Access Token (PAT) with ADMIN role for the `mcp-signoz` server
-4. **Credentials saved:** `SIGNOZ_ADMIN_EMAIL` and `SIGNOZ_MCP_API_KEY` are written to `.env` and survive re-deployments
+1. **Health check:** `signoz-server` entrypoint waits for SigNoz to be healthy (`/api/v1/health`)
+2. **Admin account:** Registers `admin@<WORKSPACE_NAME>.local` with the password from `SIGNOZ_ADMIN_PASSWORD` (generated once, preserved across re-deployments in `.env`)
+3. **Service account:** Creates a `mcp-signoz` service account with viewer role (assigned via SpiceDB tuple in SQLite)
+4. **API key:** Generates an API key and writes it to the `signoz-mcp-creds` shared volume at `/signoz-data/mcp-api-key`
+5. **mcp-signoz reads key:** The `mcp-signoz` container reads the key from the volume and exports it as `SIGNOZ_TOKEN` for the `signoz-mcp-server` process
 
-Re-running the deploy script on an existing workspace is idempotent — it skips provisioning if the MCP API key already exists.
+Re-running is idempotent — provisioning is skipped if `/signoz-data/mcp-api-key` already exists.
 
 ### Fluent Bit Log Isolation
 
@@ -219,12 +220,21 @@ This ensures each workspace's Fluent Bit instance only forwards logs from its ow
 
 ### Port Configuration
 
-Use the `--signoz-port` deploy flag (default: 3301) to customize the SigNoz UI port:
+Use the `--signoz-port` and `--mcp-signoz-port` deploy flags to customize observability ports:
 
 ```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3400
-# SigNoz UI: http://localhost:3400
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
+  --observability --signoz-port 3400 --mcp-signoz-port 3410
+# SigNoz UI:  http://localhost:3400
+# SigNoz MCP: http://localhost:3410/mcp
 ```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--signoz-port` | `3301` | SigNoz web UI |
+| `--mcp-signoz-port` | `3009` | SigNoz MCP HTTP endpoint (streamableHttp, `POST /mcp`) |
+
+The MCP endpoint accepts standard JSON-RPC 2.0 over HTTP with `Accept: application/json, text/event-stream`. External agents can call it directly without entering the Docker network.
 
 ---
 
@@ -244,7 +254,7 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | mcp-postman | 3003 | `POSTMAN_API_KEY` |
 | mcp-newrelic | 3004 | `NEW_RELIC_API_KEY` |
-| mcp-signoz | 3009 | `SIGNOZ_MCP_API_KEY` (auto-provisioned at deploy time when `--observability` enabled) |
+| mcp-signoz | 3009 | API key auto-provisioned by `signoz-server` entrypoint; shared via Docker volume. **Host port exposed** — configurable via `--mcp-signoz-port` (default: `3009`). |
 
 `playwright` and `aspire` run as local stdio servers inside the workspace container (no secrets required).
 
@@ -373,7 +383,7 @@ Users can then start inner containers with `docker run --privileged` or `--gpus 
 | Secret handling | vault-server fetches secrets from Bitwarden at startup — never written to host disk or .env files |
 | Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-vault-data`), not host path; Vault auto-unseals using keys sealed in encrypted volume |
 | Host network | Bridge only, workspace ports bound to `127.0.0.1` |
-| MCP ports | Internal only — not exposed to host |
+| MCP ports | Internal only — not exposed to host, **except `mcp-signoz`** (host port `MCP_SIGNOZ_PORT`, bound to `127.0.0.1`) |
 | Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
 | Root login | Disabled |
 | Sudo access | Passwordless by default; set `ADMIN_PASSWORD` to require password for sudo (restricts installs) |

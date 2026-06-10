@@ -1,4 +1,4 @@
-FROM hashicorp/vault:latest
+FROM hashicorp/vault:2.0.2
 
 LABEL org.opencontainers.image.title="ZZAIA Vault Production"
 LABEL org.opencontainers.image.description="HashiCorp Vault production mode with Bitwarden secret bootstrap"
