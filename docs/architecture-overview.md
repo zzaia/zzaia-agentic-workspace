@@ -505,7 +505,18 @@ workspace-server                git-sidecar                    GitHub / ADO
 | Sidecars (workspace-server, git-sidecar, vscode-sidecar, jupyter-sidecar, containers-dev-sidecar, tunnel-sidecar) | OTEL endpoint consumption | OTEL endpoint env vars injected when overlay active |
 | `database-neo4j` | Prometheus metrics | `NEO4J_metrics_prometheus_enabled=true` |
 
-**Rationale**: Opt-in pattern ensures zero resource overhead when observability is not needed. The base stack is completely unaffected. Activation pattern matches the GPU overlay (`docker-compose.gpu.yml` + `--gpu` flag) for consistency. SigNoz provides a unified backend for logs, metrics, and traces with a local web UI — no external SaaS required. Fluent Bit, OTel Collector, and cAdvisor are industry-standard collection agents, ensuring portability if observability needs to move to a different backend in the future.
+**mcp-signoz — External-Only MCP Server:**
+
+`mcp-signoz` is the only MCP server with a host-bound port (`127.0.0.1:${MCP_SIGNOZ_PORT:-3009}:3009`). It is **not** added to `/home/user/.mcp.json` and is never used by workspace agents. Its sole purpose is to allow external agents — running on the host or in CI pipelines — to query SigNoz logs and metrics directly via `http://localhost:3009/mcp` without entering the Docker network.
+
+| Property | Internal MCP servers (tavily, github, …) | `mcp-signoz` (external) |
+|----------|------------------------------------------|-------------------------|
+| Host port | None | `127.0.0.1:3009` |
+| Added to `.mcp.json` | Yes | **No** |
+| Consumer | Workspace agents (Claude Code inside containers) | External agents on host / CI |
+| Access URL | `http://mcp-{name}:{port}/mcp` (internal) | `http://localhost:3009/mcp` (host) |
+
+**Rationale**: Opt-in pattern ensures zero resource overhead when observability is not needed. The base stack is completely unaffected. Activation pattern matches the GPU overlay (`docker-compose.gpu.yml` + `--gpu` flag) for consistency. SigNoz provides a unified backend for logs, metrics, and traces with a local web UI — no external SaaS required. Fluent Bit, OTel Collector, and cAdvisor are industry-standard collection agents, ensuring portability if observability needs to move to a different backend in the future. `mcp-signoz` is intentionally external-only — observability tooling is infrastructure-level and must not appear in the workspace agent tool surface.
 
 ---
 

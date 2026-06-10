@@ -162,15 +162,13 @@ setup_profile_env() {
 # upstream tools (tavily, azure_devops, etc.) require direct connections.
 setup_mcp_config() {
     local bifrost_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
-    local observability="${OBSERVABILITY_ENABLED:-false}"
 
-    BIFROST_WORKSPACE_KEY="$bifrost_key" OBSERVABILITY_ENABLED="$observability" su -s /bin/bash user -c '
+    BIFROST_WORKSPACE_KEY="$bifrost_key" su -s /bin/bash user -c '
         mcp_file="/home/user/.mcp.json"
         [ -f "$mcp_file" ] || echo "{}" > "$mcp_file"
         python3 -c "
 import json, os
 key = os.environ[\"BIFROST_WORKSPACE_KEY\"]
-obs = os.environ.get(\"OBSERVABILITY_ENABLED\", \"false\").lower() == \"true\"
 with open(\"/home/user/.mcp.json\") as f:
     cfg = json.load(f)
 servers = cfg.setdefault(\"mcpServers\", {})
@@ -182,8 +180,6 @@ servers.setdefault(\"azure_devops\",{\"type\": \"http\", \"url\": \"http://mcp-a
 servers.setdefault(\"postman\",     {\"type\": \"http\", \"url\": \"http://mcp-postman:3003/mcp\"})
 servers.setdefault(\"github\",      {\"type\": \"http\", \"url\": \"http://mcp-github:3005/mcp\"})
 servers.setdefault(\"playwright\",  {\"type\": \"http\", \"url\": \"http://mcp-playwright:3006/mcp\"})
-if obs:
-    servers.setdefault(\"signoz\", {\"type\": \"http\", \"url\": \"http://mcp-signoz:3009/mcp\"})
 with open(\"/home/user/.mcp.json\", \"w\") as f:
     json.dump(cfg, f, indent=2)
 "
