@@ -293,6 +293,7 @@ services:
       - SIGNOZ_ALERTMANAGER_PROVIDER=signoz
       - SIGNOZ_TOKENIZER_JWT_SECRET=${SIGNOZ_JWT_SECRET:-changeme-set-SIGNOZ_JWT_SECRET-in-env}
       - WORKSPACE_NAME=${WORKSPACE_NAME}
+      - SIGNOZ_ADMIN_EMAIL=${SIGNOZ_ADMIN_EMAIL:-admin@${WORKSPACE_NAME}.local}
       - SIGNOZ_ADMIN_PASSWORD=${SIGNOZ_ADMIN_PASSWORD:-Admin@zzaia1234!}
     volumes:
       - signoz-data:/var/lib/signoz

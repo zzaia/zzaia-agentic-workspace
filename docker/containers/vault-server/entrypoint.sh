@@ -282,6 +282,29 @@ setup_approle_if_needed() {
     log_success "AppRole configured — credentials in /secrets/vault-approle-*.env"
 }
 
+setup_userpass_if_needed() {
+    if [ -z "${ADMIN_EMAIL:-}" ] || [ -z "${ADMIN_PASSWORD:-}" ]; then
+        log_warn "ADMIN_EMAIL or ADMIN_PASSWORD not set — skipping userpass auth setup"
+        return 0
+    fi
+
+    log_info "Setting up userpass auth for admin..."
+
+    local root_token
+    root_token=$(jq -r '.root_token' "${VAULT_INIT_FILE}")
+    export VAULT_TOKEN="$root_token"
+
+    if ! vault auth list -address="${VAULT_ADDR}" 2>&1 | grep -q '^userpass/'; then
+        vault auth enable -address="${VAULT_ADDR}" userpass >/dev/null
+        log_info "Userpass auth method enabled"
+    fi
+
+    vault write -address="${VAULT_ADDR}" "auth/userpass/users/${ADMIN_EMAIL}" \
+        password="${ADMIN_PASSWORD}" \
+        token_policies="workspace-policy" >/dev/null
+    log_success "Userpass admin configured: ${ADMIN_EMAIL}"
+}
+
 load_bws_token() {
     # Compose secrets mount to /run/secrets/ as tmpfs — never on disk, not in docker inspect
     local token_file="/run/secrets/bws_token"
@@ -322,6 +345,7 @@ main() {
     generate_git_sidecar_keys
     bootstrap_secrets_from_bws
     setup_approle_if_needed
+    setup_userpass_if_needed
 
     log_success "Vault setup complete. Vault is running as background process."
     log_info "Vault is running (PID $VAULT_BG_PID). Entrypoint will monitor it."

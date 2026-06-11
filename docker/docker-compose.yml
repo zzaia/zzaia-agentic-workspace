@@ -19,6 +19,8 @@ services:
     environment:
       - VAULT_ADDR=http://0.0.0.0:8200
       - VAULT_PORT=${VAULT_PORT:-8200}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     networks:
       - mcp
     cap_add:

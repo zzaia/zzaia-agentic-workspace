@@ -8,6 +8,8 @@ Usage: ./deploy/ubuntu.sh [OPTIONS]
 Options:
   --workspace-name NAME         Workspace name (required)
   --ssh-public-key KEY          SSH public key (required)
+  --admin-email EMAIL           Admin email for SigNoz and Vault (required)
+  --admin-password PASSWORD     Admin password for SigNoz and Vault (required)
   --gpu                         Enable GPU support (default: false)
   --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
@@ -23,15 +25,17 @@ Options:
   --help                        Show this help message
 
 Examples:
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --gpu --profiles vscode
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3301
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --no-bws
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1!
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --gpu --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --observability --signoz-port 3301
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --no-bws
 EOF
 }
 
 WORKSPACE_NAME=""
 SSH_PUBLIC_KEY=""
+ADMIN_EMAIL=""
+ADMIN_PASSWORD=""
 GPU_ENABLED="false"
 OBSERVABILITY_ENABLED="false"
 NO_BWS="false"
@@ -53,6 +57,14 @@ while [ $# -gt 0 ]; do
             ;;
         --ssh-public-key)
             SSH_PUBLIC_KEY="$2"
+            shift 2
+            ;;
+        --admin-email)
+            ADMIN_EMAIL="$2"
+            shift 2
+            ;;
+        --admin-password)
+            ADMIN_PASSWORD="$2"
             shift 2
             ;;
         --gpu)
@@ -115,8 +127,8 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-if [ -z "$WORKSPACE_NAME" ] || [ -z "$SSH_PUBLIC_KEY" ]; then
-    echo "Error: --workspace-name and --ssh-public-key are required"
+if [ -z "$WORKSPACE_NAME" ] || [ -z "$SSH_PUBLIC_KEY" ] || [ -z "$ADMIN_EMAIL" ] || [ -z "$ADMIN_PASSWORD" ]; then
+    echo "Error: --workspace-name, --ssh-public-key, --admin-email and --admin-password are required"
     show_usage
     exit 1
 fi
@@ -145,18 +157,13 @@ fi
 SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../docker/.env"
 
-# Preserve SIGNOZ_JWT_SECRET and SIGNOZ_ADMIN_PASSWORD across re-deployments; generate once if missing
+# Preserve SIGNOZ_JWT_SECRET across re-deployments; generate once if missing
 SIGNOZ_JWT_SECRET=""
-SIGNOZ_ADMIN_PASSWORD=""
-ADMIN_PASSWORD=""
 if [ -f "$ENV_FILE" ]; then
     SIGNOZ_JWT_SECRET=$(grep '^SIGNOZ_JWT_SECRET=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
-    SIGNOZ_ADMIN_PASSWORD=$(grep '^SIGNOZ_ADMIN_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
-    ADMIN_PASSWORD=$(grep '^ADMIN_PASSWORD=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
 fi
 [ -z "$SIGNOZ_JWT_SECRET" ] && SIGNOZ_JWT_SECRET=$(openssl rand -hex 32)
-[ -z "$SIGNOZ_ADMIN_PASSWORD" ] && SIGNOZ_ADMIN_PASSWORD="Admin@$(openssl rand -hex 8)!"
-[ -z "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD="Admin@$(openssl rand -hex 8)!"
+SIGNOZ_ADMIN_EMAIL="$ADMIN_EMAIL"
 
 cat > "$ENV_FILE" << EOF
 WORKSPACE_NAME=$WORKSPACE_NAME
@@ -173,7 +180,9 @@ JUPYTER_PORT=$JUPYTER_PORT
 PORTAINER_PORT=$PORTAINER_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
-SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
+SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
+SIGNOZ_ADMIN_PASSWORD=$ADMIN_PASSWORD
+ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_PASSWORD=$ADMIN_PASSWORD
 EOF
 

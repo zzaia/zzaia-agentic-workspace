@@ -7,6 +7,12 @@ param(
     [Parameter(Mandatory = $false)]
     [string] $SshPublicKey,
 
+    [Parameter(Mandatory = $true)]
+    [string] $AdminEmail,
+
+    [Parameter(Mandatory = $true)]
+    [string] $AdminPassword,
+
     [Parameter(Mandatory = $false)]
     [switch] $Gpu = $false,
 
@@ -48,6 +54,8 @@ Usage: .\deploy\windows.ps1 [OPTIONS]
 Options:
   -WorkspaceName NAME              Workspace name (required)
   -SshPublicKey KEY                SSH public key (required)
+  -AdminEmail EMAIL                Admin email for SigNoz and Vault (required)
+  -AdminPassword PASSWORD          Admin password for SigNoz and Vault (required)
   -Gpu                             Enable GPU support (default: $false)
   -Observability                   Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: $false)
   -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
@@ -61,15 +69,16 @@ Options:
   -Profiles PROFILES               Comma-separated server profiles: vscode,jupyter,devcontainer,tunnel,portainer
 
 Examples:
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Gpu -Profiles vscode
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -Observability -SignozPort 3301
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -NoBws
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1!
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Gpu -Profiles vscode
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Observability -SignozPort 3301
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -NoBws
 '@
 }
 
-if ([string]::IsNullOrWhiteSpace($WorkspaceName) -or [string]::IsNullOrWhiteSpace($SshPublicKey)) {
-    Write-Error "Error: -WorkspaceName and -SshPublicKey are required"
+if ([string]::IsNullOrWhiteSpace($WorkspaceName) -or [string]::IsNullOrWhiteSpace($SshPublicKey) -or
+    [string]::IsNullOrWhiteSpace($AdminEmail) -or [string]::IsNullOrWhiteSpace($AdminPassword)) {
+    Write-Error "Error: -WorkspaceName, -SshPublicKey, -AdminEmail and -AdminPassword are required"
     Show-Usage
     exit 1
 }
@@ -108,25 +117,18 @@ $OBSERVABILITY_ENABLED = if ($Observability) { "true" } else { "false" }
 $ScriptDir = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $ScriptDir "docker\.env"
 
-# Preserve SIGNOZ_JWT_SECRET and SIGNOZ_ADMIN_PASSWORD across re-deployments
+# Preserve SIGNOZ_JWT_SECRET across re-deployments
 $SIGNOZ_JWT_SECRET = ""
-$SIGNOZ_ADMIN_PASSWORD = ""
 if (Test-Path $EnvFile) {
     $envContent = Get-Content $EnvFile -Raw
     if ($envContent -match "SIGNOZ_JWT_SECRET=(.+)") {
         $SIGNOZ_JWT_SECRET = $matches[1].Trim()
     }
-    if ($envContent -match "SIGNOZ_ADMIN_PASSWORD=(.+)") {
-        $SIGNOZ_ADMIN_PASSWORD = $matches[1].Trim()
-    }
 }
 if ([string]::IsNullOrWhiteSpace($SIGNOZ_JWT_SECRET)) {
     $SIGNOZ_JWT_SECRET = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | % {[char]$_})
 }
-if ([string]::IsNullOrWhiteSpace($SIGNOZ_ADMIN_PASSWORD)) {
-    $randomPart = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 16 | % {[char]$_})
-    $SIGNOZ_ADMIN_PASSWORD = "Admin@$randomPart!"
-}
+$SIGNOZ_ADMIN_EMAIL = $AdminEmail
 
 @"
 WORKSPACE_NAME=$WorkspaceName
@@ -142,7 +144,10 @@ JUPYTER_PORT=$JupyterPort
 PORTAINER_PORT=$PortainerPort
 DEPLOY_PROFILES=$Profiles
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
-SIGNOZ_ADMIN_PASSWORD=$SIGNOZ_ADMIN_PASSWORD
+SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
+SIGNOZ_ADMIN_PASSWORD=$AdminPassword
+ADMIN_EMAIL=$AdminEmail
+ADMIN_PASSWORD=$AdminPassword
 "@ | Out-File -FilePath $EnvFile -Encoding UTF8
 
 $profileArgs = @()

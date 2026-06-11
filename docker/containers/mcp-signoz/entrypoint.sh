@@ -47,6 +47,11 @@ start_server() {
     log_info "Starting SigNoz MCP server..."
     export SIGNOZ_URL="${SIGNOZ_URL:-http://signoz-server:8080}"
     export SIGNOZ_TOKEN="${SIGNOZ_TOKEN}"
+
+    signoz-mcp-server configure --url "$SIGNOZ_URL" --token "$SIGNOZ_TOKEN" 2>&1 \
+        && log_success "SigNoz MCP configured" \
+        || log_warn "signoz-mcp configure failed — server may not work"
+
     exec supergateway --port 3009 --outputTransport streamableHttp --stateful --stdio "signoz-mcp-server"
 }
 

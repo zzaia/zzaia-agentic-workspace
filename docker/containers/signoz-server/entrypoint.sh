@@ -16,7 +16,7 @@ SIGNOZ_PID=""
 SIGNOZ_URL="${SIGNOZ_URL:-http://localhost:8080}"
 WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 SIGNOZ_ADMIN_PASSWORD="${SIGNOZ_ADMIN_PASSWORD:-}"
-ADMIN_EMAIL="admin@${WORKSPACE_NAME}.local"
+ADMIN_EMAIL="${SIGNOZ_ADMIN_EMAIL:-admin@${WORKSPACE_NAME}.local}"
 DB_PATH="${SIGNOZ_SQLSTORE_SQLITE_PATH:-/var/lib/signoz/signoz.db}"
 
 # ── Cleanup handler ───────────────────────────────────────────────────────────
