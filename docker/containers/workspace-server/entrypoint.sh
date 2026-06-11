@@ -9,19 +9,14 @@ export INSTALL_PREFIX="/opt/tools"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
-# ── Setup sudo password ───────────────────────────────────────────────────────
-setup_sudo_password() {
-    if [ -f /run/secrets/admin_password ]; then
-        local pw
-        pw=$(cat /run/secrets/admin_password)
-        if [ -n "$pw" ]; then
-            echo "user:$pw" | chpasswd
-        else
-            log_warn "admin_password secret is empty"
-        fi
-    else
-        log_warn "admin_password secret not found"
-    fi
+# ── Load admin password from Docker secret for Ansible ───────────────────────
+# Exported only during bootstrap_workspace (Ansible run), then unset before sshd exec.
+# Agents connecting via SSH cannot see it in /proc/1/environ (sshd won't have it).
+load_admin_password() {
+    # cap_drop:ALL removes DAC_OVERRIDE — must read as uid 1000 (file owner), not root
+    local pw
+    pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
+    [ -n "$pw" ] && export ADMIN_PASSWORD="$pw" || log_warn "admin_password secret not found — sudo will be passwordless"
 }
 
 # ── Fetch Vault credentials via AppRole ───────────────────────────────────────
@@ -209,10 +204,11 @@ main() {
     log_info "Starting zzaia workspace-server..."
     log_info "Workspace: $WORKSPACE_NAME"
 
-    setup_sudo_password
+    load_admin_password
     fetch_vault_credentials
     setup_git_sidecar
     bootstrap_workspace
+    unset ADMIN_PASSWORD
     setup_profile_env
     setup_mcp_config
     cleanup_secrets

@@ -11,16 +11,13 @@ SERVER_PID=""
 
 # ── Setup sudo password ───────────────────────────────────────────────────────
 setup_sudo_password() {
-    if [ -f /run/secrets/admin_password ]; then
-        local pw
-        pw=$(cat /run/secrets/admin_password)
-        if [ -n "$pw" ]; then
-            echo "user:$pw" | chpasswd
-        else
-            echo "WARN: admin_password secret is empty" >&2
-        fi
+    # Read as uid 1000 (user) — cap_drop:ALL removes DAC_OVERRIDE so root can't read 0600 uid:1000 files
+    local pw
+    pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
+    if [ -n "$pw" ]; then
+        echo "user:$pw" | chpasswd
     else
-        echo "WARN: admin_password secret not found" >&2
+        echo "WARN: admin_password secret not found or empty — sudo will require manual password setup" >&2
     fi
 }
 
