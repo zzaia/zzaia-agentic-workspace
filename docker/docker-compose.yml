@@ -123,6 +123,8 @@ services:
       - GEMINI_API_KEY=AIzaDUMMYPROXYHANDLED000000000000000000
     networks:
       - mcp
+    secrets:
+      - admin_password
     cap_drop:
       - ALL
     cap_add:
@@ -559,6 +561,8 @@ services:
       - VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX=true
     networks:
       - mcp
+    secrets:
+      - admin_password
     cap_drop:
       - ALL
     cap_add:
@@ -743,3 +747,5 @@ networks:
 secrets:
   bws_token:
     file: ${BWS_SECRET_FILE:-/dev/null}
+  admin_password:
+    file: ${ADMIN_SECRET_FILE:-/dev/null}

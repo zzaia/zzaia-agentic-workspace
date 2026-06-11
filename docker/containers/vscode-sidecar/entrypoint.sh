@@ -9,6 +9,21 @@ USER_RUN=()
 VSCODE_CLI=""
 SERVER_PID=""
 
+# ── Setup sudo password ───────────────────────────────────────────────────────
+setup_sudo_password() {
+    if [ -f /run/secrets/admin_password ]; then
+        local pw
+        pw=$(cat /run/secrets/admin_password)
+        if [ -n "$pw" ]; then
+            echo "user:$pw" | chpasswd
+        else
+            echo "WARN: admin_password secret is empty" >&2
+        fi
+    else
+        echo "WARN: admin_password secret not found" >&2
+    fi
+}
+
 # ── Setup environment ─────────────────────────────────────────────────────────
 setup_env() {
     export NVM_DIR="/opt/tools/.nvm"
@@ -153,6 +168,7 @@ install_extensions() {
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
+    setup_sudo_password
     setup_env
     verify_cli
     prepare_directories

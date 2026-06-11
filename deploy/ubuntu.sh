@@ -213,8 +213,15 @@ if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
     printf '%s' "$BWS_ACCESS_TOKEN" > "$BWS_SECRET_FILE"
     export BWS_SECRET_FILE
     unset BWS_ACCESS_TOKEN
-    trap 'rm -f "$BWS_SECRET_FILE"; unset BWS_SECRET_FILE' EXIT
 fi
+
+# Write admin password to tmpfile for Docker secrets — never in container env
+ADMIN_SECRET_FILE=$(mktemp)
+chmod 600 "$ADMIN_SECRET_FILE"
+printf '%s' "$ADMIN_PASSWORD" > "$ADMIN_SECRET_FILE"
+export ADMIN_SECRET_FILE
+
+trap 'rm -f "${BWS_SECRET_FILE:-}"; rm -f "${ADMIN_SECRET_FILE:-}"; unset BWS_SECRET_FILE ADMIN_SECRET_FILE' EXIT
 
 echo ""
 echo "Starting workspace..."

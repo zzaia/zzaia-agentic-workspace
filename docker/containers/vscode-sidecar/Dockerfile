@@ -17,6 +17,7 @@ RUN apt-get update \
         libicu74 \
         git \
         openssh-client \
+        sudo \
     && rm -rf /var/lib/apt/lists/*
 
 RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $1"\necho ""\n' \
@@ -25,7 +26,8 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
 
 # Match workspace-server user uid
 RUN userdel -r ubuntu 2>/dev/null || true \
-    && useradd -m -s /bin/bash -u 1000 user
+    && useradd -m -s /bin/bash -u 1000 user \
+    && usermod -aG sudo user
 
 COPY docker/containers/vscode-sidecar/entrypoint.sh /entrypoint.sh
 COPY docker/containers/vscode-sidecar/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt

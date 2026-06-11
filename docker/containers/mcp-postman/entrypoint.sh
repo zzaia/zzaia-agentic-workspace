@@ -50,7 +50,7 @@ fetch_secrets() {
     if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
         local vault_data
         vault_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/integrations" 2>/dev/null || echo '{}')
+            "${VAULT_ADDR}/v1/secret/data/mcp/postman" 2>/dev/null || echo '{}')
         postman_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.POSTMAN_API_KEY // empty' 2>/dev/null || echo "")
     fi
 

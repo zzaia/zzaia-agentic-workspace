@@ -9,6 +9,21 @@ export INSTALL_PREFIX="/opt/tools"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
+# ── Setup sudo password ───────────────────────────────────────────────────────
+setup_sudo_password() {
+    if [ -f /run/secrets/admin_password ]; then
+        local pw
+        pw=$(cat /run/secrets/admin_password)
+        if [ -n "$pw" ]; then
+            echo "user:$pw" | chpasswd
+        else
+            log_warn "admin_password secret is empty"
+        fi
+    else
+        log_warn "admin_password secret not found"
+    fi
+}
+
 # ── Fetch Vault credentials via AppRole ───────────────────────────────────────
 fetch_vault_credentials() {
     local cred_file="/secrets/vault-approle-workspace.env"
@@ -194,6 +209,7 @@ main() {
     log_info "Starting zzaia workspace-server..."
     log_info "Workspace: $WORKSPACE_NAME"
 
+    setup_sudo_password
     fetch_vault_credentials
     setup_git_sidecar
     bootstrap_workspace

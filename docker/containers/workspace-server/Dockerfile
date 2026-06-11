@@ -19,7 +19,7 @@ COPY docker/containers/workspace-server/scripts /docker-scripts
 RUN bash /docker-scripts/build-install.sh && rm -rf /docker-scripts
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssh-server python3-pip acl jq \
+    && apt-get install -y --no-install-recommends openssh-server python3-pip acl jq sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ansible for container initialization
@@ -33,6 +33,7 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
 # Non-root user (fixed: "user", uid 1000)
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 user \
+    && usermod -aG sudo user \
     && mkdir -p /opt/zzaia/home-seed \
     && chown -R user:user /opt/zzaia
 

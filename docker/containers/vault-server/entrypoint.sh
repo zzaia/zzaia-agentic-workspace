@@ -219,8 +219,12 @@ bootstrap_secrets_from_bws() {
     done
     write_vault_kv_path "cloud" "${cloud_args[@]+"${cloud_args[@]}"}"
 
+    local postman_val
+    postman_val=$(get_bws_value "$bws_output" "POSTMAN_API_KEY")
+    [ -n "$postman_val" ] && write_vault_kv_path "mcp/postman" "POSTMAN_API_KEY=${postman_val}"
+
     local int_args=()
-    for key in POSTMAN_API_KEY NEW_RELIC_API_KEY; do
+    for key in NEW_RELIC_API_KEY; do
         local val
         val=$(get_bws_value "$bws_output" "$key")
         [ -n "$val" ] && int_args+=("${key}=${val}")
