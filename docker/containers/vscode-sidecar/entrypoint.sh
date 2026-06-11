@@ -35,6 +35,13 @@ prepare_directories() {
     "${USER_RUN[@]}" mkdir -p /home/user/.vscode-server/data/Machine /home/user/.vscode-server/extensions
     chown -R user:user /home/user/.vscode-server 2>/dev/null || true
 
+    # Ensure the workspace file exists under the WORKSPACE_NAME-derived filename
+    local ws_file="/home/user/${WORKSPACE_NAME:-zzaia}.code-workspace"
+    local ws_source="/home/user/zzaia.code-workspace"
+    if [ ! -f "$ws_file" ] && [ -f "$ws_source" ]; then
+        "${USER_RUN[@]}" ln -sf "$ws_source" "$ws_file"
+    fi
+
     local machine_settings=/home/user/.vscode-server/data/Machine/settings.json
     if [ ! -f "$machine_settings" ]; then
         "${USER_RUN[@]}" sh -c "cat > '$machine_settings'" <<'EOF'

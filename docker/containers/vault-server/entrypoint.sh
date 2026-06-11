@@ -299,10 +299,11 @@ setup_userpass_if_needed() {
         log_info "Userpass auth method enabled"
     fi
 
-    vault write -address="${VAULT_ADDR}" "auth/userpass/users/${ADMIN_EMAIL}" \
+    local vault_username="${ADMIN_EMAIL%%@*}"
+    vault write -address="${VAULT_ADDR}" "auth/userpass/users/${vault_username}" \
         password="${ADMIN_PASSWORD}" \
-        token_policies="workspace-policy" >/dev/null
-    log_success "Userpass admin configured: ${ADMIN_EMAIL}"
+        token_policies="admin-policy" >/dev/null
+    log_success "Userpass admin configured: ${vault_username} (password same as admin)"
 }
 
 load_bws_token() {

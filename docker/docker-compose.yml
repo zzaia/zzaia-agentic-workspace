@@ -19,6 +19,7 @@ services:
     environment:
       - VAULT_ADDR=http://0.0.0.0:8200
       - VAULT_PORT=${VAULT_PORT:-8200}
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     networks:
