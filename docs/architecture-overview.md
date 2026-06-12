@@ -161,7 +161,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 | Path | Contents |
 |------|---------|
-| `secret/ai` | `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY` |
+| `secret/ai` | `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY`; optional credential pool: `CLAUDE_OAUTH_TOKEN_1..N`, `ANTHROPIC_API_KEY_1..N` |
 | `secret/mcp/github` | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | `secret/mcp/azure-devops` | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | `secret/cloud` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, Bedrock/Vertex/Foundry vars |
@@ -372,6 +372,36 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 - Future applications should be integrated into the same main AppHost model instead of introducing independent dashboard control planes
 
 **Rationale**: A single AppHost keeps orchestration and control simple, avoids resource-service federation complexity, and provides a single operational dashboard endpoint for users when the AppHost is active.
+
+---
+
+### ADR 013: Anthropic Credential Pool and Rotation via bifrost
+
+**Decision**: bifrost-server supports a credential pool for Anthropic requests. Multiple OAuth tokens or API keys are fetched from Vault and distributed across requests using weight-based round-robin, with automatic circuit-breaker fallback per credential.
+
+**Credential pool configuration** (Vault `secret/ai`):
+
+| Key Pattern | Type | Priority |
+|-------------|------|----------|
+| `CLAUDE_OAUTH_TOKEN_1..N` | OAuth token (Pro/Max subscription) | Higher — OAuth tokens are inserted first |
+| `ANTHROPIC_API_KEY_1..N` | API key (pay-per-token) | Lower — used when OAuth token absent for same index |
+
+- vault-server loops indexed keys at bootstrap: `bws secret list --output json` returns all secrets; `get_bws_value()` extracts each `CLAUDE_OAUTH_TOKEN_N` / `ANTHROPIC_API_KEY_N` and writes them to `secret/ai`
+- bifrost-server fetches the full pool from Vault at startup and exports `ANTHROPIC_POOL_KEY_1..N`; sets `ANTHROPIC_POOL_ENABLED=true`
+- bifrost `config.json` `keys[]` is generated dynamically: one entry per pool key with `"weight": 1` and `"value": "env.ANTHROPIC_POOL_KEY_N"`
+- All pool keys route through `auth_proxy.py` which converts the bifrost-selected `x-api-key` header value to `Authorization: Bearer` for `api.anthropic.com`
+- **Backward compatible**: if no indexed keys exist, singular `ANTHROPIC_EFFECTIVE_KEY` behavior is unchanged
+
+**Rotation and fallback behavior:**
+
+| Trigger | Behavior |
+|---------|----------|
+| Normal operation | Weight-based round-robin across all pool keys — traffic distributed even when all keys are healthy |
+| `429 Too Many Requests` | bifrost cools down the rate-limited key and routes to remaining pool members |
+| `401 Unauthorized` | bifrost marks the key unhealthy; remaining pool keys serve traffic |
+| All pool keys exhausted | bifrost returns the upstream error to the caller |
+
+**Rationale**: Single-credential setups are rate-limited by the quota of one account. A credential pool distributes load across multiple Pro/Max or API subscriptions, increasing effective throughput without changing any upstream agent or MCP configuration.
 
 ---
 

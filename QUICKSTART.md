@@ -112,6 +112,20 @@ If you provide `BWS_ACCESS_TOKEN`, vault-server fetches all secrets automaticall
 | `GEMINI_API_KEY` | Optional | Google Gemini API key |
 | `TAVILY_API_KEY` | Optional | Tavily web search API key — used by MCP web-search tool |
 
+### Credential Pool (optional — multiple Anthropic accounts)
+
+Add indexed keys to enable credential rotation and load distribution across multiple Pro, Max, or API accounts. bifrost distributes requests via weighted round-robin and automatically bypasses rate-limited or expired credentials.
+
+| Secret Key | Description |
+|------------|-------------|
+| `CLAUDE_OAUTH_TOKEN_1` | OAuth token for account #1 — `claude setup-token` on each account |
+| `CLAUDE_OAUTH_TOKEN_2` | OAuth token for account #2 |
+| `CLAUDE_OAUTH_TOKEN_N` | Continue pattern for additional accounts |
+| `ANTHROPIC_API_KEY_1` | API key fallback for index #1 (used when OAuth absent for same index) |
+| `ANTHROPIC_API_KEY_N` | Continue pattern for additional API keys |
+
+> Indexed keys are discovered automatically at startup by iterating `N = 1, 2, 3, ...` until a missing index is found. A mix of OAuth and API keys is supported — at each index, the OAuth token takes priority if both are present. The singular `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` keys are preserved as a fallback when no indexed keys exist.
+
 ### Cloud Providers (alternative to API Key)
 
 | Secret Key | Required | Description |

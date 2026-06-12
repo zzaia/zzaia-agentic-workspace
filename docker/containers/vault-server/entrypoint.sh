@@ -195,6 +195,18 @@ bootstrap_secrets_from_bws() {
         val=$(get_bws_value "$bws_output" "$key")
         [ -n "$val" ] && ai_args+=("${key}=${val}")
     done
+
+    local idx=1
+    while true; do
+        local oauth_val api_val
+        oauth_val=$(get_bws_value "$bws_output" "CLAUDE_OAUTH_TOKEN_${idx}")
+        api_val=$(get_bws_value "$bws_output" "ANTHROPIC_API_KEY_${idx}")
+        [ -z "$oauth_val" ] && [ -z "$api_val" ] && break
+        [ -n "$oauth_val" ] && ai_args+=("CLAUDE_OAUTH_TOKEN_${idx}=${oauth_val}")
+        [ -n "$api_val" ] && ai_args+=("ANTHROPIC_API_KEY_${idx}=${api_val}")
+        idx=$((idx + 1))
+    done
+
     write_vault_kv_path "ai" "${ai_args[@]+"${ai_args[@]}"}"
 
     local gh_val
