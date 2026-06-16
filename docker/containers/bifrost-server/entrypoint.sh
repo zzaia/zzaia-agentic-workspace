@@ -33,7 +33,7 @@ vault_approle_login() {
 fetch_secrets() {
     log_info "Fetching secrets from Vault..."
 
-    local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key=""
+    local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key="" aws_key_id=""
     local -a pool_keys=()
 
     if [ -n "${VAULT_ADDR:-}" ]; then
@@ -69,11 +69,19 @@ fetch_secrets() {
         integrations_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
             "${VAULT_ADDR}/v1/secret/data/integrations" 2>/dev/null || echo '{}')
         new_relic_api_key=$(printf '%s' "$integrations_data" | jq -r '.data.data.NEW_RELIC_API_KEY // empty' 2>/dev/null || echo "")
+
+        local aws_data
+        aws_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/mcp/aws" 2>/dev/null || echo '{}')
+        aws_key_id=$(printf '%s' "$aws_data" | jq -r '.data.data.AWS_ACCESS_KEY_ID // empty' 2>/dev/null || echo "")
     fi
 
     unset VAULT_TOKEN
     export NEW_RELIC_API_KEY_AVAILABLE=""
     [ -n "$new_relic_api_key" ] && export NEW_RELIC_API_KEY_AVAILABLE="true" && log_info "New Relic: API key available" || log_warn "New Relic: no API key — skipping newrelic MCP"
+
+    export AWS_MCP_AVAILABLE=""
+    [ -n "$aws_key_id" ] && export AWS_MCP_AVAILABLE="true" && log_info "AWS: credentials available" || log_warn "AWS: no credentials — skipping AWS MCP tools"
 
     if [ ${#pool_keys[@]} -gt 0 ]; then
         export ANTHROPIC_POOL_ENABLED="true"
@@ -110,6 +118,14 @@ generate_config() {
     local newrelic_entry=""
     [ -n "${NEW_RELIC_API_KEY_AVAILABLE:-}" ] && \
         newrelic_entry='      { "name": "newrelic", "connection_type": "http", "connection_string": "http://mcp-newrelic:3004/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
+    local aws_entries=""
+    [ -n "${AWS_MCP_AVAILABLE:-}" ] && aws_entries='
+      { "name": "aws_sns_sqs", "connection_type": "http", "connection_string": "http://mcp-aws-sns-sqs:3010/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      { "name": "aws_cloudwatch", "connection_type": "http", "connection_string": "http://mcp-aws-cloudwatch:3011/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      { "name": "aws_cloudwatch_xray", "connection_type": "http", "connection_string": "http://mcp-aws-cloudwatch-xray:3012/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      { "name": "aws_ecs", "connection_type": "http", "connection_string": "http://mcp-aws-ecs:3013/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      { "name": "aws_postgres", "connection_type": "http", "connection_string": "http://mcp-aws-postgres:3014/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
     local anthropic_keys=""
     if [ "${ANTHROPIC_POOL_ENABLED:-}" = "true" ]; then
@@ -169,7 +185,7 @@ generate_config() {
       { "name": "postman", "connection_type": "http", "connection_string": "http://mcp-postman:3003/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
       ${newrelic_entry}
       { "name": "github", "connection_type": "http", "connection_string": "http://mcp-github:3005/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "playwright", "connection_type": "http", "connection_string": "http://mcp-playwright:3006/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }
+      { "name": "playwright", "connection_type": "http", "connection_string": "http://mcp-playwright:3006/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }${aws_entries}
     ]
   }
 }

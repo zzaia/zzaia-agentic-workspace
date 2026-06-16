@@ -96,9 +96,9 @@ MCP tools reach Claude Code through two paths:
 - `headroom`, `bifrost` — infrastructure servers (see below).
 
 **bifrost Code Mode** (`bifrost` entry in `.mcp.json`):
-- bifrost's `/mcp` endpoint exposes **Code Mode tools only** (`listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode`) for Starlark sandbox execution. It does NOT proxy upstream MCP server tools.
+- bifrost's `/mcp` endpoint exposes **Code Mode tools** — tavily, azure_devops, postman, github, newrelic, aws_sns_sqs, aws_cloudwatch, aws_cloudwatch_xray, aws_ecs, aws_postgres, playwright — plus Code Mode methods (`listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode`) for Starlark sandbox execution.
 - The `bifrost` entry authenticates with virtual key `sk-bf-workspace-agent-001` via `x-api-key` header.
-- Upstream tools (tavily, azure_devops, etc.) are accessible through bifrost when it is used as `ANTHROPIC_BASE_URL`; in the current headroom-proxy setup they are accessed via direct connections above.
+- AWS MCP tools are available via bifrost Code Mode when credentials are present; otherwise idle with no impact.
 
 `headroom` tools are available directly (not through bifrost Code Mode).
 

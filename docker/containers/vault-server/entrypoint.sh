@@ -231,6 +231,14 @@ bootstrap_secrets_from_bws() {
     done
     write_vault_kv_path "cloud" "${cloud_args[@]+"${cloud_args[@]}"}"
 
+    local aws_mcp_args=()
+    for key in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION; do
+        local val
+        val=$(get_bws_value "$bws_output" "$key")
+        [ -n "$val" ] && aws_mcp_args+=("${key}=${val}")
+    done
+    write_vault_kv_path "mcp/aws" "${aws_mcp_args[@]+"${aws_mcp_args[@]}"}"
+
     local postman_val
     postman_val=$(get_bws_value "$bws_output" "POSTMAN_API_KEY")
     [ -n "$postman_val" ] && write_vault_kv_path "mcp/postman" "POSTMAN_API_KEY=${postman_val}"
