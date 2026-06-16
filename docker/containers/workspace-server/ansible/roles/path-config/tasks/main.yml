@@ -7,7 +7,36 @@
     block: |
       export NVM_DIR="{{ install_prefix }}/.nvm"
       [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-      export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:$PATH"
+
+      # Rust paths
+      if [ -d "{{ install_prefix }}/.cargo/bin" ]; then
+        export CARGO_HOME="{{ install_prefix }}/.cargo"
+        export RUSTUP_HOME="{{ install_prefix }}/.rustup"
+      fi
+
+      # Go paths
+      if [ -d "{{ install_prefix }}/go/bin" ]; then
+        export GOROOT="{{ install_prefix }}/go"
+        export GOPATH="{{ install_prefix }}/gopath"
+      fi
+
+      # Ruby paths
+      if [ -d "{{ install_prefix }}/.rbenv/bin" ]; then
+        export PATH="{{ install_prefix }}/.rbenv/bin:{{ install_prefix }}/.rbenv/shims:$PATH"
+      fi
+
+      # SDKMAN paths for Kotlin
+      if [ -d "{{ install_prefix }}/.sdkman/bin" ]; then
+        export SDKMAN_DIR="{{ install_prefix }}/.sdkman"
+        [ -s "$SDKMAN_DIR/bin/sdkman-init.sh" ] && \. "$SDKMAN_DIR/bin/sdkman-init.sh"
+      fi
+
+      # Swift paths
+      if [ -d "{{ install_prefix }}/swift/usr/bin" ]; then
+        export PATH="{{ install_prefix }}/swift/usr/bin:$PATH"
+      fi
+
+      export PATH="{{ install_prefix }}/.local/bin:{{ install_prefix }}/.npm-global/bin:{{ install_prefix }}/.dotnet:{{ install_prefix }}/.dotnet/tools:{{ install_prefix }}/miniforge3/bin:{{ install_prefix }}/.cargo/bin:{{ install_prefix }}/go/bin:$PATH"
     marker: "# {mark} ZZAIA PATH"
     create: yes
     owner: user

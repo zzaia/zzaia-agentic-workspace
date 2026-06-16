@@ -1,0 +1,45 @@
+---
+# Ruby installation via rbenv
+
+- meta: end_play
+  when: not (ruby_enabled | bool)
+
+- name: Create rbenv directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.rbenv"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Clone rbenv repository
+  ansible.builtin.shell: |
+    git clone https://github.com/rbenv/rbenv.git {{ install_prefix }}/.rbenv
+  args:
+    creates: "{{ install_prefix }}/.rbenv/bin/rbenv"
+    executable: /bin/bash
+  environment:
+    HOME: /home/user
+  changed_when: false
+
+- name: Clone ruby-build plugin
+  ansible.builtin.shell: |
+    mkdir -p {{ install_prefix }}/.rbenv/plugins
+    git clone https://github.com/rbenv/ruby-build.git {{ install_prefix }}/.rbenv/plugins/ruby-build
+  args:
+    creates: "{{ install_prefix }}/.rbenv/plugins/ruby-build/bin/ruby-build"
+    executable: /bin/bash
+  environment:
+    HOME: /home/user
+  changed_when: false
+
+- name: Install Ruby
+  ansible.builtin.shell: |
+    export PATH="{{ install_prefix }}/.rbenv/bin:$PATH"
+    {{ install_prefix }}/.rbenv/bin/rbenv install {{ ruby_version }} 2>&1 || true
+    {{ install_prefix }}/.rbenv/bin/rbenv global {{ ruby_version }}
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: /home/user
+  changed_when: false

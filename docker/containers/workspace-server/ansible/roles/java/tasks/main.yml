@@ -1,0 +1,24 @@
+---
+# Java (Temurin JDK) installation
+
+- meta: end_play
+  when: not (java_enabled | bool)
+
+- name: Install Temurin JDK repository key
+  become: true
+  ansible.builtin.apt_key:
+    url: https://packages.adoptium.net/artifactory/api/gpg/key/public
+    state: present
+
+- name: Add Temurin apt repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.adoptium.net/artifactory/deb {{ ansible_distribution_release }} main"
+    state: present
+
+- name: Install Temurin JDK
+  become: true
+  ansible.builtin.apt:
+    name: "temurin-{{ java_version }}-jdk"
+    state: present
+    update_cache: yes

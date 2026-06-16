@@ -1,0 +1,31 @@
+---
+# Go installation
+
+- meta: end_play
+  when: not (go_enabled | bool)
+
+- name: Create Go installation directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+  loop:
+    - "{{ install_prefix }}/go"
+    - "{{ install_prefix }}/gopath"
+
+- name: Download and install Go
+  ansible.builtin.shell: |
+    cd /tmp
+    curl -L "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz" -o go.tar.gz
+    tar -xzf go.tar.gz
+    rm -rf {{ install_prefix }}/go
+    mv go {{ install_prefix }}/
+    rm go.tar.gz
+  args:
+    executable: /bin/bash
+    creates: "{{ install_prefix }}/go/bin/go"
+  environment:
+    HOME: /home/user
+  changed_when: false

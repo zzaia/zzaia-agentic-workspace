@@ -41,3 +41,30 @@ cuda_version: "12.9"
 install_prefix: /opt/tools
 workspace_name: zzaia
 gpu_enabled: "false"
+
+# SDK deployment flags (read from environment, default to false)
+node_enabled: "{{ lookup('env', 'NODE_ENABLED') | default('false', true) }}"
+node_frontend_enabled: "{{ lookup('env', 'NODE_FRONTEND_ENABLED') | default('false', true) }}"
+java_enabled: "{{ lookup('env', 'JAVA_ENABLED') | default('false', true) }}"
+rust_enabled: "{{ lookup('env', 'RUST_ENABLED') | default('false', true) }}"
+lua_enabled: "{{ lookup('env', 'LUA_ENABLED') | default('false', true) }}"
+cpp_enabled: "{{ lookup('env', 'CPP_ENABLED') | default('false', true) }}"
+clojure_enabled: "{{ lookup('env', 'CLOJURE_ENABLED') | default('false', true) }}"
+go_enabled: "{{ lookup('env', 'GO_ENABLED') | default('false', true) }}"
+kotlin_enabled: "{{ lookup('env', 'KOTLIN_ENABLED') | default('false', true) }}"
+ruby_enabled: "{{ lookup('env', 'RUBY_ENABLED') | default('false', true) }}"
+php_enabled: "{{ lookup('env', 'PHP_ENABLED') | default('false', true) }}"
+swift_enabled: "{{ lookup('env', 'SWIFT_ENABLED') | default('false', true) }}"
+
+# SDK versions
+java_version: 21
+rust_version: stable
+lua_version: 5.4
+go_version: 1.24.4
+kotlin_version: 2.1.21
+ruby_version: 3.4.4
+php_version: 8.2
+swift_version: 6.1.2
+angular_cli_version: 19.2.14
+vite_version: 6.3.5
+typescript_version: 5.8.3

@@ -1,0 +1,29 @@
+---
+# Swift installation
+
+- meta: end_play
+  when: not (swift_enabled | bool)
+
+- name: Create Swift installation directory
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/swift"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Download and install Swift
+  ansible.builtin.shell: |
+    cd /tmp
+    curl -L "https://download.swift.org/swift-{{ swift_version }}-release/ubuntu2404/swift-{{ swift_version }}-RELEASE/swift-{{ swift_version }}-RELEASE-ubuntu24.04.tar.gz" \
+      -o swift.tar.gz
+    tar -xzf swift.tar.gz
+    rm -rf {{ install_prefix }}/swift
+    mv swift-{{ swift_version }}-RELEASE-ubuntu24.04/usr {{ install_prefix }}/swift/usr
+    rm -rf swift-{{ swift_version }}-RELEASE-ubuntu24.04 swift.tar.gz
+  args:
+    executable: /bin/bash
+    creates: "{{ install_prefix }}/swift/usr/bin/swift"
+  environment:
+    HOME: /home/user
+  changed_when: false

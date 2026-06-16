@@ -1,0 +1,21 @@
+---
+# Node.js frontend framework tools (Angular CLI, Vite, TypeScript)
+
+- meta: end_play
+  when: not (node_frontend_enabled | bool)
+
+- name: Install npm global frontend packages
+  ansible.builtin.shell: |
+    export NVM_DIR="{{ install_prefix }}/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    npm install -g --prefix "{{ install_prefix }}/.npm-global" \
+      "@angular/cli@{{ angular_cli_version }}" \
+      "create-vite@{{ vite_version }}" \
+      "typescript@{{ typescript_version }}"
+  args:
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ install_prefix }}/.nvm"
+    NPM_CONFIG_PREFIX: "{{ install_prefix }}/.npm-global"
+    PUPPETEER_SKIP_DOWNLOAD: "1"
+  changed_when: false

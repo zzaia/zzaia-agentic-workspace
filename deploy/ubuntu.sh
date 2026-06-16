@@ -11,6 +11,18 @@ Options:
   --admin-email EMAIL           Admin email for SigNoz and Vault (required)
   --admin-password PASSWORD     Admin password for SigNoz and Vault (required)
   --gpu                         Enable GPU support (default: false)
+  --node                        Enable Node.js runtime (default: false)
+  --node-frontend               Enable Node.js frontend tools: Angular CLI, Vite, TypeScript (default: false)
+  --java                        Enable Java (Temurin JDK 21) (default: false)
+  --rust                        Enable Rust via rustup (default: false)
+  --lua                         Enable Lua with luarocks (default: false)
+  --cpp                         Enable C++ build tools: clang, cmake, build-essential (default: false)
+  --clojure                     Enable Clojure (auto-enables Java) (default: false)
+  --go                          Enable Go 1.24.4 (default: false)
+  --kotlin                      Enable Kotlin via SDKMAN (auto-enables Java) (default: false)
+  --ruby                        Enable Ruby via rbenv (default: false)
+  --php                         Enable PHP 8.2 with Composer (default: false)
+  --swift                       Enable Swift 6.1.2 (default: false)
   --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --vault-port PORT             Vault server port (default: 8200)
@@ -26,9 +38,9 @@ Options:
 
 Examples:
   ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1!
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --gpu --profiles vscode
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --observability --signoz-port 3301
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --no-bws
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --gpu --java --rust --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --node-frontend --go --ruby
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --clojure --kotlin --observability
 EOF
 }
 
@@ -37,6 +49,18 @@ SSH_PUBLIC_KEY=""
 ADMIN_EMAIL=""
 ADMIN_PASSWORD=""
 GPU_ENABLED="false"
+NODE_ENABLED="false"
+NODE_FRONTEND_ENABLED="false"
+JAVA_ENABLED="false"
+RUST_ENABLED="false"
+LUA_ENABLED="false"
+CPP_ENABLED="false"
+CLOJURE_ENABLED="false"
+GO_ENABLED="false"
+KOTLIN_ENABLED="false"
+RUBY_ENABLED="false"
+PHP_ENABLED="false"
+SWIFT_ENABLED="false"
 OBSERVABILITY_ENABLED="false"
 NO_BWS="false"
 VAULT_PORT="8200"
@@ -69,6 +93,57 @@ while [ $# -gt 0 ]; do
             ;;
         --gpu)
             GPU_ENABLED="true"
+            shift
+            ;;
+        --node)
+            NODE_ENABLED="true"
+            shift
+            ;;
+        --node-frontend)
+            NODE_FRONTEND_ENABLED="true"
+            NODE_ENABLED="true"
+            shift
+            ;;
+        --java)
+            JAVA_ENABLED="true"
+            shift
+            ;;
+        --rust)
+            RUST_ENABLED="true"
+            shift
+            ;;
+        --lua)
+            LUA_ENABLED="true"
+            shift
+            ;;
+        --cpp)
+            CPP_ENABLED="true"
+            shift
+            ;;
+        --clojure)
+            CLOJURE_ENABLED="true"
+            JAVA_ENABLED="true"
+            shift
+            ;;
+        --go)
+            GO_ENABLED="true"
+            shift
+            ;;
+        --kotlin)
+            KOTLIN_ENABLED="true"
+            JAVA_ENABLED="true"
+            shift
+            ;;
+        --ruby)
+            RUBY_ENABLED="true"
+            shift
+            ;;
+        --php)
+            PHP_ENABLED="true"
+            shift
+            ;;
+        --swift)
+            SWIFT_ENABLED="true"
             shift
             ;;
         --observability)
@@ -169,6 +244,18 @@ cat > "$ENV_FILE" << EOF
 WORKSPACE_NAME=$WORKSPACE_NAME
 SSH_PUBLIC_KEY=$SSH_PUBLIC_KEY
 GPU_ENABLED=$GPU_ENABLED
+NODE_ENABLED=$NODE_ENABLED
+NODE_FRONTEND_ENABLED=$NODE_FRONTEND_ENABLED
+JAVA_ENABLED=$JAVA_ENABLED
+RUST_ENABLED=$RUST_ENABLED
+LUA_ENABLED=$LUA_ENABLED
+CPP_ENABLED=$CPP_ENABLED
+CLOJURE_ENABLED=$CLOJURE_ENABLED
+GO_ENABLED=$GO_ENABLED
+KOTLIN_ENABLED=$KOTLIN_ENABLED
+RUBY_ENABLED=$RUBY_ENABLED
+PHP_ENABLED=$PHP_ENABLED
+SWIFT_ENABLED=$SWIFT_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 VAULT_PORT=$VAULT_PORT
 SSH_PORT=$SSH_PORT

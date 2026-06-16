@@ -1,0 +1,31 @@
+---
+# PHP installation with Composer
+
+- meta: end_play
+  when: not (php_enabled | bool)
+
+- name: Add PHP repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: "ppa:ondrej/php"
+    state: present
+
+- name: Install PHP
+  become: true
+  ansible.builtin.apt:
+    name:
+      - "php{{ php_version }}-cli"
+      - "php{{ php_version }}-common"
+      - "php{{ php_version }}-curl"
+      - "php{{ php_version }}-mbstring"
+    state: present
+    update_cache: yes
+
+- name: Download Composer installer
+  become: true
+  ansible.builtin.shell: |
+    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/composer
+  changed_when: false

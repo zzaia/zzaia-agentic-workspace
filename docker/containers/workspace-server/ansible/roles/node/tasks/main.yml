@@ -1,6 +1,9 @@
 ---
 # Node.js and npm global installation via nvm
 
+- meta: end_play
+  when: not (node_enabled | bool)
+
 - name: Create NVM directory
   ansible.builtin.file:
     path: "{{ install_prefix }}/.nvm"

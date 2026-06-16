@@ -1,0 +1,30 @@
+---
+# Rust installation via rustup
+
+- meta: end_play
+  when: not (rust_enabled | bool)
+
+- name: Create Rust directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+  loop:
+    - "{{ install_prefix }}/.cargo"
+    - "{{ install_prefix }}/.rustup"
+
+- name: Install Rust via rustup
+  ansible.builtin.shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- -y --no-modify-path \
+      --default-toolchain {{ rust_version }}
+  args:
+    executable: /bin/bash
+    creates: "{{ install_prefix }}/.cargo/bin/rustc"
+  environment:
+    CARGO_HOME: "{{ install_prefix }}/.cargo"
+    RUSTUP_HOME: "{{ install_prefix }}/.rustup"
+    HOME: /home/user
+  changed_when: false

@@ -1,0 +1,14 @@
+---
+# Lua installation
+
+- meta: end_play
+  when: not (lua_enabled | bool)
+
+- name: Install Lua
+  become: true
+  ansible.builtin.apt:
+    name:
+      - "lua{{ lua_version }}"
+      - luarocks
+    state: present
+    update_cache: yes

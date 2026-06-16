@@ -7,7 +7,18 @@
     - { role: system, tags: [system] }
     - user-setup
 
-# Play 2: User-level tool installation
+# Play 2: Root-level SDK installation (must run with become: true for package managers)
+- name: Root-level SDK installation
+  hosts: local
+  gather_facts: no
+  roles:
+    - java
+    - lua
+    - cpp
+    - clojure
+    - php
+
+# Play 3: User-level tool installation
 - name: User-level tool installation
   hosts: local
   become: yes
@@ -16,12 +27,18 @@
   roles:
     - vscode-cli
     - node
+    - node-frontend
     - dotnet
     - python
     - cli
+    - rust
+    - go
+    - kotlin
+    - ruby
+    - swift
     - path-config
 
-# Play 3: Root-level post-installation (credentials, GPU — entrypoint runs as root, no become needed)
+# Play 4: Root-level post-installation (credentials, GPU — entrypoint runs as root, no become needed)
 - name: Root-level post-installation
   hosts: local
   gather_facts: no

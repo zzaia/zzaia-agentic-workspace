@@ -79,6 +79,18 @@ bootstrap_workspace() {
         -e "install_prefix=${INSTALL_PREFIX}" \
         -e "workspace_name=${WORKSPACE_NAME}" \
         -e "gpu_enabled=${GPU_ENABLED:-false}" \
+        -e "node_enabled=${NODE_ENABLED:-false}" \
+        -e "node_frontend_enabled=${NODE_FRONTEND_ENABLED:-false}" \
+        -e "java_enabled=${JAVA_ENABLED:-false}" \
+        -e "rust_enabled=${RUST_ENABLED:-false}" \
+        -e "lua_enabled=${LUA_ENABLED:-false}" \
+        -e "cpp_enabled=${CPP_ENABLED:-false}" \
+        -e "clojure_enabled=${CLOJURE_ENABLED:-false}" \
+        -e "go_enabled=${GO_ENABLED:-false}" \
+        -e "kotlin_enabled=${KOTLIN_ENABLED:-false}" \
+        -e "ruby_enabled=${RUBY_ENABLED:-false}" \
+        -e "php_enabled=${PHP_ENABLED:-false}" \
+        -e "swift_enabled=${SWIFT_ENABLED:-false}" \
         2>&1
 
     log_success "Workspace bootstrap complete"

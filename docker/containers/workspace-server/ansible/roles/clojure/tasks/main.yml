@@ -1,0 +1,22 @@
+---
+# Clojure installation via official installer
+
+- meta: end_play
+  when: not (clojure_enabled | bool)
+
+- name: Download Clojure installer
+  ansible.builtin.shell: |
+    curl -O https://download.clojure.org/install/linux-install.sh
+    chmod +x linux-install.sh
+  args:
+    creates: /tmp/linux-install.sh
+    executable: /bin/bash
+  changed_when: false
+
+- name: Install Clojure
+  become: true
+  ansible.builtin.shell: |
+    bash /tmp/linux-install.sh
+  args:
+    executable: /bin/bash
+  changed_when: false
