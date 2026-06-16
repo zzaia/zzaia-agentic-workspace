@@ -1,17 +1,24 @@
 ---
 # PHP installation with Composer
 
-- meta: end_play
+- meta: end_role
   when: not (php_enabled | bool)
 
-- name: Add PHP repository
-  become: true
-  ansible.builtin.apt_repository:
-    repo: "ppa:ondrej/php"
-    state: present
+- name: Add sury.org GPG key
+  ansible.builtin.shell: |
+    curl -sSLo /usr/share/keyrings/sury-php.gpg https://packages.sury.org/php/apt.gpg
+  args:
+    executable: /bin/bash
+    creates: /usr/share/keyrings/sury-php.gpg
+  changed_when: false
+
+- name: Add PHP apt repository
+  ansible.builtin.copy:
+    content: "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ {{ ansible_distribution_release }} main\n"
+    dest: /etc/apt/sources.list.d/sury-php.list
+    mode: "0644"
 
 - name: Install PHP
-  become: true
   ansible.builtin.apt:
     name:
       - "php{{ php_version }}-cli"
@@ -21,8 +28,7 @@
     state: present
     update_cache: yes
 
-- name: Download Composer installer
-  become: true
+- name: Install Composer
   ansible.builtin.shell: |
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
   args:

@@ -1,7 +1,7 @@
 ---
 # Rust installation via rustup
 
-- meta: end_play
+- meta: end_role
   when: not (rust_enabled | bool)
 
 - name: Create Rust directories

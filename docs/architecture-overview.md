@@ -221,17 +221,37 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
-### ADR 007: Tool Provisioning via Ansible Roles
+### ADR 007: Tool Provisioning via Ansible Roles with Opt-In SDK Flags
 
-**Decision**: Tool installation uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in three plays: system setup (root), user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root).
+**Decision**: Tool installation uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in four plays: system setup (root), root-level SDKs, user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root).
 
-- Roles: `system`, `user-setup`, `vscode-cli`, `node`, `dotnet`, `python`, `cli`, `path-config`, `credentials`, `gpu`
+**Always-installed roles** (defaults, every deployment):
+- `system`, `user-setup`, `vscode-cli`, `dotnet`, `python`, `cli`, `path-config`, `credentials`, `gpu`
+
+**Opt-in SDK roles** (activated by deploy-time flags, each guarded by `meta: end_play when: not (sdk_enabled | bool)`):
+
+| Role | Flag | Dependency |
+|------|------|-----------|
+| `node` | `--node` | — |
+| `node-frontend` | `--node-frontend` | auto-enables `--node` |
+| `java` | `--java` | — |
+| `rust` | `--rust` | — |
+| `lua` | `--lua` | — |
+| `cpp` | `--cpp` | — |
+| `clojure` | `--clojure` | auto-enables `--java` |
+| `go` | `--go` | — |
+| `kotlin` | `--kotlin` | auto-enables `--java` |
+| `ruby` | `--ruby` | — |
+| `php` | `--php` | — |
+| `swift` | `--swift` | — |
+
+- SDK flags flow: deploy script → `.env` → `docker-compose.yml` env → `entrypoint.sh` Ansible `-e` args → `group_vars/all.yml` lookup → role `when:` guard
 - Version pins live in `docker/containers/workspace-server/ansible/group_vars/all.yml` — single file to bump tool versions
 - All user-space tools install to `INSTALL_PREFIX=/opt/tools` (separate volume from /home/user)
 - Bootstrap marker: `/opt/tools/.bootstrap/tools.ready`
 - workspace-server runs Ansible playbook during entrypoint; optional servers skip it (tools already in shared tools volume)
 
-**Rationale**: Ansible replaces shell script + mise with a declarative, modular, industry-standard infrastructure tool. Roles are composable, reusable, and idempotent. All tool versions centralized in a single YAML file.
+**Rationale**: Opt-in SDK flags eliminate runtime overhead for SDKs not needed by the project. The `meta: end_play` pattern keeps each role self-contained with no site.yml coupling. Dependency auto-resolution in the deploy script (Clojure/Kotlin → Java, node-frontend → node) prevents misconfiguration at the source rather than at install time.
 
 ---
 
@@ -788,7 +808,7 @@ zzaia-agentic-workspace/
 | **Fluent Bit** | **Docker container log collection → SigNoz Loki endpoint** |
 | **OTel Collector** | **Prometheus scraper (qdrant, neo4j, vault, cAdvisor) → SigNoz OTLP gRPC** |
 | **cAdvisor** | **Container resource metrics (CPU, memory, network, I/O) for all containers** |
-| Tool provisioning | Ansible roles (workspace-server): system, user-setup, vscode-cli, node, dotnet, python, cli, path-config, credentials, gpu; version pins in `group_vars/all.yml` |
+| Tool provisioning | Ansible roles (workspace-server): **always-on**: system, user-setup, vscode-cli, dotnet, python, cli, path-config, credentials, gpu; **opt-in**: node, node-frontend, java, rust, lua, cpp, clojure, go, kotlin, ruby, php, swift; version pins in `group_vars/all.yml` |
 | MCP bridge | supergateway@3.4.3 (streamableHttp transport, pre-installed at build time) |
 | Multi-tenancy | Docker Compose project namespacing |
 | Secret lifecycle | BWS_ACCESS_TOKEN → vault-server bws fetch → Vault KV (AES-256-GCM at rest) → unset; manage via Vault UI |

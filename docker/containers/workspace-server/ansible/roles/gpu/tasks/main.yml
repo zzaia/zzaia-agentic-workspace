@@ -2,7 +2,7 @@
 # GPU support setup (NVIDIA Container Toolkit)
 
 - name: Skip GPU setup if disabled
-  meta: end_play
+  meta: end_role
   when: not (gpu_enabled | bool)
 
 - name: Check if nvidia-ctk is installed

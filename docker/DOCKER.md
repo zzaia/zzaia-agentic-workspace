@@ -31,8 +31,52 @@ See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short 
 
 # With observability enabled:
 ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3301
-# SigNoz UI admin account and API token are auto-provisioned at deploy time
+
+# With selective SDKs:
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
+  --java --rust --node-frontend --go --kotlin
 ```
+
+---
+
+## SDK Deployment Flags
+
+**.NET and Python are always installed.** All other SDKs are opt-in via deploy flags and installed by Ansible at first container start (persisted in the `workspace-tools` volume).
+
+| Flag (Ubuntu/macOS) | Flag (Windows) | SDK | Install method | Auto-enables |
+|---------------------|---------------|-----|---------------|--------------|
+| `--node` | `-Node` | Node.js 24 via NVM | NVM | — |
+| `--node-frontend` | `-NodeFrontend` | Angular CLI, Vite, TypeScript | npm global | `--node` |
+| `--java` | `-Java` | Temurin JDK 21 | apt (Adoptium repo) | — |
+| `--rust` | `-Rust` | Rust (stable) | rustup | — |
+| `--lua` | `-Lua` | Lua 5.4 + luarocks | apt | — |
+| `--cpp` | `-Cpp` | clang, cmake, build-essential | apt | — |
+| `--clojure` | `-Clojure` | Clojure CLI | official installer | `--java` |
+| `--go` | `-Go` | Go 1.24.4 | official binary | — |
+| `--kotlin` | `-Kotlin` | Kotlin 2.1.21 | SDKMAN | `--java` |
+| `--ruby` | `-Ruby` | Ruby 3.4.4 | rbenv | — |
+| `--php` | `-Php` | PHP 8.2 + Composer | apt + script | — |
+| `--swift` | `-Swift` | Swift 6.1.2 | swift.org binary | — |
+
+**Dependency chains** (auto-resolved by deploy script):
+- `--node-frontend` enables `--node`
+- `--clojure` enables `--java` (Clojure requires JVM)
+- `--kotlin` enables `--java` (Kotlin compiles to JVM bytecode)
+
+**Install locations** (all under `INSTALL_PREFIX=/opt/tools`):
+
+| SDK | Path |
+|-----|------|
+| Node.js | `/opt/tools/.nvm/` |
+| Rust | `/opt/tools/.cargo/`, `/opt/tools/.rustup/` |
+| Go | `/opt/tools/go/` (gopath: `/opt/tools/gopath/`) |
+| Ruby | `/opt/tools/.rbenv/` |
+| Kotlin | `/opt/tools/.sdkman/` |
+| Swift | `/opt/tools/swift/` |
+| Java, Lua, C++, PHP | System paths via apt |
+| Clojure | `/usr/local/bin/` |
+
+SDKs are installed once and persist across container restarts. Delete the `workspace-tools` volume to force reinstallation.
 
 After the first run, start and stop the workspace from **Docker Desktop** or:
 
@@ -262,18 +306,36 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 
 ## What's installed
 
+**Always installed (defaults):**
+
 | Category | Tools |
 |----------|-------|
-| Runtimes | Node.js 24, Python 3.12, .NET 10, Go, Rust, Java |
-| CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid, Azure CLI |
+| Runtimes | Python 3.12, .NET 10 |
+| CLI tools | Claude Code CLI, Dapr, k6, D2, Mermaid, Azure CLI, GitHub CLI |
 | Editor | code-server + Claude Code extension — browser on port 8080 (vscode profile) |
-| Data science | Miniforge3 (in workspace-tools), venv-development, venv-analytics |
 | Python packages | pypdf, python-docx, textual, jinja2, graphviz, diagrams, azure-cli |
 | Development | venv-development: FastAPI, Uvicorn, Pydantic, HTTPx, SQLAlchemy, Alembic, python-jose, passlib, python-multipart, aiofiles, typer, loguru, pytest |
 | ML packages *(GPU_ENABLED=true)* | venv-analytics: PyTorch, headroom-ai[ml], scikit-learn |
 | Proxy server | headroom-ai, fastapi, uvicorn, httpx (in ml-server's venv-system) |
 | .NET tools | Aspire workload, Aspirate |
 | System | tmux, PlantUML, tectonic, git, build-essential |
+
+**Opt-in SDKs** (via deploy flags — see [SDK Deployment Flags](#sdk-deployment-flags)):
+
+| Flag | Adds |
+|------|------|
+| `--node` | Node.js 24, NVM, npm globals (Claude Code CLI, Mermaid CLI, Codex, Gemini CLI) |
+| `--node-frontend` | + Angular CLI, Vite, TypeScript |
+| `--java` | Temurin JDK 21 |
+| `--rust` | Rust stable, cargo |
+| `--lua` | Lua 5.4, luarocks |
+| `--cpp` | clang, cmake, build-essential |
+| `--clojure` | Clojure CLI (+ Java auto-enabled) |
+| `--go` | Go 1.24.4 |
+| `--kotlin` | Kotlin 2.1.21 via SDKMAN (+ Java auto-enabled) |
+| `--ruby` | Ruby 3.4.4 via rbenv |
+| `--php` | PHP 8.2, Composer |
+| `--swift` | Swift 6.1.2 |
 
 ---
 

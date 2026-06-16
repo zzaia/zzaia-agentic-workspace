@@ -1,7 +1,7 @@
 ---
 # Node.js frontend framework tools (Angular CLI, Vite, TypeScript)
 
-- meta: end_play
+- meta: end_role
   when: not (node_frontend_enabled | bool)
 
 - name: Install npm global frontend packages

@@ -173,7 +173,31 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-Optional flags: `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`.
+**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`.
+
+**SDK flags** (opt-in, installed at first container start):
+
+| Flag (Ubuntu/macOS) | Flag (Windows) | SDK installed | Auto-enables |
+|---------------------|---------------|---------------|--------------|
+| `--node` | `-Node` | Node.js 24 via NVM | — |
+| `--node-frontend` | `-NodeFrontend` | Angular CLI, Vite, TypeScript (npm globals) | `--node` |
+| `--java` | `-Java` | Temurin JDK 21 | — |
+| `--rust` | `-Rust` | Rust via rustup | — |
+| `--lua` | `-Lua` | Lua 5.4 + luarocks | — |
+| `--cpp` | `-Cpp` | clang, cmake, build-essential | — |
+| `--clojure` | `-Clojure` | Clojure CLI | `--java` |
+| `--go` | `-Go` | Go 1.24.4 | — |
+| `--kotlin` | `-Kotlin` | Kotlin via SDKMAN | `--java` |
+| `--ruby` | `-Ruby` | Ruby 3.4.4 via rbenv | — |
+| `--php` | `-Php` | PHP 8.2 + Composer | — |
+| `--swift` | `-Swift` | Swift 6.1.2 | — |
+
+**.NET and Python are always installed.** All other SDKs are opt-in. Example with multiple SDKs:
+
+```bash
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
+  --java --rust --node-frontend --go
+```
 
 **With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
 

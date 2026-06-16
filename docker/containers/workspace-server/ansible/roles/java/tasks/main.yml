@@ -1,23 +1,25 @@
 ---
 # Java (Temurin JDK) installation
 
-- meta: end_play
+- meta: end_role
   when: not (java_enabled | bool)
 
-- name: Install Temurin JDK repository key
-  become: true
-  ansible.builtin.apt_key:
-    url: https://packages.adoptium.net/artifactory/api/gpg/key/public
-    state: present
+- name: Add Adoptium GPG key
+  ansible.builtin.shell: |
+    curl -fsSL https://packages.adoptium.net/artifactory/api/gpg/key/public \
+      | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg
+  args:
+    executable: /bin/bash
+    creates: /usr/share/keyrings/adoptium.gpg
+  changed_when: false
 
 - name: Add Temurin apt repository
-  become: true
-  ansible.builtin.apt_repository:
-    repo: "deb https://packages.adoptium.net/artifactory/deb {{ ansible_distribution_release }} main"
-    state: present
+  ansible.builtin.copy:
+    content: "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb {{ ansible_distribution_release }} main\n"
+    dest: /etc/apt/sources.list.d/adoptium.list
+    mode: "0644"
 
 - name: Install Temurin JDK
-  become: true
   ansible.builtin.apt:
     name: "temurin-{{ java_version }}-jdk"
     state: present

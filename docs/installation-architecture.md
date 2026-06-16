@@ -22,22 +22,42 @@ Ubuntu 24.04-based Docker container for multi-agent agentic development workspac
 
 ### ADR 002: Ansible Roles for Tool Organization
 
-**Decision**: Organize tool installation into separate Ansible roles under `docker/containers/workspace-server/ansible/roles/` — one role per tool group or concern.
+**Decision**: Organize tool installation into separate Ansible roles under `docker/containers/workspace-server/ansible/roles/` — one role per tool group or concern. Roles execute in a four-play structure: system (root), root-level SDKs, user-level tools, post-installation (root).
 
-- `roles/system/` — apt packages, system config (build-time via root play)
+**Always-on roles (installed in every deployment):**
+
+- `roles/system/` — apt packages, system config (root play)
 - `roles/user-setup/` — user creation, home directory setup
 - `roles/vscode-cli/` — VS Code CLI installation
-- `roles/node/` — Node.js via NVM + npm globals (claude-code, mmdc, codex, gemini-cli)
 - `roles/dotnet/` — .NET SDK + aspire + aspirate tools
 - `roles/python/` — Miniforge3, pip packages, conda environments
 - `roles/cli/` — gh CLI, k6, d2, dapr, RTK binary, docker CLI, azure-cli
-- `roles/path-config/` — writes ~/.bashrc and ~/.profile with correct PATH
+- `roles/path-config/` — writes ~/.bashrc and ~/.profile with correct PATH (conditional PATH blocks per SDK)
 - `roles/credentials/` — Claude, GitHub, Azure authentication setup
-- `roles/gpu/` — CUDA/GPU support (optional, becomes_user: root)
+- `roles/gpu/` — CUDA/GPU support (conditional on `gpu_enabled`)
 
-Each role is independently reusable, testable, and composable. Roles called in `site.yml` three-play structure.
+**Opt-in SDK roles** (each starts with `meta: end_play when: not (sdk_enabled | bool)`):
 
-**Rationale**: Ansible roles enforce separation of concerns. Each role has its own vars, handlers, tasks, and templates. Highly reusable; can extract to role library.
+| Role | Flag | Install method | Location |
+|------|------|---------------|----------|
+| `roles/node/` | `--node` | NVM | `/opt/tools/.nvm/` |
+| `roles/node-frontend/` | `--node-frontend` | npm global | `/opt/tools/.npm-global/` |
+| `roles/java/` | `--java` | Temurin JDK 21 via apt | system |
+| `roles/rust/` | `--rust` | rustup | `/opt/tools/.cargo/`, `/opt/tools/.rustup/` |
+| `roles/lua/` | `--lua` | apt | system |
+| `roles/cpp/` | `--cpp` | apt | system |
+| `roles/clojure/` | `--clojure` | official installer | `/usr/local/bin/` |
+| `roles/go/` | `--go` | official binary | `/opt/tools/go/` |
+| `roles/kotlin/` | `--kotlin` | SDKMAN | `/opt/tools/.sdkman/` |
+| `roles/ruby/` | `--ruby` | rbenv | `/opt/tools/.rbenv/` |
+| `roles/php/` | `--php` | apt + Composer | system + `/usr/local/bin/` |
+| `roles/swift/` | `--swift` | swift.org binary | `/opt/tools/swift/` |
+
+SDK enabled flags are passed as Ansible extra vars by `entrypoint.sh` and resolved from environment via `group_vars/all.yml` `lookup('env', 'SDK_ENABLED')`.
+
+Each role is independently reusable, testable, and composable. Roles called in `site.yml` four-play structure.
+
+**Rationale**: Opt-in SDK roles eliminate install time and volume footprint for languages not needed by the project. The `meta: end_play` guard keeps the skip logic inside each role — `site.yml` remains flat and unconditional. All roles remain idempotent; Ansible's check mode can verify drift. New SDKs are added by creating a role and adding a flag to the deploy scripts — no other file changes required.
 
 ---
 
@@ -225,13 +245,24 @@ docker/
     │           ├── system/            # System packages, config (root play)
     │           ├── user-setup/        # User creation, home directory
     │           ├── vscode-cli/        # VS Code CLI
-    │           ├── node/              # Node.js + npm globals
-    │           ├── dotnet/            # .NET SDK + aspire + aspirate
-    │           ├── python/            # Miniforge3 + pip + conda envs
+    │           ├── dotnet/            # .NET SDK + aspire + aspirate (always-on)
+    │           ├── python/            # Miniforge3 + pip + conda envs (always-on)
     │           ├── cli/               # gh, k6, d2, dapr, RTK, docker CLI, azure-cli
-    │           ├── path-config/       # .bashrc, .profile PATH setup
+    │           ├── path-config/       # .bashrc, .profile PATH setup (conditional blocks per SDK)
     │           ├── credentials/       # Claude, GitHub, Azure auth
-    │           └── gpu/               # CUDA/GPU support (optional)
+    │           ├── gpu/               # CUDA/GPU support (conditional)
+    │           ├── node/              # Node.js via NVM + npm globals (opt-in: --node)
+    │           ├── node-frontend/     # Angular CLI, Vite, TypeScript npm globals (opt-in: --node-frontend)
+    │           ├── java/              # Temurin JDK 21 via apt (opt-in: --java)
+    │           ├── rust/              # Rust via rustup (opt-in: --rust)
+    │           ├── lua/               # Lua 5.4 + luarocks via apt (opt-in: --lua)
+    │           ├── cpp/               # clang, cmake, build-essential via apt (opt-in: --cpp)
+    │           ├── clojure/           # Clojure CLI via official installer (opt-in: --clojure, requires java)
+    │           ├── go/                # Go binary from go.dev (opt-in: --go)
+    │           ├── kotlin/            # Kotlin via SDKMAN (opt-in: --kotlin, requires java)
+    │           ├── ruby/              # Ruby via rbenv (opt-in: --ruby)
+    │           ├── php/               # PHP 8.2 + Composer (opt-in: --php)
+    │           └── swift/             # Swift binary from swift.org (opt-in: --swift)
     ├── ml-server/
     ├── database-qdrant/
     ├── database-neo4j/
@@ -277,12 +308,12 @@ deploy/
 | Tool Provisioning | Ansible roles (site.yml, 3-play structure) |
 | Version Pins | `ansible/group_vars/all.yml` (centralized version registry) |
 | System Tools | Docker CE CLI, tectonic (LaTeX), plantuml, tmux, VS Code CLI, system miniforge3 (/usr/local/miniforge3) |
-| JavaScript Runtime | Node.js 24 (nodejs.org tarball) + npm globals (claude-code, mmdc, codex, gemini-cli) |
-| .NET Runtime | .NET 10 SDK (dotnet-install.sh) + aspire CLI + aspirate tool |
-| Python Runtime | Miniforge (conda-forge) + pip packages + conda envs (venv-analytics, venv-development) + Azure CLI (pip) |
-| CLI Tools | gh CLI (GitHub), k6 (load testing), d2 (diagrams), dapr (distributed app runtime), RTK (Rust binary), docker CLI, azure-cli |
+| .NET Runtime | .NET 10 SDK (dotnet-install.sh) + aspire CLI + aspirate tool (always-on) |
+| Python Runtime | Miniforge (conda-forge) + pip packages + conda envs (venv-analytics, venv-development) + Azure CLI (pip) (always-on) |
+| CLI Tools | gh CLI (GitHub), k6 (load testing), d2 (diagrams), dapr (distributed app runtime), RTK (Rust binary), docker CLI, azure-cli (always-on) |
+| Opt-in SDKs | `--node`: Node.js 24 via NVM; `--node-frontend`: + Angular CLI, Vite, TypeScript; `--java`: Temurin JDK 21; `--rust`: Rust via rustup; `--lua`: Lua 5.4 + luarocks; `--cpp`: clang/cmake/build-essential; `--clojure`: Clojure CLI (auto-enables java); `--go`: Go 1.24.4; `--kotlin`: Kotlin via SDKMAN (auto-enables java); `--ruby`: Ruby 3.4.4 via rbenv; `--php`: PHP 8.2 + Composer; `--swift`: Swift 6.1.2 |
 | IDE | vscode-sidecar (browser, optional) + jupyter-sidecar (optional) + SSH daemon (always-on) |
-| Orchestration | Ansible (infrastructure automation, role-based, idempotent) |
+| Orchestration | Ansible 4-play structure (system, root-SDKs, user-tools, post-install); `meta: end_play` guards opt-in roles |
 | Bootstrap | Hash-based marker detection in entrypoint; re-runs Ansible if playbook/group_vars change |
 
 ## Related Documentation

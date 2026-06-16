@@ -1,7 +1,7 @@
 ---
 # Ruby installation via rbenv
 
-- meta: end_play
+- meta: end_role
   when: not (ruby_enabled | bool)
 
 - name: Create rbenv directory

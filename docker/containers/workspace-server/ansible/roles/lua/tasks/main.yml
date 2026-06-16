@@ -1,7 +1,7 @@
 ---
 # Lua installation
 
-- meta: end_play
+- meta: end_role
   when: not (lua_enabled | bool)
 
 - name: Install Lua

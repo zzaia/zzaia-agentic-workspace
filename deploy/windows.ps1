@@ -23,6 +23,42 @@ param(
     [switch] $NoBws = $false,
 
     [Parameter(Mandatory = $false)]
+    [switch] $Node = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $NodeFrontend = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Java = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Rust = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Lua = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Cpp = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Clojure = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Go = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Kotlin = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Ruby = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Php = $false,
+
+    [Parameter(Mandatory = $false)]
+    [switch] $Swift = $false,
+
+    [Parameter(Mandatory = $false)]
     [int] $VaultPort = 8200,
 
     [Parameter(Mandatory = $false)]
@@ -30,6 +66,9 @@ param(
 
     [Parameter(Mandatory = $false)]
     [int] $SignozPort = 3301,
+
+    [Parameter(Mandatory = $false)]
+    [int] $McpSignozPort = 3009,
 
     [Parameter(Mandatory = $false)]
     [int] $VscodePort = 8080,
@@ -59,9 +98,22 @@ Options:
   -Gpu                             Enable GPU support (default: $false)
   -Observability                   Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: $false)
   -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
+  -Node                            Install Node.js SDK (default: $false)
+  -NodeFrontend                    Install Node.js + front-end tools: Angular CLI, Vite, TypeScript (default: $false; auto-enables -Node)
+  -Java                            Install Java JDK 21 via Temurin (default: $false)
+  -Rust                            Install Rust via rustup (default: $false)
+  -Lua                             Install Lua 5.4 + luarocks (default: $false)
+  -Cpp                             Install C++ build tools: clang, cmake, build-essential (default: $false)
+  -Clojure                         Install Clojure CLI (default: $false; auto-enables -Java)
+  -Go                              Install Go SDK (default: $false)
+  -Kotlin                          Install Kotlin via SDKMAN (default: $false; auto-enables -Java)
+  -Ruby                            Install Ruby via rbenv (default: $false)
+  -Php                             Install PHP 8.2 + Composer (default: $false)
+  -Swift                           Install Swift SDK (default: $false)
   -VaultPort PORT                  Vault server port (default: 8200)
   -SshPort PORT                    SSH server port (default: 2222)
   -SignozPort PORT                 SigNoz UI port (default: 3301)
+  -McpSignozPort PORT              SigNoz MCP HTTP port (default: 3009)
   -VscodePort PORT                 VS Code server port (default: 8080)
   -AspireDashboardPort PORT        Aspire Dashboard port (default: 18890)
   -JupyterPort PORT                Jupyter port (default: 8888)
@@ -73,6 +125,7 @@ Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Gpu -Profiles vscode
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Observability -SignozPort 3301
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -NoBws
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Java -Rust -NodeFrontend -Go
 '@
 }
 
@@ -80,6 +133,16 @@ if ([string]::IsNullOrWhiteSpace($WorkspaceName) -or [string]::IsNullOrWhiteSpac
     [string]::IsNullOrWhiteSpace($AdminEmail) -or [string]::IsNullOrWhiteSpace($AdminPassword)) {
     Write-Error "Error: -WorkspaceName, -SshPublicKey, -AdminEmail and -AdminPassword are required"
     Show-Usage
+    exit 1
+}
+
+# Validate admin password meets SigNoz requirements (12+ chars, upper, lower, digit, symbol)
+if ($AdminPassword.Length -lt 12 -or
+    -not ($AdminPassword -cmatch '[A-Z]') -or
+    -not ($AdminPassword -cmatch '[a-z]') -or
+    -not ($AdminPassword -cmatch '[0-9]') -or
+    -not ($AdminPassword -match '[~!@#$%^&*()\-_+=\[\]{}|;:,.<>?/]')) {
+    Write-Error "Error: -AdminPassword must be at least 12 characters and contain uppercase, lowercase, number, and symbol. Required for SigNoz admin provisioning."
     exit 1
 }
 
@@ -114,6 +177,20 @@ if ($NoBws) {
 $GPU_ENABLED = if ($Gpu) { "true" } else { "false" }
 $OBSERVABILITY_ENABLED = if ($Observability) { "true" } else { "false" }
 
+# SDK flags — auto-resolve dependencies
+$NODE_FRONTEND_ENABLED = if ($NodeFrontend) { "true" } else { "false" }
+$NODE_ENABLED = if ($Node -or $NodeFrontend) { "true" } else { "false" }
+$JAVA_ENABLED = if ($Java -or $Clojure -or $Kotlin) { "true" } else { "false" }
+$RUST_ENABLED = if ($Rust) { "true" } else { "false" }
+$LUA_ENABLED = if ($Lua) { "true" } else { "false" }
+$CPP_ENABLED = if ($Cpp) { "true" } else { "false" }
+$CLOJURE_ENABLED = if ($Clojure) { "true" } else { "false" }
+$GO_ENABLED = if ($Go) { "true" } else { "false" }
+$KOTLIN_ENABLED = if ($Kotlin) { "true" } else { "false" }
+$RUBY_ENABLED = if ($Ruby) { "true" } else { "false" }
+$PHP_ENABLED = if ($Php) { "true" } else { "false" }
+$SWIFT_ENABLED = if ($Swift) { "true" } else { "false" }
+
 $ScriptDir = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $ScriptDir "docker\.env"
 
@@ -135,9 +212,22 @@ WORKSPACE_NAME=$WorkspaceName
 SSH_PUBLIC_KEY=$SshPublicKey
 GPU_ENABLED=$GPU_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
+NODE_ENABLED=$NODE_ENABLED
+NODE_FRONTEND_ENABLED=$NODE_FRONTEND_ENABLED
+JAVA_ENABLED=$JAVA_ENABLED
+RUST_ENABLED=$RUST_ENABLED
+LUA_ENABLED=$LUA_ENABLED
+CPP_ENABLED=$CPP_ENABLED
+CLOJURE_ENABLED=$CLOJURE_ENABLED
+GO_ENABLED=$GO_ENABLED
+KOTLIN_ENABLED=$KOTLIN_ENABLED
+RUBY_ENABLED=$RUBY_ENABLED
+PHP_ENABLED=$PHP_ENABLED
+SWIFT_ENABLED=$SWIFT_ENABLED
 VAULT_PORT=$VaultPort
 SSH_PORT=$SshPort
 SIGNOZ_PORT=$SignozPort
+MCP_SIGNOZ_PORT=$McpSignozPort
 VSCODE_PORT=$VscodePort
 ASPIRE_DASHBOARD_PORT=$AspireDashboardPort
 JUPYTER_PORT=$JupyterPort

@@ -1,7 +1,7 @@
 ---
 # Kotlin installation via SDKMAN
 
-- meta: end_play
+- meta: end_role
   when: not (kotlin_enabled | bool)
 
 - name: Create SDKMAN directory

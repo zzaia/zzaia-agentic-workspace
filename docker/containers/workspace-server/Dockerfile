@@ -19,7 +19,7 @@ COPY docker/containers/workspace-server/scripts /docker-scripts
 RUN bash /docker-scripts/build-install.sh && rm -rf /docker-scripts
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssh-server python3-pip acl jq sudo \
+    && apt-get install -y --no-install-recommends openssh-server python3-pip python3-apt acl jq sudo lsb-release \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Ansible for container initialization

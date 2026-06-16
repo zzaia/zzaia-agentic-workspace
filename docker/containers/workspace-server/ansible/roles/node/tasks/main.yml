@@ -1,7 +1,7 @@
 ---
 # Node.js and npm global installation via nvm
 
-- meta: end_play
+- meta: end_role
   when: not (node_enabled | bool)
 
 - name: Create NVM directory

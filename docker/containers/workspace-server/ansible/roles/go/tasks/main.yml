@@ -1,7 +1,7 @@
 ---
 # Go installation
 
-- meta: end_play
+- meta: end_role
   when: not (go_enabled | bool)
 
 - name: Create Go installation directories

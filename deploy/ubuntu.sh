@@ -208,6 +208,18 @@ if [ -z "$WORKSPACE_NAME" ] || [ -z "$SSH_PUBLIC_KEY" ] || [ -z "$ADMIN_EMAIL" ]
     exit 1
 fi
 
+# Validate admin password meets SigNoz requirements (12+ chars, upper, lower, digit, symbol)
+pw_len=${#ADMIN_PASSWORD}
+if [ "$pw_len" -lt 12 ] \
+   || ! echo "$ADMIN_PASSWORD" | grep -q '[A-Z]' \
+   || ! echo "$ADMIN_PASSWORD" | grep -q '[a-z]' \
+   || ! echo "$ADMIN_PASSWORD" | grep -q '[0-9]' \
+   || ! echo "$ADMIN_PASSWORD" | grep -qE '[~!@#$%^&*()\-_+=\[\]{}|;:,.<>?/]'; then
+    echo "Error: --admin-password must be at least 12 characters and contain uppercase, lowercase, number, and symbol (~!@#\$%^&*()_+-=[]{}|;:,.<>?/)."
+    echo "       This is required for SigNoz admin account provisioning."
+    exit 1
+fi
+
 echo ""
 echo "  ███████╗███████╗ █████╗ ██╗ █████╗ "
 echo "     ███╔╝   ███╔╝██╔══██╗██║██╔══██╗"

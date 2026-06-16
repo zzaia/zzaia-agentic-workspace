@@ -1,7 +1,7 @@
 ---
 # C++ build tools installation
 
-- meta: end_play
+- meta: end_role
   when: not (cpp_enabled | bool)
 
 - name: Install C++ build tools
