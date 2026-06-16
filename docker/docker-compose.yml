@@ -746,6 +746,6 @@ networks:
 
 secrets:
   bws_token:
-    file: ${BWS_SECRET_FILE:-/dev/null}
+    file: ${BWS_TOKEN_FILE:-/dev/null}
   admin_password:
     file: ${ADMIN_SECRET_FILE:-/dev/null}

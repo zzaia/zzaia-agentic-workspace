@@ -204,14 +204,15 @@ GPU_COMPOSE_FLAG=""
 OBSERVABILITY_COMPOSE_FLAG=""
 [ "$OBSERVABILITY_ENABLED" = "true" ] && OBSERVABILITY_COMPOSE_FLAG="-f ${SCRIPT_DIR}/../docker/docker-compose.observability.yml"
 
-# Write BWS token to a tmpfile sourced by Compose secrets — token reaches vault-server
-# via tmpfs /run/secrets/ (never in docker inspect, never in container env)
-BWS_SECRET_FILE=""
+BWS_TOKEN_FILE=""
 if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
-    BWS_SECRET_FILE=$(mktemp)
-    chmod 600 "$BWS_SECRET_FILE"
-    printf '%s' "$BWS_ACCESS_TOKEN" > "$BWS_SECRET_FILE"
-    export BWS_SECRET_FILE
+    BWS_CONFIG_DIR="$HOME/.config/zzaia"
+    mkdir -p "$BWS_CONFIG_DIR"
+    BWS_TOKEN_FILE="$BWS_CONFIG_DIR/bws_token"
+    chmod 600 "$BWS_CONFIG_DIR"
+    printf '%s' "$BWS_ACCESS_TOKEN" > "$BWS_TOKEN_FILE"
+    chmod 600 "$BWS_TOKEN_FILE"
+    export BWS_TOKEN_FILE
     unset BWS_ACCESS_TOKEN
 fi
 
@@ -221,7 +222,7 @@ chmod 600 "$ADMIN_SECRET_FILE"
 printf '%s' "$ADMIN_PASSWORD" > "$ADMIN_SECRET_FILE"
 export ADMIN_SECRET_FILE
 
-trap 'rm -f "${BWS_SECRET_FILE:-}"; rm -f "${ADMIN_SECRET_FILE:-}"; unset BWS_SECRET_FILE ADMIN_SECRET_FILE' EXIT
+trap 'rm -f "${ADMIN_SECRET_FILE:-}"; unset ADMIN_SECRET_FILE' EXIT
 
 echo ""
 echo "Starting workspace..."
