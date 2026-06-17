@@ -8,6 +8,7 @@
   ansible.builtin.shell: |
     curl -sSLo /tmp/linux-install.sh https://download.clojure.org/install/linux-install.sh
     chmod +x /tmp/linux-install.sh
+    sed -i "s/tar xzf clojure-tools/tar --no-same-owner -xzf clojure-tools/" /tmp/linux-install.sh
   args:
     creates: /tmp/linux-install.sh
     executable: /bin/bash
@@ -15,7 +16,7 @@
 
 - name: Install Clojure
   ansible.builtin.shell: |
-    bash /tmp/linux-install.sh
+    cd /tmp && bash /tmp/linux-install.sh
   args:
     executable: /bin/bash
     creates: /usr/local/bin/clojure

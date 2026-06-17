@@ -147,7 +147,7 @@ services:
       - SETUID
     tmpfs:
       - /run
-      - /tmp:mode=1777
+      - /tmp:mode=1777,exec
     restart: unless-stopped
     deploy:
       resources:

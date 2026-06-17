@@ -34,6 +34,7 @@ fetch_secrets() {
     log_info "Fetching secrets from Vault..."
 
     local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key="" aws_key_id=""
+    local tavily_api_key="" github_pat="" postman_api_key="" ado_auth_token=""
     local -a pool_keys=()
 
     if [ -n "${VAULT_ADDR:-}" ]; then
@@ -69,12 +70,33 @@ fetch_secrets() {
         integrations_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
             "${VAULT_ADDR}/v1/secret/data/integrations" 2>/dev/null || echo '{}')
         new_relic_api_key=$(printf '%s' "$integrations_data" | jq -r '.data.data.NEW_RELIC_API_KEY // empty' 2>/dev/null || echo "")
+        tavily_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.TAVILY_API_KEY // empty' 2>/dev/null || echo "")
 
         local aws_data
         aws_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
             "${VAULT_ADDR}/v1/secret/data/mcp/aws" 2>/dev/null || echo '{}')
         aws_key_id=$(printf '%s' "$aws_data" | jq -r '.data.data.AWS_ACCESS_KEY_ID // empty' 2>/dev/null || echo "")
+
+        local github_data
+        github_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/mcp/github" 2>/dev/null || echo '{}')
+        github_pat=$(printf '%s' "$github_data" | jq -r '.data.data.GITHUB_PERSONAL_ACCESS_TOKEN // empty' 2>/dev/null || echo "")
+
+        local postman_data
+        postman_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/mcp/postman" 2>/dev/null || echo '{}')
+        postman_api_key=$(printf '%s' "$postman_data" | jq -r '.data.data.POSTMAN_API_KEY // empty' 2>/dev/null || echo "")
+
+        local ado_data
+        ado_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
+        ado_auth_token=$(printf '%s' "$ado_data" | jq -r '.data.data.ADO_MCP_AUTH_TOKEN // empty' 2>/dev/null || echo "")
     fi
+
+    export TAVILY_AVAILABLE=""; [ -n "$tavily_api_key" ] && export TAVILY_AVAILABLE="true"
+    export GITHUB_AVAILABLE=""; [ -n "$github_pat" ] && export GITHUB_AVAILABLE="true"
+    export POSTMAN_AVAILABLE=""; [ -n "$postman_api_key" ] && export POSTMAN_AVAILABLE="true"
+    export ADO_AVAILABLE=""; [ -n "$ado_auth_token" ] && export ADO_AVAILABLE="true"
 
     unset VAULT_TOKEN
     export NEW_RELIC_API_KEY_AVAILABLE=""
@@ -82,6 +104,11 @@ fetch_secrets() {
 
     export AWS_MCP_AVAILABLE=""
     [ -n "$aws_key_id" ] && export AWS_MCP_AVAILABLE="true" && log_info "AWS: credentials available" || log_warn "AWS: no credentials — skipping AWS MCP tools"
+
+    [ -z "${TAVILY_AVAILABLE:-}" ] && log_warn "Tavily: no API key — skipping mcp-tavily"
+    [ -z "${GITHUB_AVAILABLE:-}" ] && log_warn "GitHub: no PAT — skipping mcp-github"
+    [ -z "${POSTMAN_AVAILABLE:-}" ] && log_warn "Postman: no API key — skipping mcp-postman"
+    [ -z "${ADO_AVAILABLE:-}" ] && log_warn "Azure DevOps: no token — skipping mcp-azure-devops"
 
     if [ ${#pool_keys[@]} -gt 0 ]; then
         export ANTHROPIC_POOL_ENABLED="true"
@@ -118,6 +145,22 @@ generate_config() {
     local newrelic_entry=""
     [ -n "${NEW_RELIC_API_KEY_AVAILABLE:-}" ] && \
         newrelic_entry='      { "name": "newrelic", "connection_type": "http", "connection_string": "http://mcp-newrelic:3004/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
+    local tavily_entry=""
+    [ -n "${TAVILY_AVAILABLE:-}" ] && \
+        tavily_entry='{ "name": "tavily", "connection_type": "http", "connection_string": "http://mcp-tavily:3001/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
+    local github_entry=""
+    [ -n "${GITHUB_AVAILABLE:-}" ] && \
+        github_entry='{ "name": "github", "connection_type": "http", "connection_string": "http://mcp-github:3005/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
+    local postman_entry=""
+    [ -n "${POSTMAN_AVAILABLE:-}" ] && \
+        postman_entry='{ "name": "postman", "connection_type": "http", "connection_string": "http://mcp-postman:3003/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
+    local ado_entry=""
+    [ -n "${ADO_AVAILABLE:-}" ] && \
+        ado_entry='{ "name": "azure_devops", "connection_type": "http", "connection_string": "http://mcp-azure-devops:3002/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
     local aws_entries=""
     [ -n "${AWS_MCP_AVAILABLE:-}" ] && aws_entries='
@@ -180,11 +223,11 @@ generate_config() {
   },
   "mcp": {
     "client_configs": [
-      { "name": "tavily", "connection_type": "http", "connection_string": "http://mcp-tavily:3001/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "azure_devops", "connection_type": "http", "connection_string": "http://mcp-azure-devops:3002/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "postman", "connection_type": "http", "connection_string": "http://mcp-postman:3003/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      ${tavily_entry}
+      ${ado_entry}
+      ${postman_entry}
       ${newrelic_entry}
-      { "name": "github", "connection_type": "http", "connection_string": "http://mcp-github:3005/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
+      ${github_entry}
       { "name": "playwright", "connection_type": "http", "connection_string": "http://mcp-playwright:3006/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }${aws_entries}
     ]
   }

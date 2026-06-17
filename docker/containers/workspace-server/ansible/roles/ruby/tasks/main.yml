@@ -4,6 +4,14 @@
 - meta: end_role
   when: not (ruby_enabled | bool)
 
+- name: Install Ruby build dependencies
+  ansible.builtin.apt:
+    name: ["libssl-dev", "libreadline-dev", "zlib1g-dev", "libffi-dev", "libyaml-dev"]
+    state: present
+    update_cache: yes
+  become: yes
+  become_user: root
+
 - name: Create rbenv directory
   ansible.builtin.file:
     path: "{{ install_prefix }}/.rbenv"
@@ -20,6 +28,7 @@
     executable: /bin/bash
   environment:
     HOME: /home/user
+    GIT_CONFIG_GLOBAL: /dev/null
   changed_when: false
 
 - name: Clone ruby-build plugin
@@ -31,15 +40,18 @@
     executable: /bin/bash
   environment:
     HOME: /home/user
+    GIT_CONFIG_GLOBAL: /dev/null
   changed_when: false
 
 - name: Install Ruby
   ansible.builtin.shell: |
     export PATH="{{ install_prefix }}/.rbenv/bin:$PATH"
-    {{ install_prefix }}/.rbenv/bin/rbenv install {{ ruby_version }} 2>&1 || true
-    {{ install_prefix }}/.rbenv/bin/rbenv global {{ ruby_version }}
+    rbenv install {{ ruby_version }} 2>&1 || true
+    rbenv global {{ ruby_version }}
   args:
     executable: /bin/bash
   environment:
     HOME: /home/user
+    RBENV_ROOT: "{{ install_prefix }}/.rbenv"
+    RUBY_CONFIGURE_OPTS: "--with-openssl-dir=/usr --with-readline-dir=/usr --with-zlib-dir=/usr"
   changed_when: false

@@ -7,6 +7,7 @@
 - name: Install npm global frontend packages
   ansible.builtin.shell: |
     export NVM_DIR="{{ install_prefix }}/.nvm"
+    unset NPM_CONFIG_PREFIX
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     npm install -g --prefix "{{ install_prefix }}/.npm-global" \
       "@angular/cli@{{ angular_cli_version }}" \
@@ -16,6 +17,5 @@
     executable: /bin/bash
   environment:
     NVM_DIR: "{{ install_prefix }}/.nvm"
-    NPM_CONFIG_PREFIX: "{{ install_prefix }}/.npm-global"
     PUPPETEER_SKIP_DOWNLOAD: "1"
   changed_when: false

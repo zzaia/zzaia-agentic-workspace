@@ -66,5 +66,5 @@ ruby_version: 3.4.4
 php_version: 8.2
 swift_version: 6.1.2
 angular_cli_version: 19.2.14
-vite_version: 6.3.5
+vite_version: 9.0.7
 typescript_version: 5.8.3

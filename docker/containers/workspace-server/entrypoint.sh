@@ -218,8 +218,8 @@ main() {
 
     load_admin_password
     fetch_vault_credentials
-    setup_git_sidecar
     bootstrap_workspace
+    setup_git_sidecar
     unset ADMIN_PASSWORD
     setup_profile_env
     setup_mcp_config

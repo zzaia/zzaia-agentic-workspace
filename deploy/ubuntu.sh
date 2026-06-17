@@ -37,10 +37,10 @@ Options:
   --help                        Show this help message
 
 Examples:
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1!
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --gpu --java --rust --profiles vscode
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --node-frontend --go --ruby
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyPass1! --clojure --kotlin --observability
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --gpu --java --rust --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --node-frontend --go --ruby
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --clojure --kotlin --observability
 EOF
 }
 

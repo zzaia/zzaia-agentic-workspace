@@ -8,19 +8,30 @@ receivers:
             - targets: ['database-qdrant:6333']
           metrics_path: /metrics
         - job_name: 'cadvisor'
-          scrape_interval: 30s
+          scrape_interval: 60s
           static_configs:
             - targets: ['observability-cadvisor:8080']
           metrics_path: /metrics
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+    send_batch_max_size: 2000
 
 exporters:
   otlp:
     endpoint: signoz-otel-collector:4317
     tls:
       insecure: true
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 100
 
 service:
   pipelines:
     metrics:
       receivers: [prometheus]
+      processors: [batch]
       exporters: [otlp]

@@ -17,8 +17,10 @@
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh" | bash
   args:
     creates: "{{ install_prefix }}/.nvm/nvm.sh"
+    executable: /bin/bash
   environment:
     NVM_DIR: "{{ install_prefix }}/.nvm"
+    GIT_CONFIG_GLOBAL: /dev/null
   changed_when: false
 
 - name: Install Node.js

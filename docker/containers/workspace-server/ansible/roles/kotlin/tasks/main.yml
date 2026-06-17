@@ -4,17 +4,10 @@
 - meta: end_role
   when: not (kotlin_enabled | bool)
 
-- name: Create SDKMAN directory
-  ansible.builtin.file:
-    path: "{{ install_prefix }}/.sdkman"
-    owner: user
-    group: user
-    mode: "0755"
-    state: directory
-
 - name: Install SDKMAN
   ansible.builtin.shell: |
-    curl -s "https://get.sdkman.io?rcupdate=false" | bash
+    curl -s "https://get.sdkman.io?rcupdate=false" -o /tmp/sdkman-install.sh
+    bash /tmp/sdkman-install.sh
   args:
     executable: /bin/bash
     creates: "{{ install_prefix }}/.sdkman/bin/sdkman-init.sh"
