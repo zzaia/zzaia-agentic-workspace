@@ -218,13 +218,17 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 ./deploy/ubuntu.sh \
   --workspace-name my-org \
   --ssh-public-key "ssh-ed25519 AAAA..." \
+  --admin-email admin@example.com \
+  --admin-password "MyP@ss1234!" \
   --gpu \
   --observability \
   --profiles vscode,devcontainer,jupyter,tunnel,portainer \
   --vault-port 8200 \
   --ssh-port 2222 \
   --vscode-port 8080 \
+  --aspire-dashboard-port 18890 \
   --jupyter-port 8888 \
+  --portainer-port 9000 \
   --signoz-port 3301 \
   --mcp-signoz-port 3009 \
   --dind-data-path /mnt/dind-disk/dind-storage \
