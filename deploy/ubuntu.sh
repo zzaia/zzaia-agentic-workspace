@@ -315,7 +315,7 @@ if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
     BWS_CONFIG_DIR="$HOME/.config/zzaia"
     mkdir -p "$BWS_CONFIG_DIR"
     BWS_TOKEN_FILE="$BWS_CONFIG_DIR/bws_token"
-    chmod 600 "$BWS_CONFIG_DIR"
+    chmod 700 "$BWS_CONFIG_DIR"
     printf '%s' "$BWS_ACCESS_TOKEN" > "$BWS_TOKEN_FILE"
     chmod 600 "$BWS_TOKEN_FILE"
     export BWS_TOKEN_FILE
