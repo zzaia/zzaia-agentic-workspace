@@ -92,7 +92,7 @@ You will need the following values before starting:
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
 | `ASPIRE_DASHBOARD_PORT` | ✅ | Host port for Aspire telemetry dashboard | Default: `18888` |
 | `BWS_ACCESS_TOKEN` | Optional | Bitwarden Secrets Manager machine account token — if provided, vault-server bootstraps all secrets from Bitwarden automatically; if skipped, secrets are entered manually via Vault UI after first boot | From Bitwarden Secrets Manager; press Enter to skip |
-| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the SigNoz admin account and Neo4j password for Headroom. **Required for SigNoz observability** — must be 12+ characters with at least one uppercase letter, one lowercase letter, one digit, and one symbol (`~!@#$%^&*()_+-=[]{}|;:,.<>?/`). A weak password skips SigNoz provisioning silently — `mcp-signoz` will remain idle. | Example: `MyP@ss1234!` — leave empty for no sudo, default Neo4j password (`headroom`), and no SigNoz MCP |
+| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the SigNoz admin account and Neo4j password for Headroom. **Required for SigNoz observability** — must be 12+ characters with at least one uppercase letter, one lowercase letter, one digit, and one symbol (`~!@#$%^&*()_+-=[]{}|;:,.<>?/`). A weak password skips SigNoz provisioning silently — `mcp-signoz` will remain idle. | Example: `MyP@ss1234!x` — leave empty for no sudo, default Neo4j password (`headroom`), and no SigNoz MCP |
 
 All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
 
@@ -219,7 +219,7 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
   --workspace-name my-org \
   --ssh-public-key "ssh-ed25519 AAAA..." \
   --admin-email admin@example.com \
-  --admin-password "MyP@ss1234!" \
+  --admin-password "MyP@ss1234!x" \
   --gpu \
   --observability \
   --profiles vscode,devcontainer,jupyter,tunnel,portainer \

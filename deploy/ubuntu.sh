@@ -38,10 +38,10 @@ Options:
   --help                        Show this help message
 
 Examples:
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --gpu --java --rust --profiles vscode
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --node-frontend --go --ruby
-  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234! --clojure --kotlin --observability
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!x
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!x --gpu --java --rust --profiles vscode
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!x --node-frontend --go --ruby
+  ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --admin-email admin@example.com --admin-password MyP@ss1234!x --clojure --kotlin --observability
 EOF
 }
 
@@ -220,7 +220,7 @@ if [ "$pw_len" -lt 12 ] \
    || ! echo "$ADMIN_PASSWORD" | grep -q '[A-Z]' \
    || ! echo "$ADMIN_PASSWORD" | grep -q '[a-z]' \
    || ! echo "$ADMIN_PASSWORD" | grep -q '[0-9]' \
-   || ! echo "$ADMIN_PASSWORD" | grep -qE '[~!@#$%^&*()\-_+=\[\]{}|;:,.<>?/]'; then
+   || ! echo "$ADMIN_PASSWORD" | grep -q '[[:punct:]]'; then
     echo "Error: --admin-password must be at least 12 characters and contain uppercase, lowercase, number, and symbol (~!@#\$%^&*()_+-=[]{}|;:,.<>?/)."
     echo "       This is required for SigNoz admin account provisioning."
     exit 1
