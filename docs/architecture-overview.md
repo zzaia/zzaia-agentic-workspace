@@ -227,6 +227,31 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ---
 
+### ADR 006a: DinD Storage via Host Bind Mount
+
+**Decision**: The `dind-server` container mounts its `/var/lib/docker` storage from a host path controlled by `DIND_DATA_PATH` rather than a named Docker volume.
+
+- Default path: `/var/lib/docker/<WORKSPACE_NAME>-dind` (root filesystem, backward-compatible)
+- Override via `--dind-data-path <path>` deploy flag → written to `.env` → interpolated by Compose
+- Compose volume entry: `${DIND_DATA_PATH}:/var/lib/docker` (bind mount, not named volume)
+- Deploy script guard: if a custom path under `/mnt/`, `/media/`, `/data/`, `/disk/`, or `/storage/` resolves to the root filesystem, deployment fails with a diagnostic error
+
+**Disk isolation pattern** (redirect to a dedicated partition):
+```bash
+# 1. Mount the disk on the host
+mount /dev/sdX1 /mnt/dind-disk
+
+# 2. Persist in /etc/fstab
+echo "UUID=<uuid>  /mnt/dind-disk  ext4  defaults  0 2" >> /etc/fstab
+
+# 3. Deploy with custom path
+./deploy/ubuntu.sh --workspace-name my-org --dind-data-path /mnt/dind-disk/dind-storage
+```
+
+**Rationale**: Named volumes are opaque to operators — storage grows unboundedly inside Docker's managed volume area with no visibility or disk-pressure isolation. A bind mount makes the storage location explicit, moveable to any mounted filesystem, and monitorable with standard host tools (`df`, `du`). The deploy-time guard prevents silent root disk exhaustion when the intended separate disk is not yet mounted.
+
+---
+
 ### ADR 007: Tool Provisioning via Ansible Roles with Opt-In SDK Flags
 
 **Decision**: Tool installation uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in four plays: system setup (root), root-level SDKs, user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root).
@@ -765,7 +790,7 @@ zzaia-agentic-workspace/
 |-----------|------|------|---------|-------|
 | `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 | always | Bootstraps from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth; UI at localhost:8200/ui |
 | `git-sidecar` | SSH git proxy — routes clone/push to GitHub and Azure DevOps via PAT injection | 2223 (SSH, internal) | always | ForceCommand restricts every session to `git-proxy-cmd`; PATs never exposed to agents |
-| `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure |
+| `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure; storage bind-mounted from `DIND_DATA_PATH` on host |
 | `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
 | `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
 | `database-qdrant` | Vector DB (Qdrant v1.17.1) | 6333 (internal) | always | Semantic cache + memory embeddings + code-graph, non-root: uid=999(qdrant) |

@@ -183,7 +183,17 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`.
+**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`, `--dind-data-path <path>`.
+
+**`--dind-data-path`** — sets the host directory where the Docker-in-Docker (DinD) daemon stores all container images and layers. Defaults to `/var/lib/docker/<WORKSPACE_NAME>-dind` on the root filesystem. Use this flag to redirect DinD storage to a dedicated disk or partition to prevent root filesystem exhaustion when many containers are built inside the workspace:
+
+```bash
+# redirect DinD storage to a separate disk
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
+  --dind-data-path /mnt/nvme/dind-storage
+```
+
+> **Important:** The target mount point must already be mounted before running the deploy script. If a path under `/mnt/`, `/media/`, `/data/`, `/disk/`, or `/storage/` is provided and the directory resolves to the root filesystem, the deploy script fails with an error to prevent silent disk exhaustion.
 
 **SDK flags** (opt-in, installed at first container start):
 

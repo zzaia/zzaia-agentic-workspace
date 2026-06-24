@@ -34,6 +34,7 @@ Options:
   --jupyter-port PORT           Jupyter port (default: 8888)
   --portainer-port PORT         Portainer UI port (default: 9000)
   --profiles PROFILES           Comma-separated server profiles: vscode, jupyter, devcontainer, tunnel, portainer
+  --dind-data-path PATH         DinD storage bind mount path (default: /var/lib/docker/{WORKSPACE_NAME}-dind)
   --help                        Show this help message
 
 Examples:
@@ -72,6 +73,7 @@ ASPIRE_DASHBOARD_PORT="18890"
 JUPYTER_PORT="8888"
 PORTAINER_PORT="9000"
 DEPLOY_PROFILES=""
+DIND_DATA_PATH=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -190,6 +192,10 @@ while [ $# -gt 0 ]; do
             DEPLOY_PROFILES="$2"
             shift 2
             ;;
+        --dind-data-path)
+            DIND_DATA_PATH="$2"
+            shift 2
+            ;;
         --help)
             show_usage
             exit 0
@@ -283,6 +289,7 @@ SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
 SIGNOZ_ADMIN_PASSWORD=$ADMIN_PASSWORD
 ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_PASSWORD=$ADMIN_PASSWORD
+DIND_DATA_PATH=${DIND_DATA_PATH:-/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind}
 EOF
 
 PROFILE_FLAGS=""
@@ -313,6 +320,33 @@ if [ -n "${BWS_ACCESS_TOKEN:-}" ]; then
     chmod 600 "$BWS_TOKEN_FILE"
     export BWS_TOKEN_FILE
     unset BWS_ACCESS_TOKEN
+fi
+
+# Set default DIND_DATA_PATH if not provided
+[ -z "$DIND_DATA_PATH" ] && DIND_DATA_PATH="/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind"
+export DIND_DATA_PATH
+
+# Validate DIND_DATA_PATH — fail early if a custom path is on an unmounted disk
+if [ "$DIND_DATA_PATH" != "/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind" ]; then
+    _dind_check="$DIND_DATA_PATH"
+    while [ ! -e "$_dind_check" ] && [ "$_dind_check" != "/" ]; do
+        _dind_check=$(dirname "$_dind_check")
+    done
+    _dind_dev=$(stat -c %d "$_dind_check" 2>/dev/null || echo "")
+    _root_dev=$(stat -c %d / 2>/dev/null || echo "")
+    if [ "$_dind_dev" = "$_root_dev" ]; then
+        case "$DIND_DATA_PATH" in
+            /mnt/*|/media/*|/data/*|/disk/*|/storage/*)
+                echo "ERROR: DIND_DATA_PATH '$DIND_DATA_PATH' is under a common mount prefix but resolves to the root filesystem."
+                echo "       Mount the disk before deploying, e.g.: mount /dev/sdX1 $(dirname "$DIND_DATA_PATH")"
+                exit 1
+                ;;
+            *)
+                echo "WARNING: DIND_DATA_PATH '$DIND_DATA_PATH' is on the root filesystem. DinD storage will consume root disk space."
+                ;;
+        esac
+    fi
+    unset _dind_check _dind_dev _root_dev
 fi
 
 # Write admin password to tmpfile for Docker secrets — never in container env

@@ -52,7 +52,7 @@ services:
       - DOCKER_TLS_CERTDIR=
       - GPU_ENABLED=${GPU_ENABLED:-false}
     volumes:
-      - dind-storage:/var/lib/docker
+      - ${DIND_DATA_PATH:-/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind}:/var/lib/docker
     networks:
       - mcp
     restart: unless-stopped
@@ -881,8 +881,6 @@ volumes:
     name: ${WORKSPACE_NAME:-zzaia}-database-qdrant
   database-neo4j:
     name: ${WORKSPACE_NAME:-zzaia}-database-neo4j
-  dind-storage:
-    name: ${WORKSPACE_NAME:-zzaia}-dind-storage
   portainer-data:
     name: ${WORKSPACE_NAME:-zzaia}-portainer-data
   git-sidecar-hostkeys:
