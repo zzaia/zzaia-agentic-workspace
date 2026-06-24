@@ -59,5 +59,5 @@ if [[ "$USE_TMUX" == true ]]; then
     tmux new-session -s "$TMUX_SESSION" \
         "if ! claude ${CLAUDE_FLAGS} --resume ${SESSION_UUID}; then claude ${CLAUDE_FLAGS} --session-id ${SESSION_UUID}; fi; exec bash"
 else
-    claude $CLAUDE_FLAGS --resume "$SESSION_UUID" || claude $CLAUDE_FLAGS --session-id "$SESSION_UUID"
+    claude $CLAUDE_FLAGS 
 fi
