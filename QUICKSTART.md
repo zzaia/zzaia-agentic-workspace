@@ -212,11 +212,33 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 | `--php` | `-Php` | PHP 8.2 + Composer | — |
 | `--swift` | `-Swift` | Swift 6.1.2 | — |
 
-**.NET and Python are always installed.** All other SDKs are opt-in. Example with multiple SDKs:
+**.NET and Python are always installed.** All other SDKs are opt-in. Complete example with all features enabled:
 
 ```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
-  --java --rust --node-frontend --go
+./deploy/ubuntu.sh \
+  --workspace-name my-org \
+  --ssh-public-key "ssh-ed25519 AAAA..." \
+  --gpu \
+  --observability \
+  --profiles vscode,devcontainer,jupyter,tunnel,portainer \
+  --vault-port 8200 \
+  --ssh-port 2222 \
+  --vscode-port 8080 \
+  --jupyter-port 8888 \
+  --signoz-port 3301 \
+  --mcp-signoz-port 3009 \
+  --dind-data-path /mnt/dind-disk/dind-storage \
+  --node-frontend \
+  --java \
+  --rust \
+  --lua \
+  --cpp \
+  --clojure \
+  --go \
+  --kotlin \
+  --ruby \
+  --php \
+  --swift
 ```
 
 **With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
