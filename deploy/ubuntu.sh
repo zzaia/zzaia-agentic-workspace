@@ -362,6 +362,30 @@ echo "Starting workspace..."
 # shellcheck disable=SC2086
 docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG $OBSERVABILITY_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d --build
 
+if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
+    echo "Initializing Portainer admin account..."
+    _portainer_ready=false
+    for _i in $(seq 1 30); do
+        if curl -sf "http://localhost:${PORTAINER_PORT}/api/status" >/dev/null 2>&1; then
+            _portainer_ready=true
+            break
+        fi
+        sleep 2
+    done
+    if [ "$_portainer_ready" = "true" ]; then
+        _portainer_username="${ADMIN_EMAIL%%@*}"
+        _portainer_payload=$(printf '{"Username":"%s","Password":"%s"}' "$_portainer_username" "$ADMIN_PASSWORD")
+        curl -sf -X POST "http://localhost:${PORTAINER_PORT}/api/users/admin/init" \
+            -H "Content-Type: application/json" \
+            -d "$_portainer_payload" >/dev/null 2>&1 || true
+        echo "✓ Portainer admin configured (username: $_portainer_username)"
+        unset _portainer_username
+    else
+        echo "Warning: Portainer not ready — complete admin setup at http://localhost:${PORTAINER_PORT} within 5 minutes"
+    fi
+    unset _portainer_ready _portainer_payload _i
+fi
+
 echo ""
 echo "✓ Workspace started. Access:"
 echo "  SSH: ssh -p $SSH_PORT user@localhost"
@@ -369,7 +393,7 @@ echo "  SSH: ssh -p $SSH_PORT user@localhost"
 [[ "$DEPLOY_PROFILES" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
 echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
-[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://localhost:$PORTAINER_PORT"
+[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://localhost:$PORTAINER_PORT (${ADMIN_EMAIL%%@*} / <your-admin-password>)"
 echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
 [ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:$SIGNOZ_PORT"
 [ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://localhost:$MCP_SIGNOZ_PORT/mcp"
