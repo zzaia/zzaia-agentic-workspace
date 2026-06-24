@@ -308,12 +308,17 @@ External service integrations via Model Context Protocol servers. Each runs as a
 | **Playwright** | Browser automation, screenshots | None (always-on) | direct `mcp-playwright:3006` |
 | **Headroom** | Context compression proxy tools | None (always-on) | direct `mcp-headroom:3008` |
 | **SigNoz** | Query logs, metrics, and traces via SigNoz | `SIGNOZ_MCP_API_KEY` (auto-provisioned) | direct `mcp-signoz:3009` |
-| **bifrost** | Code Mode (Starlark sandbox tools) | virtual key `sk-bf-workspace-agent-001` | `bifrost-server:8080/mcp` |
+| **AWS SNS/SQS** | Publish/consume SNS topics and SQS queues | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-sns-sqs:3010` |
+| **AWS CloudWatch** | Query metrics, alarms, and log groups | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-cloudwatch:3011` |
+| **AWS CloudWatch X-Ray** | Distributed traces and Application Signals | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-cloudwatch-xray:3012` |
+| **AWS ECS** | Inspect and query ECS clusters and tasks | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-ecs:3013` |
+| **AWS PostgreSQL** | AWS-managed PostgreSQL (RDS/Aurora) access | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-postgres:3014` |
+| **bifrost** | Code Mode (Starlark sandbox + upstream AWS tools) | virtual key `sk-bf-workspace-agent-001` | `bifrost-server:8080/mcp` |
 | **Aspire** | AppHost resource inspection | None (workspace process) | stdio |
 
 > All sidecar MCP servers use `supergateway@3.4.3 --stateful --outputTransport streamableHttp`. Stateful mode creates one isolated child process per client session, enabling safe concurrent use by multiple agent containers. Secrets never leave the sidecar containers.
 >
-> **bifrost Code Mode** exposes Starlark sandbox tools at its `/mcp` endpoint (not upstream MCP server tools). Upstream tools reach agents via direct connections above. See [ADR 007B](docs/architecture-overview.md) for the full architecture.
+> **bifrost Code Mode** exposes Starlark sandbox tools and proxies upstream AWS MCP tools at its `/mcp` endpoint. Non-AWS tools (tavily, azure_devops, postman, github, playwright, newrelic) are also registered as Code Mode clients. See [ADR 007B](docs/architecture-overview.md) for the full architecture.
 
 ## 🛡️ Quality Standards
 

@@ -122,6 +122,11 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `mcp-github` | 3005 | Fetches `GITHUB_PERSONAL_ACCESS_TOKEN` from Vault | Opt-in |
 | `mcp-playwright` | 3006 | No secrets required | Always-on, headless Chromium |
 | `mcp-headroom` | 3008 | No secrets required | Always-on, MCP gateway for ml-server |
+| `mcp-aws-sns-sqs` | 3010 | Fetches `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
+| `mcp-aws-cloudwatch` | 3011 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
+| `mcp-aws-cloudwatch-xray` | 3012 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
+| `mcp-aws-ecs` | 3013 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
+| `mcp-aws-postgres` | 3014 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
 
 - The `workspace` container holds zero API key environment variables
 - MCP sidecars fetch secrets at runtime: `VAULT_ADDR=http://vault-server:8200`, `VAULT_TOKEN` injected at startup
@@ -164,6 +169,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `secret/ai` | `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `TAVILY_API_KEY`; optional credential pool: `CLAUDE_OAUTH_TOKEN_1..N`, `ANTHROPIC_API_KEY_1..N` |
 | `secret/mcp/github` | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | `secret/mcp/azure-devops` | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
+| `secret/mcp/aws` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` — auto-mirrored from `secret/cloud` if Bedrock keys are set |
 | `secret/cloud` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, Bedrock/Vertex/Foundry vars |
 | `secret/integrations` | `POSTMAN_API_KEY`, `NEW_RELIC_API_KEY` |
 | `secret/workspace` | `GIT_SIDECAR_AGENT_KEY` (private), `GIT_SIDECAR_AGENT_PUBKEY` (public) |
@@ -296,8 +302,13 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `postman` | `http://mcp-postman:3003/mcp` | 41 API testing tools |
 | `github` | `http://mcp-github:3005/mcp` | 47 GitHub Copilot tools |
 | `playwright` | `http://mcp-playwright:3006/mcp` | 23 browser automation tools |
+| `aws_sns_sqs` | `http://mcp-aws-sns-sqs:3010/mcp` | AWS SNS/SQS tools (conditional: requires AWS credentials in Vault) |
+| `aws_cloudwatch` | `http://mcp-aws-cloudwatch:3011/mcp` | AWS CloudWatch metrics/alarms/logs (conditional) |
+| `aws_cloudwatch_xray` | `http://mcp-aws-cloudwatch-xray:3012/mcp` | AWS X-Ray traces and Application Signals (conditional) |
+| `aws_ecs` | `http://mcp-aws-ecs:3013/mcp` | AWS ECS cluster/task inspection (conditional) |
+| `aws_postgres` | `http://mcp-aws-postgres:3014/mcp` | AWS RDS/Aurora PostgreSQL access (conditional) |
 
-All upstream tools are configured as `is_code_mode_client: true` in bifrost — agents access them via Starlark `executeToolCode`, not as direct MCP connections.
+All upstream tools are configured as `is_code_mode_client: true` in bifrost — agents access them via Starlark `executeToolCode`, not as direct MCP connections. AWS tools are conditionally registered: bifrost checks `secret/mcp/aws` at startup and skips registration if credentials are absent.
 
 **setup_mcp_config()** copies `agents/claude/.mcp.json` (the single source of truth, also deployed as `home-seed`) to `/home/user/.mcp.json`, then injects the runtime bifrost key via Python. All agent configs (copilot, gemini, codex) mirror the same server set.
 
@@ -422,6 +433,23 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 | All pool keys exhausted | bifrost returns the upstream error to the caller |
 
 **Rationale**: Single-credential setups are rate-limited by the quota of one account. A credential pool distributes load across multiple Pro/Max or API subscriptions, increasing effective throughput without changing any upstream agent or MCP configuration.
+
+---
+
+### ADR 013b: BWS Token Persistence via Docker Compose Secrets
+
+**Decision**: The Bitwarden Secrets Manager access token is stored at `~/.config/zzaia/bws_token` on the host (mode 600) and injected into vault-server as a Docker Compose secret, eliminating the ephemeral tmpfile that caused OCI mount failures after host reboots.
+
+**Mechanism**:
+- `deploy/ubuntu.sh` writes `BWS_ACCESS_TOKEN` to `~/.config/zzaia/bws_token` and exports `BWS_TOKEN_FILE` pointing to that path
+- `docker-compose.yml` top-level `secrets.bws_token.file: ${BWS_TOKEN_FILE:-/dev/null}` references the persistent path; vault-server service declares `secrets: [bws_token]`
+- Docker mounts the secret at `/run/secrets/bws_token` (tmpfs inside the container — never appears in `docker inspect` env)
+- vault-server `load_bws_token()` reads `/run/secrets/bws_token` and exports `BWS_ACCESS_TOKEN` internally before calling the bws CLI
+- After bootstrap, `BWS_ACCESS_TOKEN` is unset inside the container; the token file on the host remains for subsequent restarts
+
+**Reboot behavior**: all workspace services have `restart: unless-stopped`; the Docker daemon is systemd-enabled. On host reboot Docker restarts all containers — vault-server mounts `~/.config/zzaia/bws_token` successfully (file persists) and re-bootstraps from Bitwarden if the Vault volume was also wiped; otherwise Vault resumes from its own KV data without needing BWS at all.
+
+**Rationale**: The previous approach used `mktemp` to create a random `/tmp/tmp.xxx` file, which is cleaned on host reboot. Docker's OCI runtime fails to start a container when a `secrets.file` path does not exist, causing all dependent services to remain in `Exited (127)` state. A deterministic persistent path (`~/.config/zzaia/bws_token`) fixes the mount error without requiring a manual re-deploy after every reboot.
 
 ---
 

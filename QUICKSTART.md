@@ -92,7 +92,7 @@ You will need the following values before starting:
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
 | `ASPIRE_DASHBOARD_PORT` | ✅ | Host port for Aspire telemetry dashboard | Default: `18888` |
 | `BWS_ACCESS_TOKEN` | Optional | Bitwarden Secrets Manager machine account token — if provided, vault-server bootstraps all secrets from Bitwarden automatically; if skipped, secrets are entered manually via Vault UI after first boot | From Bitwarden Secrets Manager; press Enter to skip |
-| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the Neo4j password for Headroom | Any string; leave empty for no sudo and default Neo4j password (`headroom`) |
+| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the SigNoz admin account and Neo4j password for Headroom. **Required for SigNoz observability** — must be 12+ characters with at least one uppercase letter, one lowercase letter, one digit, and one symbol (`~!@#$%^&*()_+-=[]{}|;:,.<>?/`). A weak password skips SigNoz provisioning silently — `mcp-signoz` will remain idle. | Example: `MyP@ss1234!` — leave empty for no sudo, default Neo4j password (`headroom`), and no SigNoz MCP |
 
 All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
 
@@ -213,7 +213,9 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 
 **Without token** (press Enter) — vault-server starts with an empty KV store. The script prints the root token retrieval command and the KV paths to populate via Vault UI.
 
-After the first run, **start or stop the workspace from Docker Desktop** — no command needed again.
+**After the first run**, all containers restart automatically when Docker starts (policy: `restart: unless-stopped`). On Linux servers without Docker Desktop, the stack recovers on host reboot as long as the containers were running when the host shut down — no manual intervention needed.
+
+> **BWS token persistence**: when `BWS_ACCESS_TOKEN` is provided, the deploy script writes it to `~/.config/zzaia/bws_token` (mode 600) and passes it to vault-server as a Docker Compose secret mounted at `/run/secrets/bws_token`. This file survives host reboots, so vault-server can re-bootstrap from Bitwarden after an unexpected restart. BWS is only used at vault bootstrap; once secrets are stored in Vault KV, the token is no longer needed until the Vault volume is wiped.
 
 ---
 
