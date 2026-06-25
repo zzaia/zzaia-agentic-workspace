@@ -35,9 +35,9 @@ Multi-repository workspace with git worktrees:
 ```
 workspace/
 ├── {repo}.worktrees/
-│   ├── master/              # Reference branch
-│   ├── feature/{name}/      # Feature branches
-│   └── repository-metadata.json
+│   ├── main|master/         # Privileged branch — full clone, detected from remote HEAD
+│   ├── feature/{name}/      # Linked worktrees branched from privileged
+│   └── fix/{name}/
 ├── tasks/                   # Task specifications
 host/                        # Aspire AppHost template
 ```
