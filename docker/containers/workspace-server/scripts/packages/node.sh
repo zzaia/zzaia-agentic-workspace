@@ -56,6 +56,7 @@ node::install_npm_globals() {
         "@openai/codex@${CODEX_VERSION:-latest}"
         "@google/gemini-cli@${GEMINI_CLI_VERSION:-latest}"
         "@github/copilot@${COPILOT_VERSION:-latest}"
+        "opencode-ai@${OPENCODE_VERSION:-latest}"
     )
 
     for pkg in "${packages[@]}"; do
@@ -70,7 +71,7 @@ node::install_npm_globals() {
 node::verify() {
     log_info "Verifying Node.js and npm tools..."
 
-    local required_tools=("node" "npm" "claude" "mmdc" "codex" "gemini" "copilot")
+    local required_tools=("node" "npm" "claude" "mmdc" "codex" "gemini" "copilot" "opencode")
     local failed=0
 
     for tool in "${required_tools[@]}"; do

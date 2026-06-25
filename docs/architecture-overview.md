@@ -196,8 +196,10 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | Gemini CLI | `gemini` (npm) | `agents/gemini/.gemini/` | `agents/gemini/GEMINI.md` |
 | OpenAI Codex | `codex` (npm) | `agents/codex/.codex/` | `agents/codex/AGENTS.md` |
 | GitHub Copilot | `gh copilot` | `agents/copilot/.github/` | `agents/copilot/.github/copilot-instructions.md` |
+| OpenCode | `opencode` (npm) | `agents/opencode/.config/opencode/` | `agents/opencode/AGENTS.md` |
 
-- All agents share the same MCP tool surface — `.mcp.json` on the shared `workspace-home` volume is configured once by workspace-server at startup
+- Claude Code, Gemini CLI, Codex, and Copilot share the same MCP tool surface via `.mcp.json` on the shared `workspace-home` volume — configured once by workspace-server at startup
+- OpenCode uses its own native `~/.config/opencode/config.json` with equivalent MCP server entries (aspire, headroom, bifrost, mcp-codegraph); provider base URLs must be declared explicitly using `{env:...}` substitution — OpenCode does not read `*_BASE_URL` env vars directly
 
 **Rationale**: Multi-agent support preserves team optionality. The shared MCP surface means integrations are configured once.
 
@@ -391,7 +393,7 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 
 - RTK installed via GitHub releases curl in Dockerfile — zero external dependencies, no Docker service needed
 - Operates at Layer 0 (shell I/O level) **before** all API requests, complementing Headroom's Layer 1 compression
-- Configured via agent hooks: Claude Code `PreToolUse`, Gemini CLI `BeforeTool`, Cursor/Windsurf/Cline via config
+- Configured via agent hooks: Claude Code `PreToolUse`, Gemini CLI `BeforeTool`, Codex and Copilot via config, OpenCode via TypeScript plugin (`~/.config/opencode/plugins/rtk.ts` — initialized by `rtk init -g --opencode`)
 - Supports 100+ commands out-of-box: git, cargo/build, docker, kubectl, ls/find/grep, pytest/jest, AWS CLI, and more
 - Achieves 81% average token reduction on command outputs; cargo test: 4,823→11 tokens (99% reduction), git status: 2,000→200 tokens (90% reduction)
 - Passthrough guarantee: if RTK fails, original output is returned unchanged — no command execution is ever blocked

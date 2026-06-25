@@ -58,6 +58,7 @@ alias claude="claude --dangerously-skip-permissions"
 alias codex="codex --dangerously-bypass-approvals-and-sandbox"
 alias gemini="gemini --yolo"
 alias copilot="copilot --yolo"
+alias opencode="opencode"
 # zzaia-aliases-end'
 
     for f in "$HOME/.bashrc" "$HOME/.profile"; do
@@ -84,8 +85,9 @@ configure_rtk() {
     rtk init -g --gemini --auto-patch 2>&1 | sed 's/^/  /'
     rtk init -g --codex 2>&1 | sed 's/^/  /'
     rtk init -g --copilot --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --opencode 2>&1 | sed 's/^/  /'
 
-    log_success "RTK hooks initialized for claude, gemini, codex, copilot"
+    log_success "RTK hooks initialized for claude, gemini, codex, copilot, opencode"
 }
 
 # ── Verify all required tools ─────────────────────────────────────────────────

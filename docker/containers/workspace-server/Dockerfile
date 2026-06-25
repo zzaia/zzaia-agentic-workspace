@@ -44,6 +44,7 @@ WORKDIR /home/user
 COPY --chown=user:user agents/gemini/                  /opt/zzaia/home-seed/
 COPY --chown=user:user agents/codex/                   /opt/zzaia/home-seed/
 COPY --chown=user:user agents/copilot/                 /opt/zzaia/home-seed/
+COPY --chown=user:user agents/opencode/                /opt/zzaia/home-seed/
 COPY --chown=user:user agents/claude/.claude.json                  /opt/zzaia/home-seed/.claude.json
 COPY --chown=user:user agents/claude/.mcp.json                     /opt/zzaia/home-seed/.mcp.json
 COPY --chown=user:user agents/claude/.claude/settings.json         /opt/zzaia/home-seed/.claude/settings.json

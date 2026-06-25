@@ -143,7 +143,7 @@ C4Container
     }
     
     System_Boundary(home_vol, "Shared Home Volume (/home/user)") {
-        Container(node_tools, "Node.js 24 + npm globals", "Binary/npm", "claude-code, mmdc, codex, gemini-cli")
+        Container(node_tools, "Node.js 24 + npm globals", "Binary/npm", "claude-code, mmdc, codex, gemini-cli, opencode-ai")
         Container(dotnet_tools, ".NET 10 SDK + CLI tools", "Binary", "aspire CLI, aspirate, dotnet SDK")
         Container(python_tools, "Miniforge + conda envs", "Binary/Python", "venv-analytics, venv-development")
         Container(cli_tools, "gh, k6, d2, dapr, RTK, az", "Binary/GitHub", "CLI toolset from official sources")
