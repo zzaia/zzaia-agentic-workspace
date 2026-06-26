@@ -2,23 +2,16 @@
 # Init-ubuntu.sh - ZZAIA Workspace Launcher (Ubuntu / WSL)
 set -euo pipefail
 
-SESSION_NAME=""
 FULL_AUTOMATIC=false
 USE_TMUX=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --session-name)   SESSION_NAME="$2"; shift 2 ;;
         --full-automatic) FULL_AUTOMATIC=true; shift ;;
         --tmux)           USE_TMUX=true; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
-
-if [[ -z "$SESSION_NAME" ]]; then
-    echo "Usage: ./Init-ubuntu.sh --session-name <name> [--full-automatic] [--tmux]"
-    exit 1
-fi
 
 echo ''
 echo '  ███████╗███████╗ █████╗ ██╗ █████╗ '
