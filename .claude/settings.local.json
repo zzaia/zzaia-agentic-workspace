@@ -45,5 +45,19 @@
   "outputStyle": "agentic-concise",
   "preferences": {
     "tmuxSplitPanes": true
-  }
+  },
+  "disabledMcpjsonServers": [
+    "tavily",
+    "azure-devops",
+    "playwright",
+    "postman",
+    "aspire",
+    "new-relic",
+    "github",
+    "aws-sns-sqs",
+    "aws-postgres-sql",
+    "aws-cloudwatch",
+    "aws-cloudwatch-xray",
+    "aws-ecs"
+  ]
 }

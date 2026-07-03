@@ -231,6 +231,8 @@ __marimo__/
 !.claude/
 .claude/*
 !.claude/agents/
+!.claude/workflows/
+!.claude/skills/
 !.claude/commands/
 !.claude/output-styles/
 !.claude/marketplace.json
