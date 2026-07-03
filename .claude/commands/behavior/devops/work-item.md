@@ -92,6 +92,25 @@ parameters:
 
 Provide a unified interface for retrieving and managing work items across multiple DevOps platforms, enabling developers to quickly access and filter work item information.
 
+## EXAMPLES
+
+```bash
+# List recent project work items
+/behavior:devops:work-item --project "Finance" --limit 10
+
+# Find specific work item (detailed view)
+/behavior:devops:work-item --id 46104
+
+# Filter by assignee and status
+/behavior:devops:work-item --assignee "john.doe" --status "Active"
+
+# Time-based filtering
+/behavior:devops:work-item --since "2025-09-01" --project "Crypto Hub"
+
+# Specify platform explicitly
+/behavior:devops:work-item --platform azure --project "Engineering"
+```
+
 ## EXECUTION
 
 1. **Platform Detection**
@@ -142,25 +161,6 @@ sequenceDiagram
 - Return work items in consistent format
 - Handle platform-specific variations
 - Provide clear error messages for configuration issues
-
-## EXAMPLES
-
-```bash
-# List recent project work items
-/behavior:devops:work-item --project "Finance" --limit 10
-
-# Find specific work item (detailed view)
-/behavior:devops:work-item --id 46104
-
-# Filter by assignee and status
-/behavior:devops:work-item --assignee "john.doe" --status "Active"
-
-# Time-based filtering
-/behavior:devops:work-item --since "2025-09-01" --project "Crypto Hub"
-
-# Specify platform explicitly
-/behavior:devops:work-item --platform azure --project "Engineering"
-```
 
 ## OUTPUT FORMAT
 

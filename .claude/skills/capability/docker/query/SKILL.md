@@ -21,6 +21,24 @@ metadata:
 
 Retrieve raw Docker state via CLI. Returns unprocessed output from Docker commands — container list, image list, volume list, or network list. No formatting or analysis applied.
 
+## EXAMPLES
+
+```
+/capability:docker:query --target containers
+```
+
+```
+/capability:docker:query --target containers --filter status=exited
+```
+
+```
+/capability:docker:query --target images --description "List all images including dangling"
+```
+
+```
+/capability:docker:query --target volumes --filter dangling=true
+```
+
 ## EXECUTION
 
 1. **Identify Target** — Parse `--target` and invoke appropriate Docker CLI command
@@ -64,24 +82,6 @@ sequenceDiagram
 - Preserves field formatting and column data
 - Includes all available columns for the resource type
 - Errors reported with target context
-
-## EXAMPLES
-
-```
-/capability:docker:query --target containers
-```
-
-```
-/capability:docker:query --target containers --filter status=exited
-```
-
-```
-/capability:docker:query --target images --description "List all images including dangling"
-```
-
-```
-/capability:docker:query --target volumes --filter dangling=true
-```
 
 ## OUTPUT
 

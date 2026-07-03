@@ -22,6 +22,20 @@ metadata:
 
 Retrieve raw messages from AWS SQS queue via MCP. Returns unprocessed message data — body, attributes, message ID, and receipt handle. No formatting or analysis applied.
 
+## EXAMPLES
+
+```
+/capability:sqs:query --queue-name my-queue
+```
+
+```
+/capability:sqs:query --queue-name https://sqs.us-east-1.amazonaws.com/123456789/my-queue --max-messages 20
+```
+
+```
+/capability:sqs:query --queue-name process-queue --max-messages 5 --description "Check for pending processing tasks"
+```
+
 ## EXECUTION
 
 1. **Retrieve Messages** — Query the specified `--queue-name` for up to `--max-messages` messages (default 10)
@@ -63,20 +77,6 @@ sequenceDiagram
 - Preserves message attribute types and values
 - Includes visibility timeout and timestamp data
 - Errors reported with queue context
-
-## EXAMPLES
-
-```
-/capability:sqs:query --queue-name my-queue
-```
-
-```
-/capability:sqs:query --queue-name https://sqs.us-east-1.amazonaws.com/123456789/my-queue --max-messages 20
-```
-
-```
-/capability:sqs:query --queue-name process-queue --max-messages 5 --description "Check for pending processing tasks"
-```
 
 ## OUTPUT
 

@@ -27,6 +27,17 @@ parameters:
 
 Single interface for workspace repository management. Routes to clone, branch creation, or update based on `--action` and provided parameters.
 
+## EXAMPLES
+
+```
+/behavior:workspace:repo --action new --repo https://github.com/username/repository.git
+/behavior:workspace:repo --action new --repo https://github.com/username/repo1.git https://github.com/username/repo2.git
+/behavior:workspace:repo --action new --repo my-api --branch feature/user-authentication
+/behavior:workspace:repo --action new --repo frontend --branch bugfix/header-styling --target-branch develop
+/behavior:workspace:repo --action update --repo my-api --branch feature/user-authentication
+/behavior:workspace:repo --action update --repo my-api
+```
+
 ## ACTIONS
 
 | Action   | Description                                                                |
@@ -174,17 +185,6 @@ sequenceDiagram
 - Branch mode: remote checked; target-branch fetched before new branch creation; linked worktree added; `.code-workspace` updated
 - Update mode: fetch run via privileged branch; scope matches `--branch` or all worktrees
 - All modes report per-operation status
-
-## EXAMPLES
-
-```
-/behavior:workspace:repo --action new --repo https://github.com/username/repository.git
-/behavior:workspace:repo --action new --repo https://github.com/username/repo1.git https://github.com/username/repo2.git
-/behavior:workspace:repo --action new --repo my-api --branch feature/user-authentication
-/behavior:workspace:repo --action new --repo frontend --branch bugfix/header-styling --target-branch develop
-/behavior:workspace:repo --action update --repo my-api --branch feature/user-authentication
-/behavior:workspace:repo --action update --repo my-api
-```
 
 ## OUTPUT
 

@@ -24,6 +24,14 @@ metadata:
 
 Extract structured text content from PDF and Word documents to reference in conversation context. Supports batch reading of document pages/sections with metadata headers.
 
+## EXAMPLES
+
+```
+/capability:document:read --file ~/projects/report.pdf
+/capability:document:read --file ./contract.docx
+/capability:document:read --file /absolute/path/document.pdf --summary
+```
+
 ## EXECUTION
 
 1. **Validate Input**: Check file path, verify supported extension (.pdf or .docx)
@@ -80,14 +88,6 @@ sequenceDiagram
 - Handles unsupported formats with format guidance
 - Reports missing dependencies with installation instructions
 - Output is plain text suitable for conversation context injection
-
-## EXAMPLES
-
-```
-/capability:document:read --file ~/projects/report.pdf
-/capability:document:read --file ./contract.docx
-/capability:document:read --file /absolute/path/document.pdf --summary
-```
 
 ## OUTPUT
 

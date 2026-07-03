@@ -37,6 +37,22 @@ parameters:
 
 Conduct comprehensive code reviews with multi-dimensional analysis, providing actionable insights into code quality, potential improvements, and architectural considerations.
 
+## EXAMPLES
+
+```bash
+# Review current repository changes
+/review changes
+
+# Review specific repository
+/review repo /path/to/repository
+
+# Review pull request
+/review pr https://github.com/owner/repo/pull/123
+
+# Deep review of repository
+/review repo /path/to/repository --depth deep
+```
+
 ## EXECUTION
 
 1. **Initialization**
@@ -108,22 +124,6 @@ Apply the appropriate rule file before any code review:
 - Actionable and clear recommendations
 - Support for multiple review targets
 - Consistent and standardized reporting
-
-## EXAMPLES
-
-```bash
-# Review current repository changes
-/review changes
-
-# Review specific repository
-/review repo /path/to/repository
-
-# Review pull request
-/review pr https://github.com/owner/repo/pull/123
-
-# Deep review of repository
-/review repo /path/to/repository --depth deep
-```
 
 ## OUTPUT
 

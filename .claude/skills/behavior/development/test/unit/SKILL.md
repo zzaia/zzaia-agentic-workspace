@@ -42,6 +42,16 @@ metadata:
 
 Auto-detect the testing framework, run unit tests for a specific project, and optionally debug the system via a data source collection to surface issues and inconsistencies exposed by the test run.
 
+## EXAMPLES
+
+```
+/behavior:development:test:unit --repo backend-hub --branch master --project api
+/behavior:development:test:unit --repo compliance-hub --branch feature/new-module --project core --action implement
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources postgresql --source-metadata orders
+/behavior:development:test:unit --repo payment-service --branch master --project worker --debug-sources new-relic --application payment-service
+/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources docker --source-metadata order-service-api
+```
+
 ## EXECUTION
 
 1. **Project Validation**
@@ -80,7 +90,6 @@ Auto-detect the testing framework, run unit tests for a specific project, and op
 
    - Cross-reference diagnostic findings with test results — surface system issues, warnings, and inconsistencies revealed by the test run
 
-
 ## WORKFLOW
 
 ```mermaid
@@ -112,16 +121,6 @@ sequenceDiagram
 - Only unit tests executed with coverage report
 - When `--debug-sources` provided: debug executed after test run regardless of pass/fail
 - Diagnostic findings cross-referenced with test results
-
-## EXAMPLES
-
-```
-/behavior:development:test:unit --repo backend-hub --branch master --project api
-/behavior:development:test:unit --repo compliance-hub --branch feature/new-module --project core --action implement
-/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources postgresql --source-metadata orders
-/behavior:development:test:unit --repo payment-service --branch master --project worker --debug-sources new-relic --application payment-service
-/behavior:development:test:unit --repo order-service --branch master --project api --debug-sources docker --source-metadata order-service-api
-```
 
 ## OUTPUT
 

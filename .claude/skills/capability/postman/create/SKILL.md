@@ -21,6 +21,20 @@ metadata:
 
 Create a new Postman resource (collection, request, environment, or mock). Supports full specification of resource properties.
 
+## EXAMPLES
+
+```
+/capability:postman:create --target collection --spec '{"name":"API Tests","description":"Test collection"}'
+```
+
+```
+/capability:postman:create --target environment --spec '{"name":"staging","variables":{"api_url":"https://staging.example.com","api_key":"test_key"}}' --description "Create staging environment with base URL and API key"
+```
+
+```
+/capability:postman:create --target request --spec '{"name":"Get Users","method":"GET","url":"{{api_url}}/users","headers":{"Authorization":"Bearer {{api_key}}"}}' --description "Create request for retrieving user list"
+```
+
 ## EXECUTION
 
 1. **Identify** the resource type from `--target`
@@ -54,20 +68,6 @@ sequenceDiagram
 - Resource ID is returned
 - All specified properties are applied
 - Resource is accessible for subsequent operations
-
-## EXAMPLES
-
-```
-/capability:postman:create --target collection --spec '{"name":"API Tests","description":"Test collection"}'
-```
-
-```
-/capability:postman:create --target environment --spec '{"name":"staging","variables":{"api_url":"https://staging.example.com","api_key":"test_key"}}' --description "Create staging environment with base URL and API key"
-```
-
-```
-/capability:postman:create --target request --spec '{"name":"Get Users","method":"GET","url":"{{api_url}}/users","headers":{"Authorization":"Bearer {{api_key}}"}}' --description "Create request for retrieving user list"
-```
 
 ## OUTPUT
 

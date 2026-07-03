@@ -30,6 +30,14 @@ metadata:
 
 Create a new branch in a repository, optionally from a specified source branch. If no source branch is provided, creates from the repository's default branch.
 
+## EXAMPLES
+
+```
+/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch feature/new-feature
+/capability:repo:create-branch --portal github --project my-org --repo my-repo --branch feature/new-feature --source-branch develop
+/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch bugfix/issue-123 --source-branch release/v1.0
+```
+
 ## EXECUTION
 
 1. **Validate inputs**: Confirm portal, project, repo, and branch parameters are provided
@@ -74,14 +82,6 @@ sequenceDiagram
 - Error handling for branch already exists
 - Error handling for invalid source branch
 - Confirmation includes new branch name and source
-
-## EXAMPLES
-
-```
-/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch feature/new-feature
-/capability:repo:create-branch --portal github --project my-org --repo my-repo --branch feature/new-feature --source-branch develop
-/capability:repo:create-branch --portal azure --project MyOrg --repo MyRepo --branch bugfix/issue-123 --source-branch release/v1.0
-```
 
 ## OUTPUT
 

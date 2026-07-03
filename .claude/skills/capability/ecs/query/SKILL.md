@@ -22,6 +22,20 @@ metadata:
 
 Retrieve raw ECS cluster resources via MCP. Returns unprocessed data — services, tasks, task definitions, and container details. No formatting or analysis applied.
 
+## EXAMPLES
+
+```
+/capability:ecs:query --cluster production
+```
+
+```
+/capability:ecs:query --cluster staging --resource services
+```
+
+```
+/capability:ecs:query --cluster my-cluster --resource tasks --description "Check for running tasks"
+```
+
 ## EXECUTION
 
 1. **Retrieve Resources** — Query the specified `--cluster` for resources of type `--resource` (default all)
@@ -64,20 +78,6 @@ sequenceDiagram
 - Includes container image references and ECR paths
 - Preserves all resource attributes and deployment metadata
 - Errors reported with cluster context
-
-## EXAMPLES
-
-```
-/capability:ecs:query --cluster production
-```
-
-```
-/capability:ecs:query --cluster staging --resource services
-```
-
-```
-/capability:ecs:query --cluster my-cluster --resource tasks --description "Check for running tasks"
-```
 
 ## OUTPUT
 

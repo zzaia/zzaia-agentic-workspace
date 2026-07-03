@@ -21,6 +21,16 @@ parameters:
 
 Build applications across multiple frameworks with comprehensive error reporting and no git operations.
 
+## EXAMPLES
+
+```bash
+# Build specific repository and branch
+/build backend-hub master api
+
+# Build feature branch
+/build my-project feature/new-api
+```
+
 ## EXECUTION
 
 1. **Validation**
@@ -62,16 +72,6 @@ sequenceDiagram
     C->>P: Execute build command
     P-->>C: Build results
     C-->>U: Build status report
-```
-
-## EXAMPLES
-
-```bash
-# Build specific repository and branch
-/build backend-hub master api
-
-# Build feature branch
-/build my-project feature/new-api
 ```
 
 ## OUTPUT

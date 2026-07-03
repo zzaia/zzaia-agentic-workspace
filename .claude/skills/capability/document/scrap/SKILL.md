@@ -29,6 +29,19 @@ metadata:
 
 Discover and extract PDF/Word documents from web sources using browser automation (Playwright) or web search.
 
+## EXAMPLES
+
+```bash
+# Form-based site with filters
+/capability:document:scraping url=https://site.com/search filters='{"term": "value"}'
+
+# Web search with download
+/capability:document:scraping search="research papers 2025" download=true output-path=/workspace/docs
+
+# URL without download
+/capability:document:scraping url=https://site.com/resources download=false
+```
+
 ## EXECUTION
 
 1. **Strategy**: Playwright for form-based sites, WebSearch/WebFetch for static sites
@@ -64,19 +77,6 @@ sequenceDiagram
 - Discovers PDF/Word documents with metadata extraction
 - Applies filters, requires user confirmation for downloads
 - Handles errors gracefully with meaningful messages
-
-## EXAMPLES
-
-```bash
-# Form-based site with filters
-/capability:document:scraping url=https://site.com/search filters='{"term": "value"}'
-
-# Web search with download
-/capability:document:scraping search="research papers 2025" download=true output-path=/workspace/docs
-
-# URL without download
-/capability:document:scraping url=https://site.com/resources download=false
-```
 
 ## OUTPUT
 

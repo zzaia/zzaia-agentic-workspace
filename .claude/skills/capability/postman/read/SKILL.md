@@ -21,6 +21,24 @@ metadata:
 
 Read and list Postman workspace resources by type. Retrieves a single resource by ID or lists all resources of the specified type.
 
+## EXAMPLES
+
+```
+/capability:postman:read --target collection
+```
+
+```
+/capability:postman:read --target collection --id "collection-abc123"
+```
+
+```
+/capability:postman:read --target environment --description "Get all environments to see available API configurations"
+```
+
+```
+/capability:postman:read --target request --id "Get Users"
+```
+
 ## EXECUTION
 
 1. **Identify** the resource type from `--target`
@@ -54,24 +72,6 @@ sequenceDiagram
 - List operation returns all resources of the type
 - Resource properties are complete and accurate
 - Nested structures (folders, requests within collections) are included
-
-## EXAMPLES
-
-```
-/capability:postman:read --target collection
-```
-
-```
-/capability:postman:read --target collection --id "collection-abc123"
-```
-
-```
-/capability:postman:read --target environment --description "Get all environments to see available API configurations"
-```
-
-```
-/capability:postman:read --target request --id "Get Users"
-```
 
 ## OUTPUT
 

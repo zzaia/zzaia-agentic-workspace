@@ -22,6 +22,20 @@ metadata:
 
 Query New Relic MCP for raw telemetry data — retrieve error logs, stack traces, warning events, anomalies, and transaction performance metrics. Returns structured unprocessed data for analysis in higher layers.
 
+## EXAMPLES
+
+```
+/capability:new-relic:query --application-name payment-service
+```
+
+```
+/capability:new-relic:query --application-name api-gateway --time-range 48
+```
+
+```
+/capability:new-relic:query --application-name worker-service --time-range 12 --description "Check for recent memory anomalies"
+```
+
 ## EXECUTION
 
 1. **Query New Relic** — Retrieve logs filtered by `--application-name` from the last `--time-range` hours (default 24h)
@@ -62,20 +76,6 @@ sequenceDiagram
 - Returns raw structured data without analysis
 - Timestamps preserved for all events
 - Data organized by category (errors, warnings, anomalies, metrics)
-
-## EXAMPLES
-
-```
-/capability:new-relic:query --application-name payment-service
-```
-
-```
-/capability:new-relic:query --application-name api-gateway --time-range 48
-```
-
-```
-/capability:new-relic:query --application-name worker-service --time-range 12 --description "Check for recent memory anomalies"
-```
 
 ## OUTPUT
 

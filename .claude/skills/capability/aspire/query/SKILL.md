@@ -18,6 +18,20 @@ metadata:
 
 Query Aspire AppHost MCP for raw telemetry data — retrieve console logs, structured logs, traces, and resource metadata. Returns unprocessed data for analysis in higher layers.
 
+## EXAMPLES
+
+```
+/capability:aspire:query
+```
+
+```
+/capability:aspire:query --application order-service
+```
+
+```
+/capability:aspire:query --application api-gateway --description "Retrieve recent traces for performance analysis"
+```
+
 ## EXECUTION
 
 1. **List Resources** — Discover all running resources in Aspire AppHost; filter by `--application` if set
@@ -60,20 +74,6 @@ sequenceDiagram
 - Returns raw unprocessed data without analysis or grouping
 - Timestamps preserved for all events
 - Resource metadata included (name, type, status)
-
-## EXAMPLES
-
-```
-/capability:aspire:query
-```
-
-```
-/capability:aspire:query --application order-service
-```
-
-```
-/capability:aspire:query --application api-gateway --description "Retrieve recent traces for performance analysis"
-```
 
 ## OUTPUT
 

@@ -42,6 +42,15 @@ parameters:
 
 Single interface for Azure DevOps pipeline management. Routes to execution or diagnostics based on `--action`.
 
+## EXAMPLES
+
+```
+/behavior:devops:pipeline --action run --portal azure --project MyProject --pipeline build-pipeline --branch main
+/behavior:devops:pipeline --action run --portal azure --file workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
+/behavior:devops:pipeline --action debug --portal azure --project MyProject --pipeline build-pipeline
+/behavior:devops:pipeline --action debug --portal azure --project MyProject --pipeline 42 --run 1850 --limit 20
+```
+
 ## ACTIONS
 
 | Action  | Description                                                     |
@@ -101,15 +110,6 @@ sequenceDiagram
 
 - `run`: resolves missing parameters from `--file`; returns run ID, URL, branch, and commit SHA
 - `debug`: read-only; report includes summary table, failed steps with log excerpts, artifacts, and linked commits
-
-## EXAMPLES
-
-```
-/behavior:devops:pipeline --action run --portal azure --project MyProject --pipeline build-pipeline --branch main
-/behavior:devops:pipeline --action run --portal azure --file workspace/myrepo.worktrees/feature/my-feature/azure-pipelines.yml
-/behavior:devops:pipeline --action debug --portal azure --project MyProject --pipeline build-pipeline
-/behavior:devops:pipeline --action debug --portal azure --project MyProject --pipeline 42 --run 1850 --limit 20
-```
 
 ## OUTPUT
 

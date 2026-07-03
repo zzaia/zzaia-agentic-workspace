@@ -24,6 +24,13 @@ metadata:
 
 Retrieve detailed metadata about a repository including name, URL, default branch, visibility status, and total size.
 
+## EXAMPLES
+
+```
+/capability:repo:read --portal azure --project MyOrg --repo MyRepo
+/capability:repo:read --portal github --project my-org --repo my-repo
+```
+
 ## EXECUTION
 
 1. **Validate inputs**: Confirm portal, project, and repo parameters are provided
@@ -61,13 +68,6 @@ sequenceDiagram
 - Metadata retrieved successfully from the specified portal
 - All fields (name, URL, default branch, visibility, size) are displayed
 - Graceful error handling for missing or invalid repository
-
-## EXAMPLES
-
-```
-/capability:repo:read --portal azure --project MyOrg --repo MyRepo
-/capability:repo:read --portal github --project my-org --repo my-repo
-```
 
 ## OUTPUT
 

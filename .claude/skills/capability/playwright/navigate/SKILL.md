@@ -18,6 +18,20 @@ metadata:
 
 Navigate to a specific URL using Playwright MCP and perform interactions on the page as described. Supports clicks, form fills, key presses, selections, screenshots, and DOM inspection.
 
+## EXAMPLES
+
+```
+/capability:playwright:navigate --url https://localhost:3000
+```
+
+```
+/capability:playwright:navigate --url https://localhost:3000/login --description "Fill username admin and password secret, then click submit"
+```
+
+```
+/capability:playwright:navigate --url https://example.com/form --description "Select option 'Brazil' from country dropdown and submit the form"
+```
+
 ## EXECUTION
 
 1. **Navigate** — Open or reuse a browser tab and navigate to `--url`
@@ -61,20 +75,6 @@ sequenceDiagram
 - Executes interactions described in `--description`
 - Captures before/after page state via snapshots and screenshots
 - Returns structured report of all actions taken and final page state
-
-## EXAMPLES
-
-```
-/capability:playwright:navigate --url https://localhost:3000
-```
-
-```
-/capability:playwright:navigate --url https://localhost:3000/login --description "Fill username admin and password secret, then click submit"
-```
-
-```
-/capability:playwright:navigate --url https://example.com/form --description "Select option 'Brazil' from country dropdown and submit the form"
-```
 
 ## OUTPUT
 

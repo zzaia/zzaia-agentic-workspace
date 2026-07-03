@@ -28,6 +28,25 @@ metadata:
 
 Render a diagram from Mermaid, Graphviz, D2, PlantUML, or Python `diagrams` source code to a PNG file using local renderers — no internet access required.
 
+## EXAMPLES
+
+```
+# Mermaid — quick inline sequence/flowchart (auto-detected)
+/capability:diagram:generate --code "graph TD\n A --> B --> C" --output ./diagrams/flow.png
+
+# Graphviz — dependency trees, graph analysis, splines=ortho routing
+/capability:diagram:generate --type graphviz --code "digraph { rankdir=TB; splines=ortho; A -> B -> C }" --output ./diagrams/arch.png
+
+# D2 + ELK — default choice for service/container architecture diagrams
+/capability:diagram:generate --type d2 --code "direction: down\nwasm -> bff: GraphQL\nbff -> order: HTTP/Dapr\nbff -> identity: HTTP/Dapr" --output ./diagrams/arch.png
+
+# PlantUML — formal C4 model with Person/System/Container icons
+/capability:diagram:generate --type plantuml --code "@startuml\n!include C4Container.puml\nPerson(u, \"User\")\nSystem(s, \"System\")\nRel(u, s, \"Uses\")\n@enduml" --output ./diagrams/c4.png
+
+# Diagrams (Python) — AWS/Azure/GCP/Kubernetes cloud infrastructure with provider icons
+/capability:diagram:generate --type diagrams --code "from diagrams import Diagram, Cluster\nfrom diagrams.azure.compute import AppService\nfrom diagrams.azure.database import SQLDatabase\nwith Diagram('CoffeeShop'):\n    with Cluster('Services'):\n        svc = AppService('Order')\n    db = SQLDatabase('PostgreSQL')\n    svc >> db" --output ./diagrams/infra.png
+```
+
 ## RENDERERS
 
 | Type | CLI Tool | Auto-detected By | Best For | When to Use |
@@ -67,25 +86,6 @@ sequenceDiagram
     P->>F: Write PNG to output path
     P-->>C: PNG path + size
     C-->>U: Diagram ready
-```
-
-## EXAMPLES
-
-```
-# Mermaid — quick inline sequence/flowchart (auto-detected)
-/capability:diagram:generate --code "graph TD\n A --> B --> C" --output ./diagrams/flow.png
-
-# Graphviz — dependency trees, graph analysis, splines=ortho routing
-/capability:diagram:generate --type graphviz --code "digraph { rankdir=TB; splines=ortho; A -> B -> C }" --output ./diagrams/arch.png
-
-# D2 + ELK — default choice for service/container architecture diagrams
-/capability:diagram:generate --type d2 --code "direction: down\nwasm -> bff: GraphQL\nbff -> order: HTTP/Dapr\nbff -> identity: HTTP/Dapr" --output ./diagrams/arch.png
-
-# PlantUML — formal C4 model with Person/System/Container icons
-/capability:diagram:generate --type plantuml --code "@startuml\n!include C4Container.puml\nPerson(u, \"User\")\nSystem(s, \"System\")\nRel(u, s, \"Uses\")\n@enduml" --output ./diagrams/c4.png
-
-# Diagrams (Python) — AWS/Azure/GCP/Kubernetes cloud infrastructure with provider icons
-/capability:diagram:generate --type diagrams --code "from diagrams import Diagram, Cluster\nfrom diagrams.azure.compute import AppService\nfrom diagrams.azure.database import SQLDatabase\nwith Diagram('CoffeeShop'):\n    with Cluster('Services'):\n        svc = AppService('Order')\n    db = SQLDatabase('PostgreSQL')\n    svc >> db" --output ./diagrams/infra.png
 ```
 
 ## OUTPUT

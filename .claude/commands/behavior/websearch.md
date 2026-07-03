@@ -21,6 +21,19 @@ parameters:
 
 Provide standardized, unified web search protocol for comprehensive information gathering with quality validation and cross-referencing.
 
+## EXAMPLES
+
+```bash
+# General web search
+/behavior:websearch "latest .NET 8 features"
+
+# Focused research
+/behavior:websearch "microservices architecture" focus="security best practices"
+
+# Technical documentation
+/behavior:websearch "Entity Framework Core migrations" focus="production deployment"
+```
+
 ## EXECUTION
 
 1. **Search Strategy**
@@ -67,19 +80,6 @@ sequenceDiagram
 
 - `query`: Search query or research topic
 - `focus`: Optional specific aspect or focus area for targeted research
-
-## EXAMPLES
-
-```bash
-# General web search
-/behavior:websearch "latest .NET 8 features"
-
-# Focused research
-/behavior:websearch "microservices architecture" focus="security best practices"
-
-# Technical documentation
-/behavior:websearch "Entity Framework Core migrations" focus="production deployment"
-```
 
 ## OUTPUT
 

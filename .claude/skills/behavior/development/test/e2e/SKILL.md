@@ -29,6 +29,20 @@ metadata:
 
 Execute a single BDD step as an HTTP call via `/capability:postman:request`, query the specified `--debug-sources` for diagnostics afterwards, and return a concise step report.
 
+## EXAMPLES
+
+```
+/behavior:development:test:e2e --step "GET /kits returns 200 with kit array" --environment https://staging-api.bloquo.io --application fiat-service --debug-sources new-relic
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
+```
+
+```
+/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --debug-sources postgresql --source-metadata "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
+```
+
 ## EXECUTION
 
 1. **Resolve Authentication**
@@ -77,20 +91,6 @@ sequenceDiagram
 - HTTP call executed via `/capability:postman:request`
 - Debug source queried regardless of pass/fail result
 - Step report includes: result, HTTP status, response time, diagnostic findings
-
-## EXAMPLES
-
-```
-/behavior:development:test:e2e --step "GET /kits returns 200 with kit array" --environment https://staging-api.bloquo.io --application fiat-service --debug-sources new-relic
-```
-
-```
-/behavior:development:test:e2e --step "POST /orders places message on queue" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
-```
-
-```
-/behavior:development:test:e2e --step "POST /orders persists record" --environment https://staging.myapp.com --application order-service --debug-sources postgresql --source-metadata "SELECT * FROM orders ORDER BY created_at DESC LIMIT 1"
-```
 
 ## OUTPUT
 

@@ -27,6 +27,18 @@ parameters:
 
 Execute focused implementation tasks for development work. Uses task specification from `/behavior:management:plan` command or assumes requirements are already clarified.
 
+## EXAMPLES
+
+```bash
+# Plan first (recommended)
+/behavior:management:plan implement user authentication system
+/behavior:development:develop Add user authentication with JWT tokens repo=auth-service branch=feature/jwt-auth
+
+# Develop in specific repository and branch
+/behavior:development:develop payment processing repo=compliance-hub branch=feature/payments
+
+```
+
 ## EXECUTION
 
 1. **Development Execution**
@@ -83,18 +95,6 @@ sequenceDiagram
             end
         end
     end
-```
-
-## EXAMPLES
-
-```bash
-# Plan first (recommended)
-/behavior:management:plan implement user authentication system
-/behavior:development:develop Add user authentication with JWT tokens repo=auth-service branch=feature/jwt-auth
-
-# Develop in specific repository and branch
-/behavior:development:develop payment processing repo=compliance-hub branch=feature/payments
-
 ```
 
 ## Language Rules

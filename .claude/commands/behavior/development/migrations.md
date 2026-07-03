@@ -24,6 +24,22 @@ parameters:
 
 Manage Entity Framework Core database migrations with standardized actions and security best practices.
 
+## EXAMPLES
+
+```bash
+# Add a new migration
+/migrations compliance-hub main add AddUserProfile
+
+# Update database to latest migration
+/migrations customer-portal develop update
+
+# List all migrations
+/migrations identity-service feature/auth list
+
+# Generate SQL script
+/migrations my-project main script
+```
+
 ## EXECUTION
 
 - **CRITICAL**: Always apply migrations in the .Data project or in the project where the DbContext is implemented
@@ -84,22 +100,6 @@ sequenceDiagram
   - `script`: Generate SQL migration script
   - `drop`: Drop database (caution)
 - `migration-name`: Optional descriptive name for migration (recommended for `add` action)
-
-## EXAMPLES
-
-```bash
-# Add a new migration
-/migrations compliance-hub main add AddUserProfile
-
-# Update database to latest migration
-/migrations customer-portal develop update
-
-# List all migrations
-/migrations identity-service feature/auth list
-
-# Generate SQL script
-/migrations my-project main script
-```
 
 ## OUTPUT
 

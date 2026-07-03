@@ -21,6 +21,20 @@ metadata:
 
 Execute raw SQL queries against PostgreSQL database via MCP. Returns unprocessed query results — rows, columns, and row count. No formatting or analysis applied.
 
+## EXAMPLES
+
+```
+/capability:postgresql:query --query "SELECT * FROM users WHERE status = 'active'"
+```
+
+```
+/capability:postgresql:query --query "SELECT COUNT(*) as total FROM orders" --connection-name analytics-db
+```
+
+```
+/capability:postgresql:query --query "SELECT id, email FROM customers LIMIT 10" --description "Fetch first 10 customer records"
+```
+
 ## EXECUTION
 
 1. **Execute SQL** — Run the provided `--query` against the specified `--connection-name` (or default if omitted)
@@ -61,20 +75,6 @@ sequenceDiagram
 - Preserves column names and data types
 - Includes total row count
 - Errors reported with SQL context
-
-## EXAMPLES
-
-```
-/capability:postgresql:query --query "SELECT * FROM users WHERE status = 'active'"
-```
-
-```
-/capability:postgresql:query --query "SELECT COUNT(*) as total FROM orders" --connection-name analytics-db
-```
-
-```
-/capability:postgresql:query --query "SELECT id, email FROM customers LIMIT 10" --description "Fetch first 10 customer records"
-```
 
 ## OUTPUT
 

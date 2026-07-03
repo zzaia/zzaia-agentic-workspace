@@ -27,6 +27,14 @@ metadata:
 
 Retrieve and display all branches in a repository, with optional filtering by branch name prefix.
 
+## EXAMPLES
+
+```
+/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo
+/capability:repo:list-branches --portal github --project my-org --repo my-repo --branch feature/
+/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo --branch hotfix/
+```
+
 ## EXECUTION
 
 1. **Validate inputs**: Confirm portal, project, and repo parameters are provided
@@ -68,14 +76,6 @@ sequenceDiagram
 - Branch names clearly displayed
 - Default branch marked if identifiable
 - Graceful handling of empty branch lists
-
-## EXAMPLES
-
-```
-/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo
-/capability:repo:list-branches --portal github --project my-org --repo my-repo --branch feature/
-/capability:repo:list-branches --portal azure --project MyOrg --repo MyRepo --branch hotfix/
-```
 
 ## OUTPUT
 

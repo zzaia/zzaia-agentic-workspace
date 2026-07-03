@@ -27,6 +27,18 @@ parameters:
 
 Conduct critical analysis of current context (task, work item, description, or plan) acting as an outside observer to identify inconsistencies, missing concepts, ambiguities, and knowledge gaps. Generate relevant questions that close understanding gaps, increase domain knowledge reach, deepen concept exploration, validate assumptions, and challenge scope and edge cases.
 
+## EXAMPLES
+
+```
+/behavior:management:clarify --context "We need to implement a multi-tenant notification service"
+
+/behavior:management:clarify --work-item 2001
+
+/behavior:management:clarify --context "Refactor the payment gateway" --doc ./docs/spec.md --url https://docs.stripe.com/api
+
+/behavior:management:clarify --context "Build a real-time dashboard" --work-item 1234
+```
+
 ## EXECUTION
 
 1. **Input Analysis**: Gather all provided context from parameters, documents, URLs, and work items
@@ -84,18 +96,6 @@ sequenceDiagram
 - No implementation decisions or recommendations provided
 - All questions are critical and relevant to task quality
 - Output formatted as numbered list by concern category
-
-## EXAMPLES
-
-```
-/behavior:management:clarify --context "We need to implement a multi-tenant notification service"
-
-/behavior:management:clarify --work-item 2001
-
-/behavior:management:clarify --context "Refactor the payment gateway" --doc ./docs/spec.md --url https://docs.stripe.com/api
-
-/behavior:management:clarify --context "Build a real-time dashboard" --work-item 1234
-```
 
 ## OUTPUT
 

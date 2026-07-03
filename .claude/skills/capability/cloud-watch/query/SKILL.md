@@ -22,6 +22,20 @@ metadata:
 
 Query AWS CloudWatch and X-Ray MCPs for raw telemetry data — retrieve logs, metrics, alarms, and distributed traces. Returns structured unprocessed data for analysis in higher layers.
 
+## EXAMPLES
+
+```
+/capability:cloud-watch:query --service-name payment-service
+```
+
+```
+/capability:cloud-watch:query --service-name api-gateway --time-range 48
+```
+
+```
+/capability:cloud-watch:query --service-name worker-service --time-range 12 --description "Check for recent lambda errors"
+```
+
 ## EXECUTION
 
 1. **Query CloudWatch & X-Ray** — Retrieve data for `--service-name` from the last `--time-range` hours (default 24h)
@@ -66,20 +80,6 @@ sequenceDiagram
 - Returns raw structured data without analysis
 - Timestamps preserved for all events
 - Data organized by category (logs, metrics, traces, alarms)
-
-## EXAMPLES
-
-```
-/capability:cloud-watch:query --service-name payment-service
-```
-
-```
-/capability:cloud-watch:query --service-name api-gateway --time-range 48
-```
-
-```
-/capability:cloud-watch:query --service-name worker-service --time-range 12 --description "Check for recent lambda errors"
-```
 
 ## OUTPUT
 

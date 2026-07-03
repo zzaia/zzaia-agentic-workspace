@@ -30,6 +30,16 @@ metadata:
 
 Read and retrieve Microsoft Teams chat or channel conversations with support for filtering by date range, message content, and keyword search. Uses Microsoft 365 MCP tools to access Teams data.
 
+## EXAMPLES
+
+```
+/capability:teams:read --chat-name "Product Launch" --limit 25
+/capability:teams:read --chat-name "engineering" --filter "deployment" --limit 100
+/capability:teams:read --chat-name "#general" --begin-message "2026-03-20" --last-message "2026-03-26"
+/capability:teams:read --chat-name "planning" --begin-message "Started work on" --filter "deadline"
+/capability:teams:read --chat-name "status-updates" --begin-message "10:00" --last-message "16:30" --limit 50
+```
+
 ## EXECUTION
 
 1. **Resolve Chat/Channel**: Search Teams chats and channels using `--chat-name`
@@ -110,16 +120,6 @@ sequenceDiagram
 - Handles missing chat with clear error message
 - Handles ambiguous chat names by asking user for clarification
 - Output shows page count, applied filters, and result count
-
-## EXAMPLES
-
-```
-/capability:teams:read --chat-name "Product Launch" --limit 25
-/capability:teams:read --chat-name "engineering" --filter "deployment" --limit 100
-/capability:teams:read --chat-name "#general" --begin-message "2026-03-20" --last-message "2026-03-26"
-/capability:teams:read --chat-name "planning" --begin-message "Started work on" --filter "deadline"
-/capability:teams:read --chat-name "status-updates" --begin-message "10:00" --last-message "16:30" --limit 50
-```
 
 ## OUTPUT
 

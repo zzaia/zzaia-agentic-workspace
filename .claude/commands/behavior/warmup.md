@@ -18,6 +18,13 @@ parameters:
 
 Establish session-wide conversational guidelines by reading CLAUDE.md and applying mandatory directives for concise, deep, judgment-free interactions.
 
+## EXAMPLES
+
+```
+/behavior:warmup
+/behavior:warmup verbose
+```
+
 ## EXECUTION
 
 1. **Load Configuration**: 
@@ -56,13 +63,6 @@ sequenceDiagram
 - Conversational guidelines applied to session context
 - Output confirms active rules without verbose explanation
 - Session maintains concise, agentic communication style
-
-## EXAMPLES
-
-```
-/behavior:warmup
-/behavior:warmup verbose
-```
 
 ## OUTPUT
 

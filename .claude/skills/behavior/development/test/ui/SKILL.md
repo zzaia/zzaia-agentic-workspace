@@ -29,6 +29,28 @@ metadata:
 
 Execute a single BDD step as a browser interaction via Playwright, collect browser console diagnostics, query the specified `--debug-sources` data source for consistency and issues, and return a concise step report.
 
+## EXAMPLES
+
+```
+/behavior:development:test:ui --step "User clicks checkout and sees confirmation" --environment https://staging.myapp.com --application order-service --debug-sources new-relic
+```
+
+```
+/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
+```
+
+```
+/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --debug-sources postgresql --source-metadata "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
+```
+
+```
+/behavior:development:test:ui --step "User navigates to dashboard" --environment https://staging.myapp.com --application frontend --debug-sources aspire
+```
+
+```
+/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --debug-sources docker --source-metadata file-processor
+```
+
 ## EXECUTION
 
 1. **Authentication** *(if required)*
@@ -87,28 +109,6 @@ sequenceDiagram
 - Collection queried regardless of pass/fail
 - Cross-source consistency validated between browser interaction and backend data
 - Concise step report returned with result, timing, and all findings
-
-## EXAMPLES
-
-```
-/behavior:development:test:ui --step "User clicks checkout and sees confirmation" --environment https://staging.myapp.com --application order-service --debug-sources new-relic
-```
-
-```
-/behavior:development:test:ui --step "User submits order form" --environment https://staging.myapp.com --application order-service --debug-sources sqs --source-metadata orders-queue
-```
-
-```
-/behavior:development:test:ui --step "User updates profile and sees success message" --environment https://staging.myapp.com --application user-service --debug-sources postgresql --source-metadata "SELECT * FROM users WHERE updated_at > NOW() - INTERVAL '1 minute'"
-```
-
-```
-/behavior:development:test:ui --step "User navigates to dashboard" --environment https://staging.myapp.com --application frontend --debug-sources aspire
-```
-
-```
-/behavior:development:test:ui --step "User uploads file and sees processing indicator" --environment https://staging.myapp.com --application frontend --debug-sources docker --source-metadata file-processor
-```
 
 ## OUTPUT
 

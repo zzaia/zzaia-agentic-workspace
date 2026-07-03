@@ -24,6 +24,15 @@ parameters:
 
 Single interface for VSCode configuration management. Routes to generation, validation, or update based on `--action`.
 
+## EXAMPLES
+
+```
+/behavior:workspace:vscode --action setup
+/behavior:workspace:vscode --action setup --mode project --repo order-service
+/behavior:workspace:vscode --action validate
+/behavior:workspace:vscode --action update --repo order-service --branch feature/checkout
+```
+
 ## ACTIONS
 
 | Action     | Description                                              |
@@ -82,15 +91,6 @@ sequenceDiagram
 - `validate`: report lists valid, warning, and missing entries
 - `update`: only modifies entries affected by detected changes
 - Ubuntu/.NET launch configs always include required environment variables
-
-## EXAMPLES
-
-```
-/behavior:workspace:vscode --action setup
-/behavior:workspace:vscode --action setup --mode project --repo order-service
-/behavior:workspace:vscode --action validate
-/behavior:workspace:vscode --action update --repo order-service --branch feature/checkout
-```
 
 ## OUTPUT
 
