@@ -3,22 +3,20 @@
 set -euo pipefail
 
 VAULT_NAME=""
-SESSION_NAME=""
 FULL_AUTOMATIC=false
 USE_TMUX=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --vault-name)     VAULT_NAME="$2"; shift 2 ;;
-        --session-name)   SESSION_NAME="$2"; shift 2 ;;
         --full-automatic) FULL_AUTOMATIC=true; shift ;;
         --tmux)           USE_TMUX=true; shift ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
     esac
 done
 
-if [[ -z "$VAULT_NAME" || -z "$SESSION_NAME" ]]; then
-    echo "Usage: ./Init-ubuntu-op.sh --vault-name <vault> --session-name <name> [--full-automatic] [--tmux]"
+if [[ -z "$VAULT_NAME" ]]; then
+    echo "Usage: ./Init-ubuntu-op.sh --vault-name <vault> [--full-automatic] [--tmux]"
     exit 1
 fi
 
@@ -70,10 +68,10 @@ export CLAUDE_CONFIG_DIR="$SCRIPT_DIR/.claude"
 CLAUDE_FLAGS="--enable-auto-mode"
 [[ "$FULL_AUTOMATIC" == true ]] && CLAUDE_FLAGS="--dangerously-skip-permissions"
 
-SESSION_UUID=$(python3 -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + "_" + sys.argv[2]))' "$VAULT_NAME" "$SESSION_NAME")
+SESSION_UUID=$(python3 -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + sys.argv[1]))' "$AZURE_DEVOPS_ORGANIZATION")
 
 if [[ "$USE_TMUX" == true ]]; then
-    TMUX_SESSION="${VAULT_NAME}_${SESSION_NAME}"
+    TMUX_SESSION="$SESSION_UUID"
     if tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
         tmux attach-session -t "$TMUX_SESSION"; exit 0
     fi

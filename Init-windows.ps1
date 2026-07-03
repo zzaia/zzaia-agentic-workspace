@@ -1,7 +1,6 @@
 #Requires -Version 7
 # Init-windows.ps1 - ZZAIA Workspace Launcher (Windows PowerShell)
 param(
-    [Parameter(Mandatory)][string]$SessionName,
     [switch]$FullAutomatic
 )
 
@@ -58,7 +57,7 @@ if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-$sessionUuid = & py -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + sys.argv[2]))' $SessionName $env:AZURE_DEVOPS_ORGANIZATION
+$sessionUuid = & py -c 'import uuid, sys; print(uuid.uuid5(uuid.NAMESPACE_DNS, sys.argv[1] + sys.argv[1]))' $env:AZURE_DEVOPS_ORGANIZATION
 if (-not $sessionUuid) {
     Write-Error "Failed to generate session UUID."
     exit 1
