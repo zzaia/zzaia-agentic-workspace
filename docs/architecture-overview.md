@@ -122,11 +122,8 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | `mcp-github` | 3005 | Fetches `GITHUB_PERSONAL_ACCESS_TOKEN` from Vault | Opt-in |
 | `mcp-playwright` | 3006 | No secrets required | Always-on, headless Chromium |
 | `mcp-headroom` | 3008 | No secrets required | Always-on, MCP gateway for ml-server |
-| `mcp-aws-sns-sqs` | 3010 | Fetches `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
-| `mcp-aws-cloudwatch` | 3011 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
-| `mcp-aws-cloudwatch-xray` | 3012 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
-| `mcp-aws-ecs` | 3013 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
-| `mcp-aws-postgres` | 3014 | Fetches AWS credentials from `secret/mcp/aws` | Opt-in via bifrost Code Mode |
+| `mcp-aws-api` | 3010 | Fetches `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` from `secret/mcp/aws` | Opt-in via bifrost Code Mode; aggregates 15,000+ AWS API operations (requires ReadOnlyAccess or narrower IAM scope) |
+| `mcp-azure-portal` | 3015 | Fetches `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` from `secret/mcp/azure-portal` | Opt-in via bifrost Code Mode; covers 40+ Azure services (Monitor, Storage, Key Vault, etc.) |
 
 - The `workspace` container holds zero API key environment variables
 - MCP sidecars fetch secrets at runtime: `VAULT_ADDR=http://vault-server:8200`, `VAULT_TOKEN` injected at startup
@@ -329,13 +326,10 @@ echo "UUID=<uuid>  /mnt/dind-disk  ext4  defaults  0 2" >> /etc/fstab
 | `postman` | `http://mcp-postman:3003/mcp` | 41 API testing tools |
 | `github` | `http://mcp-github:3005/mcp` | 47 GitHub Copilot tools |
 | `playwright` | `http://mcp-playwright:3006/mcp` | 23 browser automation tools |
-| `aws_sns_sqs` | `http://mcp-aws-sns-sqs:3010/mcp` | AWS SNS/SQS tools (conditional: requires AWS credentials in Vault) |
-| `aws_cloudwatch` | `http://mcp-aws-cloudwatch:3011/mcp` | AWS CloudWatch metrics/alarms/logs (conditional) |
-| `aws_cloudwatch_xray` | `http://mcp-aws-cloudwatch-xray:3012/mcp` | AWS X-Ray traces and Application Signals (conditional) |
-| `aws_ecs` | `http://mcp-aws-ecs:3013/mcp` | AWS ECS cluster/task inspection (conditional) |
-| `aws_postgres` | `http://mcp-aws-postgres:3014/mcp` | AWS RDS/Aurora PostgreSQL access (conditional) |
+| `aws_api` | `http://mcp-aws-api:3010/mcp` | AWS API (~15,000 operations: EC2, S3, Lambda, RDS, DynamoDB, etc.) (conditional: requires AWS credentials in Vault) |
+| `azure_portal` | `http://mcp-azure-portal:3015/mcp` | Azure resource management (40+ services: Monitor, Storage, Key Vault, App Service, Functions, etc.) (conditional: requires Azure credentials in Vault) |
 
-All upstream tools are configured as `is_code_mode_client: true` in bifrost — agents access them via Starlark `executeToolCode`, not as direct MCP connections. AWS tools are conditionally registered: bifrost checks `secret/mcp/aws` at startup and skips registration if credentials are absent.
+All upstream tools are configured as `is_code_mode_client: true` in bifrost — agents access them via Starlark `executeToolCode`, not as direct MCP connections. AWS and Azure tools are conditionally registered: bifrost checks respective Vault paths (`secret/mcp/aws`, `secret/mcp/azure-portal`) at startup and skips registration if credentials are absent.
 
 **setup_mcp_config()** copies `agents/claude/.mcp.json` (the single source of truth, also deployed as `home-seed`) to `/home/user/.mcp.json`, then injects the runtime bifrost key via Python. All agent configs (copilot, gemini, codex) mirror the same server set.
 

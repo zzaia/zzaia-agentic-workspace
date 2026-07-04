@@ -16,9 +16,9 @@ else
     _N=''
 fi
 
-log_info()    { echo -e "${_B}[mcp-aws-postgres]${_N} $*"; }
-log_warn()    { echo -e "${_Y}[mcp-aws-postgres] WARN:${_N} $*" >&2; }
-log_success() { echo -e "${_G}[mcp-aws-postgres] ✓${_N} $*"; }
+log_info()    { echo -e "${_B}[mcp-aws-api]${_N} $*"; }
+log_warn()    { echo -e "${_Y}[mcp-aws-api] WARN:${_N} $*" >&2; }
+log_success() { echo -e "${_G}[mcp-aws-api] ✓${_N} $*"; }
 
 # ── AppRole login ─────────────────────────────────────────────────────────────
 vault_approle_login() {
@@ -67,7 +67,7 @@ fetch_secrets() {
 # ── Validate secrets ──────────────────────────────────────────────────────────
 validate_secrets() {
     if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ] || [ -z "${AWS_REGION}" ]; then
-        log_warn "AWS credentials not set - mcp-aws-postgres idle."
+        log_warn "AWS credentials not set - mcp-aws-api idle (Note: AWS API MCP requires ReadOnlyAccess or narrower scope)."
         trap 'exit 0' TERM INT
         while :; do sleep 3600 & wait $!; done
     fi
@@ -75,18 +75,9 @@ validate_secrets() {
 
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
-    cat > /tmp/mcp-runner.sh << 'EOF'
-#!/bin/sh
-export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
-export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-export AWS_REGION="${AWS_REGION}"
-export FASTMCP_LOG_LEVEL="ERROR"
-exec uvx awslabs.postgres-mcp-server@latest
-EOF
-    chmod +x /tmp/mcp-runner.sh
-    log_info "Starting AWS PostgreSQL MCP server..."
-    exec supergateway --port 3014 --outputTransport streamableHttp --stateful \
-        --stdio "/tmp/mcp-runner.sh"
+    log_info "Starting AWS API MCP server..."
+    log_info "Credentials: requires ReadOnlyAccess or narrower IAM scope"
+    exec uvx awslabs.aws-api-mcp-server@latest
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────

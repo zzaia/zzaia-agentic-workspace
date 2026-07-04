@@ -16,9 +16,9 @@ else
     _N=''
 fi
 
-log_info()    { echo -e "${_B}[mcp-aws-ecs]${_N} $*"; }
-log_warn()    { echo -e "${_Y}[mcp-aws-ecs] WARN:${_N} $*" >&2; }
-log_success() { echo -e "${_G}[mcp-aws-ecs] ✓${_N} $*"; }
+log_info()    { echo -e "${_B}[mcp-azure-portal]${_N} $*"; }
+log_warn()    { echo -e "${_Y}[mcp-azure-portal] WARN:${_N} $*" >&2; }
+log_success() { echo -e "${_G}[mcp-azure-portal] ✓${_N} $*"; }
 
 # ── AppRole login ─────────────────────────────────────────────────────────────
 vault_approle_login() {
@@ -41,7 +41,7 @@ vault_approle_login() {
 fetch_secrets() {
     log_info "Fetching secrets from Vault..."
 
-    local aws_access_key_id="" aws_secret_access_key="" aws_region=""
+    local azure_client_id="" azure_client_secret="" azure_tenant_id="" azure_subscription_id=""
 
     if [ -n "${VAULT_ADDR:-}" ]; then
         vault_approle_login || log_warn "AppRole login failed — secrets will be empty"
@@ -50,24 +50,27 @@ fetch_secrets() {
     if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
         local vault_data
         vault_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/aws" 2>/dev/null || echo '{}')
-        aws_access_key_id=$(printf '%s' "$vault_data" | jq -r '.data.data.AWS_ACCESS_KEY_ID // empty' 2>/dev/null || echo "")
-        aws_secret_access_key=$(printf '%s' "$vault_data" | jq -r '.data.data.AWS_SECRET_ACCESS_KEY // empty' 2>/dev/null || echo "")
-        aws_region=$(printf '%s' "$vault_data" | jq -r '.data.data.AWS_REGION // empty' 2>/dev/null || echo "")
+            "${VAULT_ADDR}/v1/secret/data/mcp/azure-portal" 2>/dev/null || echo '{}')
+
+        azure_client_id=$(printf '%s' "$vault_data" | jq -r '.data.data.AZURE_CLIENT_ID // empty' 2>/dev/null || echo "")
+        azure_client_secret=$(printf '%s' "$vault_data" | jq -r '.data.data.AZURE_CLIENT_SECRET // empty' 2>/dev/null || echo "")
+        azure_tenant_id=$(printf '%s' "$vault_data" | jq -r '.data.data.AZURE_TENANT_ID // empty' 2>/dev/null || echo "")
+        azure_subscription_id=$(printf '%s' "$vault_data" | jq -r '.data.data.AZURE_SUBSCRIPTION_ID // empty' 2>/dev/null || echo "")
     fi
 
     unset VAULT_TOKEN
-    export AWS_ACCESS_KEY_ID="$aws_access_key_id"
-    export AWS_SECRET_ACCESS_KEY="$aws_secret_access_key"
-    export AWS_REGION="$aws_region"
+    export AZURE_CLIENT_ID="$azure_client_id"
+    export AZURE_CLIENT_SECRET="$azure_client_secret"
+    export AZURE_TENANT_ID="$azure_tenant_id"
+    export AZURE_SUBSCRIPTION_ID="$azure_subscription_id"
 
     log_success "Secrets loaded"
 }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 validate_secrets() {
-    if [ -z "${AWS_ACCESS_KEY_ID}" ] || [ -z "${AWS_SECRET_ACCESS_KEY}" ] || [ -z "${AWS_REGION}" ]; then
-        log_warn "AWS credentials not set - mcp-aws-ecs idle."
+    if [ -z "${AZURE_CLIENT_ID}" ] || [ -z "${AZURE_CLIENT_SECRET}" ] || [ -z "${AZURE_TENANT_ID}" ]; then
+        log_warn "Azure credentials not set - mcp-azure-portal idle."
         trap 'exit 0' TERM INT
         while :; do sleep 3600 & wait $!; done
     fi
@@ -75,19 +78,8 @@ validate_secrets() {
 
 # ── Start server ──────────────────────────────────────────────────────────────
 start_server() {
-    cat > /tmp/mcp-runner.sh << 'EOF'
-#!/bin/sh
-export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
-export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}"
-export AWS_REGION="${AWS_REGION}"
-export ALLOW_WRITE="false"
-export FASTMCP_LOG_LEVEL="ERROR"
-exec uvx --from awslabs-ecs-mcp-server@latest ecs-mcp-server
-EOF
-    chmod +x /tmp/mcp-runner.sh
-    log_info "Starting AWS ECS MCP server..."
-    exec supergateway --port 3013 --outputTransport streamableHttp --stateful \
-        --stdio "/tmp/mcp-runner.sh"
+    log_info "Starting Azure Portal MCP server..."
+    exec supergateway --port 3015 --outputTransport streamableHttp --stateful --stdio "npx -y @azure/mcp@latest server start"
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────
