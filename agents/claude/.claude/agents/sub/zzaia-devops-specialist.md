@@ -6,6 +6,9 @@ model: haiku
 mcpServers: 
   - azure-devops
   - new-relic
+  - headroom
+  - bifrost
+  - codegraph
 color: purple
 ---
 

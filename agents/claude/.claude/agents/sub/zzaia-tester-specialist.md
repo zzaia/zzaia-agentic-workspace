@@ -7,6 +7,9 @@ mcpServers:
    - postman
    - aspire
    - new-relic
+   - headroom
+   - bifrost
+   - codegraph
 model: haiku
 color: yellow
 ---

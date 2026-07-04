@@ -87,21 +87,18 @@ This hierarchy enables complex automation through composition without coupling l
 - Language-appropriate architecture across all projects
 - Cross-repository feature development coordination
 
-## MCP Tool Architecture
+## MCP Tools
 
-MCP tools reach Claude Code through two paths:
+| MCP | Interaction | How to Interact | Use When | Example Tools |
+|---|---|---|---|---|
+| **bifrost** | Bifrost Code Mode | `listToolFiles()` → `getToolDocs(name, fn)` → `executeToolCode(code)` — Python/Starlark sandbox; `result["key"]` syntax (not dot notation); no async/await; assign final output to `result`. Authenticates with virtual key `sk-bf-workspace-agent-001` via `x-api-key` header | Aggregated work tools: web research, DevOps tickets/PRs, API testing, observability, cloud ops | tavily, azure_devops, postman, github, newrelic, playwright, aws_cloudwatch, aws_cloudwatch_xray, aws_ecs, aws_sns_sqs, aws_postgres (AWS tools require Vault credentials; idle with no impact otherwise) |
+| **headroom** | Direct (not through bifrost) | HTTP MCP tool call to `mcp-headroom` | Explicit compression control, or recovering an original prompt lost to automatic compression (1-hour retrieval window) | `headroom_compress`, `headroom_retrieve(hash)`, `headroom_stats` |
+| **aspire** | Direct (not through bifrost) | stdio subprocess (local CLI) | Inspecting/managing the local Aspire AppHost — resources, containers, telemetry | resource listing, container start/stop, log/telemetry queries |
+| **codegraph** | Direct (not through bifrost) | SSE connection to Neo4j-backed graph service | Cross-file relationship queries (callers, class hierarchies, call chains) that plain text search can't answer — use grep/file search for simple string lookups instead | `find_code`, `analyze_code_relationships`, `execute_cypher_query` (27 tools total) |
 
-**Direct MCP connections** (primary — in `.mcp.json`):
-- `tavily`, `azure_devops`, `postman`, `github`, `playwright` — each server runs as an isolated sidecar container; secrets fetched from Vault at startup; tools available immediately without bifrost involvement.
-- `mcp-codegraph` — codebase structure queries via Neo4j (SSE). 27 tools (`find_code`, `analyze_code_relationships`, `execute_cypher_query`, etc.) for cross-file relationship queries — callers, class hierarchies, call chains — that plain text search can't answer. Use grep/file search for simple string lookups instead.
-- `headroom`, `bifrost` — infrastructure servers (see below).
+**Claude-Code-specific redundancy**: `tavily`, `azure_devops`, `postman`, `github`, `playwright` are ALSO configured as direct sidecar connections in `.mcp.json` (isolated containers, secrets from Vault, no bifrost involvement) — a second path to the same 5 tools, in addition to reaching them via bifrost Code Mode above. This direct path is specific to Claude Code's `.mcp.json`; other agents reach these 5 tools only through bifrost Code Mode.
 
-**bifrost Code Mode** (`bifrost` entry in `.mcp.json`):
-- bifrost's `/mcp` endpoint exposes **Code Mode tools** — tavily, azure_devops, postman, github, newrelic, aws_sns_sqs, aws_cloudwatch, aws_cloudwatch_xray, aws_ecs, aws_postgres, playwright — plus Code Mode methods (`listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode`) for Starlark sandbox execution.
-- The `bifrost` entry authenticates with virtual key `sk-bf-workspace-agent-001` via `x-api-key` header.
-- AWS MCP tools are available via bifrost Code Mode when credentials are present; otherwise idle with no impact.
-
-`headroom` tools are available directly (not through bifrost Code Mode).
+**Not yet wired**: OpenMemory MCP (persistent, semantic cross-session memory) is documented in ADR 012 but not configured in any agent yet.
 
 ## MANDATORY DEFINITIONS
 

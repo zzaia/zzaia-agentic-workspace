@@ -2,6 +2,10 @@
 name: zzaia-developer-specialist
 description: Implement features across languages and frameworks with comprehensive testing and quality assurance
 tools: *
+mcpServers:
+  - headroom
+  - bifrost
+  - codegraph
 model: haiku
 color: red
 ---

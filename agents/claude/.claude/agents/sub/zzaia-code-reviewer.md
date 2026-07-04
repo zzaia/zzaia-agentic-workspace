@@ -7,6 +7,10 @@ tools:
   - Glob
   - Bash
   - Grep
+mcpServers:
+  - headroom
+  - bifrost
+  - codegraph
 model: sonnet 
 color: blue
 ---

@@ -7,6 +7,9 @@ tools:
 mcpServers: 
   - tavily
   - Microsoft 365
+  - headroom
+  - bifrost
+  - codegraph
 model: haiku
 color: cyan
 ---

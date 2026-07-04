@@ -6,6 +6,9 @@ mcpServers:
   - playwright
   - postman
   - aspire
+  - headroom
+  - bifrost
+  - codegraph
 model: haiku
 color: purple
 ---

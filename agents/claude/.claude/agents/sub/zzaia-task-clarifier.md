@@ -2,6 +2,10 @@
 name: zzaia-task-clarifier
 description: Transform vague task descriptions into clear, actionable specifications
 tools: *
+mcpServers:
+  - headroom
+  - bifrost
+  - codegraph
 model: haiku
 color: cyan
 ---

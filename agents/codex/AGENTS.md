@@ -6,22 +6,18 @@ This file provides guidance to Codex CLI when working with code in this reposito
 
 Multi-agent orchestration system for multi-language development workflows across repositories, using git worktrees and architectural principles.
 
-## Available MCP Tools
+## MCP Tools
 
 Four MCP connections are configured:
 
-- **bifrost** — MCP gateway aggregating all work tools via Code Mode (tavily, azure-devops, postman, new-relic, github, playwright, aws-sns-sqs, aws-cloudwatch, aws-cloudwatch-xray, aws-ecs, aws-postgres — AWS tools available only when AWS credentials are configured in Vault)
-- **headroom** — Memory context injection (direct, not through bifrost)
-- **aspire** — AppHost resource inspection, container management, and telemetry (local CLI)
-- **mcp-codegraph** — Codebase structure queries via Neo4j (SSE). 27 tools (`find_code`, `analyze_code_relationships`, `execute_cypher_query`, etc.) for cross-file relationship queries — callers, class hierarchies, call chains — that plain text search can't answer. Use grep/file search for simple string lookups instead.
+| MCP | Interaction | How to Interact | Use When | Example Tools |
+|---|---|---|---|---|
+| **bifrost** | Bifrost Code Mode | `listToolFiles()` → `getToolDocs(name, fn)` → `executeToolCode(code)` — Python/Starlark sandbox; `result["key"]` syntax (not dot notation); no async/await; assign final output to `result` | Aggregated work tools: web research, DevOps tickets/PRs, API testing, observability, cloud ops | tavily, azure_devops, postman, github, newrelic, playwright, aws_cloudwatch, aws_cloudwatch_xray, aws_ecs, aws_sns_sqs, aws_postgres (AWS tools require Vault credentials) |
+| **headroom** | Direct (not through bifrost) | HTTP MCP tool call to `mcp-headroom` | Explicit compression control, or recovering an original prompt lost to automatic compression (1-hour retrieval window) | `headroom_compress`, `headroom_retrieve(hash)`, `headroom_stats` |
+| **aspire** | Direct (not through bifrost) | stdio subprocess (local CLI) | Inspecting/managing the local Aspire AppHost — resources, containers, telemetry | resource listing, container start/stop, log/telemetry queries |
+| **codegraph** | Direct (not through bifrost) | SSE connection to Neo4j-backed graph service | Cross-file relationship queries (callers, class hierarchies, call chains) that plain text search can't answer — use grep/file search for simple string lookups instead | `find_code`, `analyze_code_relationships`, `execute_cypher_query` (27 tools total) |
 
-## MCP via Bifrost Code Mode
-
-When tools available are `listToolFiles`, `readToolFile`, `getToolDocs`, `executeToolCode` — bifrost Code Mode is active:
-- `listToolFiles()` → discover available tool servers
-- `readToolFile(name)` → load compact Python function signatures
-- `getToolDocs(name, fn)` → get detailed docs for a specific function
-- `executeToolCode(code)` → run Python orchestration code in sandbox
+**Not yet wired**: OpenMemory MCP (persistent, semantic cross-session memory) is documented in ADR 012 but not configured in any agent yet.
 
 Rules: use `result["key"]` syntax (not dot notation), no async/await, assign final output to `result` variable. `headroom` tools are available directly (not through Code Mode).
 

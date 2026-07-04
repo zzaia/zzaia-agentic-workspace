@@ -6,6 +6,9 @@ mcpServers:
   - playwright
   - tavily
   - azure-devops
+  - headroom
+  - bifrost
+  - codegraph
 model: haiku
 color: yellow
 ---

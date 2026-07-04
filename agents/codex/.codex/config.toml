@@ -10,7 +10,7 @@ args = ["-y", "supergateway", "--streamableHttp", "http://mcp-headroom:3008/mcp"
 command = "npx"
 args = ["-y", "supergateway", "--streamableHttp", "http://bifrost-server:8080/mcp"]
 
-[mcp_servers.mcp-codegraph]
+[mcp_servers.codegraph]
 command = "npx"
 args = ["-y", "supergateway", "--sse", "http://mcp-codegraph:8000/api/v1/mcp/sse"]
 
