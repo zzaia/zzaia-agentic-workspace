@@ -17,6 +17,7 @@ RUN pip3 install ansible-core --break-system-packages
 ENV INSTALL_PREFIX=/opt/ml-tools
 
 COPY docker/containers/ml-server/entrypoint.sh /entrypoint.sh
+COPY docker/containers/ml-server/embeddings_server.py /opt/ml-tools/embeddings_server.py
 COPY docker/containers/ml-server/scripts/versions.env /opt/scripts/versions.env
 RUN chmod +x /entrypoint.sh
 
@@ -28,7 +29,7 @@ RUN find /usr/local/lib/zzaia/ansible -name '*.yml' -exec chmod 644 {} + \
 WORKDIR /opt/ml-tools
 USER headroom
 
-EXPOSE 8787
+EXPOSE 8787 8788
 
 HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=15m \
     CMD curl -sf http://localhost:8787/health || exit 1

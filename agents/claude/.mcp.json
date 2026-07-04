@@ -4,10 +4,6 @@
       "command": "aspire",
       "args": ["agent", "mcp"]
     },
-    "headroom": {
-      "type": "http",
-      "url": "http://mcp-headroom:3008/mcp"
-    },
     "bifrost": {
       "type": "http",
       "url": "http://bifrost-server:8080/mcp"
@@ -15,6 +11,14 @@
     "codegraph": {
       "type": "sse",
       "url": "http://mcp-codegraph:8000/api/v1/mcp/sse"
+    },
+    "graphiti": {
+      "type": "http",
+      "url": "http://mcp-graphiti:8000/mcp/"
+    },
+    "headroom": {
+      "type": "http",
+      "url": "http://mcp-headroom:3008/mcp"
     }
   }
 }

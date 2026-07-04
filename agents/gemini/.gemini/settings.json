@@ -17,6 +17,10 @@
     "codegraph": {
       "type": "sse",
       "url": "http://mcp-codegraph:8000/api/v1/mcp/sse"
+    },
+    "graphiti": {
+      "type": "http",
+      "url": "http://mcp-graphiti:8000/mcp/"
     }
   },
   "hooks": {

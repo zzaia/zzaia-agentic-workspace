@@ -40,9 +40,32 @@ start_headroom() {
 }
 
 # ── Main entry point ──────────────────────────────────────────────────────────
+# ── Start embeddings server (GPU mode only) ────────────────────────────────
+start_embeddings_server() {
+    if [ "${GPU_ENABLED:-false}" != "true" ]; then
+        return 0
+    fi
+
+    log_info "Starting embeddings server on port 8788 (GPU mode)..."
+
+    local venv="${INSTALL_PREFIX}/miniforge3/envs/venv-system"
+    "${venv}/bin/python" /opt/ml-tools/embeddings_server.py &
+    local server_pid=$!
+    sleep 2
+
+    if kill -0 $server_pid 2>/dev/null; then
+        log_success "Embeddings server started (PID: $server_pid)"
+        return 0
+    else
+        log_error "Embeddings server failed to start"
+        return 1
+    fi
+}
+
 main() {
     bootstrap
     verify_headroom
+    start_embeddings_server
     start_headroom "$@"
 }
 

@@ -14,6 +14,10 @@ args = ["-y", "supergateway", "--streamableHttp", "http://bifrost-server:8080/mc
 command = "npx"
 args = ["-y", "supergateway", "--sse", "http://mcp-codegraph:8000/api/v1/mcp/sse"]
 
+[mcp_servers.graphiti]
+command = "npx"
+args = ["-y", "supergateway", "--streamableHttp", "http://mcp-graphiti:8000/mcp/"]
+
 [hooks.before_tool_use]
 command = "if command -v rtk &>/dev/null; then rtk hook claude; else cat; fi"
 matcher = "bash"

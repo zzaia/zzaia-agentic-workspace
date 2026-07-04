@@ -58,3 +58,12 @@
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/headroom"
   when: gpu_enabled | string == 'true'
+
+- name: Install embedding dependencies (GPU mode)
+  ansible.builtin.shell:
+    cmd: >
+      {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
+      sentence-transformers
+      --quiet
+    creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/sentence_transformers/__init__.py"
+  when: gpu_enabled | string == 'true'

@@ -95,10 +95,11 @@ This hierarchy enables complex automation through composition without coupling l
 | **headroom** | Direct (not through bifrost) | HTTP MCP tool call to `mcp-headroom` | Explicit compression control, or recovering an original prompt lost to automatic compression (1-hour retrieval window) | `headroom_compress`, `headroom_retrieve(hash)`, `headroom_stats` |
 | **aspire** | Direct (not through bifrost) | stdio subprocess (local CLI) | Inspecting/managing the local Aspire AppHost — resources, containers, telemetry | resource listing, container start/stop, log/telemetry queries |
 | **codegraph** | Direct (not through bifrost) | SSE connection to Neo4j-backed graph service | Cross-file relationship queries (callers, class hierarchies, call chains) that plain text search can't answer — use grep/file search for simple string lookups instead | `find_code`, `analyze_code_relationships`, `execute_cypher_query` (27 tools total) |
+| **graphiti** | Direct (not through bifrost) | HTTP MCP tool call to `mcp-graphiti` | Persistent cross-session agent memory — store/recall entities, relationships, and facts extracted from conversations via Neo4j knowledge graph | `add_episode`, `search_memory_nodes`, `search_memory_facts` |
 
 **Claude-Code-specific redundancy**: `tavily`, `azure_devops`, `postman`, `github`, `playwright` are ALSO configured as direct sidecar connections in `.mcp.json` (isolated containers, secrets from Vault, no bifrost involvement) — a second path to the same 5 tools, in addition to reaching them via bifrost Code Mode above. This direct path is specific to Claude Code's `.mcp.json`; other agents reach these 5 tools only through bifrost Code Mode.
 
-**Not yet wired**: OpenMemory MCP (persistent, semantic cross-session memory) is documented in ADR 012 but not configured in any agent yet.
+**Superseded**: the previously-planned OpenMemory MCP (ADR 012) is replaced by `graphiti` above — Neo4j-native, no extra Postgres dependency.
 
 ## MANDATORY DEFINITIONS
 

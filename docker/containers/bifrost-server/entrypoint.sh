@@ -89,12 +89,18 @@ fetch_secrets() {
         ado_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
             "${VAULT_ADDR}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
         ado_auth_token=$(printf '%s' "$ado_data" | jq -r '.data.data.ADO_MCP_AUTH_TOKEN // empty' 2>/dev/null || echo "")
+
+        local azure_portal_data azure_portal_client_id=""
+        azure_portal_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/secret/data/mcp/azure-portal" 2>/dev/null || echo '{}')
+        azure_portal_client_id=$(printf '%s' "$azure_portal_data" | jq -r '.data.data.AZURE_CLIENT_ID // empty' 2>/dev/null || echo "")
     fi
 
     export TAVILY_AVAILABLE=""; [ -n "$tavily_api_key" ] && export TAVILY_AVAILABLE="true"
     export GITHUB_AVAILABLE=""; [ -n "$github_pat" ] && export GITHUB_AVAILABLE="true"
     export POSTMAN_AVAILABLE=""; [ -n "$postman_api_key" ] && export POSTMAN_AVAILABLE="true"
     export ADO_AVAILABLE=""; [ -n "$ado_auth_token" ] && export ADO_AVAILABLE="true"
+    export AZURE_PORTAL_AVAILABLE=""; [ -n "$azure_portal_client_id" ] && export AZURE_PORTAL_AVAILABLE="true"
 
     unset VAULT_TOKEN
     export NEW_RELIC_API_KEY_AVAILABLE=""
@@ -107,6 +113,7 @@ fetch_secrets() {
     [ -z "${GITHUB_AVAILABLE:-}" ] && log_warn "GitHub: no PAT — skipping mcp-github"
     [ -z "${POSTMAN_AVAILABLE:-}" ] && log_warn "Postman: no API key — skipping mcp-postman"
     [ -z "${ADO_AVAILABLE:-}" ] && log_warn "Azure DevOps: no token — skipping mcp-azure-devops"
+    [ -z "${AZURE_PORTAL_AVAILABLE:-}" ] && log_warn "Azure Portal: no credentials — skipping mcp-azure-portal"
 
     export ANTHROPIC_OAUTH_VALUES=$(IFS=$'\n'; echo "${oauth_keys[*]}")
     export ANTHROPIC_APIKEY_POOL_VALUES=$(IFS=$'\n'; echo "${apikey_keys[*]}")
@@ -180,13 +187,13 @@ generate_config() {
     [ -n "${ADO_AVAILABLE:-}" ] && \
         ado_entry='{ "name": "azure_devops", "connection_type": "http", "connection_string": "http://mcp-azure-devops:3002/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
+    local azure_portal_entry=""
+    [ -n "${AZURE_PORTAL_AVAILABLE:-}" ] && \
+        azure_portal_entry='{ "name": "azure_portal", "connection_type": "http", "connection_string": "http://mcp-azure-portal:3015/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+
     local aws_entries=""
-    [ -n "${AWS_MCP_AVAILABLE:-}" ] && aws_entries='
-      { "name": "aws_sns_sqs", "connection_type": "http", "connection_string": "http://mcp-aws-sns-sqs:3010/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "aws_cloudwatch", "connection_type": "http", "connection_string": "http://mcp-aws-cloudwatch:3011/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "aws_cloudwatch_xray", "connection_type": "http", "connection_string": "http://mcp-aws-cloudwatch-xray:3012/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "aws_ecs", "connection_type": "http", "connection_string": "http://mcp-aws-ecs:3013/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
-      { "name": "aws_postgres", "connection_type": "http", "connection_string": "http://mcp-aws-postgres:3014/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
+    [ -n "${AWS_MCP_AVAILABLE:-}" ] && aws_entries=',
+      { "name": "aws_api", "connection_type": "http", "connection_string": "http://mcp-aws-api:3010/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }'
 
     # Bifrost key_ids has no glob support: "*" means "all keys", anything else must be an exact key name
     # (verified against docs.getbifrost.ai/features/governance/virtual-keys). Default to "*" (single-key /
@@ -279,6 +286,7 @@ generate_config() {
     "client_configs": [
       ${tavily_entry}
       ${ado_entry}
+      ${azure_portal_entry}
       ${postman_entry}
       ${newrelic_entry}
       ${github_entry}

@@ -151,13 +151,13 @@ delete_all_memories()
 
 **Deployment**: Docker image `mem0/mem0-mcp`, port 5005
 
-**Backend**: Uses Postgres (structured) + Qdrant (vector) — both already in ZZAIA stack
+**Backend**: Uses Postgres (structured) + Qdrant (vector). Correction (2026-07-04): ZZAIA only has `database-qdrant` deployed locally — there is no local Postgres (only `mcp-aws-postgres`, which targets remote AWS RDS, not a local instance usable here). Choosing OpenMemory would have required standing up a new local Postgres service.
 
 **Automatic capture**: Can proxy LLM conversations at HTTP level (option for optional auto-capture)
 
 **Source**: https://github.com/mem0ai/mem0 (openmemory subpackage)
 
-**Verdict**: ✅ **PREFERRED** — standard MCP interface, local-first, best interoperability with ZZAIA agent ecosystem, Postgres + Qdrant already deployed.
+**Verdict**: ⚠️ **SUPERSEDED (2026-07-04)** — originally preferred, but re-evaluated after confirming no local Postgres exists in this stack. Replaced by Graphiti MCP (Neo4j-native, reuses `database-neo4j`, no new database). See revised ADR 002 in `optimization-stack-recomendation.md`.
 
 ---
 
@@ -439,7 +439,7 @@ This is essentially building a code-understanding agent inside the proxy.
 | Capability | Tool | Why This One | Automation Level |
 |---|---|---|---|
 | **Context Compression** | Headroom | Only transparent proxy option; passthrough guarantee; supports all major LLM providers | 100% proxy-level, zero agent code changes |
-| **Session Memory** | OpenMemory MCP | Standard MCP interface; local Postgres+Qdrant; no Headroom lock-in; retrieval quality | Agent-initiated via `search_memories()` tool |
+| **Session Memory** | ~~OpenMemory MCP~~ → **Graphiti MCP** (revised 2026-07-04) | Standard MCP interface; Neo4j-native (no new Postgres needed, unlike OpenMemory); temporal knowledge graph; no Headroom lock-in | Agent-initiated via `search_memory_nodes()`/`search_memory_facts()` tools |
 | **Workspace Search** | Continue.dev + LanceDB + ast-grep | Code-aware indexing; MCP-native; hybrid semantic+structural; runs locally | Agent-initiated via `semantic_search()` tool |
 
 ---
@@ -507,10 +507,11 @@ This is essentially building a code-understanding agent inside the proxy.
 - **Mitigation**: Passthrough guarantee in design; always forwards original on failure
 - **Monitoring**: `/stats` and `/dashboard` endpoints
 
-### OpenMemory MCP
+### Graphiti MCP (supersedes OpenMemory MCP, see revised ADR 002)
 - **Risk**: Memory pollution (too much irrelevant context retrieved)
-- **Mitigation**: Agents control retrieval via `search_memories()`; structured queries allow filtering
+- **Mitigation**: Agents control retrieval via `search_memory_nodes()`/`search_memory_facts()`; temporal validity windows and structured queries allow filtering
 - **Monitoring**: Memory growth monitoring; pruning strategies for old memories
+- **Additional risk (embedder)**: GPU-gated local embedder (`nomic-embed-text-v1.5` on `ml-server:8788`) may not be ready when `mcp-graphiti` starts — mitigated with a bounded retry/wait loop rather than a hard `depends_on` (avoids blocking on `ml-server`'s slow Ansible bootstrap)
 
 ### Continue.dev Indexing
 - **Risk**: Large codebase causes slow indexing on startup

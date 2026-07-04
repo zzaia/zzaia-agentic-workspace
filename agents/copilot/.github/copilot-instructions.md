@@ -11,6 +11,7 @@ Three MCP connections are configured:
 - **bifrost** — MCP gateway aggregating all work tools via Code Mode (tavily, azure-devops, postman, new-relic, github, playwright)
 - **headroom** — Memory context injection (direct, not through bifrost)
 - **aspire** — AppHost resource inspection, container management, and telemetry (local CLI)
+- **graphiti** — Persistent cross-session agent memory via Neo4j knowledge graph (direct, not through bifrost)
 
 ## MCP via Bifrost Code Mode
 

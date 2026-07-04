@@ -1,14 +1,16 @@
 ---
 name: ZZAIA Agentic Workspace — AI Optimization Stack Recommendation
-date: 2026-05-02
-version: 2.0
+date: 2026-07-04
+version: 2.1
 scope: ZZAIA Docker Compose stack (feature/improve-agentic-system)
-status: Complete
+status: Complete — ADR 002 revised (Graphiti supersedes OpenMemory)
 ---
 
 # ZZAIA Agentic Workspace — AI Optimization Stack Recommendation
 
-Research and decision record for three LLM optimization capabilities: context compression, session memory, and workspace semantic search. Evaluated multiple solutions per capability and produced a two-layer recommendation: Headroom as the primary automatic triple-stack, with OpenMemory MCP and CodeGraphContext as supplementary agent-initiated context tools.
+Research and decision record for three LLM optimization capabilities: context compression, session memory, and workspace semantic search. Evaluated multiple solutions per capability and produced a two-layer recommendation: Headroom as the primary automatic triple-stack, with Graphiti MCP and CodeGraphContext as supplementary agent-initiated context tools.
+
+**2026 update**: ADR 002 superseded — Graphiti MCP replaces the originally-selected OpenMemory MCP. Graphiti is Neo4j-native (this stack already runs Neo4j for Headroom; OpenMemory would have required standing up a new local Postgres). See revised ADR 002 below.
 
 ---
 
@@ -20,7 +22,7 @@ The optimization stack operates in three complementary layers:
 
 **Layer 1 — Automatic (Proxy Pipeline)**: Headroom proxy started with `--memory --code-graph`. All clients routing through `http://headroom:8787` get compression, memory injection, and code-graph MCP tools without any agent code changes. Covers Claude Code, Gemini CLI, Codex, VS Code extensions — any client that respects the API base URL env vars.
 
-**Layer 2 — Agent-Initiated (MCP Tools)**: OpenMemory MCP and CodeGraphContext expose structured query tools agents call explicitly. These supplement Headroom's automatic layer with richer semantic search, structured memory queries, and cross-agent coordination. Both share the same Qdrant and Neo4j already deployed for Headroom.
+**Layer 2 — Agent-Initiated (MCP Tools)**: Graphiti MCP and CodeGraphContext expose structured query tools agents call explicitly. These supplement Headroom's automatic layer with richer semantic search, structured memory queries, and cross-agent coordination. Graphiti shares the same Neo4j already deployed for Headroom (no new Postgres); its embedder runs locally on `ml-server` when a GPU is available, falling back to cloud OpenAI embeddings otherwise. Its LLM calls (entity/relationship extraction) route through `ml-server → bifrost-server → Anthropic`, the same compression+credential pipeline every other agent client in this workspace uses — not a direct call to Bifrost.
 
 ---
 
@@ -30,7 +32,7 @@ The optimization stack operates in three complementary layers:
 
 **Phase 1 (Implement After Phase 0)**: Headroom triple-stack — compression + proxy-side memory injection + code-graph file watcher. Single service change.
 
-**Phase 2 (Implement After Phase 1)**: OpenMemory MCP — supplementary structured memory queries via MCP tools.
+**Phase 2 (Implement After Phase 1)**: Graphiti MCP — supplementary structured memory queries via MCP tools, backed by the shared Neo4j knowledge graph.
 
 **Phase 3 (Implement After Phase 2)**: CodeGraphContext — supplementary code graph queries via MCP tools.
 
@@ -82,7 +84,7 @@ RUN curl -fsSL https://github.com/rtk-ai/rtk/releases/latest/download/rtk-linux-
 }
 ```
 
-**Rationale**: RTK is the only tool operating at shell I/O level — Headroom compresses at HTTP API level, OpenMemory handles memory, CodeGraphContext handles code search. None of these touch raw command outputs. RTK's 41k GitHub stars, 146 releases, and 103-case benchmark suite confirm production readiness. It stacks with all other layers without conflict.
+**Rationale**: RTK is the only tool operating at shell I/O level — Headroom compresses at HTTP API level, Graphiti handles memory, CodeGraphContext handles code search. None of these touch raw command outputs. RTK's 41k GitHub stars, 146 releases, and 103-case benchmark suite confirm production readiness. It stacks with all other layers without conflict.
 
 ---
 
@@ -130,16 +132,24 @@ headroom:
 
 ---
 
-### ADR 002: OpenMemory MCP as Supplementary Structured Memory Layer
+### ADR 002 (revised): Graphiti MCP as Supplementary Structured Memory Layer
 
-**Decision**: Deploy OpenMemory MCP as a supplementary session memory service. Agents invoke `search_memory`, `add_memories`, and `list_memories` via MCP discovery when they need structured, queryable memory beyond what Headroom's automatic injection provides.
+**Supersedes**: the original ADR 002 selected OpenMemory MCP (mem0.ai). Re-evaluated because OpenMemory's default backend is Postgres + Qdrant, and this stack has no local Postgres — only `database-qdrant` and `database-neo4j`. Graphiti (getzep/graphiti) is Neo4j-native, ships a production MCP server (v1.0, 20k+ stars, Apache 2.0), and needs zero new infrastructure.
 
-- **Architecture**: Postgres + Qdrant (shared with Headroom) backend, native MCP tools
-- **Retrieval**: Agent-initiated via MCP tool calls — structured queries by topic, date, agent, or category
-- **Deployment**: Single compose service (`openmemory`) — no additional infrastructure beyond what Headroom already uses
-- **Relation to Headroom memory**: Complementary — Headroom injects automatically; OpenMemory gives agents explicit structured retrieval control
+**Decision**: Deploy Graphiti MCP as a supplementary session memory service (`mcp-graphiti`). Agents invoke `add_episode`, `search_memory_nodes`, and `search_memory_facts` via MCP discovery when they need structured, queryable, temporal memory beyond what Headroom's automatic injection provides.
 
-**Rationale**: Headroom's automatic memory injection covers the common case. OpenMemory adds agent-controlled structured queries (filter by topic, date range, agent ID) that the automatic injection layer cannot perform. Both use Qdrant for vector search — no new infrastructure needed. MCP-based delivery ensures any future MCP-capable client can use it without proxy configuration.
+- **Architecture**: Neo4j (shared with Headroom, `database-neo4j`) as the knowledge-graph backend — no Postgres. Native MCP server, HTTP transport (`http://mcp-graphiti:8000/mcp/`).
+- **Retrieval**: Agent-initiated via MCP tool calls — temporal knowledge graph with validity windows ("what was true when"), entity/relationship extraction from conversation episodes.
+- **LLM (entity extraction)**: Always routed through `http://ml-server:8787` (Headroom), which forwards to `bifrost-server`'s Anthropic-compatible endpoint — the same compression + credential-pooling pipeline every other agent client in this workspace already uses (see `workspace-server`'s `ANTHROPIC_BASE_URL` convention). Never calls Bifrost directly, so entity-extraction requests get Headroom's compression too.
+- **Embedder (semantic search over memory)**: GPU-gated dual path —
+  - `GPU_ENABLED=true`: local `nomic-embed-text-v1.5` served by a small FastAPI/sentence-transformers process added to `ml-server` on port 8788 (reuses `ml-server`'s existing GPU allocation — no second GPU-consuming container). Zero cloud dependency, zero Vault secret for embeddings.
+  - `GPU_ENABLED=false` (default): cloud OpenAI embeddings (`text-embedding-3-small`), API key fetched from Vault (`secret/data/ai`) at container start — same Vault pattern as `bifrost-server`.
+- **Deployment**: Single compose service (`mcp-graphiti`) — no additional infrastructure beyond what Headroom/`ml-server` already provide.
+- **Relation to Headroom memory**: Complementary — Headroom injects automatically; Graphiti gives agents explicit, temporal, structured retrieval control via its own knowledge graph.
+
+**Rationale**: Headroom's automatic memory injection covers the common case. Graphiti adds agent-controlled, temporal, structured queries (entities, relationships, validity windows) that the automatic injection layer cannot perform. Reuses Neo4j — no new database. The embedder's GPU/CPU split keeps the workspace cloud-independent when a GPU is present, while still working out of the box on CPU-only hosts via the existing Vault-backed OpenAI path.
+
+**Rejected alternative — OpenMemory MCP (mem0.ai)**: still viable in isolation (defaults to SQLite, not strictly Postgres-locked) but loses the Neo4j-native fit and temporal knowledge-graph reasoning Graphiti provides; would also duplicate Qdrant's vector role that Headroom already occupies.
 
 ---
 
@@ -194,8 +204,7 @@ C4Container
     }
 
     System_Boundary(supplementary, "Supplementary Layer — Agent-Initiated MCP Tools") {
-        Container(openmemory, "OpenMemory MCP", "MCP Server", "Structured memory queries: search_memory, add_memories")
-        Container(postgres, "PostgreSQL", "Database", "OpenMemory metadata storage")
+        Container(graphiti, "Graphiti MCP", "MCP Server", "Temporal knowledge-graph memory: add_episode, search_memory_nodes, search_memory_facts")
         Container(cgc, "CodeGraphContext", "MCP Server", "Code graph queries: find_callers, class_hierarchy, call_chain")
     }
 
@@ -212,8 +221,8 @@ C4Container
     Rel(headroom, qdrant, "Semantic cache and memory search", "gRPC")
     Rel(headroom, neo4j, "Knowledge graph memory and code-graph", "Bolt")
     Rel(headroom, workspaceRepos, "Code-graph file watcher", "Filesystem")
-    Rel(openmemory, postgres, "Stores memory metadata", "SQL")
-    Rel(openmemory, qdrant, "Shared semantic index", "gRPC")
+    Rel(graphiti, neo4j, "Stores/queries temporal knowledge graph", "Bolt")
+    Rel(graphiti, headroom, "LLM calls (entity extraction) — compressed + credential-pooled", "HTTP")
     Rel(cgc, workspaceRepos, "Indexes files and builds call graph", "Filesystem")
 
     UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="2")
@@ -225,14 +234,14 @@ C4Container
 
 ### Primary Layer: Headroom Triple-Stack
 
-- **Headroom** (`--memory --code-graph`): Single proxy service handling compression (automatic), memory injection (automatic, proxy pipeline), and code-graph indexing (background watcher + MCP tools)
-- **Qdrant**: Vector database for Headroom semantic cache and memory embeddings; shared with OpenMemory
-- **Neo4j** (+ APOC): Knowledge graph for Headroom memory relationships and code-graph structure
+- **Headroom** (`--memory --code-graph`, runs inside `ml-server`): Single proxy service handling compression (automatic), memory injection (automatic, proxy pipeline), and code-graph indexing (background watcher + MCP tools). Also serves the GPU-gated local embedding model (`nomic-embed-text-v1.5` on port 8788) for Graphiti when a GPU is available.
+- **Qdrant**: Vector database for Headroom semantic cache
+- **Neo4j** (+ APOC): Knowledge graph for Headroom memory relationships, code-graph structure, and Graphiti's temporal knowledge graph (shared)
 
 ### Supplementary Layer: Agent-Initiated MCP Tools
 
-- **OpenMemory MCP**: Structured memory queries — agents call `search_memory`, `add_memories` when they need explicit, filtered memory retrieval. Uses shared Qdrant + Postgres.
-- **CodeGraphContext**: Structured code graph queries — agents call `find_callers`, `find_callees`, `class_hierarchy`, `call_chain` when they need precise code structure navigation. Uses embedded KûzuDB.
+- **Graphiti MCP**: Temporal, structured memory queries — agents call `add_episode`, `search_memory_nodes`, `search_memory_facts` when they need explicit, filtered, time-aware memory retrieval. Uses shared Neo4j; embedder is local (GPU) or cloud OpenAI (CPU-only); LLM calls route through `ml-server → bifrost-server → Anthropic`.
+- **CodeGraphContext**: Structured code graph queries — agents call `find_callers`, `find_callees`, `class_hierarchy`, `call_chain` when they need precise code structure navigation. Uses the shared Neo4j in this deployment.
 
 ### Workspace Layer
 
@@ -247,9 +256,10 @@ C4Container
 | **Shell I/O (Layer 0)** | RTK — Rust binary, bash hooks, 100+ commands, 81% avg token reduction |
 | **Primary Proxy (Layer 1)** | Headroom (HTTP reverse proxy, `--memory --code-graph`) |
 | **Primary Memory Storage** | SQLite + HNSW (in-process, Headroom) + Qdrant (semantic) + Neo4j (graph) |
-| **Supplementary Memory MCP (Layer 2)** | OpenMemory (native MCP tools, structured queries) |
-| **Supplementary Memory Storage** | PostgreSQL (metadata) + Qdrant (shared with Headroom) |
-| **Supplementary Code Search (Layer 2)** | CodeGraphContext (MCP tools, call graphs, AST) + KûzuDB (embedded) |
+| **Supplementary Memory MCP (Layer 2)** | Graphiti (native MCP tools, temporal knowledge-graph queries) |
+| **Supplementary Memory Storage** | Neo4j (shared with Headroom, no new database) |
+| **Supplementary Memory Embedder** | Local `nomic-embed-text-v1.5` on `ml-server:8788` (GPU) or cloud OpenAI via Vault (CPU-only) |
+| **Supplementary Code Search (Layer 2)** | CodeGraphContext (MCP tools, call graphs, AST) + Neo4j (shared, this deployment) |
 | **Infrastructure** | Docker Compose, shared Qdrant and Neo4j across layers |
 
 ---
@@ -290,7 +300,7 @@ headroom:
   restart: unless-stopped
 ```
 
-**Qdrant** (shared vector DB — Headroom semantic cache + OpenMemory embeddings):
+**Qdrant** (vector DB — Headroom semantic cache only; Graphiti uses Neo4j for its knowledge graph, and its embedder is either local `ml-server` or cloud OpenAI, not Qdrant):
 ```yaml
 qdrant:
   image: qdrant/qdrant:v1.17.1
@@ -326,21 +336,36 @@ neo4j:
     start_period: 45s
 ```
 
-### Phase 2: OpenMemory MCP (Supplementary)
+### Phase 2: Graphiti MCP (Supplementary)
 
 ```yaml
-openmemory:
-  image: skpassegna/openmemory-mcp:latest
+mcp-graphiti:
+  build:
+    context: ..
+    dockerfile: docker/containers/mcp-graphiti/Dockerfile
+  image: zzaia-mcp-graphiti:latest
   environment:
-    DATABASE_URL: postgresql://user:${ADMIN_PASSWORD:-headroom}@postgres:5432/openmemory
-    QDRANT_URL: http://qdrant:6333
+    - VAULT_ADDR=http://vault-server:8200
+    - GPU_ENABLED=${GPU_ENABLED:-false}
+    - NEO4J_URI=bolt://database-neo4j:7687
+    - NEO4J_USER=neo4j
+    - NEO4J_PASSWORD=${ADMIN_PASSWORD:-zzaia1234}
+    - BIFROST_WORKSPACE_KEY=sk-bf-workspace-agent-001
   depends_on:
-    - postgres
-    - qdrant
+    vault-server:
+      condition: service_healthy
+    database-neo4j:
+      condition: service_healthy
+    bifrost-server:
+      condition: service_healthy
+    ml-server:
+      condition: service_started
   networks:
     - mcp
   restart: unless-stopped
 ```
+
+No `postgres` service, no new database — `database-neo4j` and `ml-server` are already deployed. See `docker/containers/mcp-graphiti/` for the full implementation (entrypoint branches embedder config on `GPU_ENABLED`, routes LLM calls through `ml-server:8787`).
 
 ### Phase 3: CodeGraphContext MCP (Supplementary)
 
@@ -370,8 +395,8 @@ MCP endpoints registered in workspace MCP config:
 ```json
 {
   "mcpServers": {
-    "openmemory": { "url": "http://openmemory:5005" },
-    "code-graph":  { "url": "http://code-graph:8045" }
+    "graphiti":   { "type": "http", "url": "http://mcp-graphiti:8000/mcp/" },
+    "code-graph": { "url": "http://code-graph:8045" }
   }
 }
 ```
@@ -386,7 +411,7 @@ MCP endpoints registered in workspace MCP config:
 ### Session Memory: Two-Layer Pattern
 ✅ **Automatic (Layer 1)** — Headroom injects relevant memories into every request at proxy pipeline stage. No agent action required. Scoped by `x-headroom-user-id`.
 
-⚠️ **Agent-initiated (Layer 2)** — Agents call OpenMemory `search_memory` for structured, filtered queries (by topic, date, agent ID) that the automatic injection cannot perform.
+⚠️ **Agent-initiated (Layer 2)** — Agents call Graphiti `search_memory_nodes`/`search_memory_facts` for structured, temporal, filtered queries (entities, relationships, validity windows) that the automatic injection cannot perform.
 
 ### Workspace Semantic Search: Two-Layer Pattern
 ✅ **Background (Layer 1)** — Headroom's `--code-graph` file watcher maintains a live codebase index, improving compression context scoring automatically.
@@ -410,9 +435,10 @@ MCP endpoints registered in workspace MCP config:
 | Tool | Layer | Storage | Injection | Local-first | Maturity | Selection |
 |---|---|---|---|---|---|---|
 | **Headroom `--memory`** | Primary (automatic) | SQLite + HNSW + FTS5 (in-process) | Proxy pipeline (automatic) | ✅ | Community, active | ✅ **Primary** |
-| **OpenMemory MCP** | Supplementary (agent-initiated) | Postgres + Qdrant (shared) | Agent MCP tool calls | ✅ | Early prod | ✅ **Supplementary** |
-| Zep / Graphiti | — | Postgres + Vector DB | MCP tools | ✅ | Mature, SOC2 | Alternative to OpenMemory |
-| Mem0 | — | SaaS or self-hosted | MCP tools | ⚠️ | Prod, vendor-backed | Rejected — not local-first |
+| **Graphiti MCP** | Supplementary (agent-initiated) | Neo4j (shared, no new DB) | Agent MCP tool calls | ✅ | Prod, 20k+ stars, Apache 2.0 | ✅ **Supplementary** |
+| OpenMemory MCP (mem0.ai) | — | Postgres + Qdrant | MCP tools | ✅ | Prod, 60k+ stars | Rejected — would need a new Postgres; loses Neo4j-native/temporal fit |
+| Zep (hosted) | — | Postgres + Vector DB | MCP tools | ✅ | Mature, SOC2 | Rejected — heavier deployment; Graphiti is Zep's open-source graph engine, used directly instead |
+| Letta / MemGPT | — | Flexible | MCP (deprecating server-side) | ⚠️ | Architectural churn | Rejected — MCP support being deprecated in favor of client-side skills |
 
 ### Workspace Semantic Search Candidates
 
@@ -431,12 +457,14 @@ MCP endpoints registered in workspace MCP config:
 - [RTK GitHub](https://github.com/rtk-ai/rtk) — Shell command output compression via agent hooks (Layer 0)
 - [Headroom GitHub](https://github.com/chopratejas/headroom) — Triple-stack proxy (compression + memory + code-graph)
 - [Headroom Memory Docs](https://raw.githubusercontent.com/chopratejas/headroom/main/docs/content/docs/memory.mdx) — Proxy-side memory injection pipeline
-- [OpenMemory MCP Announcement](https://mem0.ai/blog/introducing-openmemory-mcp) — Supplementary structured memory MCP tools
+- [Graphiti GitHub](https://github.com/getzep/graphiti) — Supplementary temporal knowledge-graph memory MCP server (supersedes OpenMemory, see revised ADR 002)
+- [Graphiti MCP Server docs](https://help.getzep.com/graphiti/getting-started/mcp-server) — Deployment, config schema, Neo4j backend setup
+- [OpenMemory MCP Announcement](https://mem0.ai/blog/introducing-openmemory-mcp) — Rejected alternative, kept for reference
 - [CodeGraphContext GitHub](https://github.com/CodeGraphContext/CodeGraphContext) — Supplementary code graph MCP server
 - [codebase-memory (DeusData)](https://github.com/DeusData/codebase-memory-mcp) — Alternative to CodeGraphContext
 - [CodeGraph Rust (suatkocar)](https://github.com/suatkocar/codegraph) — Alternative: 44 MCP tools, PageRank
 
 ---
 
-**Document updated**: 2026-05-04
-**Status**: Ready for docker-compose implementation — Phase 1 first
+**Document updated**: 2026-07-04
+**Status**: Phase 1 (Headroom) implemented. Phase 2 (Graphiti MCP, revised ADR 002) implemented — replaces originally-planned OpenMemory MCP.
