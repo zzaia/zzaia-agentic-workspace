@@ -93,6 +93,7 @@ MCP tools reach Claude Code through two paths:
 
 **Direct MCP connections** (primary — in `.mcp.json`):
 - `tavily`, `azure_devops`, `postman`, `github`, `playwright` — each server runs as an isolated sidecar container; secrets fetched from Vault at startup; tools available immediately without bifrost involvement.
+- `mcp-codegraph` — codebase structure queries via Neo4j (SSE). 27 tools (`find_code`, `analyze_code_relationships`, `execute_cypher_query`, etc.) for cross-file relationship queries — callers, class hierarchies, call chains — that plain text search can't answer. Use grep/file search for simple string lookups instead.
 - `headroom`, `bifrost` — infrastructure servers (see below).
 
 **bifrost Code Mode** (`bifrost` entry in `.mcp.json`):

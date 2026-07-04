@@ -8,11 +8,12 @@ Multi-agent orchestration system for multi-language development workflows across
 
 ## Available MCP Tools
 
-Three MCP connections are configured:
+Four MCP connections are configured:
 
-- **bifrost** — MCP gateway aggregating all work tools via Code Mode (tavily, azure-devops, postman, new-relic, github, playwright)
+- **bifrost** — MCP gateway aggregating all work tools via Code Mode (tavily, azure-devops, postman, new-relic, github, playwright, aws-sns-sqs, aws-cloudwatch, aws-cloudwatch-xray, aws-ecs, aws-postgres — AWS tools available only when AWS credentials are configured in Vault)
 - **headroom** — Memory context injection (direct, not through bifrost)
 - **aspire** — AppHost resource inspection, container management, and telemetry (local CLI)
+- **mcp-codegraph** — Codebase structure queries via Neo4j (SSE). 27 tools (`find_code`, `analyze_code_relationships`, `execute_cypher_query`, etc.) for cross-file relationship queries — callers, class hierarchies, call chains — that plain text search can't answer. Use grep/file search for simple string lookups instead.
 
 ## MCP via Bifrost Code Mode
 
