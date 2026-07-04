@@ -433,33 +433,76 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 
 ---
 
-### ADR 013: Anthropic Credential Pool and Rotation via bifrost
+### ADR 013: Two-Tier Anthropic Credential Pipeline (OAuth vs API-Key)
 
-**Decision**: bifrost-server supports a credential pool for Anthropic requests. Multiple OAuth tokens or API keys are fetched from Vault and distributed across requests using weight-based round-robin, with automatic circuit-breaker fallback per credential.
+**Decision**: Bifrost-server and auth_proxy.py implement a two-tier credential model — Tier 1 for Claude Code CLI/extension (OAuth pool, falling back into the shared Tier-2 API-key pool on exhaustion) and Tier 2 for all other agents like OpenCode (API-key pool with sticky cache coherence). Both tiers route through a single ml-server (Headroom) instance and share the one auth_proxy.py process; tier separation is enforced via bifrost's `governance.virtual_keys[]` at config time.
+
+**Architecture**:
+
+- **Tier 1 (claude-pro)**: Used by Claude Code CLI and VSCode extension.
+  - Pool of up to 5 Anthropic OAuth tokens (`CLAUDE_OAUTH_TOKEN_1..5`), converted to `Authorization: Bearer` headers.
+  - If all OAuth tokens are unhealthy (401/429/529), falls back into the **same 5-key Tier-2 API-key pool** — no dedicated fallback credential. Falls back keys are sent as `x-api-key`, not Bearer.
+  - First-healthy selection across the OAuth pool (in index order); no stickiness required — OAuth tokens have no cache-coherence requirement.
+  - Virtual key `claude-pro` (bifrost governance): `key_ids` = all `oauth-1..N` names plus all `apikey-1..N` names (exact enumeration — bifrost's `key_ids` has no glob support, `"*"` is the only wildcard and means "all keys").
+
+- **Tier 2 (agents-generic)**: Used by all other Anthropic-speaking agents (currently OpenCode).
+  - Pool of up to 5 plain Anthropic API keys (`ANTHROPIC_API_KEY_1..5`), sent as `x-api-key` headers.
+  - Sticky credential selection based on request-body hash (preferring `system` field if present, else first ~4KB of body), ensuring the same coding session stays on the same API key.
+  - Prompt-cache coherence preserved because Anthropic's cache is scoped per API key — repeated messages with the same key maintain warm cache prefix.
+  - Virtual key `agents-generic` (bifrost governance): `key_ids` = all `apikey-1..N` names only.
+
+- **Common fallback**: If no indexed credentials exist, falls back to singular `ANTHROPIC_EFFECTIVE_KEY` (backward-compatible mode). Both tiers then point to the same single key, and both virtual keys' `key_ids` default to `["*"]` (there is only one key to allow).
 
 **Credential pool configuration** (Vault `secret/ai`):
 
-| Key Pattern | Type | Priority |
-|-------------|------|----------|
-| `CLAUDE_OAUTH_TOKEN_1..N` | OAuth token (Pro/Max subscription) | Higher — OAuth tokens are inserted first |
-| `ANTHROPIC_API_KEY_1..N` | API key (pay-per-token) | Lower — used when OAuth token absent for same index |
+| Key | Type | Tier | Purpose |
+|-----|------|------|---------|
+| `CLAUDE_OAUTH_TOKEN_1..5` | OAuth token | 1 | Claude Pro/Max subscriptions, primary pool |
+| `ANTHROPIC_API_KEY_1..5` | API key | 2 (shared as Tier-1 fallback) | Pay-per-token keys, agent pool |
+| `BIFROST_VIRTUAL_KEY_CLAUDE_PRO` | Opaque string | Config | bifrost virtual-key value for Tier 1 |
+| `BIFROST_VIRTUAL_KEY_AGENTS_GENERIC` | Opaque string | Config | bifrost virtual-key value for Tier 2 |
 
-- vault-server loops indexed keys at bootstrap: `bws secret list --output json` returns all secrets; `get_bws_value()` extracts each `CLAUDE_OAUTH_TOKEN_N` / `ANTHROPIC_API_KEY_N` and writes them to `secret/ai`
-- bifrost-server fetches the full pool from Vault at startup and exports `ANTHROPIC_POOL_KEY_1..N`; sets `ANTHROPIC_POOL_ENABLED=true`
-- bifrost `config.json` `keys[]` is generated dynamically: one entry per pool key with `"weight": 1` and `"value": "env.ANTHROPIC_POOL_KEY_N"`
-- All pool keys route through `auth_proxy.py` which converts the bifrost-selected `x-api-key` header value to `Authorization: Bearer` for `api.anthropic.com`
-- **Backward compatible**: if no indexed keys exist, singular `ANTHROPIC_EFFECTIVE_KEY` behavior is unchanged
+**Credential pool bootstrap**:
 
-**Rotation and fallback behavior:**
+- vault-server `bootstrap_secrets_from_bws()`: fetches all indexed keys from Bitwarden Secrets Manager (via `bws secret list --output json`), loops `CLAUDE_OAUTH_TOKEN_${idx}` / `ANTHROPIC_API_KEY_${idx}` for idx=1.. until both are empty, writes all to Vault `secret/ai`.
+- bifrost-server `fetch_secrets()`: reads from Vault, exports as `ANTHROPIC_OAUTH_1..N`, `ANTHROPIC_APIKEY_1..N`, exports literal pool membership lists (`ANTHROPIC_OAUTH_VALUES`, `ANTHROPIC_APIKEY_POOL_VALUES`) to the auth_proxy.py child process.
+- bifrost `generate_config()` dynamically emits bifrost `providers.anthropic.keys[]` with one entry per pool credential (OAuth, API-keys), all routing through `network_config.base_url: http://127.0.0.1:8099` (the auth_proxy process).
+- bifrost `governance.virtual_keys[]`: two new entries (claude-pro, agents-generic), each with an explicitly enumerated `key_ids` list built by the same loop that generates `providers.anthropic.keys[]` — kept in sync by construction, not duplicated by hand.
 
-| Trigger | Behavior |
-|---------|----------|
-| Normal operation | Weight-based round-robin across all pool keys — traffic distributed even when all keys are healthy |
-| `429 Too Many Requests` | bifrost cools down the rate-limited key and routes to remaining pool members |
-| `401 Unauthorized` | bifrost marks the key unhealthy; remaining pool keys serve traffic |
-| All pool keys exhausted | bifrost returns the upstream error to the caller |
+**Circuit breaker and retry logic** (in auth_proxy.py):
 
-**Rationale**: Single-credential setups are rate-limited by the quota of one account. A credential pool distributes load across multiple Pro/Max or API subscriptions, increasing effective throughput without changing any upstream agent or MCP configuration.
+- auth_proxy.py reads the credential value bifrost forwards via `x-api-key` (or `Authorization: Bearer`), classifies it as `oauth`, `apikey`, or `effective` (legacy single-key), and selects a live credential from that tier's pool — bifrost's own per-request pick is only a starting hint; auth_proxy performs the real selection (round-robin for OAuth, sticky hash for API keys) and can override it.
+- On upstream 401, 429, or 529 from api.anthropic.com, auth_proxy marks the credential unhealthy in-memory (cooldown: 401 = 3600s, 429/529 = 60s) and **retries the same request internally** against the next healthy credential in the tier (up to 10 attempts) — the retry loop lives entirely in auth_proxy.py, not in bifrost.
+- Tier 1: if all OAuth keys are unhealthy, retries against the shared Tier-2 API-key pool; if that's also exhausted, returns 503.
+- Tier 2: if the selected API key is unhealthy, picks the next healthy one (sticky-hash order); if all exhaust, returns 503.
+
+**Header conversion**:
+
+- OAuth tokens (Tier 1) → sent as `Authorization: Bearer <token>` per Anthropic API spec.
+- Plain API keys (Tier 2, and Tier-1 fallback) → sent as `x-api-key: <key>` per Anthropic API spec.
+- Legacy single-key mode: `ANTHROPIC_EFFECTIVE_KEY_TYPE` (`oauth` or `apikey`, set by `fetch_secrets()`) decides the header — this closes a bug where the single-key fallback path always sent `Bearer`, which Anthropic rejects for plain API keys.
+
+**Client-side configuration**:
+
+- Claude Code CLI and VSCode extension use `ANTHROPIC_API_KEY=sk-bf-claude-pro-001` (the virtual key bifrost expects).
+- OpenCode (and any future agents) use `ANTHROPIC_API_KEY_AGENTS=sk-bf-agents-generic-001` (its own virtual key).
+- Both target the same `ANTHROPIC_BASE_URL=http://ml-server:8787` → bifrost → auth_proxy.py → api.anthropic.com. The single ml-server (Headroom) instance is shared.
+
+**Backward compatibility**:
+
+- If no indexed credentials exist in Vault, bifrost falls back to the single-key mode (reading `ANTHROPIC_EFFECTIVE_KEY` from `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`, with `ANTHROPIC_EFFECTIVE_KEY_TYPE` recording which).
+- Both tiers then use the same credential; virtual-key `key_ids` fall back to `["*"]` (the single key is the only one to allow).
+- auth_proxy.py's `effective` classification path re-reads `ANTHROPIC_EFFECTIVE_KEY`/`ANTHROPIC_EFFECTIVE_KEY_TYPE` per request (cheap env lookup, no caching needed at this volume).
+
+**Known limitation**: bifrost's own `weight` field on `providers.anthropic.keys[]` is best-effort/probabilistic, not a strict priority order (unverified whether bifrost supports true priority — treat as probabilistic until confirmed against bifrost's release notes). The real tier/failover contract is enforced by auth_proxy.py's own selection and circuit breaker, not by bifrost's weights.
+
+**Rationale**:
+
+- **Load distribution**: A credential pool across multiple OAuth or API subscriptions multiplies effective rate-limit quota, reducing bottlenecks.
+- **Tier separation**: OAuth (Pro/Max subscriptions) and plain API keys have different trust/security models, pricing, and critical **use-case restrictions**: Anthropic's ToS explicitly reserves OAuth/subscription credentials for interactive personal use only (Claude Code CLI, VSCode extension); they are forbidden for autonomous or agentic workloads. Separating into two tiers enforces this requirement structurally.
+- **Tier asymmetry**: Tier 1 (interactive) can fall back to Tier 2 (API keys) on exhaustion—a user's subscription backing off to pay-per-use is operationally sound and compliant. Tier 2 (agentic) must never fall back to Tier 1 (OAuth)—this is a hard compliance boundary, enforced in auth_proxy handler structure (ADR 014).
+- **Cache coherence**: Sticky selection via request-body hash ensures Anthropic's per-key prompt-cache prefix stays warm for repeated sessions, reducing latency and cost.
+- **Single ml-server instance**: No architectural change to Headroom; all tier routing is upstream (auth_proxy classification → virtual key → bifrost key selection). Agents see no difference.
 
 ---
 
@@ -477,6 +520,54 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 **Reboot behavior**: all workspace services have `restart: unless-stopped`; the Docker daemon is systemd-enabled. On host reboot Docker restarts all containers — vault-server mounts `~/.config/zzaia/bws_token` successfully (file persists) and re-bootstraps from Bitwarden if the Vault volume was also wiped; otherwise Vault resumes from its own KV data without needing BWS at all.
 
 **Rationale**: The previous approach used `mktemp` to create a random `/tmp/tmp.xxx` file, which is cleaned on host reboot. Docker's OCI runtime fails to start a container when a `secrets.file` path does not exist, causing all dependent services to remain in `Exited (127)` state. A deterministic persistent path (`~/.config/zzaia/bws_token`) fixes the mount error without requiring a manual re-deploy after every reboot.
+
+---
+
+### ADR 013c: Two-Tier Auth Handler Refactoring
+
+**Decision**: Refactor auth_proxy.py to split credential routing into two structurally independent handlers (`handle_tier1_oauth()` and `handle_tier2_apikey()`), enforcing Anthropic ToS compliance at the code level.
+
+**Rationale**:
+
+The two-tier model (ADR 013) is a governance design: bifrost virtual keys carve up the credential pools, and auth_proxy selects within those pools. However, that design alone is not sufficient to guarantee Anthropic's ToS requirement that OAuth/subscription credentials (Claude Pro/Max) never reach autonomous/agentic systems. Bifrost's virtual-key governance controls *which* pools a caller can reach, but a single monolithic `do_request()` handler in auth_proxy could still implement a fallback from Tier 2 → Tier 1 (API-key → OAuth) if code is inadvertently modified.
+
+Structural separation—two handlers that never reference each other's pools—is stronger: `handle_tier2_apikey()` has zero code paths to the OAuth pool, not by convention but by language semantics. OAuth credentials cannot flow to agentic workloads even under code review stress or future maintenance.
+
+**Architecture**:
+
+**Tier 1 Handler** (`handle_tier1_oauth`):
+- Selects from `oauth_list` (first-healthy order, no stickiness).
+- On exhaustion: falls back to `apikey_list` (shared Tier-2 pool), respecting subscription fallback rules (Anthropic ToS allows subscription fallback for interactive use).
+- Circuit breaker: 401→3600s, 429/529→60s.
+- Logs: `tier=1 event=...` (success, fallback_to_apikey_pool, circuit_breaker, exhausted, max_retries_exceeded).
+
+**Tier 2 Handler** (`handle_tier2_apikey`):
+- Selects from `apikey_list` only via sticky-hash (request-body hash for cache coherence).
+- **NO fallback to any other pool**—returns 503 on exhaustion.
+- Circuit breaker: 401→3600s, 429/529→60s.
+- Logs: `tier=2 event=...` (success, circuit_breaker, exhausted, max_retries_exceeded).
+- **Compliance invariant**: handler never imports, references, or has access to `oauth_list`; OAuth pool is out of scope syntactically.
+
+**Effective (Legacy) Mode**:
+- If no indexed credentials, handler checks `ANTHROPIC_EFFECTIVE_KEY_TYPE` and routes to appropriate handler.
+- If type=oauth → Tier 1 path.
+- If type=apikey → dedicated `_handle_effective_apikey()` (single-key fallback, no pool selection).
+
+**CEL Routing Rules — considered, implemented, then removed**: an earlier revision of this ADR added two custom-header CEL routing rules to bifrost (`x-oauth-anthropic`/`x-api-key-anthropic`) purely as a secondary, logging-only tier tag. This was removed after confirming it was never load-bearing: tier identification already happens via **fixed virtual-key values** — each agent container is statically configured with a distinct, unchanging virtual key (`sk-bf-claude-pro-001` for Tier 1 services, `sk-bf-agents-generic-001` for Tier 2/OpenCode), which bifrost's governance and auth_proxy's pool classification both resolve by value match, independent of any header. The custom-header layer added no enforcement value and was blocked for OpenCode by an upstream config-header bug (opencode issue #22608) — removing it keeps the config lean with no loss of compliance guarantees.
+
+**Bifrost Version Bump**:
+- **v1.5.11 → v1.6.2**: retained independent of the CEL-routing-rule removal above — no breaking changes to virtual-key or provider schema; all existing configs remain compatible.
+
+**Testing**:
+- Unit tests verify tier classification, circuit breaker, and sticky selection.
+- **New compliance test** (`test_tier2_apikey_never_falls_back_to_oauth_pool`): explicitly asserts that Tier 2 exhaustion returns 503 without attempting OAuth, validating the structural separation.
+- All 29 tests passing.
+
+**Alternatives Considered and Rejected**:
+
+1. **Single handler with runtime type guards**: Could check tier type and skip OAuth pool conditionally. Rejected: logic is harder to audit, refactoring risk remains if code changes add hidden pathways.
+2. **CEL routing at bifrost for tier enforcement/tagging**: Bifrost's routing rules support CEL conditions but not dynamic per-request credential reselection to a different pool, and can only match on headers/params/model — never URL path. Fixed virtual-key values already provide the enforcement signal; a header-based CEL tag added no value and was removed (see above).
+3. **Path-based routing (e.g., `/v1/messages-tier1` vs `/v1/messages-tier2`)**: Requires agents to be aware of the path, increases coupling, and loses single ml-server simplicity. bifrost's base_url per provider is one URL; ml-server discards original path. Rejected.
 
 ---
 

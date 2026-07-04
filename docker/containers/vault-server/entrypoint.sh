@@ -190,7 +190,8 @@ bootstrap_secrets_from_bws() {
     fi
 
     local ai_args=()
-    for key in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY TAVILY_API_KEY; do
+    for key in ANTHROPIC_API_KEY CLAUDE_CODE_OAUTH_TOKEN OPENAI_API_KEY GEMINI_API_KEY TAVILY_API_KEY \
+               BIFROST_VIRTUAL_KEY_CLAUDE_PRO BIFROST_VIRTUAL_KEY_AGENTS_GENERIC; do
         local val
         val=$(get_bws_value "$bws_output" "$key")
         [ -n "$val" ] && ai_args+=("${key}=${val}")

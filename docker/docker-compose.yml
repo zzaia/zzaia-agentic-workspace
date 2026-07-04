@@ -127,7 +127,8 @@ services:
       - VAULT_ADDR=http://vault-server:8200
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://ml-server:8787
-      - ANTHROPIC_API_KEY=sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA
+      - ANTHROPIC_API_KEY=sk-bf-claude-pro-001
+      - ANTHROPIC_API_KEY_AGENTS=sk-bf-agents-generic-001
       - OPENAI_BASE_URL=http://ml-server:8787
       - OPENAI_API_KEY=proxy-handled
       - GOOGLE_GEMINI_BASE_URL=http://ml-server:8787
@@ -698,7 +699,7 @@ services:
       - VSCODE_PORT=${VSCODE_PORT:-8080}
       - DOCKER_HOST=tcp://dind-server:2375
       - ANTHROPIC_BASE_URL=http://ml-server:8787
-      - ANTHROPIC_API_KEY=sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA
+      - ANTHROPIC_API_KEY=sk-bf-claude-pro-001
       - OPENAI_BASE_URL=http://ml-server:8787
       - OPENAI_API_KEY=proxy-handled
       - GOOGLE_GEMINI_BASE_URL=http://ml-server:8787
@@ -754,7 +755,7 @@ services:
       - GPU_ENABLED=${GPU_ENABLED:-false}
       - INSTALL_PREFIX=/opt/tools
       - ANTHROPIC_BASE_URL=http://ml-server:8787
-      - ANTHROPIC_API_KEY=sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA
+      - ANTHROPIC_API_KEY=sk-bf-claude-pro-001
       - OPENAI_BASE_URL=http://ml-server:8787
       - OPENAI_API_KEY=proxy-handled
       - GOOGLE_GEMINI_BASE_URL=http://ml-server:8787
@@ -793,7 +794,7 @@ services:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - DOCKER_HOST=tcp://dind-server:2375
       - ANTHROPIC_BASE_URL=http://ml-server:8787
-      - ANTHROPIC_API_KEY=sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA
+      - ANTHROPIC_API_KEY=sk-bf-claude-pro-001
       - OPENAI_BASE_URL=http://ml-server:8787
       - OPENAI_API_KEY=proxy-handled
       - GOOGLE_GEMINI_BASE_URL=http://ml-server:8787
@@ -832,7 +833,7 @@ services:
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1
       - ANTHROPIC_BASE_URL=http://ml-server:8787
-      - ANTHROPIC_API_KEY=sk-ant-api03-proxy0000000000000000000000000000000000000000000000000000000000000000000000000000000000000AA
+      - ANTHROPIC_API_KEY=sk-bf-claude-pro-001
       - OPENAI_BASE_URL=http://ml-server:8787
       - OPENAI_API_KEY=proxy-handled
       - GOOGLE_GEMINI_BASE_URL=http://ml-server:8787

@@ -35,7 +35,8 @@ fetch_secrets() {
 
     local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key="" aws_key_id=""
     local tavily_api_key="" github_pat="" postman_api_key="" ado_auth_token=""
-    local -a pool_keys=()
+    local bifrost_vkey_claude_pro="" bifrost_vkey_agents_generic=""
+    local -a oauth_keys=() apikey_keys=()
 
     if [ -n "${VAULT_ADDR:-}" ]; then
         vault_approle_login || log_warn "AppRole login failed — no AI keys available"
@@ -49,6 +50,8 @@ fetch_secrets() {
         claude_oauth_token=$(printf '%s' "$vault_data" | jq -r '.data.data.CLAUDE_CODE_OAUTH_TOKEN // empty' 2>/dev/null || echo "")
         openai_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.OPENAI_API_KEY // empty' 2>/dev/null || echo "")
         gemini_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.GEMINI_API_KEY // empty' 2>/dev/null || echo "")
+        bifrost_vkey_claude_pro=$(printf '%s' "$vault_data" | jq -r '.data.data.BIFROST_VIRTUAL_KEY_CLAUDE_PRO // empty' 2>/dev/null || echo "")
+        bifrost_vkey_agents_generic=$(printf '%s' "$vault_data" | jq -r '.data.data.BIFROST_VIRTUAL_KEY_AGENTS_GENERIC // empty' 2>/dev/null || echo "")
 
         local idx=1
         while true; do
@@ -56,13 +59,8 @@ fetch_secrets() {
             oauth_val=$(printf '%s' "$vault_data" | jq -r ".data.data.CLAUDE_OAUTH_TOKEN_${idx} // empty" 2>/dev/null || echo "")
             api_val=$(printf '%s' "$vault_data" | jq -r ".data.data.ANTHROPIC_API_KEY_${idx} // empty" 2>/dev/null || echo "")
             [ -z "$oauth_val" ] && [ -z "$api_val" ] && break
-            if [ -n "$oauth_val" ]; then
-                pool_keys+=("$oauth_val")
-                export ANTHROPIC_POOL_KEY_${idx}="$oauth_val"
-            elif [ -n "$api_val" ]; then
-                pool_keys+=("$api_val")
-                export ANTHROPIC_POOL_KEY_${idx}="$api_val"
-            fi
+            [ -n "$oauth_val" ] && oauth_keys+=("$oauth_val") && export ANTHROPIC_OAUTH_${idx}="$oauth_val"
+            [ -n "$api_val" ] && apikey_keys+=("$api_val") && export ANTHROPIC_APIKEY_${idx}="$api_val"
             idx=$((idx + 1))
         done
 
@@ -110,17 +108,37 @@ fetch_secrets() {
     [ -z "${POSTMAN_AVAILABLE:-}" ] && log_warn "Postman: no API key — skipping mcp-postman"
     [ -z "${ADO_AVAILABLE:-}" ] && log_warn "Azure DevOps: no token — skipping mcp-azure-devops"
 
-    if [ ${#pool_keys[@]} -gt 0 ]; then
-        export ANTHROPIC_POOL_ENABLED="true"
-        log_info "Anthropic: pool mode enabled with ${#pool_keys[@]} credential(s)"
+    export ANTHROPIC_OAUTH_VALUES=$(IFS=$'\n'; echo "${oauth_keys[*]}")
+    export ANTHROPIC_APIKEY_POOL_VALUES=$(IFS=$'\n'; echo "${apikey_keys[*]}")
+
+    if [ -z "$bifrost_vkey_claude_pro" ]; then
+        bifrost_vkey_claude_pro="${BIFROST_VIRTUAL_KEY_CLAUDE_PRO:-sk-bf-claude-pro-001}"
+        log_info "Anthropic: using default claude-pro virtual key"
+    fi
+    if [ -z "$bifrost_vkey_agents_generic" ]; then
+        bifrost_vkey_agents_generic="${BIFROST_VIRTUAL_KEY_AGENTS_GENERIC:-sk-bf-agents-generic-001}"
+        log_info "Anthropic: using default agents-generic virtual key"
+    fi
+    export BIFROST_VIRTUAL_KEY_CLAUDE_PRO="$bifrost_vkey_claude_pro"
+    export BIFROST_VIRTUAL_KEY_AGENTS_GENERIC="$bifrost_vkey_agents_generic"
+
+    if [ ${#oauth_keys[@]} -gt 0 ] || [ ${#apikey_keys[@]} -gt 0 ]; then
+        export ANTHROPIC_TIER_MODE="two-tier"
+        log_info "Anthropic: two-tier pool mode (Tier-1: ${#oauth_keys[@]} OAuth [fallback: shared Tier-2 pool], Tier-2: ${#apikey_keys[@]} API-keys)"
     elif [ -n "$claude_oauth_token" ]; then
+        export ANTHROPIC_TIER_MODE="single"
         export ANTHROPIC_EFFECTIVE_KEY="$claude_oauth_token"
-        log_info "Anthropic: using CLAUDE_CODE_OAUTH_TOKEN (Pro/Max)"
+        export ANTHROPIC_EFFECTIVE_KEY_TYPE="oauth"
+        log_info "Anthropic: single key mode (Pro/Max OAuth)"
     elif [ -n "$anthropic_api_key" ]; then
+        export ANTHROPIC_TIER_MODE="single"
         export ANTHROPIC_EFFECTIVE_KEY="$anthropic_api_key"
-        log_info "Anthropic: using ANTHROPIC_API_KEY"
+        export ANTHROPIC_EFFECTIVE_KEY_TYPE="apikey"
+        log_info "Anthropic: single key mode (API key)"
     else
+        export ANTHROPIC_TIER_MODE="single"
         export ANTHROPIC_EFFECTIVE_KEY=""
+        export ANTHROPIC_EFFECTIVE_KEY_TYPE=""
         log_warn "Anthropic: no key available"
     fi
     export OPENAI_API_KEY="$openai_api_key"
@@ -130,11 +148,11 @@ fetch_secrets() {
 }
 
 start_auth_proxy() {
-    if [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ] || [ "${ANTHROPIC_POOL_ENABLED:-}" = "true" ]; then
-        log_info "Starting Bearer auth proxy on 127.0.0.1:8099..."
+    if [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ] || [ "${ANTHROPIC_TIER_MODE:-}" = "two-tier" ]; then
+        log_info "Starting credential tier proxy on 127.0.0.1:8099..."
         python3 /auth_proxy.py &
         sleep 1
-        log_success "Bearer auth proxy started"
+        log_success "Credential tier proxy started"
     fi
 }
 
@@ -170,17 +188,37 @@ generate_config() {
       { "name": "aws_ecs", "connection_type": "http", "connection_string": "http://mcp-aws-ecs:3013/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },
       { "name": "aws_postgres", "connection_type": "http", "connection_string": "http://mcp-aws-postgres:3014/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
-    local anthropic_keys=""
-    if [ "${ANTHROPIC_POOL_ENABLED:-}" = "true" ]; then
-        local idx=1
-        while [ -n "$(eval echo \${ANTHROPIC_POOL_KEY_${idx}:-})" ]; do
-            if [ -n "$anthropic_keys" ]; then
-                anthropic_keys="${anthropic_keys},"
-            fi
-            anthropic_keys="${anthropic_keys}
-      { \"name\": \"pool-${idx}\", \"value\": \"env.ANTHROPIC_POOL_KEY_${idx}\", \"weight\": 1, \"models\": [\"*\"] }"
+    # Bifrost key_ids has no glob support: "*" means "all keys", anything else must be an exact key name
+    # (verified against docs.getbifrost.ai/features/governance/virtual-keys). Default to "*" (single-key /
+    # legacy mode, where every virtual key resolves to the one "primary" key anyway); the two-tier branch
+    # below overwrites these with the real enumerated key names.
+    local anthropic_keys="" claude_pro_key_ids="\"*\"" agents_generic_key_ids="\"*\""
+    if [ "${ANTHROPIC_TIER_MODE:-}" = "two-tier" ]; then
+        claude_pro_key_ids="" agents_generic_key_ids=""
+        local idx=1 keysep="" ksep=""
+        while [ -n "$(eval echo \${ANTHROPIC_OAUTH_${idx}:-})" ]; do
+            anthropic_keys="${anthropic_keys}${keysep}
+      { \"name\": \"oauth-${idx}\", \"value\": \"env.ANTHROPIC_OAUTH_${idx}\", \"weight\": 1, \"models\": [\"*\"] }"
+            keysep=","
+            claude_pro_key_ids="${claude_pro_key_ids}${ksep}\"oauth-${idx}\""
+            ksep=", "
             idx=$((idx + 1))
         done
+        idx=1 ksep=""
+        while [ -n "$(eval echo \${ANTHROPIC_APIKEY_${idx}:-})" ]; do
+            anthropic_keys="${anthropic_keys}${keysep}
+      { \"name\": \"apikey-${idx}\", \"value\": \"env.ANTHROPIC_APIKEY_${idx}\", \"weight\": 1, \"models\": [\"*\"] }"
+            keysep=","
+            agents_generic_key_ids="${agents_generic_key_ids}${ksep}\"apikey-${idx}\""
+            # Tier-1 (claude-pro) shares the same API-key pool as its last-resort fallback — no separate key.
+            [ -n "$claude_pro_key_ids" ] && claude_pro_key_ids="${claude_pro_key_ids}, "
+            claude_pro_key_ids="${claude_pro_key_ids}\"apikey-${idx}\""
+            ksep=", "
+            idx=$((idx + 1))
+        done
+        # Empty key_ids denies all traffic in bifrost — guard against a tier ending up with zero real keys.
+        [ -z "$claude_pro_key_ids" ] && claude_pro_key_ids="\"*\""
+        [ -z "$agents_generic_key_ids" ] && agents_generic_key_ids="\"*\""
     elif [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ]; then
         anthropic_keys="{ \"name\": \"primary\", \"value\": \"env.ANTHROPIC_EFFECTIVE_KEY\", \"weight\": 1, \"models\": [\"*\"] }"
     fi
@@ -217,6 +255,22 @@ generate_config() {
         "value": "${workspace_key}",
         "provider_configs": [
           { "provider": "anthropic", "allowed_models": ["*"], "key_ids": ["*"] }
+        ]
+      },
+      {
+        "id": "claude-pro",
+        "name": "Claude Pro (Tier 1)",
+        "value": "${BIFROST_VIRTUAL_KEY_CLAUDE_PRO}",
+        "provider_configs": [
+          { "provider": "anthropic", "allowed_models": ["*"], "key_ids": [${claude_pro_key_ids}] }
+        ]
+      },
+      {
+        "id": "agents-generic",
+        "name": "Agents Generic (Tier 2)",
+        "value": "${BIFROST_VIRTUAL_KEY_AGENTS_GENERIC}",
+        "provider_configs": [
+          { "provider": "anthropic", "allowed_models": ["*"], "key_ids": [${agents_generic_key_ids}] }
         ]
       }
     ]

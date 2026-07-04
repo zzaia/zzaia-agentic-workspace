@@ -81,10 +81,10 @@ workspace/
 
 OpenCode provides multi-provider LLM support. All providers are pre-configured in `~/.config/opencode/config.json` and route through `ml-server → bifrost`:
 
-- **Anthropic** — `baseURL: {env:ANTHROPIC_BASE_URL}`, key: `{env:ANTHROPIC_API_KEY}`
+- **Anthropic** — `baseURL: {env:ANTHROPIC_BASE_URL}`, key: `{env:ANTHROPIC_API_KEY_AGENTS}` (agents-generic tier, separate from Claude Code CLI's claude-pro tier)
 - **OpenAI** — `baseURL: {env:OPENAI_BASE_URL}`, key: `{env:OPENAI_API_KEY}`
 - **Google** — `baseURL: {env:GOOGLE_GEMINI_BASE_URL}`, key: `{env:GEMINI_API_KEY}`
 
-Base URLs are NOT read from env vars directly by OpenCode — they must be declared in `config.json` using `{env:...}` substitution. Do not rely on env vars alone for provider routing.
+Base URLs are NOT read from env vars directly by OpenCode — they must be declared in `config.json` using `{env:...}` substitution. Do not rely on env vars alone for provider routing. OpenCode's Anthropic credential uses a dedicated `ANTHROPIC_API_KEY_AGENTS` env var (agents-generic bifrost virtual key) rather than the shared `ANTHROPIC_API_KEY`; this enables credential tier isolation and sticky request routing for prompt-cache coherence.
 
 RTK token optimization is active via `~/.config/opencode/plugins/rtk.ts` (initialized by `rtk init -g --opencode` at workspace bootstrap).
