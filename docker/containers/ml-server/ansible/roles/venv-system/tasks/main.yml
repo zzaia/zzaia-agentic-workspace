@@ -64,6 +64,7 @@
     cmd: >
       {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
       sentence-transformers
+      einops
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/sentence_transformers/__init__.py"
   when: gpu_enabled | string == 'true'

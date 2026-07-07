@@ -83,16 +83,16 @@ def has_cuda():
 
 
 # ── Routes ──────────────────────────────────────────────────────────────────
-@app.get("/health", status_code=200)
+@app.get("/health")
 async def health():
-    """Health check — indicates readiness once model is loaded."""
+    """Health check — returns 503 until model is loaded, 200 once ready."""
     if model is None:
-        return {"status": "loading"}
+        raise HTTPException(status_code=503, detail="Model loading")
     return {"status": "ok", "model": MODEL_NAME, "dimensions": MODEL_OUTPUT_DIMS}
 
 
 @app.post("/v1/embeddings", response_model=EmbeddingResponse)
-async def embeddings(req: EmbeddingRequest):
+def embeddings(req: EmbeddingRequest):
     """Generate embeddings for input text(s) — OpenAI-compatible endpoint."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not ready")

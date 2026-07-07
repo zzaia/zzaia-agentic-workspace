@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Graphiti MCP Server — Agent memory backend via Neo4j knowledge graph
-# Routes LLM calls (entity extraction) through Bifrost HTTP gateway
+# Routes LLM calls (entity extraction) through ml-server (Headroom) → bifrost-server → Anthropic
 # Embedder routing: GPU_ENABLED=true → local ml-server; else → cloud OpenAI via Vault
 
 if [ -t 1 ]; then
@@ -68,29 +68,46 @@ fetch_secrets() {
     fi
 }
 
-# ── Wait for ml-server embeddings health (GPU mode only) ────────────────────────
+# ── Wait for ml-server health (LLM on 8787 unconditional, embeddings on 8788 GPU-gated) ────
 wait_for_ml_server() {
-    if [ "${GPU_ENABLED:-false}" != "true" ]; then
-        return 0
-    fi
+    log_info "Waiting for ml-server Headroom (LLM) on http://ml-server:8787/health..."
 
-    log_info "Waiting for ml-server embeddings server on http://ml-server:8788/health..."
-
-    local max_attempts=30
+    local max_attempts=150
     local attempt=1
     local interval=2
 
+    # Always wait for LLM health on port 8787 (Headroom)
     while [ $attempt -le $max_attempts ]; do
-        if curl -sf http://ml-server:8788/health >/dev/null 2>&1; then
-            log_success "ml-server embeddings server is ready"
-            return 0
+        if curl -sf http://ml-server:8787/health >/dev/null 2>&1; then
+            log_success "ml-server Headroom (LLM) is ready"
+            break
         fi
-        log_info "ml-server not ready yet (attempt $attempt/$max_attempts)..."
+        log_info "ml-server Headroom not ready yet (attempt $attempt/$max_attempts)..."
         sleep $interval
         attempt=$((attempt + 1))
     done
 
-    log_warn "ml-server embeddings server did not become ready after ${max_attempts}s — proceeding anyway"
+    if [ $attempt -gt $max_attempts ]; then
+        log_warn "ml-server Headroom did not become ready after $((max_attempts * interval))s — proceeding anyway"
+    fi
+
+    # If GPU enabled, also wait for embeddings health on port 8788
+    if [ "${GPU_ENABLED:-false}" = "true" ]; then
+        log_info "Waiting for ml-server embeddings on http://ml-server:8788/health (GPU mode)..."
+        attempt=1
+        while [ $attempt -le $max_attempts ]; do
+            if curl -sf http://ml-server:8788/health >/dev/null 2>&1; then
+                log_success "ml-server embeddings server is ready"
+                return 0
+            fi
+            log_info "ml-server embeddings not ready yet (attempt $attempt/$max_attempts)..."
+            sleep $interval
+            attempt=$((attempt + 1))
+        done
+
+        log_warn "ml-server embeddings did not become ready after $((max_attempts * interval))s — proceeding anyway"
+    fi
+
     return 0
 }
 
@@ -183,6 +200,7 @@ graphiti:
   semaphore_limit: ${semaphore_limit}
 EOF
 
+    chmod 600 /app/mcp/config/config.yaml
     log_success "Config prepared at /app/mcp/config/config.yaml"
 }
 

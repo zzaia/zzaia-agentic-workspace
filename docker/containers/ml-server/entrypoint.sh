@@ -65,7 +65,7 @@ start_embeddings_server() {
 main() {
     bootstrap
     verify_headroom
-    start_embeddings_server
+    start_embeddings_server || log_warn "Embeddings server failed to start — GPU-mode local embedder unavailable, continuing with Headroom only"
     start_headroom "$@"
 }
 
