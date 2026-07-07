@@ -152,10 +152,10 @@ C4Container
     }
     
     System_Boundary(scripts, "Install Orchestration") {
-        Container(runtime_script, "runtime-install.sh", "Bash", "Tool orchestration in workspace-server entrypoint")
-        Container(modules, "packages/*.sh modules", "Bash", "system.sh, node.sh, dotnet.sh, python.sh, cli.sh, vscode.sh")
-        Container(versions, "versions.env", "Text", "Single-file version pin registry")
-        Container(common, "common.sh", "Bash", "Logging, retry_with_backoff, ensure_dir utilities")
+        Container(runtime_script, "ansible-playbook site.yml", "Ansible", "Tool orchestration, run from workspace-server entrypoint.sh")
+        Container(modules, "Ansible roles", "YAML/Ansible", "node, dotnet, python, cli, vscode, path-config, and other per-toolchain roles")
+        Container(versions, "versions.env / group_vars", "Text/YAML", "Version pin registry read by Ansible roles")
+        Container(common, "common.sh", "Bash", "Logging, retry_with_backoff, ensure_dir utilities (sourced by entrypoint.sh and build-install.sh)")
     }
     
     Rel(build_script, ubuntu, "Runs during docker build", "apt, curl, bash")

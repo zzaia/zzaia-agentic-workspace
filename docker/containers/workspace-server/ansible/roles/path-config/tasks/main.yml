@@ -63,6 +63,10 @@
     - /home/user/.bashrc
     - /home/user/.profile
 
+# claude intentionally has no --auto-patch: its patcher is not idempotent (confirmed
+# empirically — re-running --auto-patch appends a duplicate, unguarded hook matcher on
+# every bootstrap instead of detecting the existing one). The hook is already correctly
+# seeded from agents/claude/.claude/settings.json, so --auto-patch is not needed here.
 - name: Initialize RTK hooks
   ansible.builtin.shell: |
     export NVM_DIR="{{ install_prefix }}/.nvm"
@@ -73,10 +77,11 @@
         exit 0
     fi
 
-    rtk init -g --agent claude --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --agent claude 2>&1 | sed 's/^/  /'
     rtk init -g --gemini --auto-patch 2>&1 | sed 's/^/  /'
     rtk init -g --codex 2>&1 | sed 's/^/  /'
     rtk init -g --copilot --auto-patch 2>&1 | sed 's/^/  /'
+    rtk init -g --opencode 2>&1 | sed 's/^/  /'
   args:
     executable: /bin/bash
   environment:

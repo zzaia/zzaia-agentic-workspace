@@ -134,3 +134,16 @@
         NVM_DIR: "{{ install_prefix }}/.nvm"
         PUPPETEER_SKIP_DOWNLOAD: "1"
       changed_when: false
+
+    - name: Install OpenCode
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "opencode-ai@{{ opencode_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/opencode"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false

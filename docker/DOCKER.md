@@ -1,6 +1,6 @@
 # ZZAIA Container — Docker
 
-Ubuntu 24.04 all-in-one container (`workspace-server`) with tools provisioned via modular shell scripts (`build-install.sh` + `runtime-install.sh`). Runs SSH daemon by default; optionally runs browser VS Code and Dev Containers on separate container services. MCP servers run as isolated sidecar containers — each receives only its own secret.
+Ubuntu 24.04 all-in-one container (`workspace-server`) with system packages installed at build time (`build-install.sh`) and runtime tooling provisioned via Ansible (`entrypoint.sh` runs `ansible-playbook site.yml`). Runs SSH daemon by default; optionally runs browser VS Code and Dev Containers on separate container services. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 ---
 
@@ -138,7 +138,7 @@ On the **first start with an empty home volume**, Docker copies the image's `/ho
 
 Tools install to `/opt/tools` in the separate `workspace-tools` volume:
 
-- `workspace-server` entrypoint runs `runtime-install.sh` which installs tools to `/opt/tools` (INSTALL_PREFIX=/opt/tools, HOME=/home/user)
+- `workspace-server` entrypoint runs `ansible-playbook site.yml` which installs tools to `/opt/tools` (INSTALL_PREFIX=/opt/tools, HOME=/home/user)
 - `workspace-tools` volume is read-write for `workspace-server`, read-only (`:ro`) for `vscode-server` and `containers-dev-server`
 - Tools persist across restarts; delete the volume to force re-installation with new versions from `versions.env`
 
@@ -458,7 +458,7 @@ Users can then start inner containers with `docker run --privileged` or `--gpus 
 ```
 docker/
 ├── Dockerfile               — Image definition (Ubuntu 24.04)
-├── entrypoint.sh           — workspace-server entrypoint: setup-user → runtime-install → setup-credentials → sshd
+├── entrypoint.sh           — workspace-server entrypoint: fetch Vault creds → ansible-playbook site.yml → profile/MCP setup → sshd
 ├── sshd_config             — Port 2222, key-auth only
 ├── docker-compose.yml      — workspace-server + vscode-server + containers-dev-server + dind + MCP sidecars
 ├── docker-compose.gpu.yml  — GPU override for all services + dind
