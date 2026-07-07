@@ -7,6 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip3 --python /app/mcp/.venv/bin/python install --no-cache-dir "anthropic>=0.49.0"
+
 COPY docker/containers/mcp-graphiti/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

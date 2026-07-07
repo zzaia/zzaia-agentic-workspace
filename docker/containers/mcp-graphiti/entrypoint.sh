@@ -112,6 +112,12 @@ wait_for_ml_server() {
 }
 
 # ── Prepare config YAML ───────────────────────────────────────────────────────
+    # LLM: always route through ml-server (Headroom), regardless of GPU status.
+    # ml-server itself forwards to bifrost-server (ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic,
+    # see docker-compose.yml's ml-server environment block) — the same convention every other
+    # client in this workspace uses (see docker/containers/workspace-server/entrypoint.sh's
+    # setup_profile_env: ANTHROPIC_BASE_URL defaults to http://ml-server:8787). Pointing straight at
+    # bifrost-server here would skip Headroom's compression/memory injection entirely.
 prepare_config() {
     log_info "Preparing Graphiti config..."
 
@@ -122,15 +128,10 @@ prepare_config() {
     local group_id="${GRAPHITI_GROUP_ID:-main}"
     local semaphore_limit="${SEMAPHORE_LIMIT:-10}"
 
-    # LLM: always route through ml-server (Headroom), regardless of GPU status.
-    # ml-server itself forwards to bifrost-server (ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic,
-    # see docker-compose.yml's ml-server environment block) — the same convention every other
-    # client in this workspace uses (see docker/containers/workspace-server/entrypoint.sh's
-    # setup_profile_env: ANTHROPIC_BASE_URL defaults to http://ml-server:8787). Pointing straight at
-    # bifrost-server here would skip Headroom's compression/memory injection entirely.
     local llm_provider="anthropic"
     local llm_api_url="http://ml-server:8787"
     local llm_api_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
+    local llm_model="${GRAPHITI_LLM_MODEL:-claude-haiku-4-5-20251001}"
 
     # Embedder: branch on GPU_ENABLED
     local embedder_provider="openai"
@@ -152,6 +153,8 @@ prepare_config() {
         log_info "GPU disabled — using cloud OpenAI embedder"
     fi
 
+    export OPENAI_API_KEY="${embedder_api_key}"
+
     # Create config directory
     mkdir -p /app/mcp/config
 
@@ -172,6 +175,7 @@ database:
 
 llm:
   provider: ${llm_provider}
+  model: ${llm_model}
   providers:
     ${llm_provider}:
       api_key: ${llm_api_key}
@@ -213,7 +217,7 @@ main() {
     prepare_config
 
     log_info "Starting Graphiti HTTP server on port 8000..."
-    cd /app/mcp && exec uv run --no-sync main.py
+    cd /app/mcp && exec .venv/bin/python main.py
 }
 
 main "$@"
