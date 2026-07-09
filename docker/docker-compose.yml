@@ -143,6 +143,7 @@ services:
     cap_add:
       - AUDIT_WRITE
       - CHOWN
+      - DAC_OVERRIDE
       - FOWNER
       - SETGID
       - SETUID
@@ -678,6 +679,7 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE
       - FOWNER
       - SETGID
       - SETUID

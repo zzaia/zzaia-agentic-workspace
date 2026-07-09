@@ -13,7 +13,8 @@ source "$SCRIPT_DIR/common.sh"
 # Exported only during bootstrap_workspace (Ansible run), then unset before sshd exec.
 # Agents connecting via SSH cannot see it in /proc/1/environ (sshd won't have it).
 load_admin_password() {
-    # cap_drop:ALL removes DAC_OVERRIDE — must read as uid 1000 (file owner), not root
+    # cap_drop:ALL removes DAC_OVERRIDE — must read as uid 1000 (file owner), not root.
+    # DAC_OVERRIDE was re-added to cap_add for apt/dpkg support, but we still read as uid 1000 for defense-in-depth.
     local pw
     pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
     [ -n "$pw" ] && export ADMIN_PASSWORD="$pw" || log_warn "admin_password secret not found — sudo will be passwordless"
