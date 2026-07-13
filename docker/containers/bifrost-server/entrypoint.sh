@@ -195,39 +195,20 @@ generate_config() {
     [ -n "${AWS_MCP_AVAILABLE:-}" ] && aws_entries=',
       { "name": "aws_api", "connection_type": "http", "connection_string": "http://mcp-aws-api:3010/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }'
 
-    # Bifrost key_ids has no glob support: "*" means "all keys", anything else must be an exact key name
-    # (verified against docs.getbifrost.ai/features/governance/virtual-keys). Default to "*" (single-key /
-    # legacy mode, where every virtual key resolves to the one "primary" key anyway); the two-tier branch
-    # below overwrites these with the real enumerated key names.
+    # Build provider keys — For two-tier mode, use wildcard ("*") to allow auth-proxy to handle routing
+    # The auth_proxy (running on 127.0.0.1:8099) has the actual credentials and handles Tier-1/Tier-2 selection
     local anthropic_keys="" claude_pro_key_ids="\"*\"" agents_generic_key_ids="\"*\""
     if [ "${ANTHROPIC_TIER_MODE:-}" = "two-tier" ]; then
-        claude_pro_key_ids="" agents_generic_key_ids=""
-        local idx=1 keysep="" ksep=""
-        while [ -n "$(eval echo \${ANTHROPIC_OAUTH_${idx}:-})" ]; do
-            anthropic_keys="${anthropic_keys}${keysep}
-      { \"name\": \"oauth-${idx}\", \"value\": \"env.ANTHROPIC_OAUTH_${idx}\", \"weight\": 1, \"models\": [\"*\"] }"
-            keysep=","
-            claude_pro_key_ids="${claude_pro_key_ids}${ksep}\"oauth-${idx}\""
-            ksep=", "
-            idx=$((idx + 1))
-        done
-        idx=1 ksep=""
-        while [ -n "$(eval echo \${ANTHROPIC_APIKEY_${idx}:-})" ]; do
-            anthropic_keys="${anthropic_keys}${keysep}
-      { \"name\": \"apikey-${idx}\", \"value\": \"env.ANTHROPIC_APIKEY_${idx}\", \"weight\": 1, \"models\": [\"*\"] }"
-            keysep=","
-            agents_generic_key_ids="${agents_generic_key_ids}${ksep}\"apikey-${idx}\""
-            # Tier-1 (claude-pro) shares the same API-key pool as its last-resort fallback — no separate key.
-            [ -n "$claude_pro_key_ids" ] && claude_pro_key_ids="${claude_pro_key_ids}, "
-            claude_pro_key_ids="${claude_pro_key_ids}\"apikey-${idx}\""
-            ksep=", "
-            idx=$((idx + 1))
-        done
-        # Empty key_ids denies all traffic in bifrost — guard against a tier ending up with zero real keys.
-        [ -z "$claude_pro_key_ids" ] && claude_pro_key_ids="\"*\""
-        [ -z "$agents_generic_key_ids" ] && agents_generic_key_ids="\"*\""
+        # In two-tier mode, use wildcard for all key_ids since auth-proxy handles the actual routing
+        claude_pro_key_ids="\"*\""
+        agents_generic_key_ids="\"*\""
+        # Single sentinel key definition for provider (value doesn't matter; auth-proxy will intercept)
+        anthropic_keys="{ \"name\": \"_bifrost_gateway\", \"value\": \"dummy\", \"weight\": 1, \"models\": [\"*\"] }"
     elif [ -n "${ANTHROPIC_EFFECTIVE_KEY:-}" ]; then
-        anthropic_keys="{ \"name\": \"primary\", \"value\": \"env.ANTHROPIC_EFFECTIVE_KEY\", \"weight\": 1, \"models\": [\"*\"] }"
+        # Single-key mode: embed actual key value directly in JSON
+        local eff_key
+        eff_key=$(printf '%s' "${ANTHROPIC_EFFECTIVE_KEY}" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+        anthropic_keys="{ \"name\": \"primary\", \"value\": \"${eff_key}\", \"weight\": 1, \"models\": [\"*\"] }"
     fi
 
     if [ -n "$anthropic_keys" ]; then
@@ -295,6 +276,22 @@ generate_config() {
   }
 }
 EOF
+
+    # Restrict config.json permissions — contains raw secret values
+    chmod 600 /app/data/config.json
+
+    # Debug: validate JSON structure and log key counts
+    if command -v jq &>/dev/null; then
+        local key_count
+        key_count=$(jq '.providers.anthropic.keys | length' /app/data/config.json 2>/dev/null || echo "0")
+        log_info "Config validation: Anthropic provider has ${key_count} keys configured"
+
+        if [ "$key_count" -gt 0 ]; then
+            jq -r '.providers.anthropic.keys[] | .name' /app/data/config.json | while read -r keyname; do
+                log_info "  - Key: ${keyname}"
+            done
+        fi
+    fi
 
     if [ -z "$providers" ]; then
         log_warn "No API keys configured — bifrost starts without providers (add keys via Vault UI)"

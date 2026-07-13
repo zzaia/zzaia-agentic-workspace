@@ -143,12 +143,19 @@ class BearerAuthProxy(http.server.BaseHTTPRequestHandler):
             self.handle_tier1_oauth(body)
         elif tier == "apikey":
             self.handle_tier2_apikey(body)
-        else:  # "effective" (legacy single-key mode)
-            effective_is_oauth = os.environ.get("ANTHROPIC_EFFECTIVE_KEY_TYPE", "") == "oauth"
-            if effective_is_oauth:
+        else:  # "effective" (legacy single-key mode or two-tier without incoming key)
+            # In two-tier mode, if no incoming key is provided, default to Tier-1 (OAuth with fallback to API-key)
+            # This handles cases where Bifrost forwards requests without client auth headers
+            if pool.oauth_values or pool.apikey_values:
+                # Two-tier mode detected: use Tier-1 handler (which has fallback to Tier-2)
                 self.handle_tier1_oauth(body)
             else:
-                self._handle_effective_apikey(body)
+                # Single-key mode: use the configured effective key type
+                effective_is_oauth = os.environ.get("ANTHROPIC_EFFECTIVE_KEY_TYPE", "") == "oauth"
+                if effective_is_oauth:
+                    self.handle_tier1_oauth(body)
+                else:
+                    self._handle_effective_apikey(body)
 
     def handle_tier1_oauth(self, body: Optional[bytes]):
         """Tier 1 handler: OAuth pool with fallback to shared Tier-2 API-key pool.
