@@ -44,11 +44,26 @@
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/torch/__init__.py"
   when: gpu_enabled | string == 'true'
 
-- name: Install headroom-ai with ML and OTEL (GPU mode)
+- name: Check if headroom-ai with ml extra is already installed (GPU mode)
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/pip show headroom-ai | grep -q 'Location' && echo 'installed' || echo 'notinstalled'"
+  register: headroom_check_result
+  when: gpu_enabled | string == 'true'
+  changed_when: false
+
+- name: Uninstall headroom-ai if present (GPU mode - for clean reinstall)
+  ansible.builtin.shell:
+    cmd: "{{ install_prefix }}/miniforge3/envs/venv-system/bin/pip uninstall -y headroom-ai 2>/dev/null || true"
+  when:
+    - gpu_enabled | string == 'true'
+    - headroom_check_result.stdout | default('notinstalled') == 'installed'
+  changed_when: false
+
+- name: Install headroom-ai with ML, code, and OTEL (GPU mode)
   ansible.builtin.shell:
     cmd: >
       {{ install_prefix }}/miniforge3/envs/venv-system/bin/pip install
-      headroom-ai[ml,otel]=={{ headroom_ai_version }}
+      'headroom-ai[ml,code,otel]=={{ headroom_ai_version }}'
       hnswlib
       opentelemetry-sdk
       opentelemetry-exporter-otlp-proto-grpc
@@ -68,3 +83,49 @@
       --quiet
     creates: "{{ install_prefix }}/miniforge3/envs/venv-system/lib/python{{ python_version }}/site-packages/sentence_transformers/__init__.py"
   when: gpu_enabled | string == 'true'
+
+- name: Enable tag compression in headroom (patch content_router.py)
+  ansible.builtin.shell:
+    cmd: |
+      python3 << 'EOFPATCH'
+      import os
+      venv_path = "{{ install_prefix }}/miniforge3/envs/venv-system"
+      py_ver = "{{ python_version }}"
+      content_router = f"{venv_path}/lib/python{py_ver}/site-packages/headroom/transforms/content_router.py"
+      if os.path.exists(content_router):
+        with open(content_router, 'r') as f:
+          content = f.read()
+        if "compress_tagged_content: bool = False" in content:
+          content = content.replace("compress_tagged_content: bool = False", "compress_tagged_content: bool = True")
+          with open(content_router, 'w') as f:
+            f.write(content)
+      EOFPATCH
+
+- name: Enable system message compression in proxy (patch anthropic.py)
+  ansible.builtin.shell:
+    cmd: |
+      python3 << 'EOFPATCH'
+      import os
+      venv_path = "{{ install_prefix }}/miniforge3/envs/venv-system"
+      py_ver = "{{ python_version }}"
+      anthropic_handler = f"{venv_path}/lib/python{py_ver}/site-packages/headroom/proxy/handlers/anthropic.py"
+      if os.path.exists(anthropic_handler):
+        with open(anthropic_handler, 'r') as f:
+          lines = f.readlines()
+        # Find all lines with "compression_policy=compression_policy," and add compress_system_messages=True before them
+        modified = False
+        i = 0
+        while i < len(lines):
+          if 'compression_policy=compression_policy,' in lines[i] and 'anthropic_pipeline.apply' in ''.join(lines[max(0, i-15):i+1]):
+            # Check if compress_system_messages already exists
+            apply_block = ''.join(lines[max(0, i-15):i+1])
+            if 'compress_system_messages' not in apply_block:
+              indent = len(lines[i]) - len(lines[i].lstrip())
+              lines.insert(i, ' ' * indent + 'compress_system_messages=True,\n')
+              modified = True
+              i += 1  # Skip the inserted line
+          i += 1
+        if modified:
+          with open(anthropic_handler, 'w') as f:
+            f.writelines(lines)
+      EOFPATCH
