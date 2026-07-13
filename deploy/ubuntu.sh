@@ -28,6 +28,8 @@ Options:
   --skip-hosts                  Skip /etc/hosts auto-provisioning prompt, print manual instructions only (default: false)
   --nginx-proxy-port PORT       Nginx reverse-proxy port (default: 80)
   --ssh-port PORT               SSH server port (default: 2222)
+  --otel-grpc-port PORT         OTel Collector gRPC (OTLP) port — observability only (default: 4317)
+  --otel-http-port PORT         OTel Collector HTTP (OTLP) port — observability only (default: 4318)
   --profiles PROFILES           Comma-separated server profiles: vscode, jupyter, devcontainer, tunnel, portainer
   --dind-data-path PATH         DinD storage bind mount path (default: /var/lib/docker/{WORKSPACE_NAME}-dind)
   --help                        Show this help message
@@ -62,6 +64,8 @@ NO_BWS="false"
 SKIP_HOSTS="false"
 NGINX_PROXY_PORT="80"
 SSH_PORT="2222"
+OTEL_GRPC_PORT="4317"
+OTEL_HTTP_PORT="4318"
 DEPLOY_PROFILES=""
 DIND_DATA_PATH=""
 
@@ -158,6 +162,14 @@ while [ $# -gt 0 ]; do
             SSH_PORT="$2"
             shift 2
             ;;
+        --otel-grpc-port)
+            OTEL_GRPC_PORT="$2"
+            shift 2
+            ;;
+        --otel-http-port)
+            OTEL_HTTP_PORT="$2"
+            shift 2
+            ;;
         --profiles)
             DEPLOY_PROFILES="$2"
             shift 2
@@ -247,6 +259,8 @@ SWIFT_ENABLED=$SWIFT_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 NGINX_PROXY_PORT=$NGINX_PROXY_PORT
 SSH_PORT=$SSH_PORT
+OTEL_GRPC_PORT=$OTEL_GRPC_PORT
+OTEL_HTTP_PORT=$OTEL_HTTP_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
@@ -255,6 +269,9 @@ ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_PASSWORD=$ADMIN_PASSWORD
 DIND_DATA_PATH=${DIND_DATA_PATH:-/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind}
 EOF
+
+NGINX_URL_SUFFIX=""
+[ "$NGINX_PROXY_PORT" != "80" ] && NGINX_URL_SUFFIX=":$NGINX_PROXY_PORT"
 
 PROFILE_FLAGS=""
 if [ -n "$DEPLOY_PROFILES" ]; then
@@ -330,7 +347,7 @@ if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
     echo "Initializing Portainer admin account..."
     _portainer_ready=false
     for _i in $(seq 1 30); do
-        if curl -sf --resolve "portainer.${WORKSPACE_NAME}.local:80:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local/api/status" >/dev/null 2>&1; then
+        if curl -sf --resolve "portainer.${WORKSPACE_NAME}.local:${NGINX_PROXY_PORT}:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX}/api/status" >/dev/null 2>&1; then
             _portainer_ready=true
             break
         fi
@@ -339,19 +356,19 @@ if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
     if [ "$_portainer_ready" = "true" ]; then
         _portainer_username="${ADMIN_EMAIL%%@*}"
         _portainer_payload=$(printf '{"Username":"%s","Password":"%s"}' "$_portainer_username" "$ADMIN_PASSWORD")
-        curl -sf -X POST --resolve "portainer.${WORKSPACE_NAME}.local:80:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local/api/users/admin/init" \
+        curl -sf -X POST --resolve "portainer.${WORKSPACE_NAME}.local:${NGINX_PROXY_PORT}:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX}/api/users/admin/init" \
             -H "Content-Type: application/json" \
             -d "$_portainer_payload" >/dev/null 2>&1 || true
         echo "✓ Portainer admin configured (username: $_portainer_username)"
         unset _portainer_username
     else
-        echo "Warning: Portainer not ready — complete admin setup at http://portainer.${WORKSPACE_NAME}.local within 5 minutes"
+        echo "Warning: Portainer not ready — complete admin setup at http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX} within 5 minutes"
     fi
     unset _portainer_ready _portainer_payload _i
 fi
 
 # Auto-provision /etc/hosts entries for the *.local URLs (sudo-gated, idempotent)
-HOSTS_NEEDED="vault.$WORKSPACE_NAME.local aspire.$WORKSPACE_NAME.local bifrost.$WORKSPACE_NAME.local ssh.$WORKSPACE_NAME.local"
+HOSTS_NEEDED="vault.$WORKSPACE_NAME.local aspire.$WORKSPACE_NAME.local bifrost.$WORKSPACE_NAME.local ssh.$WORKSPACE_NAME.local headroom.$WORKSPACE_NAME.local"
 [[ "$DEPLOY_PROFILES" == *vscode* ]] && HOSTS_NEEDED="$HOSTS_NEEDED vscode.$WORKSPACE_NAME.local"
 [[ "$DEPLOY_PROFILES" == *jupyter* ]] && HOSTS_NEEDED="$HOSTS_NEEDED jupyter.$WORKSPACE_NAME.local"
 [[ "$DEPLOY_PROFILES" == *portainer* ]] && HOSTS_NEEDED="$HOSTS_NEEDED portainer.$WORKSPACE_NAME.local"
@@ -385,22 +402,24 @@ unset HOSTS_NEEDED MISSING_HOSTS
 echo ""
 echo "✓ Workspace started. Access:"
 echo "  SSH: ssh -p $SSH_PORT user@ssh.$WORKSPACE_NAME.local"
-[[ "$DEPLOY_PROFILES" == *vscode* ]] && echo "  VS Code: http://vscode.$WORKSPACE_NAME.local"
+[[ "$DEPLOY_PROFILES" == *vscode* ]] && echo "  VS Code: http://vscode.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}"
 [[ "$DEPLOY_PROFILES" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
-[[ "$DEPLOY_PROFILES" == *jupyter* ]] && echo "  Jupyter: http://jupyter.$WORKSPACE_NAME.local"
-echo "  Vault UI: http://vault.$WORKSPACE_NAME.local/ui"
-[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://portainer.$WORKSPACE_NAME.local (${ADMIN_EMAIL%%@*} / <your-admin-password>)"
-echo "  AppHost Dashboard (when AppHost is running): http://aspire.$WORKSPACE_NAME.local"
-echo "  Bifrost UI: http://bifrost.$WORKSPACE_NAME.local"
-[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://signoz.$WORKSPACE_NAME.local"
-[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://signoz-mcp.$WORKSPACE_NAME.local/mcp"
+[[ "$DEPLOY_PROFILES" == *jupyter* ]] && echo "  Jupyter: http://jupyter.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}"
+echo "  Vault UI: http://vault.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}/ui"
+[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://portainer.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX} (${ADMIN_EMAIL%%@*} / <your-admin-password>)"
+echo "  AppHost Dashboard (when AppHost is running): http://aspire.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}"
+echo "  Bifrost UI: http://bifrost.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}"
+echo "  Headroom Dashboard: http://headroom.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}/dashboard"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://signoz.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://signoz-mcp.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}/mcp"
 echo ""
 echo "Note: the *.local URLs above require /etc/hosts entries — see QUICKSTART.md for the line to add."
+[ "$NGINX_PROXY_PORT" != "80" ] && echo "Note: nginx-proxy is on non-default port $NGINX_PROXY_PORT — the ':$NGINX_PROXY_PORT' suffix above is required in the browser URL too."
 echo ""
 if [ "$BWS_MODE" = "manual" ]; then
     echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
-    echo "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WORKSPACE_NAME.local/ui"
+    echo "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WORKSPACE_NAME.local${NGINX_URL_SUFFIX}/ui"
     echo "  2. Get root token: docker exec ${WORKSPACE_NAME}-vault-server-1 cat /vault/data/.init | grep root_token"
     echo "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
 else

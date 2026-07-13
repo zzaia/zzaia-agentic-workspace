@@ -269,7 +269,7 @@ All HTTP front-ends are served through a single `nginx-proxy` container, routed 
 
 Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
 
-> `nginx-proxy` listens on `127.0.0.1:${NGINX_PROXY_PORT:-80}`. Override with the `--nginx-proxy-port` deploy flag (`-NginxProxyPort` on Windows) if port 80 is taken — e.g. when running multiple workspaces on the same host. None of the proxied apps enforce their own auth by default — the router is network-only (localhost-bound), matching the previous per-port exposure model.
+> `nginx-proxy` listens on `127.0.0.1:${NGINX_PROXY_PORT:-80}`. Override with the `--nginx-proxy-port` deploy flag (`-NginxProxyPort` on Windows) if port 80 is taken — e.g. when running multiple workspaces on the same host. None of the proxied apps enforce their own auth by default — the router is network-only (localhost-bound), matching the previous per-port exposure model. When overridden, every URL in the table above needs a `:PORT` suffix (e.g. `http://vault.<WORKSPACE_NAME>.local:81/ui`) — the deploy script's own "Access:" printout reflects this automatically.
 
 ---
 
@@ -350,13 +350,19 @@ Each workspace gets its own isolated Docker Compose stack identified by `WORKSPA
 
 Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, separate Vault volumes, and separate internal networks. `--nginx-proxy-port` is the one that matters most here — all `*.local` subdomain routing (Vault, VS Code, Aspire, etc.) goes through it, so two workspaces sharing the default port 80 will fail to start together.
 
+> When `--nginx-proxy-port` (or `-NginxProxyPort`) is set to anything other than `80`, every `*.local` URL printed by the deploy script includes `:PORT` — use that exact URL in your browser. A `/etc/hosts` (or Windows hosts file) entry only maps a hostname to an IP; it never carries port information, so the port must come from the URL itself.
+
+> If both workspaces use `--observability`, also set distinct `--otel-grpc-port`/`--otel-http-port` (default `4317`/`4318`) — the SigNoz OTel Collector publishes these directly to the host (unlike the `nginx-proxy`-routed apps) since they receive OTLP telemetry from processes running outside Docker (e.g. an AppHost on the host machine).
+
 **Recommended port assignments:**
 
-| Workspace | `NGINX_PROXY_PORT` | `SSH_PORT` |
-|-----------|--------------------|------------|
-| org-one   | `80`                | `2222`     |
-| org-two   | `81`                | `2223`     |
-| org-three | `82`                | `2224`     |
+| Workspace | `NGINX_PROXY_PORT` | `SSH_PORT` | `OTEL_GRPC_PORT` | `OTEL_HTTP_PORT` |
+|-----------|--------------------|------------|------------------|------------------|
+| org-one   | `80`                | `2222`     | `4317`           | `4318`           |
+| org-two   | `81`                | `2223`     | `4417`           | `4418`           |
+| org-three | `82`                | `2224`     | `4517`           | `4518`           |
+
+*(`OTEL_GRPC_PORT`/`OTEL_HTTP_PORT` only matter if more than one concurrent workspace uses `--observability`.)*
 | org-four  | `83`                | `2225`     |
 
 ---

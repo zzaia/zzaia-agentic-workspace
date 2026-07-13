@@ -63,3 +63,10 @@ server {
     set $upstream mcp-signoz:3009;
     location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
 }
+
+server {
+    listen 80;
+    server_name headroom.${WORKSPACE_NAME}.local;
+    set $upstream ml-server:8787;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}

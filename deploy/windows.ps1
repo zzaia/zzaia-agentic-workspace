@@ -68,6 +68,12 @@ param(
     [int] $SshPort = 2222,
 
     [Parameter(Mandatory = $false)]
+    [int] $OtelGrpcPort = 4317,
+
+    [Parameter(Mandatory = $false)]
+    [int] $OtelHttpPort = 4318,
+
+    [Parameter(Mandatory = $false)]
     [string] $Profiles = ""
 )
 
@@ -98,6 +104,8 @@ Options:
   -Swift                           Install Swift SDK (default: $false)
   -NginxProxyPort PORT             Nginx reverse-proxy port (default: 80)
   -SshPort PORT                    SSH server port (default: 2222)
+  -OtelGrpcPort PORT               OTel Collector gRPC (OTLP) port — observability only (default: 4317)
+  -OtelHttpPort PORT               OTel Collector HTTP (OTLP) port — observability only (default: 4318)
   -Profiles PROFILES               Comma-separated server profiles: vscode,jupyter,devcontainer,tunnel,portainer
 
 Examples:
@@ -206,6 +214,8 @@ PHP_ENABLED=$PHP_ENABLED
 SWIFT_ENABLED=$SWIFT_ENABLED
 NGINX_PROXY_PORT=$NginxProxyPort
 SSH_PORT=$SshPort
+OTEL_GRPC_PORT=$OtelGrpcPort
+OTEL_HTTP_PORT=$OtelHttpPort
 DEPLOY_PROFILES=$Profiles
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
@@ -213,6 +223,8 @@ SIGNOZ_ADMIN_PASSWORD=$AdminPassword
 ADMIN_EMAIL=$AdminEmail
 ADMIN_PASSWORD=$AdminPassword
 "@ | Out-File -FilePath $EnvFile -Encoding UTF8
+
+$nginxUrlSuffix = if ($NginxProxyPort -ne 80) { ":$NginxProxyPort" } else { "" }
 
 $profileArgs = @()
 if (-not [string]::IsNullOrWhiteSpace($Profiles)) {
@@ -251,7 +263,7 @@ docker compose `
 Remove-Item "Env:BWS_ACCESS_TOKEN" -ErrorAction SilentlyContinue
 
 # Auto-provision hosts-file entries for the *.local URLs (Administrator-gated, idempotent)
-$hostsNeeded = @("vault.$WorkspaceName.local", "aspire.$WorkspaceName.local", "bifrost.$WorkspaceName.local", "ssh.$WorkspaceName.local")
+$hostsNeeded = @("vault.$WorkspaceName.local", "aspire.$WorkspaceName.local", "bifrost.$WorkspaceName.local", "ssh.$WorkspaceName.local", "headroom.$WorkspaceName.local")
 if ($Profiles -match 'vscode') { $hostsNeeded += "vscode.$WorkspaceName.local" }
 if ($Profiles -match 'jupyter') { $hostsNeeded += "jupyter.$WorkspaceName.local" }
 if ($Profiles -match 'portainer') { $hostsNeeded += "portainer.$WorkspaceName.local" }
@@ -283,22 +295,24 @@ if ($missingHosts.Count -gt 0) {
 Write-Host ""
 Write-Host "✓ Workspace started. Access:"
 Write-Host "  SSH: ssh -p $SshPort user@ssh.$WorkspaceName.local"
-if ($Profiles -match 'vscode') { Write-Host "  VS Code: http://vscode.$WorkspaceName.local" }
+if ($Profiles -match 'vscode') { Write-Host "  VS Code: http://vscode.$WorkspaceName.local$nginxUrlSuffix" }
 if ($Profiles -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
 if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$WorkspaceName'" }
-if ($Profiles -match 'jupyter') { Write-Host "  Jupyter: http://jupyter.$WorkspaceName.local" }
-Write-Host "  Vault UI: http://vault.$WorkspaceName.local/ui"
-if ($Profiles -match 'portainer') { Write-Host "  Portainer: http://portainer.$WorkspaceName.local" }
-Write-Host "  AppHost Dashboard (when AppHost is running): http://aspire.$WorkspaceName.local"
-Write-Host "  Bifrost UI: http://bifrost.$WorkspaceName.local"
-if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://signoz.$WorkspaceName.local" }
-if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz MCP: http://signoz-mcp.$WorkspaceName.local/mcp" }
+if ($Profiles -match 'jupyter') { Write-Host "  Jupyter: http://jupyter.$WorkspaceName.local$nginxUrlSuffix" }
+Write-Host "  Vault UI: http://vault.$WorkspaceName.local$nginxUrlSuffix/ui"
+if ($Profiles -match 'portainer') { Write-Host "  Portainer: http://portainer.$WorkspaceName.local$nginxUrlSuffix" }
+Write-Host "  AppHost Dashboard (when AppHost is running): http://aspire.$WorkspaceName.local$nginxUrlSuffix"
+Write-Host "  Bifrost UI: http://bifrost.$WorkspaceName.local$nginxUrlSuffix"
+Write-Host "  Headroom Dashboard: http://headroom.$WorkspaceName.local$nginxUrlSuffix/dashboard"
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://signoz.$WorkspaceName.local$nginxUrlSuffix" }
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz MCP: http://signoz-mcp.$WorkspaceName.local$nginxUrlSuffix/mcp" }
 Write-Host ""
 Write-Host "Note: the *.local URLs above require /etc/hosts entries — see QUICKSTART.md for the line to add."
+if ($NginxProxyPort -ne 80) { Write-Host "Note: nginx-proxy is on non-default port $NginxProxyPort — the ':$NginxProxyPort' suffix above is required in the browser URL too." }
 Write-Host ""
 if ($BwsMode -eq "manual") {
     Write-Host "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
-    Write-Host "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WorkspaceName.local/ui"
+    Write-Host "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WorkspaceName.local$nginxUrlSuffix/ui"
     Write-Host "  2. Get root token: docker exec ${WorkspaceName}-vault-server-1 cat /vault/data/.init | jq -r .root_token"
     Write-Host "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
 } else {
