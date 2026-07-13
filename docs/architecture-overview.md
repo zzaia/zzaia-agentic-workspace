@@ -127,7 +127,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 - The `workspace` container holds zero API key environment variables
 - MCP sidecars fetch secrets at runtime: `VAULT_ADDR=http://vault-server:8200`, `VAULT_TOKEN` injected at startup
-- Vault UI at `http://localhost:8200/ui` (localhost only) for inspection and audit logs
+- Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` via `nginx-proxy` (localhost only) for inspection and audit logs
 
 **Rationale**: Central vault eliminates secret duplication and enables audit logging. Sidecars fetch only what they need at runtime, not at startup.
 
@@ -213,7 +213,7 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 | Dev Containers | `containers-dev-sidecar` | `devcontainer` | VS Code Dev Containers extension attachment |
 | Jupyter | `jupyter-sidecar` | `jupyter` | JupyterLab on JUPYTER_PORT |
 | VS Code Tunnel | `tunnel-sidecar` | `tunnel` | VS Code Tunnel for remote access via vscode.dev |
-| Docker UI | `portainer-server` | `portainer` | Portainer CE browser UI for DinD container management on PORTAINER_PORT |
+| Docker UI | `portainer-server` | `portainer` | Portainer CE browser UI for DinD container management, routed via `nginx-proxy` |
 
 - `workspace-server` always starts — it owns the shared `workspace-home` volume and exposes SSH
 - All optional servers depend on `workspace-server: condition: service_healthy` — they start only after workspace-server completes Ansible bootstrap
@@ -419,7 +419,7 @@ All upstream tools are configured as `is_code_mode_client: true` in bifrost — 
 **Decision**: The workspace uses a single main AppHost orchestrator. The dashboard is the AppHost-native local dashboard and is exposed outside the container via `vscode-sidecar` port mapping.
 
 - No standalone `aspire-dashboard` service exists in Docker Compose
-- `vscode-sidecar` maps `${ASPIRE_DASHBOARD_PORT}` to AppHost dashboard port `17001`
+- `nginx-proxy` routes `aspire.${WORKSPACE_NAME}.local` to `vscode-sidecar`'s AppHost dashboard port `17001`
 - Dashboard is available only when the AppHost is running
 - Future applications should be integrated into the same main AppHost model instead of introducing independent dashboard control planes
 
@@ -703,14 +703,14 @@ workspace-server                git-sidecar                    GitHub / ADO
 
 **mcp-signoz — External-Only MCP Server:**
 
-`mcp-signoz` is the only MCP server with a host-bound port (`127.0.0.1:${MCP_SIGNOZ_PORT:-3009}:3009`). It is **not** added to `/home/user/.mcp.json` and is never used by workspace agents. Its sole purpose is to allow external agents — running on the host or in CI pipelines — to query SigNoz logs and metrics directly via `http://localhost:3009/mcp` without entering the Docker network.
+`mcp-signoz` is the only MCP server reachable from outside the Docker network, routed through `nginx-proxy` at `signoz-mcp.${WORKSPACE_NAME}.local` (upstream `mcp-signoz:3009`). It is **not** added to `/home/user/.mcp.json` and is never used by workspace agents. Its sole purpose is to allow external agents — running on the host or in CI pipelines — to query SigNoz logs and metrics directly via `http://signoz-mcp.<WORKSPACE_NAME>.local/mcp` without entering the Docker network.
 
 | Property | Internal MCP servers (tavily, github, …) | `mcp-signoz` (external) |
 |----------|------------------------------------------|-------------------------|
-| Host port | None | `127.0.0.1:3009` |
+| Proxied via nginx-proxy | No | Yes |
 | Added to `.mcp.json` | Yes | **No** |
 | Consumer | Workspace agents (Claude Code inside containers) | External agents on host / CI |
-| Access URL | `http://mcp-{name}:{port}/mcp` (internal) | `http://localhost:3009/mcp` (host) |
+| Access URL | `http://mcp-{name}:{port}/mcp` (internal) | `http://signoz-mcp.<WORKSPACE_NAME>.local/mcp` (host) |
 
 **Rationale**: Opt-in pattern ensures zero resource overhead when observability is not needed. The base stack is completely unaffected. Activation pattern matches the GPU overlay (`docker-compose.gpu.yml` + `--gpu` flag) for consistency. SigNoz provides a unified backend for logs, metrics, and traces with a local web UI — no external SaaS required. Fluent Bit, OTel Collector, and cAdvisor are industry-standard collection agents, ensuring portability if observability needs to move to a different backend in the future. `mcp-signoz` is intentionally external-only — observability tooling is infrastructure-level and must not appear in the workspace agent tool surface.
 
@@ -794,7 +794,7 @@ C4Container
     Rel(dev, ws, "SSH terminal / VS Code Remote SSH", "127.0.0.1:SSH_PORT")
     Rel(dev, vscode, "VS Code browser", "127.0.0.1:VSCODE_PORT")
     Rel(dev, devcontainer, "Dev Containers attach", "Docker socket")
-    Rel(dev, jupyter, "JupyterLab", "127.0.0.1:JUPYTER_PORT")
+    Rel(dev, jupyter, "JupyterLab", "jupyter.<WORKSPACE_NAME>.local via nginx-proxy")
     Rel(ws, rtk, "Bash hook intercepts outputs", "stdin/stdout at shell level")
     Rel(ws, vscode, "Shares workspace-home + tools volumes", "named volumes")
     Rel(ws, devcontainer, "Shares workspace-home + tools volumes", "named volumes")
@@ -875,7 +875,8 @@ zzaia-agentic-workspace/
 
 | Container | Role | Port | Profile | Notes |
 |-----------|------|------|---------|-------|
-| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 | always | Bootstraps from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth; UI at localhost:8200/ui |
+| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 (internal) | always | Bootstraps from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth; UI at `vault.<WORKSPACE_NAME>.local` via `nginx-proxy` |
+| `nginx-proxy` | Subdomain reverse proxy for HTTP front-ends (vault, vscode, aspire, jupyter, portainer, bifrost, signoz, signoz-mcp) | NGINX_PROXY_PORT (default 80) | always | Single host-exposed entrypoint; routes by `Host` header, `resolver 127.0.0.11` for lazy DNS on optional/profile-gated backends |
 | `git-sidecar` | SSH git proxy — routes clone/push to GitHub and Azure DevOps via PAT injection | 2223 (SSH, internal) | always | ForceCommand restricts every session to `git-proxy-cmd`; PATs never exposed to agents |
 | `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure; storage bind-mounted from `DIND_DATA_PATH` on host |
 | `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
@@ -895,7 +896,7 @@ zzaia-agentic-workspace/
 | `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, fetches NEW_RELIC_API_KEY from Vault |
 | `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, fetches GITHUB_PERSONAL_ACCESS_TOKEN from Vault |
 | **Observability (opt-in)** | | | | |
-| `observability-signoz` | Unified observability backend (logs/metrics/traces) | 3301 (UI), 4317, 4318, 3100 | opt-in | ClickHouse-backed; web UI at http://localhost:3301 (only when observability overlay is active) |
+| `observability-signoz` | Unified observability backend (logs/metrics/traces) | 8080 (UI, internal), 4317, 4318, 3100 | opt-in | ClickHouse-backed; web UI at `http://signoz.<WORKSPACE_NAME>.local` via `nginx-proxy` (only when observability overlay is active) |
 | `signoz-db` | ClickHouse storage for SigNoz | internal | opt-in | Database backend with 2G RAM allocation (only when observability overlay is active) |
 | `observability-fluent-bit` | Docker log collector → SigNoz Loki | — | opt-in | Tails Docker container logs via host bind mount (only when observability overlay is active) |
 | `observability-otel-collector` | Prometheus scraper → SigNoz OTLP | — | opt-in | Scrapes qdrant, neo4j, vault, cAdvisor metrics (only when observability overlay is active) |

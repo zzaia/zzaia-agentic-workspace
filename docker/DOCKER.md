@@ -30,7 +30,7 @@ See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short 
 # Prompts for BWS_ACCESS_TOKEN (optional — press Enter to configure secrets via Vault UI after startup)
 
 # With observability enabled:
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability --signoz-port 3301
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
 
 # With selective SDKs:
 ./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
@@ -99,8 +99,8 @@ docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d --force-re
 
 | Method | Address |
 |--------|---------|
-| VS Code (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) |
-| SSH | `ssh -p <SSH_PORT> zzaia@localhost` (default `2222`) |
+| VS Code (browser) | `http://vscode.<WORKSPACE_NAME>.local` via `nginx-proxy` (see QUICKSTART.md Step 4) |
+| SSH | `ssh -p <SSH_PORT> zzaia@ssh.<WORKSPACE_NAME>.local` (default port `2222`) — not proxied, hostname is a plain `/etc/hosts` alias to `127.0.0.1` |
 
 The Claude Code extension is pre-installed. Code-server logs (if vscode profile enabled):
 
@@ -194,7 +194,7 @@ docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 
 | Service | Port | Role |
 |---------|------|------|
-| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) — bootstrapped from Bitwarden at startup; Vault UI at `localhost:8200/ui` |
+| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) — bootstrapped from Bitwarden at startup; Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` via `nginx-proxy` |
 | `git-sidecar` | 2223 (SSH) | SSH git proxy — workspace agents clone/push private repos via this relay; credentials never leave the container |
 
 **Secret distribution pattern**:
@@ -203,7 +203,7 @@ docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 - vault-server generates an ed25519 SSH keypair and stores it at `secret/workspace` (`GIT_SIDECAR_AGENT_KEY` + `GIT_SIDECAR_AGENT_PUBKEY`)
 - vault-server enables AppRole auth and binds `git-sidecar-policy` (read `secret/workspace`, `secret/mcp/github`, `secret/mcp/azure-devops`)
 - All other containers fetch only their needed secrets from Vault at runtime via `VAULT_ADDR=http://vault-server:8200`
-- After bootstrap, manage secrets via Vault UI at `http://localhost:${VAULT_PORT}/ui`
+- After bootstrap, manage secrets via Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui`
 
 **git-sidecar — SSH Git Proxy**:
 
@@ -262,21 +262,15 @@ Fluent Bit reads all Docker container logs from `/var/lib/docker/containers/*/` 
 
 This ensures each workspace's Fluent Bit instance only forwards logs from its own containers to SigNoz, even if multiple compose stacks run on the same Docker host.
 
-### Port Configuration
+### Access
 
-Use the `--signoz-port` and `--mcp-signoz-port` deploy flags to customize observability ports:
+SigNoz is routed through `nginx-proxy` by subdomain, like the rest of the workspace's HTTP front-ends:
 
 ```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
-  --observability --signoz-port 3400 --mcp-signoz-port 3410
-# SigNoz UI:  http://localhost:3400
-# SigNoz MCP: http://localhost:3410/mcp
+./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
+# SigNoz UI:  http://signoz.my-org.local
+# SigNoz MCP: http://signoz-mcp.my-org.local/mcp
 ```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--signoz-port` | `3301` | SigNoz web UI |
-| `--mcp-signoz-port` | `3009` | SigNoz MCP HTTP endpoint (streamableHttp, `POST /mcp`) |
 
 The MCP endpoint accepts standard JSON-RPC 2.0 over HTTP with `Accept: application/json, text/event-stream`. External agents can call it directly without entering the Docker network.
 
@@ -298,7 +292,7 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | mcp-postman | 3003 | `POSTMAN_API_KEY` |
 | mcp-newrelic | 3004 | `NEW_RELIC_API_KEY` |
-| mcp-signoz | 3009 | API key auto-provisioned by `signoz-server` entrypoint; shared via Docker volume. **Host port exposed** — configurable via `--mcp-signoz-port` (default: `3009`). |
+| mcp-signoz | 3009 | API key auto-provisioned by `signoz-server` entrypoint; shared via Docker volume. Reachable via `nginx-proxy` at `signoz-mcp.<WORKSPACE_NAME>.local`. |
 
 `playwright` and `aspire` run as local stdio servers inside the workspace container (no secrets required).
 
@@ -445,7 +439,7 @@ Users can then start inner containers with `docker run --privileged` or `--gpus 
 | Secret handling | vault-server fetches secrets from Bitwarden at startup — never written to host disk or .env files |
 | Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-vault-data`), not host path; Vault auto-unseals using keys sealed in encrypted volume |
 | Host network | Bridge only, workspace ports bound to `127.0.0.1` |
-| MCP ports | Internal only — not exposed to host, **except `mcp-signoz`** (host port `MCP_SIGNOZ_PORT`, bound to `127.0.0.1`) |
+| MCP ports | Internal only — not exposed to host; `mcp-signoz` is reachable via `nginx-proxy` at `signoz-mcp.<WORKSPACE_NAME>.local` |
 | Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
 | Root login | Disabled |
 | Sudo access | Passwordless by default; set `ADMIN_PASSWORD` to require password for sudo (restricts installs) |

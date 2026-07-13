@@ -152,8 +152,6 @@ services:
       - OTEL_SERVICE_NAME=mcp-signoz
     networks:
       - mcp
-    ports:
-      - "127.0.0.1:${MCP_SIGNOZ_PORT:-3009}:3009"
     volumes:
       - signoz-mcp-creds:/signoz-data:ro
     restart: unless-stopped
@@ -212,7 +210,6 @@ services:
 
   signoz-schema-migrator:
     image: signoz/signoz-schema-migrator:v0.144.5
-    container_name: signoz-schema-migrator
     command:
       - "sync"
       - "--dsn=tcp://signoz-db:9000/?username=default&password=signoz"
@@ -226,7 +223,6 @@ services:
 
   signoz-schema-patch:
     image: clickhouse/clickhouse-server:25.5
-    container_name: signoz-schema-patch
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -245,7 +241,6 @@ services:
 
   signoz-otel-collector:
     image: signoz/signoz-otel-collector:v0.144.5
-    container_name: signoz-otel-collector
     command:
       - "--config=/etc/otel/config.yaml"
       - "--clickhouse-dsn=tcp://signoz-db:9000/?username=default&password=signoz"
@@ -282,11 +277,8 @@ services:
       context: ..
       dockerfile: docker/containers/signoz-server/Dockerfile
     image: zzaia-signoz-server:latest
-    container_name: signoz
     networks:
       - mcp
-    ports:
-      - "127.0.0.1:${SIGNOZ_PORT:-3301}:8080"
     environment:
       - SIGNOZ_TELEMETRYSTORE_CLICKHOUSE_DSN=tcp://signoz-db:9000?username=default&password=signoz
       - SIGNOZ_SQLSTORE_SQLITE_PATH=/var/lib/signoz/signoz.db
@@ -316,7 +308,6 @@ services:
 
   signoz-db:
     image: clickhouse/clickhouse-server:25.5
-    container_name: signoz-db
     networks:
       - mcp
     environment:
@@ -341,7 +332,6 @@ services:
 
   observability-fluent-bit:
     image: fluent/fluent-bit:5.0.7
-    container_name: fluent-bit
     networks:
       - mcp
     volumes:
@@ -370,7 +360,6 @@ services:
 
   observability-otel-collector:
     image: otel/opentelemetry-collector-contrib:0.127.0
-    container_name: otel-collector
     command: ["--config=/etc/otelcol-contrib/config.yaml"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
@@ -394,7 +383,6 @@ services:
 
   observability-cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.52.1
-    container_name: cadvisor
     networks:
       - mcp
     volumes:

@@ -23,6 +23,9 @@ param(
     [switch] $NoBws = $false,
 
     [Parameter(Mandatory = $false)]
+    [switch] $SkipHosts = $false,
+
+    [Parameter(Mandatory = $false)]
     [switch] $Node = $false,
 
     [Parameter(Mandatory = $false)]
@@ -59,28 +62,10 @@ param(
     [switch] $Swift = $false,
 
     [Parameter(Mandatory = $false)]
-    [int] $VaultPort = 8200,
+    [int] $NginxProxyPort = 80,
 
     [Parameter(Mandatory = $false)]
     [int] $SshPort = 2222,
-
-    [Parameter(Mandatory = $false)]
-    [int] $SignozPort = 3301,
-
-    [Parameter(Mandatory = $false)]
-    [int] $McpSignozPort = 3009,
-
-    [Parameter(Mandatory = $false)]
-    [int] $VscodePort = 8080,
-
-    [Parameter(Mandatory = $false)]
-    [int] $AspireDashboardPort = 18890,
-
-    [Parameter(Mandatory = $false)]
-    [int] $JupyterPort = 8888,
-
-    [Parameter(Mandatory = $false)]
-    [int] $PortainerPort = 9000,
 
     [Parameter(Mandatory = $false)]
     [string] $Profiles = ""
@@ -98,6 +83,7 @@ Options:
   -Gpu                             Enable GPU support (default: $false)
   -Observability                   Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: $false)
   -NoBws                           Skip Bitwarden token prompt, use Vault UI only (default: $false)
+  -SkipHosts                       Skip hosts-file auto-provisioning prompt, print manual instructions only (default: $false)
   -Node                            Install Node.js SDK (default: $false)
   -NodeFrontend                    Install Node.js + front-end tools: Angular CLI, Vite, TypeScript (default: $false; auto-enables -Node)
   -Java                            Install Java JDK 21 via Temurin (default: $false)
@@ -110,20 +96,14 @@ Options:
   -Ruby                            Install Ruby via rbenv (default: $false)
   -Php                             Install PHP 8.2 + Composer (default: $false)
   -Swift                           Install Swift SDK (default: $false)
-  -VaultPort PORT                  Vault server port (default: 8200)
+  -NginxProxyPort PORT             Nginx reverse-proxy port (default: 80)
   -SshPort PORT                    SSH server port (default: 2222)
-  -SignozPort PORT                 SigNoz UI port (default: 3301)
-  -McpSignozPort PORT              SigNoz MCP HTTP port (default: 3009)
-  -VscodePort PORT                 VS Code server port (default: 8080)
-  -AspireDashboardPort PORT        Aspire Dashboard port (default: 18890)
-  -JupyterPort PORT                Jupyter port (default: 8888)
-  -PortainerPort PORT              Portainer UI port (default: 9000)
   -Profiles PROFILES               Comma-separated server profiles: vscode,jupyter,devcontainer,tunnel,portainer
 
 Examples:
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1!
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Gpu -Profiles vscode
-  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Observability -SignozPort 3301
+  .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Observability
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -NoBws
   .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..." -AdminEmail admin@example.com -AdminPassword MyPass1! -Java -Rust -NodeFrontend -Go
 '@
@@ -224,14 +204,8 @@ KOTLIN_ENABLED=$KOTLIN_ENABLED
 RUBY_ENABLED=$RUBY_ENABLED
 PHP_ENABLED=$PHP_ENABLED
 SWIFT_ENABLED=$SWIFT_ENABLED
-VAULT_PORT=$VaultPort
+NGINX_PROXY_PORT=$NginxProxyPort
 SSH_PORT=$SshPort
-SIGNOZ_PORT=$SignozPort
-MCP_SIGNOZ_PORT=$McpSignozPort
-VSCODE_PORT=$VscodePort
-ASPIRE_DASHBOARD_PORT=$AspireDashboardPort
-JUPYTER_PORT=$JupyterPort
-PORTAINER_PORT=$PortainerPort
 DEPLOY_PROFILES=$Profiles
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
@@ -276,20 +250,55 @@ docker compose `
 
 Remove-Item "Env:BWS_ACCESS_TOKEN" -ErrorAction SilentlyContinue
 
+# Auto-provision hosts-file entries for the *.local URLs (Administrator-gated, idempotent)
+$hostsNeeded = @("vault.$WorkspaceName.local", "aspire.$WorkspaceName.local", "bifrost.$WorkspaceName.local", "ssh.$WorkspaceName.local")
+if ($Profiles -match 'vscode') { $hostsNeeded += "vscode.$WorkspaceName.local" }
+if ($Profiles -match 'jupyter') { $hostsNeeded += "jupyter.$WorkspaceName.local" }
+if ($Profiles -match 'portainer') { $hostsNeeded += "portainer.$WorkspaceName.local" }
+if ($OBSERVABILITY_ENABLED -eq "true") { $hostsNeeded += "signoz.$WorkspaceName.local"; $hostsNeeded += "signoz-mcp.$WorkspaceName.local" }
+
+$hostsFilePath = "$env:SystemRoot\System32\drivers\etc\hosts"
+$hostsContent = if (Test-Path $hostsFilePath) { Get-Content $hostsFilePath -Raw } else { "" }
+$missingHosts = @($hostsNeeded | Where-Object { $hostsContent -notmatch "(?m)(^|\s)$([regex]::Escape($_))(\s|$)" })
+
+if ($missingHosts.Count -gt 0) {
+    Write-Host ""
+    Write-Host "Missing hosts file entries: $($missingHosts -join ', ')"
+    $isElevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    if ((-not $SkipHosts) -and [Environment]::UserInteractive -and $isElevated) {
+        $hostsAnswer = Read-Host "Add $($missingHosts.Count) missing entries to hosts file? Requires Administrator. [Y/n]"
+        if ([string]::IsNullOrWhiteSpace($hostsAnswer) -or $hostsAnswer -match '^[Yy]$') {
+            try {
+                foreach ($missingHost in $missingHosts) {
+                    Add-Content -Path $hostsFilePath -Value "127.0.0.1 $missingHost" -ErrorAction Stop
+                }
+                Write-Host "✓ Added missing entries to hosts file"
+            } catch {
+                Write-Warning "Could not update hosts file: $_"
+            }
+        }
+    }
+}
+
 Write-Host ""
 Write-Host "✓ Workspace started. Access:"
-Write-Host "  SSH: ssh -p $SshPort user@localhost"
-if ($Profiles -match 'vscode') { Write-Host "  VS Code: http://localhost:$VscodePort" }
+Write-Host "  SSH: ssh -p $SshPort user@ssh.$WorkspaceName.local"
+if ($Profiles -match 'vscode') { Write-Host "  VS Code: http://vscode.$WorkspaceName.local" }
 if ($Profiles -match 'devcontainer') { Write-Host "  Dev Container: attach via VS Code Dev Containers extension" }
 if ($Profiles -match 'tunnel') { Write-Host "  VS Code Tunnel: Remote Tunnels extension → '$WorkspaceName'" }
-Write-Host "  Vault UI: http://localhost:$VaultPort/ui"
-if ($Profiles -match 'portainer') { Write-Host "  Portainer: http://localhost:$PortainerPort" }
-Write-Host "  AppHost Dashboard (when AppHost is running): http://localhost:$AspireDashboardPort"
-if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://localhost:$SignozPort" }
+if ($Profiles -match 'jupyter') { Write-Host "  Jupyter: http://jupyter.$WorkspaceName.local" }
+Write-Host "  Vault UI: http://vault.$WorkspaceName.local/ui"
+if ($Profiles -match 'portainer') { Write-Host "  Portainer: http://portainer.$WorkspaceName.local" }
+Write-Host "  AppHost Dashboard (when AppHost is running): http://aspire.$WorkspaceName.local"
+Write-Host "  Bifrost UI: http://bifrost.$WorkspaceName.local"
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz UI: http://signoz.$WorkspaceName.local" }
+if ($OBSERVABILITY_ENABLED -eq "true") { Write-Host "  SigNoz MCP: http://signoz-mcp.$WorkspaceName.local/mcp" }
+Write-Host ""
+Write-Host "Note: the *.local URLs above require /etc/hosts entries — see QUICKSTART.md for the line to add."
 Write-Host ""
 if ($BwsMode -eq "manual") {
     Write-Host "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
-    Write-Host "  1. Wait ~30s for vault-server to initialize, then open http://localhost:$VaultPort/ui"
+    Write-Host "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WorkspaceName.local/ui"
     Write-Host "  2. Get root token: docker exec ${WorkspaceName}-vault-server-1 cat /vault/data/.init | jq -r .root_token"
     Write-Host "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
 } else {

@@ -9,8 +9,6 @@ services:
       context: ..
       dockerfile: docker/containers/vault-server/Dockerfile
     image: zzaia-vault:latest
-    ports:
-      - "127.0.0.1:${VAULT_PORT:-8200}:8200"
     volumes:
       - vault-data:/vault/data
       - workspace-credentials:/secrets
@@ -18,7 +16,6 @@ services:
       - bws_token
     environment:
       - VAULT_ADDR=http://0.0.0.0:8200
-      - VAULT_PORT=${VAULT_PORT:-8200}
       - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
@@ -71,8 +68,6 @@ services:
   portainer-server:
     image: portainer/portainer-ce:latest
     profiles: ["portainer"]
-    ports:
-      - "127.0.0.1:${PORTAINER_PORT:-9000}:9000"
     environment:
       - DOCKER_HOST=tcp://dind-server:2375
     networks:
@@ -217,6 +212,7 @@ services:
       - PORT=8787
       - HEADROOM_TELEMETRY=off
       - HEADROOM_MIN_TOKENS=1
+      - HEADROOM_COMPRESS_USER_MESSAGES=1
       - OTEL_TRACES_EXPORTER=none
       - OTEL_METRICS_EXPORTER=none
       - ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic
@@ -238,8 +234,13 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 3G
           cpus: '0.5'
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8787/health || exit 1"]
       interval: 15s
@@ -652,9 +653,6 @@ services:
     image: zzaia-vscode-sidecar:latest
     profiles: ["vscode"]
     user: root
-    ports:
-      - "127.0.0.1:${VSCODE_PORT:-8080}:${VSCODE_PORT:-8080}"
-      - "127.0.0.1:${ASPIRE_DASHBOARD_PORT:-18890}:17001"
     volumes:
       - workspace-home:/home/user
       - workspace-tools:/opt/tools
@@ -709,8 +707,6 @@ services:
         JUPYTER_PORT: ${JUPYTER_PORT:-8888}
     image: zzaia-jupyter-sidecar:latest
     profiles: ["jupyter"]
-    ports:
-      - "127.0.0.1:${JUPYTER_PORT:-8888}:${JUPYTER_PORT:-8888}"
     volumes:
       - workspace-home:/home/user
       - workspace-tools:/opt/tools
@@ -848,6 +844,31 @@ services:
       vault-server:
         condition: service_healthy
       workspace-server:
+        condition: service_healthy
+
+  nginx-proxy:
+    build:
+      context: ..
+      dockerfile: docker/containers/nginx-proxy/Dockerfile
+    image: zzaia-nginx-proxy:latest
+    ports:
+      - "127.0.0.1:${NGINX_PROXY_PORT:-80}:80"
+    environment:
+      - WORKSPACE_NAME=${WORKSPACE_NAME:-zzaia}
+      - VSCODE_PORT=${VSCODE_PORT:-8080}
+      - JUPYTER_PORT=${JUPYTER_PORT:-8888}
+    networks:
+      - mcp
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
+    depends_on:
+      vault-server:
+        condition: service_healthy
+      bifrost-server:
         condition: service_healthy
 
 volumes:

@@ -25,14 +25,9 @@ Options:
   --swift                       Enable Swift 6.1.2 (default: false)
   --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
-  --vault-port PORT             Vault server port (default: 8200)
+  --skip-hosts                  Skip /etc/hosts auto-provisioning prompt, print manual instructions only (default: false)
+  --nginx-proxy-port PORT       Nginx reverse-proxy port (default: 80)
   --ssh-port PORT               SSH server port (default: 2222)
-  --signoz-port PORT            SigNoz UI port (default: 3301)
-  --mcp-signoz-port PORT        SigNoz MCP port (default: 3009)
-  --vscode-port PORT            VS Code server port (default: 8080)
-  --aspire-dashboard-port PORT  Aspire Dashboard port (default: 18890)
-  --jupyter-port PORT           Jupyter port (default: 8888)
-  --portainer-port PORT         Portainer UI port (default: 9000)
   --profiles PROFILES           Comma-separated server profiles: vscode, jupyter, devcontainer, tunnel, portainer
   --dind-data-path PATH         DinD storage bind mount path (default: /var/lib/docker/{WORKSPACE_NAME}-dind)
   --help                        Show this help message
@@ -64,14 +59,9 @@ PHP_ENABLED="false"
 SWIFT_ENABLED="false"
 OBSERVABILITY_ENABLED="false"
 NO_BWS="false"
-VAULT_PORT="8200"
+SKIP_HOSTS="false"
+NGINX_PROXY_PORT="80"
 SSH_PORT="2222"
-SIGNOZ_PORT="3301"
-MCP_SIGNOZ_PORT="3009"
-VSCODE_PORT="8080"
-ASPIRE_DASHBOARD_PORT="18890"
-JUPYTER_PORT="8888"
-PORTAINER_PORT="9000"
 DEPLOY_PROFILES=""
 DIND_DATA_PATH=""
 
@@ -156,36 +146,16 @@ while [ $# -gt 0 ]; do
             NO_BWS="true"
             shift
             ;;
-        --vault-port)
-            VAULT_PORT="$2"
+        --skip-hosts)
+            SKIP_HOSTS="true"
+            shift
+            ;;
+        --nginx-proxy-port)
+            NGINX_PROXY_PORT="$2"
             shift 2
             ;;
         --ssh-port)
             SSH_PORT="$2"
-            shift 2
-            ;;
-        --signoz-port)
-            SIGNOZ_PORT="$2"
-            shift 2
-            ;;
-        --mcp-signoz-port)
-            MCP_SIGNOZ_PORT="$2"
-            shift 2
-            ;;
-        --vscode-port)
-            VSCODE_PORT="$2"
-            shift 2
-            ;;
-        --aspire-dashboard-port)
-            ASPIRE_DASHBOARD_PORT="$2"
-            shift 2
-            ;;
-        --jupyter-port)
-            JUPYTER_PORT="$2"
-            shift 2
-            ;;
-        --portainer-port)
-            PORTAINER_PORT="$2"
             shift 2
             ;;
         --profiles)
@@ -275,14 +245,8 @@ RUBY_ENABLED=$RUBY_ENABLED
 PHP_ENABLED=$PHP_ENABLED
 SWIFT_ENABLED=$SWIFT_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
-VAULT_PORT=$VAULT_PORT
+NGINX_PROXY_PORT=$NGINX_PROXY_PORT
 SSH_PORT=$SSH_PORT
-SIGNOZ_PORT=$SIGNOZ_PORT
-MCP_SIGNOZ_PORT=$MCP_SIGNOZ_PORT
-VSCODE_PORT=$VSCODE_PORT
-ASPIRE_DASHBOARD_PORT=$ASPIRE_DASHBOARD_PORT
-JUPYTER_PORT=$JUPYTER_PORT
-PORTAINER_PORT=$PORTAINER_PORT
 DEPLOY_PROFILES=$DEPLOY_PROFILES
 SIGNOZ_JWT_SECRET=$SIGNOZ_JWT_SECRET
 SIGNOZ_ADMIN_EMAIL=$SIGNOZ_ADMIN_EMAIL
@@ -366,7 +330,7 @@ if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
     echo "Initializing Portainer admin account..."
     _portainer_ready=false
     for _i in $(seq 1 30); do
-        if curl -sf "http://localhost:${PORTAINER_PORT}/api/status" >/dev/null 2>&1; then
+        if curl -sf --resolve "portainer.${WORKSPACE_NAME}.local:80:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local/api/status" >/dev/null 2>&1; then
             _portainer_ready=true
             break
         fi
@@ -375,32 +339,68 @@ if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
     if [ "$_portainer_ready" = "true" ]; then
         _portainer_username="${ADMIN_EMAIL%%@*}"
         _portainer_payload=$(printf '{"Username":"%s","Password":"%s"}' "$_portainer_username" "$ADMIN_PASSWORD")
-        curl -sf -X POST "http://localhost:${PORTAINER_PORT}/api/users/admin/init" \
+        curl -sf -X POST --resolve "portainer.${WORKSPACE_NAME}.local:80:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local/api/users/admin/init" \
             -H "Content-Type: application/json" \
             -d "$_portainer_payload" >/dev/null 2>&1 || true
         echo "✓ Portainer admin configured (username: $_portainer_username)"
         unset _portainer_username
     else
-        echo "Warning: Portainer not ready — complete admin setup at http://localhost:${PORTAINER_PORT} within 5 minutes"
+        echo "Warning: Portainer not ready — complete admin setup at http://portainer.${WORKSPACE_NAME}.local within 5 minutes"
     fi
     unset _portainer_ready _portainer_payload _i
 fi
 
+# Auto-provision /etc/hosts entries for the *.local URLs (sudo-gated, idempotent)
+HOSTS_NEEDED="vault.$WORKSPACE_NAME.local aspire.$WORKSPACE_NAME.local bifrost.$WORKSPACE_NAME.local ssh.$WORKSPACE_NAME.local"
+[[ "$DEPLOY_PROFILES" == *vscode* ]] && HOSTS_NEEDED="$HOSTS_NEEDED vscode.$WORKSPACE_NAME.local"
+[[ "$DEPLOY_PROFILES" == *jupyter* ]] && HOSTS_NEEDED="$HOSTS_NEEDED jupyter.$WORKSPACE_NAME.local"
+[[ "$DEPLOY_PROFILES" == *portainer* ]] && HOSTS_NEEDED="$HOSTS_NEEDED portainer.$WORKSPACE_NAME.local"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && HOSTS_NEEDED="$HOSTS_NEEDED signoz.$WORKSPACE_NAME.local signoz-mcp.$WORKSPACE_NAME.local"
+
+MISSING_HOSTS=""
+for _h in $HOSTS_NEEDED; do
+    grep -qE "(^|[[:space:]])${_h}([[:space:]]|$)" /etc/hosts 2>/dev/null || MISSING_HOSTS="$MISSING_HOSTS $_h"
+done
+MISSING_HOSTS="${MISSING_HOSTS# }"
+unset _h
+
+if [ -n "$MISSING_HOSTS" ]; then
+    _missing_count=$(echo "$MISSING_HOSTS" | wc -w | tr -d ' ')
+    echo ""
+    echo "Missing /etc/hosts entries: $MISSING_HOSTS"
+    if [ "$SKIP_HOSTS" != "true" ] && [ -t 0 ]; then
+        read -p "Add $_missing_count missing entries to /etc/hosts? Requires sudo. [Y/n] " _hosts_answer
+        if [ -z "$_hosts_answer" ] || [[ "$_hosts_answer" =~ ^[Yy]$ ]]; then
+            if printf '127.0.0.1 %s\n' "$MISSING_HOSTS" | sudo tee -a /etc/hosts >/dev/null 2>&1; then
+                echo "✓ Added missing entries to /etc/hosts"
+            else
+                echo "Warning: could not update /etc/hosts (sudo denied or unavailable) — add entries manually."
+            fi
+        fi
+    fi
+    unset _hosts_answer _missing_count
+fi
+unset HOSTS_NEEDED MISSING_HOSTS
+
 echo ""
 echo "✓ Workspace started. Access:"
-echo "  SSH: ssh -p $SSH_PORT user@localhost"
-[[ "$DEPLOY_PROFILES" == *vscode* ]] && echo "  VS Code: http://localhost:$VSCODE_PORT"
+echo "  SSH: ssh -p $SSH_PORT user@ssh.$WORKSPACE_NAME.local"
+[[ "$DEPLOY_PROFILES" == *vscode* ]] && echo "  VS Code: http://vscode.$WORKSPACE_NAME.local"
 [[ "$DEPLOY_PROFILES" == *devcontainer* ]] && echo "  Dev Container: attach via VS Code Dev Containers extension"
 [[ "$DEPLOY_PROFILES" == *tunnel* ]] && echo "  VS Code Tunnel: Remote Tunnels extension → '$WORKSPACE_NAME'"
-echo "  Vault UI: http://localhost:$VAULT_PORT/ui"
-[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://localhost:$PORTAINER_PORT (${ADMIN_EMAIL%%@*} / <your-admin-password>)"
-echo "  AppHost Dashboard (when AppHost is running): http://localhost:$ASPIRE_DASHBOARD_PORT"
-[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://localhost:$SIGNOZ_PORT"
-[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://localhost:$MCP_SIGNOZ_PORT/mcp"
+[[ "$DEPLOY_PROFILES" == *jupyter* ]] && echo "  Jupyter: http://jupyter.$WORKSPACE_NAME.local"
+echo "  Vault UI: http://vault.$WORKSPACE_NAME.local/ui"
+[[ "$DEPLOY_PROFILES" == *portainer* ]] && echo "  Portainer: http://portainer.$WORKSPACE_NAME.local (${ADMIN_EMAIL%%@*} / <your-admin-password>)"
+echo "  AppHost Dashboard (when AppHost is running): http://aspire.$WORKSPACE_NAME.local"
+echo "  Bifrost UI: http://bifrost.$WORKSPACE_NAME.local"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz UI: http://signoz.$WORKSPACE_NAME.local"
+[ "$OBSERVABILITY_ENABLED" = "true" ] && echo "  SigNoz MCP: http://signoz-mcp.$WORKSPACE_NAME.local/mcp"
+echo ""
+echo "Note: the *.local URLs above require /etc/hosts entries — see QUICKSTART.md for the line to add."
 echo ""
 if [ "$BWS_MODE" = "manual" ]; then
     echo "Vault started empty (no Bitwarden token). Enter secrets via Vault UI:"
-    echo "  1. Wait ~30s for vault-server to initialize, then open http://localhost:$VAULT_PORT/ui"
+    echo "  1. Wait ~30s for vault-server to initialize, then open http://vault.$WORKSPACE_NAME.local/ui"
     echo "  2. Get root token: docker exec ${WORKSPACE_NAME}-vault-server-1 cat /vault/data/.init | grep root_token"
     echo "  3. Log in and add secrets under: secret/ai, secret/mcp/github, secret/mcp/azure-devops, secret/cloud, secret/integrations"
 else

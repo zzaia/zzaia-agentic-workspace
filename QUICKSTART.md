@@ -88,13 +88,11 @@ You will need the following values before starting:
 |----------|----------|-------------|--------------|
 | `WORKSPACE_NAME` | ✅ | Unique name for this workspace instance (used as Docker Compose project name) | Choose any slug, e.g. `my-org` |
 | `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
-| `VSCODE_PORT` | ✅ | Host port for VS Code browser access | Default: `8080` |
 | `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
-| `ASPIRE_DASHBOARD_PORT` | ✅ | Host port for Aspire telemetry dashboard | Default: `18888` |
 | `BWS_ACCESS_TOKEN` | Optional | Bitwarden Secrets Manager machine account token — if provided, vault-server bootstraps all secrets from Bitwarden automatically; if skipped, secrets are entered manually via Vault UI after first boot | From Bitwarden Secrets Manager; press Enter to skip |
 | `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the SigNoz admin account and Neo4j password for Headroom. **Required for SigNoz observability** — must be 12+ characters with at least one uppercase letter, one lowercase letter, one digit, and one symbol (`~!@#$%^&*()_+-=[]{}|;:,.<>?/`). A weak password skips SigNoz provisioning silently — `mcp-signoz` will remain idle. | Example: `MyP@ss1234!x` — leave empty for no sudo, default Neo4j password (`headroom`), and no SigNoz MCP |
 
-All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://localhost:${VAULT_PORT}/ui` after first boot.
+All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` after first boot.
 
 ---
 
@@ -183,7 +181,7 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 .\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
 ```
 
-**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--vault-port 8200`, `--ssh-port 2222`, `--signoz-port 3301`, `--mcp-signoz-port 3009`, `--vscode-port 8080`, `--jupyter-port 8888`, `--dind-data-path <path>`.
+**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--nginx-proxy-port 80`, `--ssh-port 2222`, `--dind-data-path <path>`.
 
 **`--dind-data-path`** — sets the host directory where the Docker-in-Docker (DinD) daemon stores all container images and layers. Defaults to `/var/lib/docker/<WORKSPACE_NAME>-dind` on the root filesystem. Use this flag to redirect DinD storage to a dedicated disk or partition to prevent root filesystem exhaustion when many containers are built inside the workspace:
 
@@ -223,14 +221,8 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
   --gpu \
   --observability \
   --profiles vscode,devcontainer,jupyter,tunnel,portainer \
-  --vault-port 8200 \
+  --nginx-proxy-port 80 \
   --ssh-port 2222 \
-  --vscode-port 8080 \
-  --aspire-dashboard-port 18890 \
-  --jupyter-port 8888 \
-  --portainer-port 9000 \
-  --signoz-port 3301 \
-  --mcp-signoz-port 3009 \
   --dind-data-path /mnt/dind-disk/dind-storage \
   --node-frontend \
   --java \
@@ -257,18 +249,27 @@ Run the deploy script for your platform. The script prompts securely for `BWS_AC
 
 ## Step 4 — Access the Workspace
 
+All HTTP front-ends are served through a single `nginx-proxy` container, routed by subdomain (`<app>.<WORKSPACE_NAME>.local`) instead of per-app host ports. The deploy script now offers to add the required entries to your hosts file automatically (prompts for `sudo`/Administrator). Skip this with `--skip-hosts` (`-SkipHosts` on Windows); it's also skipped automatically for non-interactive runs or if declined. In any of those cases, add these lines to your local `/etc/hosts` manually (substitute your actual `WORKSPACE_NAME`, e.g. `my-org`):
+
+```
+127.0.0.1 vault.my-org.local vscode.my-org.local aspire.my-org.local jupyter.my-org.local portainer.my-org.local bifrost.my-org.local ssh.my-org.local
+```
+
 | Access | URL / Command |
 |--------|--------------|
-| **VS Code** (browser) | `http://localhost:<VSCODE_PORT>` (default `8080`) — requires `--profile vscode` at startup |
-| **SSH** | `ssh -p <SSH_PORT> user@localhost` (default `2222`) |
+| **VS Code** (browser) | `http://vscode.<WORKSPACE_NAME>.local` — requires `--profile vscode` at startup |
+| **SSH** | `ssh -p <SSH_PORT> user@ssh.<WORKSPACE_NAME>.local` (default port `2222`) — not proxied (not HTTP), hostname is a plain `/etc/hosts` alias to `127.0.0.1` |
 | **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
-| **Aspire Dashboard** | `http://localhost:<ASPIRE_DASHBOARD_PORT>` (default `18888`) |
-| **Vault UI** | `http://localhost:8200/ui` (localhost only) |
-| **Portainer** | `http://localhost:<PORTAINER_PORT>` (default `9000`) — requires `--profile portainer` at startup |
-| **SigNoz UI** (observability) | `http://localhost:3301` — only when `--observability` was used at startup |
-| **SigNoz MCP** (observability) | `http://localhost:3009/mcp` — streamableHttp MCP endpoint for external agents; port via `--mcp-signoz-port` |
+| **Aspire Dashboard** | `http://aspire.<WORKSPACE_NAME>.local` |
+| **Vault UI** | `http://vault.<WORKSPACE_NAME>.local/ui` |
+| **Portainer** | `http://portainer.<WORKSPACE_NAME>.local` — requires `--profile portainer` at startup |
+| **Bifrost UI** | `http://bifrost.<WORKSPACE_NAME>.local` — gateway dashboard: logs, provider config, MCP clients |
+| **SigNoz UI** (observability) | `http://signoz.<WORKSPACE_NAME>.local` — only when `--observability` was used at startup |
+| **SigNoz MCP** (observability) | `http://signoz-mcp.<WORKSPACE_NAME>.local/mcp` — streamableHttp MCP endpoint for external agents |
 
 Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
+
+> `nginx-proxy` listens on `127.0.0.1:${NGINX_PROXY_PORT:-80}`. Override with the `--nginx-proxy-port` deploy flag (`-NginxProxyPort` on Windows) if port 80 is taken — e.g. when running multiple workspaces on the same host. None of the proxied apps enforce their own auth by default — the router is network-only (localhost-bound), matching the previous per-port exposure model.
 
 ---
 
@@ -323,7 +324,7 @@ All configured tools should show as connected. Then verify commands are availabl
 | MCP shows disconnected | MCP packages are pre-installed in sidecar images (no runtime npx). Wait ~15s for Vault secret fetch + supergateway init, then retry `/mcp`. If a sidecar has no secret configured in Vault it enters idle mode (expected) |
 | Workspace slow to start | workspace-server runs tool installation on first boot; headroom waits for qdrant/neo4j — allow up to 90s on first boot |
 | Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
-| SigNoz shows no data | Allow 2–3 min after startup for ClickHouse initialization; check `docker logs signoz` |
+| SigNoz shows no data | Allow 2–3 min after startup for ClickHouse initialization; check `docker logs <WORKSPACE_NAME>-signoz-server-1` |
 | Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-server-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
 | Port already in use | Stop any existing stack via Docker Desktop before re-running |
 | SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
@@ -340,29 +341,29 @@ Each workspace gets its own isolated Docker Compose stack identified by `WORKSPA
 ```bash
 # Workspace 1 — default ports
 ./deploy/ubuntu.sh --workspace-name org-one --ssh-public-key "ssh-ed25519 AAAA..." \
-    --vscode-port 8080 --ssh-port 2222
+    --nginx-proxy-port 80 --ssh-port 2222
 
 # Workspace 2 — different ports
 ./deploy/ubuntu.sh --workspace-name org-two --ssh-public-key "ssh-ed25519 AAAA..." \
-    --vscode-port 8081 --ssh-port 2223
+    --nginx-proxy-port 81 --ssh-port 2223
 ```
 
-Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, separate Vault volumes, and separate internal networks.
+Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, separate Vault volumes, and separate internal networks. `--nginx-proxy-port` is the one that matters most here — all `*.local` subdomain routing (Vault, VS Code, Aspire, etc.) goes through it, so two workspaces sharing the default port 80 will fail to start together.
 
 **Recommended port assignments:**
 
-| Workspace | `VSCODE_PORT` | `SSH_PORT` |
-|-----------|--------------|------------|
-| org-one   | `8080`       | `2222`     |
-| org-two   | `8081`       | `2223`     |
-| org-three | `8082`       | `2224`     |
-| org-four  | `8083`       | `2225`     |
+| Workspace | `NGINX_PROXY_PORT` | `SSH_PORT` |
+|-----------|--------------------|------------|
+| org-one   | `80`                | `2222`     |
+| org-two   | `81`                | `2223`     |
+| org-three | `82`                | `2224`     |
+| org-four  | `83`                | `2225`     |
 
 ---
 
 ## Secret Rotation
 
-To update secrets (API keys, PATs, cloud credentials), log in to the Vault UI at `http://localhost:${VAULT_PORT}/ui` using the root token stored in the `vault-data` volume:
+To update secrets (API keys, PATs, cloud credentials), log in to the Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` using the root token stored in the `vault-data` volume:
 
 ```bash
 # Retrieve root token from vault-data volume

@@ -1,0 +1,65 @@
+# Auto-generated via envsubst from this template at container start
+# (docker-entrypoint.d/20-envsubst-on-templates.sh). Only container-env
+# variables are substituted — nginx's own $vars (no braces) are untouched.
+resolver 127.0.0.11 valid=10s;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name vault.${WORKSPACE_NAME}.local;
+    set $upstream vault-server:8200;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name portainer.${WORKSPACE_NAME}.local;
+    set $upstream portainer-server:9000;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name vscode.${WORKSPACE_NAME}.local;
+    set $upstream vscode-sidecar:${VSCODE_PORT};
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name aspire.${WORKSPACE_NAME}.local;
+    set $upstream vscode-sidecar:17001;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name jupyter.${WORKSPACE_NAME}.local;
+    set $upstream jupyter-sidecar:${JUPYTER_PORT};
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name bifrost.${WORKSPACE_NAME}.local;
+    set $upstream bifrost-server:8080;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name signoz.${WORKSPACE_NAME}.local;
+    set $upstream signoz-server:8080;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}
+
+server {
+    listen 80;
+    server_name signoz-mcp.${WORKSPACE_NAME}.local;
+    set $upstream mcp-signoz:3009;
+    location / { include /etc/nginx/proxy.inc; proxy_pass http://$upstream; }
+}

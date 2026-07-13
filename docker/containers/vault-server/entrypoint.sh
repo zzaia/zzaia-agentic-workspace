@@ -168,12 +168,12 @@ write_vault_kv_path() {
 
 bootstrap_secrets_from_bws() {
     if [ -z "${BWS_ACCESS_TOKEN:-}" ]; then
-        log_warn "BWS_ACCESS_TOKEN not set — Vault started empty. Add secrets via Vault UI: http://localhost:${VAULT_PORT:-8200}/ui"
+        log_warn "BWS_ACCESS_TOKEN not set — Vault started empty. Add secrets via Vault UI: http://vault.${WORKSPACE_NAME}.local/ui"
         return 0
     fi
 
     if ! command -v bws >/dev/null 2>&1; then
-        log_warn "bws CLI not available in this image — Vault started empty. Add secrets via Vault UI: http://localhost:${VAULT_PORT:-8200}/ui"
+        log_warn "bws CLI not available in this image — Vault started empty. Add secrets via Vault UI: http://vault.${WORKSPACE_NAME}.local/ui"
         return 0
     fi
 
