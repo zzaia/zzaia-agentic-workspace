@@ -9,127 +9,268 @@
     mode: "0755"
     state: directory
 
+- name: Create admin binary directory
+  ansible.builtin.file:
+    path: "{{ admin_install_prefix }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+  become_user: root
+
 - name: Install GitHub CLI
   block:
     - name: Check if gh is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/gh"
+        path: "{{ admin_install_prefix }}/gh"
       register: gh_stat
+
+    - name: Check gh version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.gh_version"
+      register: gh_version_marker
+
+    - name: Read gh version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.gh_version"
+      register: gh_version_content
+      when: gh_version_marker.stat.exists
+
+    - name: Determine if gh needs (re)install
+      ansible.builtin.set_fact:
+        gh_needs_install: >-
+          {{ not gh_stat.stat.exists or not gh_version_marker.stat.exists or
+             (gh_version_content.content | b64decode | trim) != gh_version }}
 
     - name: Download and install gh
       ansible.builtin.shell: |
         gh_url="https://github.com/cli/cli/releases/download/v{{ gh_version }}/gh_{{ gh_version }}_linux_amd64.tar.gz"
-        curl -fsSL "$gh_url" | tar xz -C "{{ install_prefix }}/.local/bin" "gh_{{ gh_version }}_linux_amd64/bin/gh" --strip-components 2
-        chmod +x "{{ install_prefix }}/.local/bin/gh"
-      args:
-        creates: "{{ install_prefix }}/.local/bin/gh"
-      when: not gh_stat.stat.exists
+        curl -fsSL "$gh_url" | tar xz -C "{{ admin_install_prefix }}" "gh_{{ gh_version }}_linux_amd64/bin/gh" --strip-components 2
+        chmod +x "{{ admin_install_prefix }}/gh"
+      when: gh_needs_install
       changed_when: false
+
+    - name: Write gh version marker
+      ansible.builtin.copy:
+        content: "{{ gh_version }}"
+        dest: "{{ admin_install_prefix }}/.gh_version"
+      when: gh_needs_install
+  become_user: root
 
 - name: Install k6
   block:
     - name: Check if k6 is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/k6"
+        path: "{{ admin_install_prefix }}/k6"
       register: k6_stat
+
+    - name: Check k6 version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.k6_version"
+      register: k6_version_marker
+
+    - name: Read k6 version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.k6_version"
+      register: k6_version_content
+      when: k6_version_marker.stat.exists
+
+    - name: Determine if k6 needs (re)install
+      ansible.builtin.set_fact:
+        k6_needs_install: >-
+          {{ not k6_stat.stat.exists or not k6_version_marker.stat.exists or
+             (k6_version_content.content | b64decode | trim) != k6_version }}
 
     - name: Download and install k6
       ansible.builtin.shell: |
         k6_url="https://github.com/grafana/k6/releases/download/v{{ k6_version }}/k6-v{{ k6_version }}-linux-amd64.tar.gz"
-        curl -fsSL "$k6_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 1 "k6-v{{ k6_version }}-linux-amd64/k6" || true
-        [ -f "{{ install_prefix }}/.local/bin/k6" ] && chmod +x "{{ install_prefix }}/.local/bin/k6"
-      args:
-        creates: "{{ install_prefix }}/.local/bin/k6"
-      when: not k6_stat.stat.exists
+        curl -fsSL "$k6_url" | tar xz -C "{{ admin_install_prefix }}" --strip-components 1 "k6-v{{ k6_version }}-linux-amd64/k6" || true
+        [ -f "{{ admin_install_prefix }}/k6" ] && chmod +x "{{ admin_install_prefix }}/k6"
+      when: k6_needs_install
       changed_when: false
+
+    - name: Write k6 version marker
+      ansible.builtin.copy:
+        content: "{{ k6_version }}"
+        dest: "{{ admin_install_prefix }}/.k6_version"
+      when: k6_needs_install
+  become_user: root
 
 - name: Install D2
   block:
     - name: Check if d2 is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/d2"
+        path: "{{ admin_install_prefix }}/d2"
       register: d2_stat
+
+    - name: Check d2 version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.d2_version"
+      register: d2_version_marker
+
+    - name: Read d2 version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.d2_version"
+      register: d2_version_content
+      when: d2_version_marker.stat.exists
+
+    - name: Determine if d2 needs (re)install
+      ansible.builtin.set_fact:
+        d2_needs_install: >-
+          {{ not d2_stat.stat.exists or not d2_version_marker.stat.exists or
+             (d2_version_content.content | b64decode | trim) != d2_version }}
 
     - name: Download and install d2
       ansible.builtin.shell: |
         d2_url="https://github.com/terrastruct/d2/releases/download/v{{ d2_version }}/d2-v{{ d2_version }}-linux-amd64.tar.gz"
-        curl -fsSL "$d2_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 2 "d2-v{{ d2_version }}/bin/d2" || true
-        [ -f "{{ install_prefix }}/.local/bin/d2" ] && chmod +x "{{ install_prefix }}/.local/bin/d2"
-      args:
-        creates: "{{ install_prefix }}/.local/bin/d2"
-      when: not d2_stat.stat.exists
+        curl -fsSL "$d2_url" | tar xz -C "{{ admin_install_prefix }}" --strip-components 2 "d2-v{{ d2_version }}/bin/d2" || true
+        [ -f "{{ admin_install_prefix }}/d2" ] && chmod +x "{{ admin_install_prefix }}/d2"
+      when: d2_needs_install
       changed_when: false
+
+    - name: Write d2 version marker
+      ansible.builtin.copy:
+        content: "{{ d2_version }}"
+        dest: "{{ admin_install_prefix }}/.d2_version"
+      when: d2_needs_install
+  become_user: root
 
 - name: Install Dapr
   block:
     - name: Check if dapr is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/dapr"
+        path: "{{ admin_install_prefix }}/dapr"
       register: dapr_stat
+
+    - name: Check dapr version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.dapr_version"
+      register: dapr_version_marker
+
+    - name: Read dapr version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.dapr_version"
+      register: dapr_version_content
+      when: dapr_version_marker.stat.exists
+
+    - name: Determine if dapr needs (re)install
+      ansible.builtin.set_fact:
+        dapr_needs_install: >-
+          {{ not dapr_stat.stat.exists or not dapr_version_marker.stat.exists or
+             (dapr_version_content.content | b64decode | trim) != dapr_version }}
 
     - name: Download and install dapr
       ansible.builtin.shell: |
         curl -fsSL https://raw.githubusercontent.com/dapr/cli/master/install/install.sh \
-            | env DAPR_INSTALL_DIR="{{ install_prefix }}/.local/bin" DAPR_RELEASE_TAG="v{{ dapr_version }}" bash \
+            | env DAPR_INSTALL_DIR="{{ admin_install_prefix }}" DAPR_RELEASE_TAG="v{{ dapr_version }}" bash \
             || true
-      args:
-        creates: "{{ install_prefix }}/.local/bin/dapr"
-      when: not dapr_stat.stat.exists
+      when: dapr_needs_install
       changed_when: false
+
+    - name: Write dapr version marker
+      ansible.builtin.copy:
+        content: "{{ dapr_version }}"
+        dest: "{{ admin_install_prefix }}/.dapr_version"
+      when: dapr_needs_install
+  become_user: root
 
 - name: Install RTK
   block:
     - name: Check if rtk is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/rtk"
+        path: "{{ admin_install_prefix }}/rtk"
       register: rtk_stat
+
+    - name: Check rtk version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.rtk_version"
+      register: rtk_version_marker
+
+    - name: Read rtk version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.rtk_version"
+      register: rtk_version_content
+      when: rtk_version_marker.stat.exists
+
+    - name: Determine if rtk needs (re)install
+      ansible.builtin.set_fact:
+        rtk_needs_install: >-
+          {{ not rtk_stat.stat.exists or not rtk_version_marker.stat.exists or
+             (rtk_version_content.content | b64decode | trim) != rtk_version }}
 
     - name: Download and install rtk
       ansible.builtin.shell: |
         rtk_url="https://github.com/rtk-ai/rtk/releases/download/v{{ rtk_version }}/rtk-x86_64-unknown-linux-musl.tar.gz"
-        curl -fsSL "$rtk_url" | tar xz -C "{{ install_prefix }}/.local/bin" rtk || true
-        [ -f "{{ install_prefix }}/.local/bin/rtk" ] && chmod +x "{{ install_prefix }}/.local/bin/rtk"
-      args:
-        creates: "{{ install_prefix }}/.local/bin/rtk"
-      when: not rtk_stat.stat.exists
+        curl -fsSL "$rtk_url" | tar xz -C "{{ admin_install_prefix }}" rtk || true
+        [ -f "{{ admin_install_prefix }}/rtk" ] && chmod +x "{{ admin_install_prefix }}/rtk"
+      when: rtk_needs_install
       changed_when: false
+
+    - name: Write rtk version marker
+      ansible.builtin.copy:
+        content: "{{ rtk_version }}"
+        dest: "{{ admin_install_prefix }}/.rtk_version"
+      when: rtk_needs_install
+  become_user: root
 
 - name: Install Docker CLI
   block:
     - name: Check if docker is installed
       ansible.builtin.stat:
-        path: "{{ install_prefix }}/.local/bin/docker"
+        path: "{{ admin_install_prefix }}/docker"
       register: docker_stat
+
+    - name: Check docker version marker
+      ansible.builtin.stat:
+        path: "{{ admin_install_prefix }}/.docker_version"
+      register: docker_version_marker
+
+    - name: Read docker version marker
+      ansible.builtin.slurp:
+        src: "{{ admin_install_prefix }}/.docker_version"
+      register: docker_version_content
+      when: docker_version_marker.stat.exists
+
+    - name: Determine if docker needs (re)install
+      ansible.builtin.set_fact:
+        docker_needs_install: >-
+          {{ not docker_stat.stat.exists or not docker_version_marker.stat.exists or
+             (docker_version_content.content | b64decode | trim) != docker_version }}
 
     - name: Create Docker directories
       ansible.builtin.file:
         path: "{{ item }}"
-        owner: user
-        group: user
+        owner: root
+        group: root
         mode: "0755"
         state: directory
       loop:
-        - "{{ install_prefix }}/.local/bin"
-        - "{{ install_prefix }}/.local/docker/cli-plugins"
+        - "{{ admin_install_prefix }}"
+        - "{{ admin_install_prefix }}/cli-plugins"
 
     - name: Download and install docker
       ansible.builtin.shell: |
         docker_url="https://download.docker.com/linux/static/stable/x86_64/docker-{{ docker_version }}.tgz"
-        curl -fsSL "$docker_url" | tar xz -C "{{ install_prefix }}/.local/bin" --strip-components 1 docker/docker 2>/dev/null || true
-        [ -f "{{ install_prefix }}/.local/bin/docker" ] && chmod +x "{{ install_prefix }}/.local/bin/docker"
-      args:
-        creates: "{{ install_prefix }}/.local/bin/docker"
-      when: not docker_stat.stat.exists
+        curl -fsSL "$docker_url" | tar xz -C "{{ admin_install_prefix }}" --strip-components 1 docker/docker 2>/dev/null || true
+        [ -f "{{ admin_install_prefix }}/docker" ] && chmod +x "{{ admin_install_prefix }}/docker"
+      when: docker_needs_install
       changed_when: false
+
+    - name: Write docker version marker
+      ansible.builtin.copy:
+        content: "{{ docker_version }}"
+        dest: "{{ admin_install_prefix }}/.docker_version"
+      when: docker_needs_install
 
     - name: Install docker-buildx
       ansible.builtin.shell: |
         curl -fsSL "https://github.com/docker/buildx/releases/download/v{{ docker_buildx_version }}/buildx-v{{ docker_buildx_version }}.linux-amd64" \
-            -o "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" 2>/dev/null || true
-        [ -f "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" ] && \
-            chmod +x "{{ install_prefix }}/.local/docker/cli-plugins/docker-buildx" || true
+            -o "{{ admin_install_prefix }}/cli-plugins/docker-buildx" 2>/dev/null || true
+        [ -f "{{ admin_install_prefix }}/cli-plugins/docker-buildx" ] && \
+            chmod +x "{{ admin_install_prefix }}/cli-plugins/docker-buildx" || true
       changed_when: false
       failed_when: false
+  become_user: root
 
 - name: Install Azure CLI
   ansible.builtin.shell: |

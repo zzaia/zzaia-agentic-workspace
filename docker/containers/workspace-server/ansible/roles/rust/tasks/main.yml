@@ -15,6 +15,28 @@
     - "{{ install_prefix }}/.cargo"
     - "{{ install_prefix }}/.rustup"
 
+- name: Check if Rust is installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.cargo/bin/rustc"
+  register: rust_stat
+
+- name: Check Rust version marker
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.cargo/.rust_version"
+  register: rust_version_marker
+
+- name: Read Rust version marker
+  ansible.builtin.slurp:
+    src: "{{ install_prefix }}/.cargo/.rust_version"
+  register: rust_version_content
+  when: rust_version_marker.stat.exists
+
+- name: Determine if Rust needs (re)install
+  ansible.builtin.set_fact:
+    rust_needs_install: >-
+      {{ not rust_stat.stat.exists or not rust_version_marker.stat.exists or
+         (rust_version_content.content | b64decode | trim) != rust_version }}
+
 - name: Install Rust via rustup
   ansible.builtin.shell: |
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
@@ -22,9 +44,15 @@
       --default-toolchain {{ rust_version }}
   args:
     executable: /bin/bash
-    creates: "{{ install_prefix }}/.cargo/bin/rustc"
   environment:
     CARGO_HOME: "{{ install_prefix }}/.cargo"
     RUSTUP_HOME: "{{ install_prefix }}/.rustup"
     HOME: /home/user
+  when: rust_needs_install
   changed_when: false
+
+- name: Write Rust version marker
+  ansible.builtin.copy:
+    content: "{{ rust_version }}"
+    dest: "{{ install_prefix }}/.cargo/.rust_version"
+  when: rust_needs_install

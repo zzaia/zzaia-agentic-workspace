@@ -11,7 +11,7 @@ USER_RUN=()
 setup_env() {
     export NVM_DIR="/opt/tools/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
-    export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
+    export PATH=/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
     export HOME=/home/user
     # VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1 required: Docker containers have no system keyring
     USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH" VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT=1)

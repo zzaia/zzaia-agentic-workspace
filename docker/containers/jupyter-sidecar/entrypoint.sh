@@ -8,13 +8,25 @@ log_info()    { echo "[jupyter-sidecar] $*"; }
 log_success() { echo "[jupyter-sidecar] ✓ $*"; }
 log_error()   { echo "[jupyter-sidecar] ✗ $*" >&2; }
 
+# ── Setup sudo password ───────────────────────────────────────────────────────
+setup_sudo_password() {
+    local pw
+    pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
+    if [ -n "$pw" ]; then
+        echo "user:$pw" | chpasswd
+    else
+        echo "ERROR: admin_password secret not found — sudo is mandatory, refusing to start" >&2
+        exit 1
+    fi
+}
+
 # ── Bootstrap ─────────────────────────────────────────────────────────────────
 bootstrap() {
     log_info "Starting jupyter-sidecar (GPU_ENABLED=${GPU_ENABLED:-false})..."
     log_info "Starting bootstrap via Ansible..."
 
     ANSIBLE_CONFIG="/usr/local/lib/zzaia/ansible/ansible.cfg" \
-        ansible-playbook /usr/local/lib/zzaia/ansible/site.yml \
+        runuser -u user -- ansible-playbook /usr/local/lib/zzaia/ansible/site.yml \
         -e "install_prefix=${INSTALL_PREFIX}" \
         -e "gpu_enabled=${GPU_ENABLED:-false}" \
         -e "workspace_name=${WORKSPACE_NAME:-zzaia}" \
@@ -40,7 +52,7 @@ start_jupyter() {
     local notebook_dir="/home/user/${WORKSPACE_NAME:-zzaia}"
     mkdir -p "${notebook_dir}"
 
-    exec "${jupyter_bin}" lab \
+    exec runuser -u user -- "${jupyter_bin}" lab \
         --ip=0.0.0.0 \
         --port="${JUPYTER_PORT:-8888}" \
         --no-browser \
@@ -51,6 +63,7 @@ start_jupyter() {
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
+    setup_sudo_password
     bootstrap
     verify_jupyter
     start_jupyter

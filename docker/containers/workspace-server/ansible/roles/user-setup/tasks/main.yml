@@ -17,6 +17,14 @@
     mode: "0755"
     state: directory
 
+- name: Create admin install prefix (root-owned)
+  ansible.builtin.file:
+    path: "{{ admin_install_prefix }}"
+    owner: root
+    group: root
+    mode: "0755"
+    state: directory
+
 - name: Ensure workspace directory exists
   ansible.builtin.shell: |
     su -s /bin/bash user -c "mkdir -p /home/user/workspace"
@@ -170,18 +178,18 @@
       ansible.builtin.set_fact:
         admin_password: "{{ lookup('env', 'ADMIN_PASSWORD') }}"
 
-    - name: Configure passwordless sudo (no ADMIN_PASSWORD)
-      ansible.builtin.copy:
-        content: "user ALL=(ALL) NOPASSWD:ALL\n"
-        dest: /etc/sudoers.d/user-admin
-        mode: "0440"
+    - name: Require password-protected sudo
+      ansible.builtin.fail:
+        msg: "admin_password is required — sudo must always require a password, refusing to start with a passwordless fallback"
       when: admin_password | length == 0
 
     - name: Configure password-protected sudo (ADMIN_PASSWORD set)
       block:
         - name: Add sudo rule
           ansible.builtin.copy:
-            content: "user ALL=(ALL) ALL\n"
+            content: |
+              Defaults secure_path="/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              user ALL=(ALL) ALL
             dest: /etc/sudoers.d/user-admin
             mode: "0440"
 

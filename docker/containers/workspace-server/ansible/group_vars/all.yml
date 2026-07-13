@@ -40,6 +40,7 @@ cuda_version: "12.9"
 
 # Installation prefix
 install_prefix: /opt/tools
+admin_install_prefix: "{{ install_prefix }}/.admin-bin"
 workspace_name: zzaia
 gpu_enabled: "false"
 

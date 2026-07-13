@@ -9,14 +9,41 @@
     mode: "0755"
     state: directory
 
+- name: Check if .NET SDK is installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.dotnet/dotnet"
+  register: dotnet_stat
+
+- name: Check .NET SDK version marker
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.dotnet/.dotnet_version"
+  register: dotnet_version_marker
+
+- name: Read .NET SDK version marker
+  ansible.builtin.slurp:
+    src: "{{ install_prefix }}/.dotnet/.dotnet_version"
+  register: dotnet_version_content
+  when: dotnet_version_marker.stat.exists
+
+- name: Determine if .NET SDK needs (re)install
+  ansible.builtin.set_fact:
+    dotnet_needs_install: >-
+      {{ not dotnet_stat.stat.exists or not dotnet_version_marker.stat.exists or
+         (dotnet_version_content.content | b64decode | trim) != dotnet_version }}
+
 - name: Install .NET SDK
   ansible.builtin.shell: |
     curl -fsSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin \
         --channel "{{ dotnet_version }}.0" \
         --install-dir "{{ install_prefix }}/.dotnet"
-  args:
-    creates: "{{ install_prefix }}/.dotnet/dotnet"
+  when: dotnet_needs_install
   changed_when: false
+
+- name: Write .NET SDK version marker
+  ansible.builtin.copy:
+    content: "{{ dotnet_version }}"
+    dest: "{{ install_prefix }}/.dotnet/.dotnet_version"
+  when: dotnet_needs_install
 
 - name: Install Aspire CLI
   block:

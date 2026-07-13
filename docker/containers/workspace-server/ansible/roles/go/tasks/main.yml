@@ -15,6 +15,28 @@
     - "{{ install_prefix }}/go"
     - "{{ install_prefix }}/gopath"
 
+- name: Check if go is installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/go/bin/go"
+  register: go_stat
+
+- name: Check go version marker
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/go/.go_version"
+  register: go_version_marker
+
+- name: Read go version marker
+  ansible.builtin.slurp:
+    src: "{{ install_prefix }}/go/.go_version"
+  register: go_version_content
+  when: go_version_marker.stat.exists
+
+- name: Determine if go needs (re)install
+  ansible.builtin.set_fact:
+    go_needs_install: >-
+      {{ not go_stat.stat.exists or not go_version_marker.stat.exists or
+         (go_version_content.content | b64decode | trim) != go_version }}
+
 - name: Download and install Go
   ansible.builtin.shell: |
     cd /tmp
@@ -25,7 +47,13 @@
     rm go.tar.gz
   args:
     executable: /bin/bash
-    creates: "{{ install_prefix }}/go/bin/go"
   environment:
     HOME: /home/user
+  when: go_needs_install
   changed_when: false
+
+- name: Write go version marker
+  ansible.builtin.copy:
+    content: "{{ go_version }}"
+    dest: "{{ install_prefix }}/go/.go_version"
+  when: go_needs_install

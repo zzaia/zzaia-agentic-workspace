@@ -7,11 +7,23 @@ export WORKSPACE_NAME="${WORKSPACE_NAME:-zzaia}"
 
 USER_RUN=()
 
+# ── Setup sudo password ───────────────────────────────────────────────────────
+setup_sudo_password() {
+    local pw
+    pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
+    if [ -n "$pw" ]; then
+        echo "user:$pw" | chpasswd
+    else
+        echo "ERROR: admin_password secret not found — sudo is mandatory, refusing to start" >&2
+        exit 1
+    fi
+}
+
 # ── Setup environment ─────────────────────────────────────────────────────────
 setup_env() {
     export NVM_DIR="/opt/tools/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" --no-use
-    export PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
+    export PATH=/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH
     export HOME=/home/user
 
     USER_RUN=(runuser -u user -- env HOME=/home/user PATH="$PATH")
@@ -72,6 +84,7 @@ seed_config() {
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
+    setup_sudo_password
     setup_env
     verify_cli
     cache_server

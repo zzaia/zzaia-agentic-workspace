@@ -12,16 +12,52 @@
     mode: "0755"
     state: directory
 
+- name: Ensure .local/bin directory exists
+  ansible.builtin.file:
+    path: "{{ install_prefix }}/.local/bin"
+    owner: user
+    group: user
+    mode: "0755"
+    state: directory
+
+- name: Check if NVM is installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.nvm/nvm.sh"
+  register: nvm_stat
+
+- name: Check NVM version marker
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/.nvm/.nvm_version"
+  register: nvm_version_marker
+
+- name: Read NVM version marker
+  ansible.builtin.slurp:
+    src: "{{ install_prefix }}/.nvm/.nvm_version"
+  register: nvm_version_content
+  when: nvm_version_marker.stat.exists
+
+- name: Determine if NVM needs (re)install
+  ansible.builtin.set_fact:
+    nvm_needs_install: >-
+      {{ not nvm_stat.stat.exists or not nvm_version_marker.stat.exists or
+         (nvm_version_content.content | b64decode | trim) != nvm_version }}
+
 - name: Install NVM
   ansible.builtin.shell: |
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh" | bash
   args:
-    creates: "{{ install_prefix }}/.nvm/nvm.sh"
     executable: /bin/bash
   environment:
     NVM_DIR: "{{ install_prefix }}/.nvm"
     GIT_CONFIG_GLOBAL: /dev/null
+  when: nvm_needs_install
   changed_when: false
+
+- name: Write NVM version marker
+  ansible.builtin.copy:
+    content: "{{ nvm_version }}"
+    dest: "{{ install_prefix }}/.nvm/.nvm_version"
+  when: nvm_needs_install
 
 - name: Install Node.js
   ansible.builtin.shell: |
@@ -51,6 +87,13 @@
       ansible.builtin.set_fact:
         node_dir: "{{ node_dirs.files | sort(attribute='path', reverse=True) | first }}"
       when: node_dirs.files | length > 0
+
+    - name: Wait for node binary to be fully extracted
+      ansible.builtin.wait_for:
+        path: "{{ node_dir.path }}/bin/node"
+        state: present
+        timeout: 30
+      when: node_dir is defined
 
     - name: Create symlinks
       ansible.builtin.file:
@@ -82,6 +125,14 @@
         group: user
         mode: "0755"
         state: directory
+
+    - name: Pin npm default global prefix to .npm-global
+      ansible.builtin.copy:
+        content: "prefix={{ install_prefix }}/.npm-global\n"
+        dest: /home/user/.npmrc
+        owner: user
+        group: user
+        mode: "0644"
 
     - name: Install Claude Code
       ansible.builtin.shell: |

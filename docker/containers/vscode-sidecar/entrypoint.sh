@@ -17,7 +17,8 @@ setup_sudo_password() {
     if [ -n "$pw" ]; then
         echo "user:$pw" | chpasswd
     else
-        echo "WARN: admin_password secret not found or empty — sudo will require manual password setup" >&2
+        echo "ERROR: admin_password secret not found — sudo is mandatory, refusing to start" >&2
+        exit 1
     fi
 }
 

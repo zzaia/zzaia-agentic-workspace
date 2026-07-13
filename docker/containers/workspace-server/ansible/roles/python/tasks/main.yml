@@ -8,22 +8,45 @@
         path: "{{ install_prefix }}/miniforge3/bin/conda"
       register: miniforge_stat
 
+    - name: Check Miniforge version marker
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/miniforge3/.miniforge_version"
+      register: miniforge_version_marker
+
+    - name: Read Miniforge version marker
+      ansible.builtin.slurp:
+        src: "{{ install_prefix }}/miniforge3/.miniforge_version"
+      register: miniforge_version_content
+      when: miniforge_version_marker.stat.exists
+
+    - name: Determine if Miniforge needs (re)install
+      ansible.builtin.set_fact:
+        miniforge_needs_install: >-
+          {{ not miniforge_stat.stat.exists or not miniforge_version_marker.stat.exists or
+             (miniforge_version_content.content | b64decode | trim) != miniforge_version }}
+
     - name: Download Miniforge installer
       ansible.builtin.get_url:
         url: "https://github.com/conda-forge/miniforge/releases/download/{{ miniforge_version }}/Miniforge3-Linux-{{ miniforge_arch }}.sh"
         dest: /tmp/miniforge.sh
         mode: "0755"
-      when: not miniforge_stat.stat.exists
+      when: miniforge_needs_install
 
     - name: Run Miniforge installer
       ansible.builtin.shell: bash /tmp/miniforge.sh -b -p "{{ install_prefix }}/miniforge3"
-      when: not miniforge_stat.stat.exists
+      when: miniforge_needs_install
       changed_when: false
 
     - name: Initialize conda for bash
       ansible.builtin.shell: "{{ install_prefix }}/miniforge3/bin/conda init bash"
-      when: not miniforge_stat.stat.exists
+      when: miniforge_needs_install
       changed_when: false
+
+    - name: Write Miniforge version marker
+      ansible.builtin.copy:
+        content: "{{ miniforge_version }}"
+        dest: "{{ install_prefix }}/miniforge3/.miniforge_version"
+      when: miniforge_needs_install
 
     - name: Clean up installer
       ansible.builtin.file:
@@ -79,6 +102,23 @@
         path: "{{ install_prefix }}/miniforge3/envs/venv-development"
       register: venv_dev_stat
 
+    - name: Check venv-development version marker
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/miniforge3/envs/venv-development/.venv_dev_version"
+      register: venv_dev_version_marker
+
+    - name: Read venv-development version marker
+      ansible.builtin.slurp:
+        src: "{{ install_prefix }}/miniforge3/envs/venv-development/.venv_dev_version"
+      register: venv_dev_version_content
+      when: venv_dev_version_marker.stat.exists
+
+    - name: Determine if venv-development needs (re)install
+      ansible.builtin.set_fact:
+        venv_dev_needs_install: >-
+          {{ not venv_dev_stat.stat.exists or not venv_dev_version_marker.stat.exists or
+             (venv_dev_version_content.content | b64decode | trim) != conda_python_version }}
+
     - name: Create venv-development environment
       ansible.builtin.shell: |
         export PATH="{{ install_prefix }}/miniforge3/bin:$PATH"
@@ -86,8 +126,14 @@
             "python={{ conda_python_version }}" pip -y --quiet 2>/dev/null || true
       environment:
         PATH: "{{ install_prefix }}/miniforge3/bin:{{ ansible_env.PATH }}"
-      when: not venv_dev_stat.stat.exists
+      when: venv_dev_needs_install
       changed_when: false
+
+    - name: Write venv-development version marker
+      ansible.builtin.copy:
+        content: "{{ conda_python_version }}"
+        dest: "{{ install_prefix }}/miniforge3/envs/venv-development/.venv_dev_version"
+      when: venv_dev_needs_install
 
     - name: Install venv-development packages
       ansible.builtin.shell: |

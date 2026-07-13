@@ -5,7 +5,7 @@ ARG VSCODE_PORT=8080
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     BROWSER=/usr/local/bin/browser-print \
-    PATH=/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH \
+    PATH=/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/opt/tools/.local/bin:/opt/tools/.npm-global/bin:/opt/tools/.dotnet:/opt/tools/.dotnet/tools:/opt/tools/miniforge3/bin:$PATH \
     NVM_DIR=/opt/tools/.nvm \
     DOTNET_ROOT=/opt/tools/.dotnet
 
@@ -28,6 +28,9 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
 RUN userdel -r ubuntu 2>/dev/null || true \
     && useradd -m -s /bin/bash -u 1000 user \
     && usermod -aG sudo user
+
+RUN echo 'Defaults secure_path="/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' > /etc/sudoers.d/secure-path \
+    && chmod 0440 /etc/sudoers.d/secure-path
 
 COPY docker/containers/vscode-sidecar/entrypoint.sh /entrypoint.sh
 COPY docker/containers/vscode-sidecar/vscode-extensions.txt /usr/local/bin/vscode-extensions.txt

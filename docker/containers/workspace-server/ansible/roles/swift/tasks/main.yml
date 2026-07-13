@@ -4,6 +4,28 @@
 - meta: end_role
   when: not (swift_enabled | bool)
 
+- name: Check if swift is installed
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/swift/usr/bin/swift"
+  register: swift_stat
+
+- name: Check swift version marker
+  ansible.builtin.stat:
+    path: "{{ install_prefix }}/swift/.swift_version"
+  register: swift_version_marker
+
+- name: Read swift version marker
+  ansible.builtin.slurp:
+    src: "{{ install_prefix }}/swift/.swift_version"
+  register: swift_version_content
+  when: swift_version_marker.stat.exists
+
+- name: Determine if swift needs (re)install
+  ansible.builtin.set_fact:
+    swift_needs_install: >-
+      {{ not swift_stat.stat.exists or not swift_version_marker.stat.exists or
+         (swift_version_content.content | b64decode | trim) != swift_version }}
+
 - name: Download and install Swift
   ansible.builtin.shell: |
     cd /tmp
@@ -15,7 +37,13 @@
     rm swift.tar.gz
   args:
     executable: /bin/bash
-    creates: "{{ install_prefix }}/swift/usr/bin/swift"
   environment:
     HOME: /home/user
+  when: swift_needs_install
   changed_when: false
+
+- name: Write swift version marker
+  ansible.builtin.copy:
+    content: "{{ swift_version }}"
+    dest: "{{ install_prefix }}/swift/.swift_version"
+  when: swift_needs_install

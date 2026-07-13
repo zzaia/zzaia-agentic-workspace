@@ -5,10 +5,10 @@ ARG JUPYTER_PORT=8888
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
     BROWSER=/usr/local/bin/browser-print \
-    PATH=/opt/tools/miniforge3/envs/venv-analytics/bin:/opt/tools/miniforge3/bin:/opt/tools/.npm-global/bin:/opt/tools/.local/bin:$PATH
+    PATH=/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/opt/tools/miniforge3/envs/venv-analytics/bin:/opt/tools/miniforge3/bin:/opt/tools/.npm-global/bin:/opt/tools/.local/bin:$PATH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl python3-pip git openssh-client \
+        ca-certificates curl python3-pip git openssh-client sudo \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install ansible-core --break-system-packages
@@ -18,7 +18,10 @@ RUN printf '#!/bin/sh\necho ""\necho "Open this URL in your browser:"\necho "  $
     && chmod +x /usr/local/bin/browser-print
 
 RUN userdel -r ubuntu 2>/dev/null || true \
-    && useradd -m -s /bin/bash -u 1000 user
+    && useradd -m -s /bin/bash -u 1000 user \
+    && usermod -aG sudo user
+
+RUN echo 'Defaults secure_path="/opt/tools/.admin-bin/bin:/opt/tools/.admin-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' > /etc/sudoers.d/secure-path && chmod 0440 /etc/sudoers.d/secure-path
 
 COPY docker/containers/jupyter-sidecar/entrypoint.sh /entrypoint.sh
 COPY docker/containers/jupyter-sidecar/scripts/versions.env /opt/scripts/versions.env
@@ -30,7 +33,6 @@ RUN find /usr/local/lib/zzaia/ansible -name '*.yml' -exec chmod 644 {} + \
     && find /usr/local/lib/zzaia/ansible -name '*.cfg' -exec chmod 644 {} +
 
 WORKDIR /home/user
-USER user
 
 EXPOSE ${JUPYTER_PORT}
 
