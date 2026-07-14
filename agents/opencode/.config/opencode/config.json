@@ -23,11 +23,10 @@
       }
     }
   },
-  "mcpServers": {
+  "mcp": {
     "aspire": {
       "type": "local",
-      "command": "aspire",
-      "args": ["agent", "mcp"]
+      "command": ["aspire", "agent", "mcp"]
     },
     "headroom": {
       "type": "remote",
@@ -38,11 +37,11 @@
       "url": "http://bifrost-server:8080/mcp"
     },
     "codegraph": {
-      "type": "sse",
+      "type": "remote",
       "url": "http://mcp-codegraph:8000/api/v1/mcp/sse"
     },
     "graphiti": {
-      "type": "http",
+      "type": "remote",
       "url": "http://mcp-graphiti:8000/mcp/"
     }
   }

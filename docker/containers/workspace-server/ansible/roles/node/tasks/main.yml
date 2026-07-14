@@ -198,3 +198,16 @@
         NVM_DIR: "{{ install_prefix }}/.nvm"
         PUPPETEER_SKIP_DOWNLOAD: "1"
       changed_when: false
+
+    - name: Install GitHub Copilot CLI
+      ansible.builtin.shell: |
+        export NVM_DIR="{{ install_prefix }}/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        npm install -g --prefix "{{ install_prefix }}/.npm-global" "@github/copilot@{{ copilot_version }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ install_prefix }}/.npm-global/bin/copilot"
+      environment:
+        NVM_DIR: "{{ install_prefix }}/.nvm"
+        PUPPETEER_SKIP_DOWNLOAD: "1"
+      changed_when: false
