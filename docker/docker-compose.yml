@@ -681,6 +681,7 @@ services:
       - FOWNER
       - SETGID
       - SETUID
+      - SYS_PTRACE
     restart: unless-stopped
     deploy:
       resources:

@@ -26,6 +26,31 @@
         "${workspaceFolder}/host/Zzaia.AppHost/Zzaia.AppHost.csproj"
       ],
       "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "apphost:run",
+      "type": "shell",
+      "command": "aspire run",
+      "options": {
+        "cwd": "${workspaceFolder}/host/Zzaia.AppHost"
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "pattern": [{ "regexp": "." }],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "http://localhost"
+          }
+        }
+      ]
+    },
+    {
+      "label": "apphost:stop",
+      "type": "shell",
+      "command": "pkill -TERM -f 'aspire run' 2>/dev/null; pkill -TERM -f 'Zzaia.AppHost' 2>/dev/null; true",
+      "problemMatcher": []
     }
   ]
 }

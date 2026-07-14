@@ -2,25 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch AppHost (Aspire)",
-      "type": "coreclr",
+      "name": "Launch AppHost (aspire run)",
+      "type": "node-terminal",
       "request": "launch",
-      "preLaunchTask": "apphost:build",
-      "program": "${workspaceFolder}/host/Zzaia.AppHost/bin/Debug/net10.0/Zzaia.AppHost.dll",
-      "args": [],
+      "command": "aspire run",
       "cwd": "${workspaceFolder}/host/Zzaia.AppHost",
-      "stopAtEntry": false,
-      "console": "internalConsole",
-      "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "DOTNET_ENVIRONMENT": "Development",
-        "DOTNET_ROOT": "${env:HOME}/.dotnet",
-        "DOTNET_HOST_PATH": "${env:HOME}/.dotnet/dotnet",
-        "DOTNET_ROLL_FORWARD": "Major",
-        "PATH": "${env:HOME}/.dotnet:${env:PATH}",
-        "ASPNETCORE_URLS": "http://0.0.0.0:17001",
-        "DOTNET_ASPIRE_LAUNCH_DASHBOARD": "true"
-      }
+      "postDebugTask": "apphost:stop"
     },
     {
       "name": ".NET Core Attach",
