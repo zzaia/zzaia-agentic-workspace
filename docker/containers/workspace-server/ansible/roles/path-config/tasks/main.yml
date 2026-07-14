@@ -20,6 +20,12 @@
         export GOPATH="{{ install_prefix }}/gopath"
       fi
 
+      # Java paths
+      if [ -d "{{ install_prefix }}/java/bin" ]; then
+        export JAVA_HOME="{{ install_prefix }}/java"
+        export PATH="{{ install_prefix }}/java/bin:$PATH"
+      fi
+
       # Ruby paths
       if [ -d "{{ install_prefix }}/.rbenv/bin" ]; then
         export PATH="{{ install_prefix }}/.rbenv/bin:{{ install_prefix }}/.rbenv/shims:$PATH"
