@@ -24,6 +24,7 @@ Options:
   --php                         Enable PHP 8.2 with Composer (default: false)
   --swift                       Enable Swift 6.1.2 (default: false)
   --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
+  --kind                        Enable Kubernetes via Kind (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --skip-hosts                  Skip /etc/hosts auto-provisioning prompt, print manual instructions only (default: false)
   --nginx-proxy-port PORT       Nginx reverse-proxy port (default: 80)
@@ -60,6 +61,7 @@ RUBY_ENABLED="false"
 PHP_ENABLED="false"
 SWIFT_ENABLED="false"
 OBSERVABILITY_ENABLED="false"
+KIND_ENABLED="false"
 NO_BWS="false"
 SKIP_HOSTS="false"
 NGINX_PROXY_PORT="80"
@@ -144,6 +146,10 @@ while [ $# -gt 0 ]; do
             ;;
         --observability)
             OBSERVABILITY_ENABLED="true"
+            shift
+            ;;
+        --kind)
+            KIND_ENABLED="true"
             shift
             ;;
         --no-bws)
@@ -257,6 +263,7 @@ RUBY_ENABLED=$RUBY_ENABLED
 PHP_ENABLED=$PHP_ENABLED
 SWIFT_ENABLED=$SWIFT_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
+KIND_ENABLED=$KIND_ENABLED
 NGINX_PROXY_PORT=$NGINX_PROXY_PORT
 SSH_PORT=$SSH_PORT
 OTEL_GRPC_PORT=$OTEL_GRPC_PORT
@@ -342,30 +349,6 @@ echo ""
 echo "Starting workspace..."
 # shellcheck disable=SC2086
 docker compose -f "${SCRIPT_DIR}/../docker/docker-compose.yml" $GPU_COMPOSE_FLAG $OBSERVABILITY_COMPOSE_FLAG -p "$WORKSPACE_NAME" $PROFILE_FLAGS up -d --build
-
-if [[ "$DEPLOY_PROFILES" == *portainer* ]]; then
-    echo "Initializing Portainer admin account..."
-    _portainer_ready=false
-    for _i in $(seq 1 30); do
-        if curl -sf --resolve "portainer.${WORKSPACE_NAME}.local:${NGINX_PROXY_PORT}:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX}/api/status" >/dev/null 2>&1; then
-            _portainer_ready=true
-            break
-        fi
-        sleep 2
-    done
-    if [ "$_portainer_ready" = "true" ]; then
-        _portainer_username="${ADMIN_EMAIL%%@*}"
-        _portainer_payload=$(printf '{"Username":"%s","Password":"%s"}' "$_portainer_username" "$ADMIN_PASSWORD")
-        curl -sf -X POST --resolve "portainer.${WORKSPACE_NAME}.local:${NGINX_PROXY_PORT}:127.0.0.1" "http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX}/api/users/admin/init" \
-            -H "Content-Type: application/json" \
-            -d "$_portainer_payload" >/dev/null 2>&1 || true
-        echo "✓ Portainer admin configured (username: $_portainer_username)"
-        unset _portainer_username
-    else
-        echo "Warning: Portainer not ready — complete admin setup at http://portainer.${WORKSPACE_NAME}.local${NGINX_URL_SUFFIX} within 5 minutes"
-    fi
-    unset _portainer_ready _portainer_payload _i
-fi
 
 # Auto-provision /etc/hosts entries for the *.local URLs (sudo-gated, idempotent)
 HOSTS_NEEDED="vault.$WORKSPACE_NAME.local aspire.$WORKSPACE_NAME.local bifrost.$WORKSPACE_NAME.local ssh.$WORKSPACE_NAME.local headroom.$WORKSPACE_NAME.local"

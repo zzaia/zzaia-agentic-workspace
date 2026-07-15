@@ -45,11 +45,14 @@ services:
     image: zzaia-dind-nvidia:latest
     runtime: runc
     privileged: true
+    cgroup: host
     environment:
       - DOCKER_TLS_CERTDIR=
       - GPU_ENABLED=${GPU_ENABLED:-false}
+      - KIND_ENABLED=${KIND_ENABLED:-false}
     volumes:
       - ${DIND_DATA_PATH:-/var/lib/docker/${WORKSPACE_NAME:-zzaia}-dind}:/var/lib/docker
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
     networks:
       - mcp
     restart: unless-stopped
@@ -66,11 +69,14 @@ services:
       start_period: 30s
 
   portainer-server:
-    image: portainer/portainer-ce:latest
+    build:
+      context: ..
+      dockerfile: docker/containers/portainer-server/Dockerfile
+    image: zzaia-portainer:latest
     profiles: ["portainer"]
-    command: ["--admin-password-file", "/run/secrets/admin_password"]
     environment:
       - DOCKER_HOST=tcp://dind-server:2375
+      - KIND_ENABLED=${KIND_ENABLED:-false}
     networks:
       - mcp
     volumes:
@@ -85,6 +91,12 @@ services:
           cpus: '0.25'
         reservations:
           memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/api/system/status >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     depends_on:
       dind-server:
         condition: service_healthy

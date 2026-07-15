@@ -29,6 +29,20 @@ RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
     && apt-get install -y --no-install-recommends nvidia-container-toolkit \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Kind and kubectl as static binaries
+RUN curl -fsSL -o /usr/local/bin/kind \
+        "https://github.com/kubernetes-sigs/kind/releases/download/v0.32.0/kind-linux-amd64" \
+    && chmod +x /usr/local/bin/kind \
+    && curl -fsSL -o /usr/local/bin/kubectl \
+        "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl" \
+    && chmod +x /usr/local/bin/kubectl
+
+# Create Kind config directory and copy cluster configuration
+RUN mkdir -p /etc/kind
+COPY kind-config.yaml /etc/kind/kind-config.yaml
+RUN curl -fsSL -o /etc/kind/portainer-agent-k8s-nodeport.yaml \
+        "https://downloads.portainer.io/ce-lts/portainer-agent-k8s-nodeport.yaml"
+
 VOLUME /var/lib/docker
 EXPOSE 2375 2376
 
