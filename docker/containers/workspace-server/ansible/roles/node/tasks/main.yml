@@ -161,6 +161,7 @@
       changed_when: false
 
     - name: Install Codex
+      when: codex_enabled | bool
       ansible.builtin.shell: |
         export NVM_DIR="{{ install_prefix }}/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -174,6 +175,7 @@
       changed_when: false
 
     - name: Install Gemini CLI
+      when: gemini_enabled | bool
       ansible.builtin.shell: |
         export NVM_DIR="{{ install_prefix }}/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -187,6 +189,7 @@
       changed_when: false
 
     - name: Install OpenCode
+      when: opencode_enabled | bool
       ansible.builtin.shell: |
         export NVM_DIR="{{ install_prefix }}/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
@@ -200,6 +203,7 @@
       changed_when: false
 
     - name: Install GitHub Copilot CLI
+      when: copilot_enabled | bool
       ansible.builtin.shell: |
         export NVM_DIR="{{ install_prefix }}/.nvm"
         [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"

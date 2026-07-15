@@ -25,6 +25,10 @@ Options:
   --swift                       Enable Swift 6.1.2 (default: false)
   --observability               Enable observability stack: SigNoz, Fluent Bit, OTel Collector, cAdvisor (default: false)
   --kind                        Enable Kubernetes via Kind (default: false)
+  --opencode                    Enable OpenCode CLI (default: false)
+  --codex                       Enable Codex CLI (default: false)
+  --gemini                      Enable Gemini CLI (default: false)
+  --copilot                     Enable GitHub Copilot CLI (default: false)
   --no-bws                      Skip Bitwarden token prompt, use Vault UI only (default: false)
   --skip-hosts                  Skip /etc/hosts auto-provisioning prompt, print manual instructions only (default: false)
   --nginx-proxy-port PORT       Nginx reverse-proxy port (default: 80)
@@ -62,6 +66,10 @@ PHP_ENABLED="false"
 SWIFT_ENABLED="false"
 OBSERVABILITY_ENABLED="false"
 KIND_ENABLED="false"
+OPENCODE_ENABLED="false"
+CODEX_ENABLED="false"
+GEMINI_ENABLED="false"
+COPILOT_ENABLED="false"
 NO_BWS="false"
 SKIP_HOSTS="false"
 NGINX_PROXY_PORT="80"
@@ -150,6 +158,22 @@ while [ $# -gt 0 ]; do
             ;;
         --kind)
             KIND_ENABLED="true"
+            shift
+            ;;
+        --opencode)
+            OPENCODE_ENABLED="true"
+            shift
+            ;;
+        --codex)
+            CODEX_ENABLED="true"
+            shift
+            ;;
+        --gemini)
+            GEMINI_ENABLED="true"
+            shift
+            ;;
+        --copilot)
+            COPILOT_ENABLED="true"
             shift
             ;;
         --no-bws)
@@ -264,6 +288,10 @@ PHP_ENABLED=$PHP_ENABLED
 SWIFT_ENABLED=$SWIFT_ENABLED
 OBSERVABILITY_ENABLED=$OBSERVABILITY_ENABLED
 KIND_ENABLED=$KIND_ENABLED
+OPENCODE_ENABLED=$OPENCODE_ENABLED
+CODEX_ENABLED=$CODEX_ENABLED
+GEMINI_ENABLED=$GEMINI_ENABLED
+COPILOT_ENABLED=$COPILOT_ENABLED
 NGINX_PROXY_PORT=$NGINX_PROXY_PORT
 SSH_PORT=$SSH_PORT
 OTEL_GRPC_PORT=$OTEL_GRPC_PORT

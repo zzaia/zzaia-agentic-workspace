@@ -92,6 +92,10 @@ bootstrap_workspace() {
         -e "ruby_enabled=${RUBY_ENABLED:-false}" \
         -e "php_enabled=${PHP_ENABLED:-false}" \
         -e "swift_enabled=${SWIFT_ENABLED:-false}" \
+        -e "opencode_enabled=${OPENCODE_ENABLED:-false}" \
+        -e "codex_enabled=${CODEX_ENABLED:-false}" \
+        -e "gemini_enabled=${GEMINI_ENABLED:-false}" \
+        -e "copilot_enabled=${COPILOT_ENABLED:-false}" \
         2>&1
 
     log_success "Workspace bootstrap complete"

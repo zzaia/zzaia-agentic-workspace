@@ -134,6 +134,10 @@ services:
       - RUBY_ENABLED=${RUBY_ENABLED:-false}
       - PHP_ENABLED=${PHP_ENABLED:-false}
       - SWIFT_ENABLED=${SWIFT_ENABLED:-false}
+      - OPENCODE_ENABLED=${OPENCODE_ENABLED:-false}
+      - CODEX_ENABLED=${CODEX_ENABLED:-false}
+      - GEMINI_ENABLED=${GEMINI_ENABLED:-false}
+      - COPILOT_ENABLED=${COPILOT_ENABLED:-false}
       - VAULT_ADDR=http://vault-server:8200
       - ASPIRE_ALLOW_UNSECURED_TRANSPORT=true
       - ANTHROPIC_BASE_URL=http://ml-server:8787
