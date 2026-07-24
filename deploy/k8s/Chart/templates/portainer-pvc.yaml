@@ -1,0 +1,21 @@
+{{- if and .Values.portainer.enabled .Values.volumes.portainerData.enabled }}
+{{- /*
+portainer-server data PVC (/data). Holds Portainer's own SQLite DB and the
+registered environment definitions. Owned by this task; the other 8 volume
+PVCs are created by the PVC-bundle template.
+*/}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "portainerData") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.portainer.name) | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.volumes.portainerData.accessMode }}
+  storageClassName: {{ include "zzaia-workspace.volumeStorageClass" (dict "root" . "volume" .Values.volumes.portainerData) | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.volumes.portainerData.size }}
+{{- end }}

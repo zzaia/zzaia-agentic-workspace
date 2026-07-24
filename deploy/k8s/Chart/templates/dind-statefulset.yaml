@@ -1,0 +1,96 @@
+{{- if .Values.dind.enabled }}
+{{- /*
+=============================================================================
+dind-server — Docker-in-Docker (KEPT, locked decision 2).
+
+SECURITY EXPOSURE
+  This pod runs a PRIVILEGED container and, with DOCKER_TLS_CERTDIR empty,
+  exposes an UNAUTHENTICATED dockerd on TCP {{ .Values.dind.ports.tcp }}. Any pod that can
+  reach that port has root-equivalent control of the *node* (it can start a
+  privileged container mounting the host filesystem). Reachability is therefore
+  fenced by templates/dind-networkpolicy.yaml, which only admits pods carrying
+  the label  zzaia.com/dind-client: "true". Every legitimate client
+  (portainer-server, containers-dev-sidecar, workspace-server, the vscode /
+  jupyter / tunnel sidecars) MUST carry that label on its pod template.
+
+StatefulSet (not Deployment): a single stable writer of the /var/lib/docker
+PVC; two dockerd replicas over one RWO volume would corrupt it.
+=============================================================================
+*/}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.dind.name }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.dind.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.dind.replicas }}
+  serviceName: {{ .Values.dind.name }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.dind.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.dind.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      {{- if .Values.gpu.enabled }}
+      runtimeClassName: {{ .Values.gpu.runtimeClassName }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.dind.securityContext) | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Values.dind.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.dind) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.dind) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" .Values.dind.securityContext) | nindent 12 }}
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: {{ .Values.dind.env.dockerTlsCertdir | quote }}
+            - name: GPU_ENABLED
+              value: {{ .Values.gpu.enabled | quote }}
+            - name: KIND_ENABLED
+              value: {{ .Values.dind.env.kindEnabled | quote }}
+          ports:
+            - name: tcp
+              containerPort: {{ .Values.dind.ports.tcp }}
+            - name: tls
+              containerPort: {{ .Values.dind.ports.tls }}
+          resources:
+            requests:
+              {{- toYaml .Values.dind.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml .Values.dind.resources.limits | nindent 14 }}
+              {{- with (include "zzaia-workspace.gpuLimits" .) }}
+              {{- . | nindent 14 }}
+              {{- end }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" "docker info >/dev/null 2>&1") "cfg" .Values.dind.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" "docker info >/dev/null 2>&1") "cfg" .Values.dind.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" "docker info >/dev/null 2>&1") "cfg" .Values.dind.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: dind-data
+              mountPath: {{ .Values.volumes.dindData.mountPath }}
+            {{- if .Values.dind.hostCgroup.enabled }}
+            - name: host-cgroup
+              mountPath: {{ .Values.dind.hostCgroup.path }}
+            {{- end }}
+      volumes:
+        - name: dind-data
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "dindData") }}
+        {{- if .Values.dind.hostCgroup.enabled }}
+        - name: host-cgroup
+          hostPath:
+            path: {{ .Values.dind.hostCgroup.path }}
+            type: Directory
+        {{- end }}
+{{- end }}

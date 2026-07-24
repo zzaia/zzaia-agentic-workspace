@@ -1,0 +1,55 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.qdrant.name }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.qdrant.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.qdrant.replicas }}
+  serviceName: {{ .Values.qdrant.name }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.qdrant.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.qdrant.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{ . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.qdrant.securityContext) | nindent 8 }}
+      {{- if .Values.qdrant.fixPermissions.enabled }}
+      initContainers:
+        {{- include "zzaia-workspace.fixPermissions" (dict "root" . "volumeName" "database-qdrant" "mountPath" .Values.volumes.databaseQdrant.mountPath "ctx" .Values.qdrant.securityContext) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.qdrant.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.databaseQdrant) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.databaseQdrant) }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.qdrant.ports.http }}
+            - name: grpc
+              containerPort: {{ .Values.qdrant.ports.grpc }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" .Values.qdrant.securityContext) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.qdrant.ports.http "path" .Values.qdrant.probes.httpPath "cfg" .Values.qdrant.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.qdrant.ports.http "path" .Values.qdrant.probes.httpPath "cfg" .Values.qdrant.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.qdrant.ports.http "path" .Values.qdrant.probes.httpPath "cfg" .Values.qdrant.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: database-qdrant
+              mountPath: {{ .Values.volumes.databaseQdrant.mountPath }}
+      volumes:
+        - name: database-qdrant
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "databaseQdrant") }}
+{{- end }}

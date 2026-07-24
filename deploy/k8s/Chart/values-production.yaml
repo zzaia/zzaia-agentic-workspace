@@ -1,0 +1,96 @@
+# Production overlay for zzaia-agentic-workspace (Vultr VKE).
+#
+# Usage:
+#   helm upgrade --install zzaia-workspace ./Chart \
+#     -n zzaia-agentic-workspace --create-namespace \
+#     -f values.yaml -f values-production.yaml
+#
+# Only values that DIFFER from values.yaml appear here (DRY). Resource sizes,
+# ports, probes and the service topology are inherited.
+
+# --- Secrets: Azure Key Vault is the only source of truth ---------------------
+# REPLACE_ME values must be supplied at deploy time (--set or a sealed overlay).
+externalSecrets:
+  enabled: true
+  provider: "azurekv"
+  azurekv:
+    vaultUrl: "https://REPLACE_ME_VAULT_NAME.vault.azure.net"
+    authType: "WorkloadIdentity"
+    clientId: "REPLACE_ME_CLIENT_ID"
+    tenantId: "REPLACE_ME_TENANT_ID"
+
+# --- Storage -----------------------------------------------------------------
+# No RWX-capable StorageClass exists in the finance-data-engine cluster repo
+# today (no NFS/Longhorn provisioner in any ansible role or the infra chart —
+# "vultr-block-storage-nfs" was aspirational, not real). Falling back to the
+# chart's own documented single-node strategy: RWO + a shared nodeSelector
+# pinning EVERY workload in this release to one node (see nodeSelector below),
+# exactly like local's single-node k3s does implicitly. This pins the whole
+# release to one node — acceptable for a single logical workspace instance,
+# not a horizontally-scaled multi-tenant service. Revert workspaceHome/
+# workspaceTools to ReadWriteMany + a real RWX class once one is provisioned,
+# and drop the nodeSelector at the same time.
+storageClass: "vultr-block-storage"
+volumes:
+  workspaceHome:
+    accessMode: ReadWriteOnce
+    size: 250Gi
+  workspaceTools:
+    accessMode: ReadWriteOnce
+    size: 100Gi
+  mlTools:
+    size: 80Gi
+  dindData:
+    size: 200Gi
+  databaseQdrant:
+    size: 50Gi
+  databaseNeo4j:
+    size: 50Gi
+
+# Required while workspaceHome/workspaceTools are RWO (see Storage comment
+# above): every pod in this release must land on the same node, or the
+# second pod to claim either PVC would stay Pending. Replace <node-label-value>
+# with a real node label before deploying — this placeholder will not schedule.
+nodeSelector:
+  zzaia.com/workspace-node: "<node-label-value>"
+
+# --- Images ------------------------------------------------------------------
+# Only the registry host and pull secret differ from local: CI pushes the same
+# immutable git-SHA tag to both registries, so defaultTag stays inherited.
+images:
+  registry: "sjc.vultrcr.com"
+  pullSecret: "vultrcr-dockerconfig"
+
+# --- Production hardening ----------------------------------------------------
+# Tunnel opens an outbound connection to Microsoft — off in production.
+tunnelSidecar:
+  enabled: false
+
+# Portainer is reachable only through Kong with TLS.
+portainer:
+  ingress:
+    enabled: true
+
+# Neither database is exposed publicly.
+qdrant:
+  ingress:
+    enabled: false
+neo4j:
+  ingress:
+    enabled: false
+
+# --- Capacity ----------------------------------------------------------------
+# Larger nodes than local dev: raise the ceiling, keep per-container defaults.
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "12"
+    requests.memory: 24Gi
+    limits.cpu: "32"
+    limits.memory: 64Gi
+    persistentvolumeclaims: "20"
+    requests.storage: 900Gi
+    pods: "60"
+
+observability:
+  enabled: true

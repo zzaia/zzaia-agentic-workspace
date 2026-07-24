@@ -1,0 +1,22 @@
+{{- if .Values.neo4j.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.neo4j.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.neo4j.name) | nindent 4 }}
+spec:
+  type: {{ .Values.neo4j.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.neo4j.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.neo4j.ports.http }}
+      targetPort: http
+      protocol: TCP
+    - name: bolt
+      port: {{ .Values.neo4j.ports.bolt }}
+      targetPort: bolt
+      protocol: TCP
+{{- end }}

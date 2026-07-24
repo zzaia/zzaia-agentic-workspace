@@ -1,0 +1,76 @@
+{{- /*
+=============================================================================
+git-sidecar — sshd on 2223 (NOT HTTP). Ported from compose service
+`git-sidecar` (docker/containers/git-sidecar). A StatefulSet so the SSH host
+keys live on a stable per-pod PVC (volumes.gitSidecarHostkeys -> /etc/ssh):
+the entrypoint runs `ssh-keygen -A` only when the keys are absent, so a
+persistent claim means host keys are generated ONCE and survive restarts —
+they are never regenerated on every restart. VAULT_ADDR points at the cluster
+Vault (best-effort); credentials arrive via envFrom against the mcp-github,
+mcp-azure-devops, and workspace groups — see externalsecrets.yaml.
+=============================================================================
+*/ -}}
+{{- if .Values.gitSidecar.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.gitSidecar.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.gitSidecar.replicas }}
+  serviceName: {{ .Values.gitSidecar.name }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.gitSidecar.securityContext) | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: {{ .Values.gitSidecar.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.gitSidecar) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.gitSidecar) }}
+          env:
+            - name: VAULT_ADDR
+              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
+          envFrom:
+            {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" . "groups" (list "mcp-github" "mcp-azure-devops" "workspace")) | nindent 12 }}
+          ports:
+            - name: ssh
+              containerPort: {{ .Values.gitSidecar.ports.ssh }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" .Values.gitSidecar.securityContext) | nindent 12 }}
+          resources:
+            {{- toYaml .Values.gitSidecar.resources | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" .Values.gitSidecar.ports.ssh "cfg" .Values.gitSidecar.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" .Values.gitSidecar.ports.ssh "cfg" .Values.gitSidecar.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" .Values.gitSidecar.ports.ssh "cfg" .Values.gitSidecar.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: git-sidecar-hostkeys
+              mountPath: {{ .Values.volumes.gitSidecarHostkeys.mountPath }}
+  volumeClaimTemplates:
+    - metadata:
+        name: git-sidecar-hostkeys
+        labels:
+          {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 10 }}
+      spec:
+        accessModes:
+          - {{ .Values.volumes.gitSidecarHostkeys.accessMode }}
+        storageClassName: {{ include "zzaia-workspace.volumeStorageClass" (dict "root" . "volume" .Values.volumes.gitSidecarHostkeys) | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.volumes.gitSidecarHostkeys.size }}
+{{- end }}

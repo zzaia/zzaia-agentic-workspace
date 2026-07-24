@@ -1,5 +1,21 @@
 # ZZAIA Container — Docker
 
+> [!WARNING]
+> **Docker Compose has been removed.** `docker-compose.yml`, `docker-compose.gpu.yml`,
+> `docker-compose.observability.yml`, and `deploy/ubuntu.sh`/`mac.sh`/`windows.ps1`
+> no longer exist in this repo — the compose runtime they drove was broken
+> (it built a deleted `vault-server` image) and added no value once Kubernetes
+> was the supported path. The container **images** documented below are still
+> authoritative and are built unchanged for Kubernetes by
+> [`../deploy/k8s/build-images.sh`](../deploy/k8s/build-images.sh) (`make k8s-images`);
+> deploy via [`../deploy/k8s/README.md`](../deploy/k8s/README.md). Two compose
+> services were dropped in the move: `vault-server` (the cluster Vault is
+> reused) and `nginx-proxy` (a Kong Ingress replaces it). Secrets now come from
+> Azure Key Vault via the External Secrets Operator, not Bitwarden/BWS or the
+> in-cluster Vault seed. The `docker compose` command examples below are
+> **historical** — they describe a workflow that no longer runs — kept only
+> for the image/build/volume-concept context around them.
+
 Ubuntu 24.04 all-in-one container (`workspace-server`) with system packages installed at build time (`build-install.sh`) and runtime tooling provisioned via Ansible (`entrypoint.sh` runs `ansible-playbook site.yml`). Runs SSH daemon by default; optionally runs browser VS Code and Dev Containers on separate container services. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
 ---
@@ -22,6 +38,11 @@ The workspace requires the following host software:
 ---
 
 ## Start (once per environment)
+
+> **Retired path.** The commands below start the workspace under Docker Compose,
+> which is no longer maintained. For the supported Kubernetes deployment, build
+> the images with `make k8s-images` (or `bash ../deploy/k8s/build-images.sh`) and
+> follow [`../deploy/k8s/README.md`](../deploy/k8s/README.md).
 
 See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short version:
 
@@ -454,8 +475,6 @@ docker/
 ├── Dockerfile               — Image definition (Ubuntu 24.04)
 ├── entrypoint.sh           — workspace-server entrypoint: fetch Vault creds → ansible-playbook site.yml → profile/MCP setup → sshd
 ├── sshd_config             — Port 2222, key-auth only
-├── docker-compose.yml      — workspace-server + vscode-server + containers-dev-server + dind + MCP sidecars
-├── docker-compose.gpu.yml  — GPU override for all services + dind
 ├── DOCKER.md               — This file
 └── containers/
     ├── workspace-server/   — Workspace container definition

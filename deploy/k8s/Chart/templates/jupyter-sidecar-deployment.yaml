@@ -1,0 +1,106 @@
+{{- /*
+jupyter-sidecar (JupyterLab). Shares the workspace-home and workspace-tools PVCs
+with workspace-server (RW). strategy: Recreate for the same single-node PVC
+reason documented in vscode-sidecar-deployment.yaml. Runs jupyter from the
+/opt/tools venv, so startup is gated on the tools.ready sentinel.
+*/ -}}
+{{- if .Values.jupyterSidecar.enabled }}
+{{- $svc := .Values.jupyterSidecar }}
+{{- $ready := .Values.volumes.workspaceTools.readyFile }}
+{{- $httpPort := $svc.ports.http }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- if .Values.gpu.enabled }}
+      runtimeClassName: {{ .Values.gpu.runtimeClassName }}
+      {{- end }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $svc.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.jupyterSidecar) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.jupyterSidecar) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $svc.securityContext) | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $httpPort }}
+              protocol: TCP
+          # No envFrom here: verified against entrypoint.sh that jupyter-sidecar
+          # reads none of the 23 credential keys — its AI env vars are the
+          # llmProxyEnv placeholder virtual keys below, not Key Vault secrets.
+          # Only admin-password (a single scoped key) is needed, mounted below.
+          env:
+            - name: WORKSPACE_NAME
+              value: {{ .Values.workspaceName | quote }}
+            - name: JUPYTER_PORT
+              value: {{ $httpPort | quote }}
+            - name: GPU_ENABLED
+              value: {{ .Values.gpu.enabled | quote }}
+            - name: INSTALL_PREFIX
+              value: {{ $svc.env.installPrefix | quote }}
+            {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
+            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $svc.name)) }}
+            {{- . | nindent 12 }}
+            {{- end }}
+          resources:
+            requests:
+              {{- toYaml $svc.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml $svc.resources.limits | nindent 14 }}
+              {{- with (include "zzaia-workspace.gpuLimits" .) }}
+              {{- . | nindent 14 }}
+              {{- end }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "bash" "-c" (printf "test -f %s && curl -sf http://localhost:%v%s >/dev/null" $ready $httpPort $svc.probes.httpPath)) "cfg" $svc.probes.startup) | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $httpPort "path" $svc.probes.httpPath "cfg" $svc.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $httpPort "path" $svc.probes.httpPath "cfg" $svc.probes.readiness) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: {{ .Values.volumes.workspaceHome.mountPath }}
+            - name: workspace-tools
+              mountPath: {{ .Values.volumes.workspaceTools.mountPath }}
+            - name: admin-password
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+        - name: workspace-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceTools") }}
+        - name: admin-password
+          secret:
+            secretName: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
+            optional: true
+            # 0444, not 0400: the entrypoint reads this file via
+            # `runuser -u user -- cat /run/secrets/admin_password` as a non-root
+            # user, which needs the world/group-read bit 0400 lacks.
+            defaultMode: 0444
+            items:
+              - key: ADMIN_PASSWORD
+                path: admin_password
+{{- end }}

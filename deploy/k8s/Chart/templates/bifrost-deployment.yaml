@@ -1,0 +1,74 @@
+{{- if .Values.bifrost.enabled }}
+{{- /*
+compose: bifrost-server. LLM gateway (maximhq/bifrost) fronted by the two-tier
+auth_proxy. The image entrypoint generates /app/data/config.json at runtime from
+env, so no config ConfigMap is mounted here — we only supply credentials + wiring:
+
+  - envFrom 7 of the 9 ESO credential groups (ai, integrations, mcp-github,
+    mcp-azure-devops, mcp-azure-portal, mcp-postman, mcp-aws) — bifrost is the
+    central proxy so it legitimately needs the broadest set of any consumer in
+    this chart; verified against entrypoint.sh, which excludes only the
+    workspace and admin groups. No file mount: the entrypoint reads every key
+    as an env var, never from a /secrets path.
+  - VAULT_ADDR points at the shared cluster Vault (best-effort secret refresh).
+  - shared OTEL envFrom + per-pod OTEL_SERVICE_NAME.
+*/}}
+{{- $c := .Values.bifrost }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $c.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $c.name) | nindent 4 }}
+spec:
+  replicas: {{ $c.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $c.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $c.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $c.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ $c.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.bifrostServer) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.bifrostServer) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $c.securityContext) | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $c.ports.http }}
+              protocol: TCP
+          env:
+            - name: VAULT_ADDR
+              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
+            {{- if .Values.observability.enabled }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $c.name | quote }}
+            {{- end }}
+          envFrom:
+            {{- $bifrostGroups := list "ai" "integrations" "mcp-github" "mcp-azure-devops" "mcp-azure-portal" "mcp-postman" "mcp-aws" }}
+            {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" . "groups" $bifrostGroups) | nindent 12 }}
+            {{- if .Values.observability.enabled }}
+            - configMapRef:
+                name: {{ .Release.Name }}-observability
+            {{- end }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $c.ports.http "path" $c.probes.httpPath "cfg" $c.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $c.ports.http "path" $c.probes.httpPath "cfg" $c.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" $c.ports.http "cfg" $c.probes.startup) | nindent 12 }}
+{{- end }}

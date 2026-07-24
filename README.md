@@ -14,22 +14,22 @@
 
 | # | Benefit |
 |---|---------|
-| 1 | **Minimal setup time** — a single `docker compose up` installs every package, language runtime, and tool automatically. After the first pull, starting the workspace on a new machine requires no manual configuration — just fill in your secrets and go. |
+| 1 | **Minimal setup time** — a single Helm install (`helm upgrade --install zzaia-workspace deploy/k8s/Chart`) deploys every package, language runtime, and tool automatically onto Kubernetes. After the first image build, starting the workspace requires no manual configuration — just fill in your secrets and go. |
 | 2 | **Standardized Ubuntu environment** — the workspace runs inside a container on Ubuntu regardless of whether the host machine is Linux, macOS, or Windows. Every developer gets an identical, reproducible environment with no "works on my machine" surprises. |
 | 3 | **Local and remote access** — access the full VS Code IDE from a browser tab (no local installation required), connect over SSH, or deploy remotely and reach it from any device. Supports WASM-based browser access for fully server-side execution. |
 | 4 | **Long-lived authentication** — authenticate Claude Code once at deployment time using an OAuth refresh token, API key, or cloud provider credentials. Tokens auto-refresh across container restarts; you never see another login prompt during daily use. |
-| 5 | **Secret isolation** — vault-server holds all secrets in HashiCorp Vault. MCP sidecars (Tavily, Azure DevOps, Postman, New Relic) fetch only their needed secret at runtime via Vault API. The AI agent context never has access to credentials, eliminating accidental secret leakage. |
+| 5 | **Secret isolation** — Azure Key Vault is the source of truth, projected into the cluster via the External Secrets Operator. Each MCP sidecar (Tavily, Azure DevOps, Postman, New Relic) and every other pod receives only its own credential group at deploy time — never the full set. The AI agent context never has access to credentials, eliminating accidental secret leakage. |
 | 6 | **Confident agentic YOLO mode** — container isolation from the host system makes it genuinely safe to run Claude Code with `--dangerously-skip-permissions`. Autonomous agentic workflows execute without fear of unintended changes to the host or other projects. |
 | 7 | **Familiar VS Code experience** — the full VS Code feature set works in-browser: extensions marketplace, profiles, themes, keybindings, and other AI coding assistants such as GitHub Copilot, Gemini, and Codex run side-by-side with Claude Code. |
 | 8 | **Persistent customization** — optional admin access lets you install additional tools and change configurations inside the running container. All changes survive restarts because the home directory is backed by a persistent Docker volume. |
 | 9 | **Cost-effective Pro and Max subscription support** — Claude Code works with Anthropic Pro and Max subscriptions, not only pay-per-token API keys. Teams can maximize the value of existing plans rather than paying separately for every token consumed by automation. |
 | 10 | **Full development lifecycle automation** — the workspace ships with pre-composed commands and skills that cover the entire lifecycle: repository management, implementation, testing, code review, architecture documentation, and release — all in a semi-automated, agent-driven workflow. |
 | 11 | **Deep Azure DevOps integration** — built-in remote commands connect directly to Azure DevOps for reading and updating work items, triggering and diagnosing pipelines, creating and reviewing pull requests, and navigating wikis — all without leaving the workspace terminal. |
-| 12 | **Opt-in full-stack observability** — activate SigNoz (logs + metrics + traces) with a single `--observability` flag at deploy time. Fluent Bit collects all Docker container logs (per-workspace isolation via docker metadata filtering), cAdvisor provides container resource metrics, and the OTel Collector scrapes Qdrant/Neo4j/Vault. SigNoz admin account and API token for MCP server are auto-provisioned at deploy time. Zero overhead when disabled — the base stack is unaffected. |
+| 12 | **Full-stack observability, no duplicate infra** — every pod ships logs, metrics, and traces to the cluster's existing SigNoz instance via the shared OTel Collector; no separate observability stack to deploy or maintain per workspace. |
 
 ## 🚀 Quick Start
 
-Supported on **Ubuntu / WSL**, **macOS**, and **Windows**. Requires Docker Desktop.
+Deploys as a Helm chart onto Kubernetes — see [`deploy/k8s/README.md`](deploy/k8s/README.md) for the full build-and-deploy walkthrough.
 
 > See [QUICKSTART.md](QUICKSTART.md) for step-by-step setup instructions.
 > First time inside the workspace? Open [WELCOME.md](WELCOME.md) for a guided start.
@@ -215,7 +215,7 @@ System utilities and information.
 The `workspace/host/` directory contains a .NET Aspire AppHost — a template for running workspace applications alongside shared infrastructure (PostgreSQL, Redis, RabbitMQ) for integrated validation and testing during development.
 
 - Single orchestrator model: one main AppHost controls workspace application orchestration
-- Dashboard endpoint: the AppHost local dashboard is exposed through `vscode-sidecar`, routed via `nginx-proxy` at `http://aspire.<WORKSPACE_NAME>.local`
+- Dashboard endpoint: the AppHost local dashboard is exposed through `vscode-sidecar`, routed via the Kong Ingress at `https://aspire.workspace.zzaia.com:8443` (Kong's proxy Service listens on `:8443`, not 443)
 - Availability model: the dashboard is only reachable while AppHost is running from VS Code launch settings
 
 - Add workspace service project references to `.csproj` pointing to worktree paths
@@ -226,10 +226,10 @@ The `workspace/host/` directory contains a .NET Aspire AppHost — a template fo
 
 ## 🐳 Container
 
-The `docker/` directory provides an SSH-accessible Ubuntu container with all workspace tools pre-installed. A vault-server container holds all secrets in HashiCorp Vault. MCP servers run as isolated sidecars and fetch their needed secrets at runtime via Vault API.
+The `docker/` directory provides the SSH-accessible Ubuntu image with all workspace tools pre-installed, deployed onto Kubernetes via `deploy/k8s/Chart`. Secrets live in Azure Key Vault and are projected into each pod's own credential group by the External Secrets Operator. MCP servers run as isolated sidecar pods and receive only the group(s) their own secrets belong to.
 
 > See [docs/architecture-overview.md](docs/architecture-overview.md) for architectural decisions and security model.
-> See [docker/DOCKER.md](docker/DOCKER.md) for full setup details.
+> See [docker/DOCKER.md](docker/DOCKER.md) for image/build reference and [deploy/k8s/README.md](deploy/k8s/README.md) for deployment.
 
 ## 🤖 Specialized Agents
 

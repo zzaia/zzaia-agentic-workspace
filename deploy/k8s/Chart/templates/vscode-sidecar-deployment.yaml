@@ -1,0 +1,113 @@
+{{- /*
+vscode-sidecar (code-server). Shares the workspace-home and workspace-tools PVCs
+with workspace-server (RW). strategy: Recreate because those PVCs are single-node
+(local-path is RWO in practice); a RollingUpdate would briefly run two pods
+contending the same volume. On single-node k3s this is safe. MULTI-NODE requires
+an RWX class (Longhorn / NFS) AND pinning every consumer with a matching
+nodeSelector/affinity — see workspace-pvcs.yaml. Bootstrap ordering is enforced
+by gating startup on the /opt/tools tools.ready sentinel written by
+workspace-server.
+*/ -}}
+{{- if .Values.vscodeSidecar.enabled }}
+{{- $svc := .Values.vscodeSidecar }}
+{{- $ready := .Values.volumes.workspaceTools.readyFile }}
+{{- $httpPort := $svc.ports.http }}
+{{- $readyFile := $svc.probes.readyFile }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 8 }}
+        # DOCKER_HOST=tcp://dind-server:2375 client — required by the dind
+        # NetworkPolicy (see dind-networkpolicy.yaml) to reach dockerd.
+        zzaia.com/dind-client: "true"
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $svc.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.vscodeSidecar) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.vscodeSidecar) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $svc.securityContext) | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $httpPort }}
+              protocol: TCP
+            - name: aspire
+              containerPort: {{ $svc.ports.aspire }}
+              protocol: TCP
+          # No envFrom here: verified against entrypoint.sh that vscode-sidecar
+          # reads none of the 23 credential keys — its AI env vars are the
+          # llmProxyEnv placeholder virtual keys below, not Key Vault secrets.
+          # Only admin-password (a single scoped key) is needed, mounted below.
+          env:
+            - name: WORKSPACE_NAME
+              value: {{ .Values.workspaceName | quote }}
+            - name: VSCODE_PORT
+              value: {{ $httpPort | quote }}
+            - name: DOCKER_HOST
+              value: {{ include "zzaia-workspace.dockerHost" . | quote }}
+            - name: ASPIRE_ALLOW_UNSECURED_TRANSPORT
+              value: {{ $svc.env.aspireAllowUnsecuredTransport | quote }}
+            - name: VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX
+              value: {{ $svc.env.dotnetRuntimeDisableMutex | quote }}
+            {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
+            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $svc.name)) }}
+            {{- . | nindent 12 }}
+            {{- end }}
+          resources:
+            requests:
+              {{- toYaml $svc.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml $svc.resources.limits | nindent 14 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "bash" "-c" (printf "test -f %s && test -f %s && curl -sf http://localhost:%v%s >/dev/null" $ready $readyFile $httpPort $svc.probes.httpPath)) "cfg" $svc.probes.startup) | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $httpPort "path" $svc.probes.httpPath "cfg" $svc.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "bash" "-c" (printf "test -f %s && curl -sf http://localhost:%v%s >/dev/null" $readyFile $httpPort $svc.probes.httpPath)) "cfg" $svc.probes.readiness) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: {{ .Values.volumes.workspaceHome.mountPath }}
+            - name: workspace-tools
+              mountPath: {{ .Values.volumes.workspaceTools.mountPath }}
+            - name: admin-password
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+        - name: workspace-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceTools") }}
+        - name: admin-password
+          secret:
+            secretName: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
+            optional: true
+            # 0444, not 0400: the entrypoint reads this file via
+            # `runuser -u user -- cat /run/secrets/admin_password` as a non-root
+            # user, which needs the world/group-read bit 0400 lacks.
+            defaultMode: 0444
+            items:
+              - key: ADMIN_PASSWORD
+                path: admin_password
+{{- end }}

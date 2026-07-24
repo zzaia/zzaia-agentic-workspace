@@ -1,0 +1,30 @@
+{{- if .Values.portainer.enabled }}
+{{- /*
+portainer-server Service. HTTP UI on 9000 (Ingress subdomain "portainer" is
+wired by the ingress template), Edge agent tunnel on 8000, HTTPS on 9443.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.portainer.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.portainer.name) | nindent 4 }}
+spec:
+  type: {{ .Values.portainer.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.portainer.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.portainer.ports.http }}
+      targetPort: http
+      protocol: TCP
+    - name: edge
+      port: {{ .Values.portainer.ports.edge }}
+      targetPort: edge
+      protocol: TCP
+    - name: https
+      port: {{ .Values.portainer.ports.https }}
+      targetPort: https
+      protocol: TCP
+{{- end }}

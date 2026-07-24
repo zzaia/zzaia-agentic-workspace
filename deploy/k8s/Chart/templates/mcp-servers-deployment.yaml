@@ -1,0 +1,114 @@
+{{/*
+=============================================================================
+MCP SERVER FLEET — Deployments
+=============================================================================
+One Deployment per enabled entry in .Values.mcpServers. Every MCP container is
+the same shape: a supergateway (or native HTTP server) wrapping a stdio MCP
+server on an HTTP port. Per-server differences (port, image, secrets, extra
+mounts, probe kind) are fields on the values entry, resolved through the
+zzaia-workspace.mcpConfig helper — NEVER read $mcp directly, it holds only the
+overrides and Sprig's mergeOverwrite will not override with empty values.
+
+READINESS CONTRACT
+  The container entrypoints idle forever (sleep loop) when a required secret is
+  missing — supergateway is never exec'd, so the HTTP port never binds. A real
+  probe on that port therefore reports the pod NotReady instead of letting a
+  credential-less, non-functional pod masquerade as healthy. Both the readiness
+  and startup probes hit $cfg.port; a secret-less pod never passes them.
+
+Helm sorts map keys, so `range` over .Values.mcpServers is deterministic.
+=============================================================================
+*/}}
+{{- range $key, $mcp := .Values.mcpServers }}
+{{- if $mcp.enabled }}
+{{- $cfg := fromYaml (include "zzaia-workspace.mcpConfig" (dict "root" $ "mcp" $mcp)) }}
+{{- $hasShm := gt (int $cfg.shmSizeMi) 0 }}
+{{- $hasCreds := ne $cfg.secretGroup "" }}
+{{- $hasVol := or $cfg.needsWorkspaceHome $hasShm }}
+{{- $hasEnv := or $hasCreds (gt (len $cfg.env) 0) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $cfg.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" $ "component" $cfg.name) | nindent 4 }}
+spec:
+  replicas: {{ $cfg.replicas }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" $ "component" $cfg.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" $ "component" $cfg.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" $ | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" $) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $cfg.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ $cfg.name }}
+          image: {{ include "zzaia-workspace.imageByKey" (dict "root" $ "key" $cfg.image) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" $ "image" (index $.Values.images $cfg.image)) }}
+          ports:
+            - containerPort: {{ $cfg.port }}
+              name: {{ $cfg.portName }}
+              protocol: TCP
+          {{- if $hasCreds }}
+          envFrom:
+            {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" $ "groups" (list $cfg.secretGroup)) | nindent 12 }}
+          {{- end }}
+          {{- if $hasEnv }}
+          env:
+            {{- if $hasCreds }}
+            - name: VAULT_ADDR
+              value: {{ include "zzaia-workspace.vaultAddr" $ | quote }}
+            {{- end }}
+            {{- range $k, $v := $cfg.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $cfg.securityContext) | nindent 12 }}
+          resources:
+            {{- toYaml $cfg.resources | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" $cfg.probe.type "port" $cfg.port "path" $cfg.probe.path "cfg" $cfg.probe.readiness) | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" $cfg.probe.type "port" $cfg.port "path" $cfg.probe.path "cfg" $cfg.probe.liveness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" $cfg.probe.type "port" $cfg.port "path" $cfg.probe.path "cfg" $cfg.probe.startup) | nindent 12 }}
+          {{- if $hasVol }}
+          volumeMounts:
+            {{- if $cfg.needsWorkspaceHome }}
+            - name: workspace-home
+              mountPath: {{ $cfg.workspaceMountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if $hasShm }}
+            - name: dshm
+              mountPath: /dev/shm
+            {{- end }}
+          {{- end }}
+      {{- if $hasVol }}
+      volumes:
+        {{- if $cfg.needsWorkspaceHome }}
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" $ "volume" "workspaceHome") }}
+            readOnly: true
+        {{- end }}
+        {{- if $hasShm }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ $cfg.shmSizeMi }}Mi
+        {{- end }}
+      {{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,142 @@
+{{- /*
+workspace-server — the authoritative container. Runs the Ansible bootstrap that
+populates the /opt/tools PVC (locked decision 4: workspace-tools STAYS a PVC and
+is filled at runtime, never baked into the image). Modelled on the infra chart's
+canonical StatefulSet (postgres-data-engine-statefulset.yaml).
+
+StatefulSet because this pod owns the SSH host keys PVC and is the SINGLE writer
+of /opt/tools. Compose depends_on has no k8s equivalent; ordering is enforced by
+the /opt/tools/.bootstrap/tools.ready sentinel that every /opt/tools consumer
+gates its startupProbe on.
+*/ -}}
+{{- if .Values.workspaceServer.enabled }}
+{{- $ss := .Values.workspaceServer }}
+{{- $ready := .Values.volumes.workspaceTools.readyFile }}
+{{- $sshPort := $ss.ports.ssh }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $ss.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $ss.name) | nindent 4 }}
+spec:
+  serviceName: {{ $ss.name }}
+  replicas: {{ $ss.replicas }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $ss.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $ss.name) | nindent 8 }}
+        # DOCKER_HOST=tcp://dind-server:2375 client — required by the dind
+        # NetworkPolicy (see dind-networkpolicy.yaml) to reach dockerd.
+        zzaia.com/dind-client: "true"
+    spec:
+      # Binds the namespaced provisioner Role (provisioner-rbac.yaml) — this is
+      # the pod the in-cluster agent runs from, so it is the one that needs
+      # Tier-1 ephemeral create/update/delete on workload primitives in this
+      # namespace (see deploy/k8s/AZURE_KEYVAULT.md's two-tier contract).
+      serviceAccountName: {{ include "zzaia-workspace.fullname" . }}-provisioner
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- if .Values.gpu.enabled }}
+      runtimeClassName: {{ .Values.gpu.runtimeClassName }}
+      {{- end }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $ss.securityContext) | nindent 8 }}
+      terminationGracePeriodSeconds: {{ $ss.terminationGracePeriodSeconds }}
+      containers:
+        - name: {{ $ss.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.workspaceServer) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.workspaceServer) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $ss.securityContext) | nindent 12 }}
+          ports:
+            - name: ssh
+              containerPort: {{ $sshPort }}
+              protocol: TCP
+          envFrom:
+            {{- $wsGroups := list "mcp-azure-devops" "workspace" "admin" }}
+            {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" . "groups" $wsGroups) | nindent 12 }}
+          env:
+            {{- include "zzaia-workspace.featureEnv" . | nindent 12 }}
+            {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
+            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $ss.name)) }}
+            {{- . | nindent 12 }}
+            {{- end }}
+            - name: INSTALL_PREFIX
+              value: {{ $ss.env.installPrefix | quote }}
+            - name: SSH_PORT
+              value: {{ $sshPort | quote }}
+            - name: DOCKER_HOST
+              value: {{ include "zzaia-workspace.dockerHost" . | quote }}
+            - name: VAULT_ADDR
+              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
+            - name: ASPIRE_ALLOW_UNSECURED_TRANSPORT
+              value: {{ $ss.env.aspireAllowUnsecuredTransport | quote }}
+          resources:
+            requests:
+              {{- toYaml $ss.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml $ss.resources.limits | nindent 14 }}
+              {{- with (include "zzaia-workspace.gpuLimits" .) }}
+              {{- . | nindent 14 }}
+              {{- end }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "bash" "-c" (printf "test -f %s && : </dev/tcp/127.0.0.1/%v" $ready $sshPort)) "cfg" $ss.probes.startup) | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" $sshPort "cfg" $ss.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "bash" "-c" (printf "test -f %s && : </dev/tcp/127.0.0.1/%v" $ready $sshPort)) "cfg" $ss.probes.readiness) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: {{ .Values.volumes.workspaceHome.mountPath }}
+            - name: workspace-tools
+              mountPath: {{ .Values.volumes.workspaceTools.mountPath }}
+            - name: workspace-sshkeys
+              mountPath: {{ .Values.volumes.workspaceSshkeys.mountPath }}
+            # admin_password stays a FILE mount (mode 0400), NOT envFrom, so the
+            # entrypoint's `runuser -u user -- cat /run/secrets/admin_password`
+            # keeps working exactly as under compose docker secrets.
+            - name: admin-password
+              mountPath: /run/secrets
+              readOnly: true
+            - name: run
+              mountPath: /run
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+        - name: workspace-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceTools") }}
+        - name: workspace-sshkeys
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceSshkeys") }}
+        - name: admin-password
+          secret:
+            secretName: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
+            optional: true
+            # 0444, not 0400: the entrypoint reads this file via
+            # `runuser -u user -- cat /run/secrets/admin_password` as a non-root
+            # user, which needs the world/group-read bit 0400 lacks.
+            defaultMode: 0444
+            items:
+              - key: ADMIN_PASSWORD
+                path: admin_password
+        # compose tmpfs: /run and /tmp:mode=1777,exec
+        - name: run
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ $ss.tmpfs.run.sizeLimit }}
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ $ss.tmpfs.tmp.sizeLimit }}
+{{- end }}

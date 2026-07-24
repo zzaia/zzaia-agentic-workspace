@@ -1,0 +1,32 @@
+{{/*
+=============================================================================
+MCP SERVER FLEET — Services
+=============================================================================
+One ClusterIP Service per enabled entry in .Values.mcpServers. The Service name
+equals the compose service name ($cfg.name) so in-cluster URLs stay identical
+to docker-compose (e.g. http://mcp-tavily:3001). Resolved through the same
+zzaia-workspace.mcpConfig helper as the Deployments — never read $mcp directly.
+=============================================================================
+*/}}
+{{- range $key, $mcp := .Values.mcpServers }}
+{{- if $mcp.enabled }}
+{{- $cfg := fromYaml (include "zzaia-workspace.mcpConfig" (dict "root" $ "mcp" $mcp)) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $cfg.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" $ "component" $cfg.name) | nindent 4 }}
+spec:
+  type: {{ $cfg.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" $ "component" $cfg.name) | nindent 4 }}
+  ports:
+    - name: {{ $cfg.portName }}
+      port: {{ $cfg.port }}
+      targetPort: {{ $cfg.portName }}
+      protocol: TCP
+{{- end }}
+{{- end }}

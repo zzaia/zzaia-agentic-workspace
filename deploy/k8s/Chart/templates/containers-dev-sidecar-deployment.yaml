@@ -1,0 +1,96 @@
+{{- if .Values.containersDevSidecar.enabled }}
+{{- /*
+=============================================================================
+containers-dev-sidecar (compose profile "devcontainer").
+
+No Service (service.enabled=false) — it exposes no listening port; it only
+pre-caches the VS Code Desktop Server onto the shared workspace-home PVC for
+Dev Containers attach. It is a DOCKER_HOST=tcp://dind-server:2375 client, so it
+carries zzaia.com/dind-client:"true" for the dind NetworkPolicy.
+
+ORDERING
+  In compose it waited on workspace-server healthy. k8s has no depends_on, so the
+  gate is the /opt/tools bootstrap sentinel written by workspace-server on the
+  shared workspace-tools PVC. All three probes test for that sentinel; the 30m
+  startup budget covers a cold Ansible bootstrap.
+
+ADMIN PASSWORD
+  entrypoint.sh (setup_sudo_password) reads /run/secrets/admin_password AS THE
+  UNPRIVILEGED user via runuser, then hard-fails if absent. The ESO key
+  ADMIN_PASSWORD is projected to that path world-readable (0444) so the non-root
+  read succeeds regardless of secret-volume fsGroup handling.
+=============================================================================
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.containersDevSidecar.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.containersDevSidecar.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.containersDevSidecar.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.containersDevSidecar.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.containersDevSidecar.name) | nindent 8 }}
+        zzaia.com/dind-client: "true"
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.containersDevSidecar.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ .Values.containersDevSidecar.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.containersDevSidecar) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.containersDevSidecar) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" .Values.containersDevSidecar.securityContext) | nindent 12 }}
+          env:
+            - name: WORKSPACE_NAME
+              value: {{ .Values.workspaceName | quote }}
+            - name: DOCKER_HOST
+              value: {{ include "zzaia-workspace.dockerHost" . | quote }}
+            {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
+          resources:
+            requests:
+              {{- toYaml .Values.containersDevSidecar.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml .Values.containersDevSidecar.resources.limits | nindent 14 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" (printf "test -f %s" .Values.volumes.workspaceTools.readyFile)) "cfg" .Values.containersDevSidecar.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" (printf "test -f %s" .Values.volumes.workspaceTools.readyFile)) "cfg" .Values.containersDevSidecar.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "sh" "-c" (printf "test -f %s" .Values.volumes.workspaceTools.readyFile)) "cfg" .Values.containersDevSidecar.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: {{ .Values.volumes.workspaceHome.mountPath }}
+            - name: workspace-tools
+              mountPath: {{ .Values.volumes.workspaceTools.mountPath }}
+            - name: admin-password
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+        - name: workspace-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceTools") }}
+        - name: admin-password
+          secret:
+            secretName: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
+            optional: true
+            defaultMode: 0444
+            items:
+              - key: ADMIN_PASSWORD
+                path: admin_password
+{{- end }}

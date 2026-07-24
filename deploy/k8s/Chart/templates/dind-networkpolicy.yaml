@@ -1,0 +1,56 @@
+{{- if .Values.dind.enabled }}
+{{- /*
+=============================================================================
+dind-server ingress NetworkPolicy.
+
+WHY THIS EXISTS
+  dind-server exposes an UNAUTHENTICATED Docker daemon on TCP {{ .Values.dind.ports.tcp }}
+  (DOCKER_TLS_CERTDIR is empty, so there is no client-cert gate). Reaching that
+  port is equivalent to being root on the underlying node: a caller can launch a
+  privileged inner container that bind-mounts the host filesystem. Kubernetes
+  Services are flat and reachable by every pod in the namespace by default, so
+  without a NetworkPolicy any compromised sidecar could take over the node.
+
+WHAT IT DOES
+  Selects the dind-server pod and permits ingress to ports {{ .Values.dind.ports.tcp }}/{{ .Values.dind.ports.tls }} ONLY from
+  pods in THIS namespace that carry the label  zzaia.com/dind-client: "true".
+  A `from` entry with a podSelector and no namespaceSelector is scoped to the
+  policy's own namespace, so no cross-namespace pod can match.
+
+CLIENTS THAT MUST CARRY THE LABEL
+  portainer-server and containers-dev-sidecar (owned here), plus workspace-server
+  and vscode-sidecar, all carry zzaia.com/dind-client: "true" on their pod
+  template. Per compose, jupyter-sidecar and tunnel-sidecar never set
+  DOCKER_HOST and do not need it.
+
+Requires a CNI that enforces NetworkPolicy (Cilium/Calico); on a non-enforcing
+CNI this object is inert and dockerd is reachable namespace-wide.
+
+NOTE: the client label and a policy on/off toggle are hardcoded here because the
+values contract has no networkPolicy.* keys — see the reported issue.
+=============================================================================
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Values.dind.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.dind.name) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.dind.name) | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              zzaia.com/dind-client: "true"
+      ports:
+        - protocol: TCP
+          port: {{ .Values.dind.ports.tcp }}
+        - protocol: TCP
+          port: {{ .Values.dind.ports.tls }}
+{{- end }}

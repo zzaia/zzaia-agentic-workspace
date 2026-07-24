@@ -1,0 +1,38 @@
+{{- /*
+Service for vscode-sidecar. Exposes the code-server HTTP port and the Aspire
+dashboard port. Both are fronted by Ingress hosts (vscode.<domain> and
+aspire.<domain>) authored in the ingress unit.
+
+Both ports are long-lived websockets (code-server, Aspire dashboard). Kong's
+default 60s read timeout kills them, so this Service carries the KIC 3.x
+Service-scoped timeout annotations — see ingress.yaml's WEBSOCKET TIMEOUT note
+and kongingress.yaml for why these, not the KongIngress CRD, are authoritative.
+*/ -}}
+{{- if .Values.vscodeSidecar.enabled }}
+{{- $svc := .Values.vscodeSidecar }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+  {{- if .Values.ingress.enabled }}
+  annotations:
+    konghq.com/read-timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 | quote }}
+    konghq.com/write-timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 | quote }}
+  {{- end }}
+spec:
+  type: {{ $svc.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $svc.ports.http }}
+      targetPort: {{ $svc.ports.http }}
+      protocol: TCP
+    - name: aspire
+      port: {{ $svc.ports.aspire }}
+      targetPort: {{ $svc.ports.aspire }}
+      protocol: TCP
+{{- end }}

@@ -1,0 +1,28 @@
+# Patterns to ignore when building Helm packages.
+.DS_Store
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.project
+.idea/
+*.tmproj
+.vscode/
+# CI / tooling
+.github/
+*.tgz
+# Never package environment overlays or local secret material
+values-local.yaml
+secrets*.yaml
+*.key
+*.pem
+# Fleet is read by the Fleet controller from git, not from the packaged chart
+fleet.yaml

@@ -1,0 +1,1139 @@
+# =============================================================================
+# zzaia-agentic-workspace — THE VALUES CONTRACT
+# =============================================================================
+# Ported from docker/docker-compose.yml (25 services). Every surviving compose
+# service has exactly one block here. Templates MUST NOT hardcode any value that
+# appears in this file.
+#
+# DROPPED vs compose (deliberate, do not re-add):
+#   vault-server  -> cluster Vault in .Values.sharedInfraNamespace is reused
+#   nginx-proxy   -> Kong Ingress replaces it (see .Values.ingress)
+#   bws_token / Bitwarden secret -> replaced by External Secrets + Azure Key Vault
+#
+# Resource requests/limits: `limits` are taken verbatim from each compose
+# service's `deploy.resources.limits`. Compose declared NO requests (except
+# portainer-server's 256M reservation), so `requests` are CHOSEN here — roughly
+# 25-50% of the limit, floored at the LimitRange defaults. Tune after real load.
+# =============================================================================
+
+nameOverride: ""
+fullnameOverride: ""
+
+# --- Global identity ---------------------------------------------------------
+# Replaces compose's ${WORKSPACE_NAME:-zzaia}. Used for user-visible naming and
+# the per-user home directory layout inside the workspace-home PVC.
+workspaceName: "zzaia"
+
+# Public DNS suffix. Local resolution is a dnsmasq wildcard on the developer
+# machine: address=/workspace.zzaia.com/127.0.0.1
+domain: "workspace.zzaia.com"
+
+# TLS secret for every Ingress in THIS namespace. Must exist in the release
+# namespace. NOT zzaia-wildcard-tls — that one covers *.fintech.zzaia.com only
+# and is scoped to the infra namespace.
+tlsSecretName: "zzaia-workspace-tls"
+
+# Namespace hosting the shared cluster services this chart consumes but does
+# NOT deploy: Vault, SigNoz, the OTEL collector. All cross-namespace references
+# MUST be built as <service>.<sharedInfraNamespace>.svc.cluster.local.
+sharedInfraNamespace: "infra"
+
+# --- Feature toggles ---------------------------------------------------------
+# Mirrors the compose *_ENABLED env vars consumed by the workspace-server
+# Ansible bootstrap (docker/containers/workspace-server/ansible).
+gpu:
+  enabled: false
+  # RuntimeClass "nvidia" is owned by the infra chart — referenced, never created.
+  runtimeClassName: "nvidia"
+  resourceName: "nvidia.com/gpu"
+  count: 1
+
+toolchains:
+  node: false
+  nodeFrontend: false
+  java: false
+  rust: false
+  lua: false
+  cpp: false
+  clojure: false
+  go: false
+  kotlin: false
+  ruby: false
+  php: false
+  swift: false
+
+agentClis:
+  opencode: false
+  codex: false
+  gemini: false
+  copilot: false
+
+# --- Scheduling --------------------------------------------------------------
+# PriorityClass "zzaia-critical" is owned by the infra chart — referenced only.
+priorityClassName: "zzaia-critical"
+nodeSelector: {}
+tolerations: []
+affinity: {}
+imagePullSecrets: []
+
+# --- Storage -----------------------------------------------------------------
+# "local-path"  = k3s local-path-provisioner (single-node local dev)
+# "vultr-block-storage" = Vultr NVMe SSD (production, see values-production.yaml)
+storageClass: "local-path"
+storageReclaimPolicy: Retain
+
+# One entry per compose named volume that survives. accessMode ReadWriteMany is
+# REQUIRED where the volume is mounted by more than one workload — local-path
+# does NOT support RWX, so local dev must either pin those consumers to one node
+# or swap in an RWX-capable class (see README).
+volumes:
+  # compose: workspace-home -> workspace-server, vscode, jupyter, containers-dev,
+  # tunnel (rw) + ml-server, mcp-codegraph (ro). Shared => RWX.
+  workspaceHome:
+    enabled: true
+    size: 100Gi
+    accessMode: ReadWriteMany
+    storageClass: ""        # "" => inherit .Values.storageClass
+    mountPath: /home/user
+  # compose: workspace-tools (/opt/tools). LOCKED: stays a PVC, populated at
+  # runtime by the workspace-server Ansible bootstrap. Never baked into an image.
+  # Shared by workspace-server (rw), vscode, jupyter, containers-dev (rw), tunnel (ro).
+  workspaceTools:
+    enabled: true
+    size: 50Gi
+    accessMode: ReadWriteMany
+    storageClass: ""
+    mountPath: /opt/tools
+    # Sentinel written by mark_bootstrap_ready() in workspace-server/entrypoint.sh.
+    # Consumed by readiness probes of every /opt/tools consumer.
+    readyFile: /opt/tools/.bootstrap/tools.ready
+  # compose: workspace-sshkeys -> workspace-server only.
+  workspaceSshkeys:
+    enabled: true
+    size: 128Mi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /var/lib/workspace/ssh-hostkeys
+  # compose: ml-tools -> ml-server only.
+  mlTools:
+    enabled: true
+    size: 40Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /opt/ml-tools
+  # compose: database-qdrant -> database-qdrant only.
+  databaseQdrant:
+    enabled: true
+    size: 20Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /qdrant/storage
+  # compose: database-neo4j -> database-neo4j only.
+  databaseNeo4j:
+    enabled: true
+    size: 20Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /data
+  # compose: portainer-data -> portainer-server only. KEPT (portainer is kept).
+  portainerData:
+    enabled: true
+    size: 5Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /data
+  # compose: git-sidecar-hostkeys -> git-sidecar only.
+  gitSidecarHostkeys:
+    enabled: true
+    size: 128Mi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /etc/ssh
+  # compose: bind mount ${DIND_DATA_PATH}:/var/lib/docker -> dind-server only.
+  # Promoted to a PVC; the /sys/fs/cgroup bind is a hostPath on the workload.
+  dindData:
+    enabled: true
+    size: 100Gi
+    accessMode: ReadWriteOnce
+    storageClass: ""
+    mountPath: /var/lib/docker
+  # compose: vault-data -> DROPPED. Cluster Vault owns its own storage.
+  # compose: workspace-credentials -> NOT a PVC. It carried Vault AppRole env
+  # files written by the dropped vault-server. Replaced by per-group External
+  # Secrets targets (.Values.externalSecrets.groupNames), injected via envFrom
+  # only into the consumers that need each group — see
+  # zzaia-workspace.credentialsEnvFrom in _helpers.tpl. No consumer reads a
+  # secrets file path; every entrypoint reads env vars directly, so there is no
+  # credentials file-mount volume in this chart.
+
+# --- Images ------------------------------------------------------------------
+# Compose image names are preserved verbatim as `repository` leaf names.
+# RULE: immutable tags only. "latest" is banned; `defaultTag` is the CI-pushed
+# tag and is overridden per environment. Any image whose tag is "" inherits
+# defaultTag via the zzaia-workspace.image helper.
+images:
+  registry: "localhost:5000"
+  defaultTag: "1.0.0"
+  pullPolicy: IfNotPresent
+  pullSecret: ""
+
+  dind:
+    registry: ""            # "" => inherit images.registry
+    repository: "zzaia/zzaia-dind-nvidia"
+    tag: ""                 # "" => inherit images.defaultTag
+    pullPolicy: ""          # "" => inherit images.pullPolicy
+  portainer:
+    registry: ""
+    repository: "zzaia/zzaia-portainer"
+    tag: ""
+    pullPolicy: ""
+  workspaceServer:
+    registry: ""
+    repository: "zzaia/zzaia-workspace-server"
+    tag: ""
+    pullPolicy: ""
+  bifrostServer:
+    registry: ""
+    repository: "zzaia/zzaia-bifrost-server"
+    tag: ""
+    pullPolicy: ""
+  mlServer:
+    registry: ""
+    repository: "zzaia/zzaia-ml-server"
+    tag: ""
+    pullPolicy: ""
+  databaseQdrant:
+    registry: ""
+    repository: "zzaia/zzaia-qdrant"
+    tag: "v1.17.1"          # pinned in compose
+    pullPolicy: ""
+  databaseNeo4j:
+    registry: ""
+    repository: "zzaia/zzaia-neo4j"
+    tag: "5.14.0"           # pinned in compose
+    pullPolicy: ""
+  gitSidecar:
+    registry: ""
+    repository: "zzaia/zzaia-git-sidecar"
+    tag: ""
+    pullPolicy: ""
+  vscodeSidecar:
+    registry: ""
+    repository: "zzaia/zzaia-vscode-sidecar"
+    tag: ""
+    pullPolicy: ""
+  jupyterSidecar:
+    registry: ""
+    repository: "zzaia/zzaia-jupyter-sidecar"
+    tag: ""
+    pullPolicy: ""
+  containersDevSidecar:
+    registry: ""
+    repository: "zzaia/zzaia-containers-dev-sidecar"
+    tag: ""
+    pullPolicy: ""
+  tunnelSidecar:
+    registry: ""
+    repository: "zzaia/zzaia-tunnel-sidecar"
+    tag: ""
+    pullPolicy: ""
+  mcpTavily:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-tavily"
+    tag: ""
+    pullPolicy: ""
+  mcpAzureDevops:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-azure-devops"
+    tag: ""
+    pullPolicy: ""
+  mcpPostman:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-postman"
+    tag: ""
+    pullPolicy: ""
+  mcpNewrelic:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-newrelic"
+    tag: ""
+    pullPolicy: ""
+  mcpGithub:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-github"
+    tag: ""
+    pullPolicy: ""
+  mcpAwsApi:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-aws-api"
+    tag: ""
+    pullPolicy: ""
+  mcpAzurePortal:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-azure-portal"
+    tag: ""
+    pullPolicy: ""
+  mcpPlaywright:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-playwright"
+    tag: ""
+    pullPolicy: ""
+  mcpHeadroom:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-headroom"
+    tag: ""
+    pullPolicy: ""
+  mcpCodegraph:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-codegraph"
+    tag: ""
+    pullPolicy: ""
+  mcpGraphiti:
+    registry: ""
+    repository: "zzaia/zzaia-mcp-graphiti"
+    tag: ""
+    pullPolicy: ""
+  # Utility image for permission-fixing initContainers (infra chart uses the
+  # same pinned tag in postgres-data-engine-statefulset.yaml).
+  busybox:
+    registry: "docker.io"
+    repository: "busybox"
+    tag: "1.36"
+    pullPolicy: IfNotPresent
+
+# --- External Secrets (Azure Key Vault) --------------------------------------
+# Shape MIRRORS deploy/k8s/infra/Chart values + external-secrets-store.yaml.
+# Bitwarden/BWS is GONE. Azure Key Vault is the only source of truth.
+externalSecrets:
+  enabled: true
+  provider: "azurekv"
+  pathPrefix: "zzaia"
+  refreshInterval: "1h"
+  azurekv:
+    vaultUrl: ""            # https://<name>.vault.azure.net — REQUIRED
+    authType: "WorkloadIdentity"
+    clientId: ""            # REQUIRED — annotates the ServiceAccount
+    tenantId: ""            # REQUIRED — annotates the ServiceAccount
+  # ServiceAccount created in THIS namespace and referenced by the store.
+  serviceAccountName: "external-secrets"
+  # Reuse the infra chart's ClusterSecretStore. Do NOT recreate it.
+  clusterSecretStoreName: "zzaia-secrets-store"
+  createClusterSecretStore: false
+  # Base name; the actual per-group Secret is "<targetSecretName>-<group>" (see
+  # zzaia-workspace.groupSecretName). One ExternalSecret+Secret pair is
+  # materialised per entry below, so a consumer's envFrom
+  # (zzaia-workspace.credentialsEnvFrom) can request only the group(s) it needs
+  # instead of all 23 keys in one blob.
+  targetSecretName: "zzaia-workspace-secrets"
+  # Every distinct .data[].remoteKey value below, i.e. one group per Key Vault
+  # JSON-blob object. externalsecrets.yaml ranges over this list and, per
+  # group, filters .data to the entries whose remoteKey matches.
+  groupNames:
+    - "ai"
+    - "integrations"
+    - "mcp-github"
+    - "mcp-azure-devops"
+    - "mcp-azure-portal"
+    - "mcp-postman"
+    - "mcp-aws"
+    - "workspace"
+    - "admin"
+  # remoteRef.key = Azure Key Vault secret name (JSON blob);
+  # remoteRef.property = field inside it. Property names are the exact env var
+  # names the container entrypoints read (verified against containers/*/entrypoint.sh).
+  data:
+    - secretKey: ANTHROPIC_API_KEY
+      remoteKey: "ai"
+      property: "ANTHROPIC_API_KEY"
+    - secretKey: CLAUDE_CODE_OAUTH_TOKEN
+      remoteKey: "ai"
+      property: "CLAUDE_CODE_OAUTH_TOKEN"
+    - secretKey: OPENAI_API_KEY
+      remoteKey: "ai"
+      property: "OPENAI_API_KEY"
+    - secretKey: GEMINI_API_KEY
+      remoteKey: "ai"
+      property: "GEMINI_API_KEY"
+    - secretKey: TAVILY_API_KEY
+      remoteKey: "ai"
+      property: "TAVILY_API_KEY"
+    - secretKey: BIFROST_VIRTUAL_KEY_CLAUDE_PRO
+      remoteKey: "ai"
+      property: "BIFROST_VIRTUAL_KEY_CLAUDE_PRO"
+    - secretKey: BIFROST_VIRTUAL_KEY_AGENTS_GENERIC
+      remoteKey: "ai"
+      property: "BIFROST_VIRTUAL_KEY_AGENTS_GENERIC"
+    - secretKey: NEW_RELIC_API_KEY
+      remoteKey: "integrations"
+      property: "NEW_RELIC_API_KEY"
+    - secretKey: GITHUB_PERSONAL_ACCESS_TOKEN
+      remoteKey: "mcp-github"
+      property: "GITHUB_PERSONAL_ACCESS_TOKEN"
+    - secretKey: ADO_MCP_AUTH_TOKEN
+      remoteKey: "mcp-azure-devops"
+      property: "ADO_MCP_AUTH_TOKEN"
+    - secretKey: AZURE_DEVOPS_ORGANIZATION
+      remoteKey: "mcp-azure-devops"
+      property: "AZURE_DEVOPS_ORGANIZATION"
+    - secretKey: AZURE_CLIENT_ID
+      remoteKey: "mcp-azure-portal"
+      property: "AZURE_CLIENT_ID"
+    - secretKey: AZURE_CLIENT_SECRET
+      remoteKey: "mcp-azure-portal"
+      property: "AZURE_CLIENT_SECRET"
+    - secretKey: AZURE_TENANT_ID
+      remoteKey: "mcp-azure-portal"
+      property: "AZURE_TENANT_ID"
+    - secretKey: AZURE_SUBSCRIPTION_ID
+      remoteKey: "mcp-azure-portal"
+      property: "AZURE_SUBSCRIPTION_ID"
+    - secretKey: POSTMAN_API_KEY
+      remoteKey: "mcp-postman"
+      property: "POSTMAN_API_KEY"
+    - secretKey: AWS_ACCESS_KEY_ID
+      remoteKey: "mcp-aws"
+      property: "AWS_ACCESS_KEY_ID"
+    - secretKey: AWS_SECRET_ACCESS_KEY
+      remoteKey: "mcp-aws"
+      property: "AWS_SECRET_ACCESS_KEY"
+    - secretKey: AWS_REGION
+      remoteKey: "mcp-aws"
+      property: "AWS_REGION"
+    - secretKey: GIT_SIDECAR_AGENT_KEY
+      remoteKey: "workspace"
+      property: "GIT_SIDECAR_AGENT_KEY"
+    - secretKey: SSH_PUBLIC_KEY
+      remoteKey: "workspace"
+      property: "SSH_PUBLIC_KEY"
+    - secretKey: ADMIN_EMAIL
+      remoteKey: "admin"
+      property: "email"
+    - secretKey: ADMIN_PASSWORD
+      remoteKey: "admin"
+      property: "password"
+
+# --- Cluster Vault (consumed, NOT deployed) ----------------------------------
+# Replaces compose's vault-server. Entrypoints still speak the Vault HTTP API,
+# so they need a reachable VAULT_ADDR.
+vault:
+  # Service name in .Values.sharedInfraNamespace (infra chart: vault-data-engine-service.yaml).
+  serviceName: "vault-data-engine"
+  port: 8200
+  # "" => helper builds http://<serviceName>.<sharedInfraNamespace>.svc.cluster.local:<port>
+  addr: ""
+
+# --- Observability (consumed, NOT deployed) ----------------------------------
+# SigNoz + the OTEL collector live in .Values.sharedInfraNamespace.
+observability:
+  enabled: true
+  otlpService: "otel-collector-data-engine"
+  otlpGrpcPort: 4317
+  otlpHttpPort: 4318
+  # "" => helper builds http://<otlpService>.<sharedInfraNamespace>.svc.cluster.local:<otlpHttpPort>
+  otlpEndpoint: ""
+  otlpProtocol: "http/protobuf"
+  serviceNamespace: "zzaia-agentic-workspace"
+  tracesExporter: "otlp"
+  metricsExporter: "otlp"
+  logsExporter: "otlp"
+  # SigNoz UI in the infra namespace — used by NOTES.txt only.
+  signozService: "signoz-data-engine"
+  signozPort: 8080
+
+# --- LLM proxy wiring --------------------------------------------------------
+# In compose every IDE/agent container pointed at ml-server:8787 and bifrost:8080
+# with literal Bifrost virtual keys. Those literals stay non-secret routing
+# labels; the real provider keys reach Bifrost via the ESO secret.
+llmProxy:
+  mlServerService: "ml-server"
+  mlServerPort: 8787
+  mlServerEmbeddingsPort: 8788
+  bifrostService: "bifrost-server"
+  bifrostPort: 8080
+  anthropicVirtualKey: "sk-bf-claude-pro-001"
+  agentsVirtualKey: "sk-bf-agents-generic-001"
+  workspaceAgentVirtualKey: "sk-bf-workspace-agent-001"
+  openaiPlaceholderKey: "proxy-handled"
+  geminiPlaceholderKey: "AIzaDUMMYPROXYHANDLED000000000000000000"
+
+# =============================================================================
+# SERVICES — one block per surviving compose service
+# =============================================================================
+
+# compose: dind-server. KEPT. Privileged, cgroup: host.
+dind:
+  enabled: true
+  replicas: 1
+  name: "dind-server"
+  ports:
+    tcp: 2375
+    tls: 2376
+  service:
+    type: ClusterIP
+  env:
+    dockerTlsCertdir: ""      # compose: DOCKER_TLS_CERTDIR= (empty disables TLS)
+    kindEnabled: false
+  # Non-negotiable: Docker-in-Docker needs a privileged container.
+  securityContext:
+    privileged: true
+    runAsUser: 0
+    runAsNonRoot: false
+    allowPrivilegeEscalation: true
+  # compose mounted /sys/fs/cgroup:rw from the host.
+  hostCgroup:
+    enabled: true
+    path: /sys/fs/cgroup
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: 1000m, memory: 2Gi }   # compose limits: 1.0 / 2G
+  probes:
+    # compose: docker info >/dev/null 2>&1
+    liveness:  { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 10, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 20, periodSeconds: 10, timeoutSeconds: 10, failureThreshold: 5 }
+    startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+# compose: portainer-server (profile "portainer"). KEPT.
+portainer:
+  enabled: true
+  replicas: 1
+  name: "portainer-server"
+  ports:
+    http: 9000
+    edge: 8000
+    https: 9443
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    subdomain: "portainer"
+  securityContext:
+    runAsUser: 0             # image has no USER; portainer binary needs /data ownership
+    runAsNonRoot: false
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilitiesDrop: ["ALL"]
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }  # compose reservations: memory 256M
+    limits:   { cpu: 250m, memory: 512Mi }  # compose limits: 0.25 / 512M
+  probes:
+    # compose: curl -sf http://localhost:9000/api/system/status
+    httpPath: /api/system/status
+    liveness:  { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 15, periodSeconds: 10, timeoutSeconds: 5, failureThreshold: 5 }
+    startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+# compose: workspace-server. The authoritative container — runs the Ansible
+# bootstrap that populates the workspace-tools PVC.
+workspaceServer:
+  enabled: true
+  replicas: 1
+  name: "workspace-server"
+  # StatefulSet: owns ssh host keys and is the single writer of /opt/tools.
+  kind: StatefulSet
+  ports:
+    ssh: 2222
+  service:
+    type: ClusterIP
+    sshNodePort: 0           # >0 and type NodePort/LoadBalancer => publish SSH
+  env:
+    installPrefix: /opt/tools
+    aspireAllowUnsecuredTransport: true
+  securityContext:
+    runAsUser: 0             # entrypoint drops to uid 1000 after bootstrap
+    runAsNonRoot: false
+    fsGroup: 1000
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["AUDIT_WRITE", "CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
+  # compose tmpfs: /run and /tmp:mode=1777,exec
+  tmpfs:
+    run:      { enabled: true, sizeLimit: 64Mi }
+    tmp:      { enabled: true, sizeLimit: 2Gi }
+  resources:
+    requests: { cpu: 500m, memory: 512Mi }
+    limits:   { cpu: 1500m, memory: 2Gi }   # compose limits: 1.5 / 2G
+  probes:
+    # compose: tools.ready sentinel + TCP on the ssh port. start_period 30m
+    # because the Ansible bootstrap genuinely takes that long on a cold PVC.
+    liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 10, failureThreshold: 3 }
+    startup:   { periodSeconds: 20, failureThreshold: 90 }   # 90*20s = 30m
+  terminationGracePeriodSeconds: 120
+
+# compose: bifrost-server. LLM gateway.
+bifrost:
+  enabled: true
+  replicas: 1
+  name: "bifrost-server"
+  ports:
+    http: 8080
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    subdomain: "bifrost"
+  securityContext:
+    runAsUser: 0             # Dockerfile: USER root
+    runAsNonRoot: false
+    allowPrivilegeEscalation: false
+    capabilitiesDrop: ["ALL"]
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }  # compose limits: 0.2 / 256M
+  probes:
+    httpPath: /health        # compose: curl -sf http://localhost:8080/health
+    liveness:  { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 10, periodSeconds: 10, timeoutSeconds: 5, failureThreshold: 5 }
+    startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+# compose: ml-server. Headroom proxy + embeddings. Optional GPU.
+mlServer:
+  enabled: true
+  replicas: 1
+  name: "ml-server"
+  ports:
+    http: 8787
+    embeddings: 8788
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    subdomain: "headroom"    # compose nginx: headroom.<ws>.local -> ml-server:8787
+  env:
+    installPrefix: /opt/ml-tools
+    versionsFile: /opt/scripts/versions.env
+    port: 8787
+    headroomTelemetry: "off"
+    headroomMinTokens: 1
+    headroomCompressUserMessages: 1
+    neo4jUsername: "neo4j"
+    neo4jDatabase: "neo4j"
+  securityContext:
+    runAsUser: 1001          # Dockerfile: useradd -m -u 1001 headroom
+    runAsGroup: 1001
+    runAsNonRoot: true
+    fsGroup: 1001
+    allowPrivilegeEscalation: false
+    capabilitiesDrop: ["ALL"]
+  resources:
+    requests: { cpu: 250m, memory: 1Gi }
+    limits:   { cpu: 500m, memory: 3Gi }    # compose limits: 0.5 / 3G
+  probes:
+    httpPath: /health        # compose: curl -sf http://localhost:8787/health
+    liveness:  { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    startup:   { periodSeconds: 20, failureThreshold: 45 }   # 45*20s = 15m
+
+# compose: database-qdrant.
+qdrant:
+  enabled: true
+  replicas: 1
+  name: "database-qdrant"
+  kind: StatefulSet
+  ports:
+    http: 6333
+    grpc: 6334
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+    subdomain: "qdrant"
+  securityContext:
+    # Dockerfile creates a system user via `useradd -r` (no explicit uid).
+    # 999 is Debian's first free system uid on the qdrant/qdrant base.
+    # VERIFY against the built image before first deploy.
+    runAsUser: 999
+    runAsGroup: 999
+    runAsNonRoot: true
+    fsGroup: 999
+    allowPrivilegeEscalation: false
+    capabilitiesDrop: ["ALL"]
+  fixPermissions:
+    enabled: true            # busybox initContainer chowns the PVC, infra-chart pattern
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }  # compose limits: 0.2 / 256M
+  probes:
+    httpPath: /readyz        # compose: wget -qO- http://localhost:6333/readyz
+    liveness:  { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 10, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    startup:   { periodSeconds: 5, failureThreshold: 12 }
+
+# compose: database-neo4j.
+neo4j:
+  enabled: true
+  replicas: 1
+  name: "database-neo4j"
+  kind: StatefulSet
+  ports:
+    http: 7474
+    bolt: 7687
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+    subdomain: "neo4j"
+  env:
+    acceptLicenseAgreement: "yes"
+    username: "neo4j"
+    heapInitialSize: "256m"
+    heapMaxSize: "512m"
+    pagecacheSize: "128m"
+  # NEO4J_AUTH=neo4j/<password> — password comes from the ESO secret key below.
+  auth:
+    passwordSecretKey: "ADMIN_PASSWORD"
+  securityContext:
+    runAsUser: 7474          # neo4j official image uid
+    runAsGroup: 7474
+    runAsNonRoot: true
+    fsGroup: 7474
+    allowPrivilegeEscalation: false
+    capabilitiesDrop: ["ALL"]
+  fixPermissions:
+    enabled: true
+  # compose tmpfs: /logs
+  tmpfs:
+    logs: { enabled: true, sizeLimit: 512Mi }
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 250m, memory: 768Mi }  # compose limits: 0.25 / 768M
+  probes:
+    httpPath: /             # compose: wget -qO- http://localhost:7474/
+    liveness:  { initialDelaySeconds: 120, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    startup:   { periodSeconds: 10, failureThreshold: 18 }   # 18*10s = 3m
+
+# compose: git-sidecar. SSH-based git relay for agents.
+gitSidecar:
+  enabled: true
+  replicas: 1
+  name: "git-sidecar"
+  kind: StatefulSet          # owns its own ssh host keys PVC
+  ports:
+    ssh: 2223
+  service:
+    type: ClusterIP
+  securityContext:
+    runAsUser: 0             # sshd must bind and manage /etc/ssh host keys
+    runAsNonRoot: false
+    fsGroup: 1000            # Dockerfile: adduser -u 1000 git
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+  resources:
+    requests: { cpu: 25m, memory: 64Mi }
+    limits:   { cpu: 100m, memory: 512Mi }  # compose limits: 0.1 / 512m
+  probes:
+    # compose: nc -z 127.0.0.1 2223 -> tcpSocket in k8s
+    liveness:  { initialDelaySeconds: 30, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 10, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    startup:   { periodSeconds: 5, failureThreshold: 12 }
+
+# compose: vscode-sidecar (profile "vscode").
+vscodeSidecar:
+  enabled: true
+  replicas: 1
+  name: "vscode-sidecar"
+  ports:
+    http: 8080
+    aspire: 17001            # compose nginx: aspire.<ws>.local -> vscode-sidecar:17001
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    subdomain: "vscode"
+  aspireIngress:
+    enabled: true
+    subdomain: "aspire"
+  env:
+    aspireAllowUnsecuredTransport: true
+    dotnetRuntimeDisableMutex: true
+  securityContext:
+    runAsUser: 0             # compose: user: root
+    runAsNonRoot: false
+    fsGroup: 1000
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID", "SYS_PTRACE"]
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: 1000m, memory: 2Gi }   # compose limits: 1.0 / 2G
+  probes:
+    httpPath: /
+    # compose also required /home/user/.vscode-server/.extensions-installed
+    readyFile: /home/user/.vscode-server/.extensions-installed
+    liveness:  { initialDelaySeconds: 120, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    startup:   { periodSeconds: 20, failureThreshold: 90 }   # 90*20s = 30m
+
+# compose: jupyter-sidecar (profile "jupyter").
+jupyterSidecar:
+  enabled: true
+  replicas: 1
+  name: "jupyter-sidecar"
+  ports:
+    http: 8888
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: true
+    subdomain: "jupyter"
+  env:
+    installPrefix: /opt/tools
+  securityContext:
+    runAsUser: 0             # entrypoint drops to uid 1000
+    runAsNonRoot: false
+    fsGroup: 1000
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["AUDIT_WRITE", "CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits:   { cpu: 1000m, memory: 2Gi }   # compose limits: 1.0 / 2G
+  probes:
+    httpPath: /api           # compose: curl -sf http://localhost:8888/api
+    liveness:  { initialDelaySeconds: 120, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    readiness: { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+    startup:   { periodSeconds: 20, failureThreshold: 90 }   # 90*20s = 30m
+
+# compose: containers-dev-sidecar (profile "devcontainer").
+containersDevSidecar:
+  enabled: true
+  replicas: 1
+  name: "containers-dev-sidecar"
+  ports: {}
+  service:
+    enabled: false           # no listening port in compose
+  securityContext:
+    runAsUser: 0
+    runAsNonRoot: false
+    fsGroup: 1000
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["AUDIT_WRITE", "CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 1Gi }    # compose limits: 0.5 / 1G
+  probes:
+    # compose: [ -f /opt/tools/.bootstrap/tools.ready ] -> exec probe on the PVC sentinel
+    liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 30, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 3 }
+    startup:   { periodSeconds: 20, failureThreshold: 90 }   # 90*20s = 30m
+
+# compose: tunnel-sidecar (profile "tunnel"). VS Code remote tunnel.
+tunnelSidecar:
+  enabled: false             # opt-in: opens an outbound tunnel to Microsoft
+  replicas: 1
+  name: "tunnel-sidecar"
+  ports: {}
+  service:
+    enabled: false
+  env:
+    disableKeychainEncrypt: 1
+  securityContext:
+    runAsUser: 0             # compose: user: root
+    runAsNonRoot: false
+    fsGroup: 1000
+    allowPrivilegeEscalation: true
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: ["SETGID", "SETUID"]
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 250m, memory: 512Mi }  # compose limits: 0.25 / 512M
+  probes:
+    # compose: pgrep -f 'code tunnel'
+    liveness:  { initialDelaySeconds: 120, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 3 }
+    startup:   { periodSeconds: 15, failureThreshold: 20 }   # 20*15s = 5m
+
+# =============================================================================
+# MCP FLEET — one template renders all of these
+# =============================================================================
+# Shared defaults, per-server overrides below. A template iterating this map
+# MUST sort keys for deterministic output.
+mcpDefaults:
+  replicas: 1
+  # Which .Values.externalSecrets.groupNames entry this MCP server's envFrom
+  # requests, e.g. "ai" or "mcp-github". "" (the default) means no credentials
+  # secret is attached — mergeOverwrite only needs an explicit non-empty
+  # override per entry below, no special re-assertion (unlike bools/shmSizeMi).
+  # Every server that sets a group here was verified against its own
+  # entrypoint.sh to actually read that group's keys, and only those keys.
+  secretGroup: ""
+  needsWorkspaceHome: false
+  securityContext:
+    runAsUser: 1000          # node:24-alpine "node" user
+    runAsGroup: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilitiesDrop: ["ALL"]
+    capabilitiesAdd: []
+  probe:
+    type: tcp                # tcp | http
+    path: ""
+    liveness:  { initialDelaySeconds: 30, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    readiness: { initialDelaySeconds: 10, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+    startup:   { periodSeconds: 5, failureThreshold: 12 }
+  service:
+    type: ClusterIP
+  ingress:
+    enabled: false
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits:   { cpu: 100m, memory: 128Mi }
+  shmSizeMi: 0               # >0 => emptyDir{medium: Memory} at /dev/shm
+  env: {}
+
+# Keys are short names; `name` is the k8s Deployment/Service name and must match
+# the compose service name so in-cluster URLs stay identical.
+mcpServers:
+  tavily:
+    enabled: true
+    name: "mcp-tavily"
+    image: "mcpTavily"
+    port: 3001
+    portName: "http"
+    secretGroup: "ai"          # entrypoint reads TAVILY_API_KEY
+
+  azureDevops:
+    enabled: true
+    name: "mcp-azure-devops"
+    image: "mcpAzureDevops"
+    port: 3002
+    portName: "http"
+    secretGroup: "mcp-azure-devops"   # ADO_MCP_AUTH_TOKEN, AZURE_DEVOPS_ORGANIZATION
+
+  postman:
+    enabled: true
+    name: "mcp-postman"
+    image: "mcpPostman"
+    port: 3003
+    portName: "http"
+    secretGroup: "mcp-postman"        # POSTMAN_API_KEY
+
+  newrelic:
+    enabled: true
+    name: "mcp-newrelic"
+    image: "mcpNewrelic"
+    port: 3004
+    portName: "http"
+    secretGroup: "integrations"       # NEW_RELIC_API_KEY
+
+  github:
+    enabled: true
+    name: "mcp-github"
+    image: "mcpGithub"
+    port: 3005
+    portName: "http"
+    secretGroup: "mcp-github"         # GITHUB_PERSONAL_ACCESS_TOKEN
+
+  playwright:
+    enabled: true
+    name: "mcp-playwright"
+    image: "mcpPlaywright"
+    port: 3006
+    portName: "http"
+    # secretGroup: "" (default) — compose mounts no secrets
+    shmSizeMi: 256             # compose: shm_size: 256m
+    securityContext:
+      runAsUser: 1000          # Dockerfile ends on USER node
+      runAsGroup: 1000
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilitiesDrop: ["ALL"]
+      capabilitiesAdd: ["SYS_ADMIN"]   # compose: cap_add SYS_ADMIN (chromium sandbox)
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 250m, memory: 1Gi }   # compose limits: 0.25 / 1G
+    probe:
+      type: tcp
+      liveness:  { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+      readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+      startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+  headroom:
+    enabled: true
+    name: "mcp-headroom"
+    image: "mcpHeadroom"
+    port: 3008
+    portName: "http"
+    # secretGroup: "" (default) — no secrets needed
+    env:
+      HEADROOM_TELEMETRY: "off"
+    securityContext:
+      # Dockerfile: `useradd -r headroom` (no explicit uid) on an unknown base.
+      # VERIFY against the built image before first deploy.
+      runAsUser: 999
+      runAsGroup: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilitiesDrop: ["ALL"]
+    resources:
+      requests: { cpu: 25m, memory: 64Mi }
+      limits:   { cpu: 100m, memory: 256Mi } # compose limits: 0.1 / 256M
+    probe:
+      type: tcp
+      liveness:  { initialDelaySeconds: 60, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+      readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 5 }
+      startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+  awsApi:
+    enabled: true
+    name: "mcp-aws-api"
+    image: "mcpAwsApi"
+    port: 3010
+    portName: "http"
+    secretGroup: "mcp-aws"     # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+    env:
+      AWS_API_MCP_TRANSPORT: "streamable-http"
+      AWS_API_MCP_PORT: "3010"
+      AWS_API_MCP_HOST: "0.0.0.0"
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 300m, memory: 512Mi } # compose limits: 0.3 / 512M
+    probe:
+      type: http                             # compose: wget http://127.0.0.1:3010/health
+      path: /health
+      liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3 }
+      readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
+      startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+  azurePortal:
+    enabled: true
+    name: "mcp-azure-portal"
+    image: "mcpAzurePortal"
+    port: 3015
+    portName: "http"
+    secretGroup: "mcp-azure-portal"   # AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits:   { cpu: 200m, memory: 256Mi } # compose limits: 0.2 / 256M
+
+  codegraph:
+    enabled: true
+    name: "mcp-codegraph"
+    image: "mcpCodegraph"
+    port: 8000
+    portName: "http"
+    # secretGroup: "" (default) — no secrets needed
+    needsWorkspaceHome: true                 # compose: workspace-home:/workspace:ro
+    workspaceMountPath: /workspace
+    env:
+      WORKSPACE_PATH: "/workspace"
+      CGC_RUNTIME_DB_TYPE: "neo4j"
+      CGC_PORT: "8000"
+      CGC_HOST: "0.0.0.0"
+      NEO4J_USERNAME: "neo4j"
+    securityContext:
+      # python:3.12-slim, Dockerfile declares no USER -> currently root.
+      runAsUser: 0
+      runAsGroup: 0
+      runAsNonRoot: false
+      allowPrivilegeEscalation: false
+      capabilitiesDrop: ["ALL"]
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 300m, memory: 512Mi } # compose limits: 0.3 / 512M
+    probe:
+      type: http                             # compose: curl -sf http://localhost:8000/health
+      path: /health
+      liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 5 }
+      readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 10, failureThreshold: 5 }
+      startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+  graphiti:
+    enabled: true
+    name: "mcp-graphiti"
+    image: "mcpGraphiti"
+    port: 8000
+    portName: "http"
+    # entrypoint reads OPENAI_API_KEY (cloud embedder path) — was previously
+    # getting it (plus all 22 other keys) by silently inheriting the
+    # mcpDefaults true/blanket default; now scoped explicitly.
+    secretGroup: "ai"
+    env:
+      NEO4J_USER: "neo4j"
+      NEO4J_DATABASE: "neo4j"
+      GRAPHITI_GROUP_ID: "main"
+      SEMAPHORE_LIMIT: "10"
+    securityContext:
+      # Dockerfile: `useradd -r graphiti` (no explicit uid) on
+      # zepai/knowledge-graph-mcp:standalone. VERIFY before first deploy.
+      runAsUser: 999
+      runAsGroup: 999
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilitiesDrop: ["ALL"]
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits:   { cpu: 300m, memory: 512Mi } # compose limits: 0.3 / 512M
+    probe:
+      type: http                             # compose: curl -sf http://localhost:8000/health
+      path: /health
+      liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 10, failureThreshold: 5 }
+      readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 10, failureThreshold: 5 }
+      startup:   { periodSeconds: 5, failureThreshold: 24 }
+
+# =============================================================================
+# INGRESS — replaces compose's nginx-proxy
+# =============================================================================
+# Hosts render as <subdomain>.<domain>. Per-service `ingress.enabled` +
+# `ingress.subdomain` (above) are the source of truth for which hosts exist;
+# this block holds only the cross-cutting settings.
+ingress:
+  enabled: true
+  className: "kong"
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/protocols: "https"
+    konghq.com/https-redirect-status-code: "308"
+  tls:
+    enabled: true
+    secretName: ""           # "" => inherit .Values.tlsSecretName
+    # Infra chart now provisions a "selfsigned" ClusterIssuer (see its
+    # clusterissuer-selfsigned.yaml) — this default is a REAL, working
+    # issuer, not a placeholder. Override to a real ACME ClusterIssuer name
+    # in values-production.yaml once one exists in the cluster.
+    clusterIssuer: "selfsigned"
+    issuerKind: "ClusterIssuer"
+  # WebSocket / long-lived streams (code-server, Jupyter, MCP SSE) need a long
+  # read timeout — compose's nginx used proxy_read_timeout 3600s.
+  readTimeoutSeconds: 3600
+  # Kong's proxy Service is type:LoadBalancer with tls.servicePort=8443, NOT
+  # 443 (see deploy/ansible/roles/ring/tasks/main.yml in the cluster repo) —
+  # an Ingress `host:` field cannot carry a port, so this exists purely for
+  # constructing correct URLs in NOTES.txt/docs. 443 renders with no suffix.
+  httpsPort: 8443
+  pathType: Prefix
+  path: /
+
+# =============================================================================
+# NAMESPACE GOVERNANCE
+# =============================================================================
+limitRange:
+  enabled: true
+  default:
+    cpu: 500m
+    memory: 512Mi
+  defaultRequest:
+    cpu: 50m
+    memory: 64Mi
+  max:
+    cpu: "2"
+    memory: 4Gi
+
+# Sized from the sum of all limits above, with ~20% headroom.
+resourceQuota:
+  enabled: true
+  hard:
+    requests.cpu: "6"
+    requests.memory: 10Gi
+    limits.cpu: "16"
+    limits.memory: 28Gi
+    persistentvolumeclaims: "20"
+    requests.storage: 400Gi
+    pods: "40"
+
+podDisruptionBudget:
+  enabled: false             # every workload is replicas: 1 — a PDB would block drains
+  minAvailable: 1

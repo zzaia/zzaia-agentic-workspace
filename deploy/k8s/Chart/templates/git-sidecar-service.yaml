@@ -1,0 +1,31 @@
+{{- /*
+=============================================================================
+git-sidecar Service — plain in-cluster ClusterIP on 2223 (sshd, NOT HTTP).
+Kong has no stream/TCP listener configured (HTTPS-only proxy on 8443), so this
+service is internal-only BY DESIGN and is never exposed through Ingress.
+
+EXTERNAL ACCESS (developer machine): use kubectl port-forward, e.g.
+    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Values.gitSidecar.name }} 2223:{{ .Values.gitSidecar.ports.ssh }}
+then `ssh -p 2223 git@127.0.0.1`. In-cluster consumers reach it directly at
+{{ .Values.gitSidecar.name }}:{{ .Values.gitSidecar.ports.ssh }}. Also acts as the governing
+service for the git-sidecar StatefulSet (spec.serviceName).
+=============================================================================
+*/ -}}
+{{- if .Values.gitSidecar.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.gitSidecar.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 4 }}
+spec:
+  type: {{ .Values.gitSidecar.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.gitSidecar.name) | nindent 4 }}
+  ports:
+    - name: ssh
+      port: {{ .Values.gitSidecar.ports.ssh }}
+      targetPort: ssh
+      protocol: TCP
+{{- end }}

@@ -1,6 +1,6 @@
 # ZZAIA Agentic Workspace — Quick Start
 
-> Get the workspace running in under 5 minutes.
+> Deploy the workspace onto Kubernetes.
 
 ---
 
@@ -8,9 +8,9 @@
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **Docker Desktop or CLI** | Runs the workspace container and MCP sidecars | [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop) |
-| **Bitwarden Secrets Manager** *(optional)* | Automated secret bootstrap — vault-server runs the bws CLI internally at startup; no host installation required | [bitwarden.com/products/secrets-manager](https://bitwarden.com/products/secrets-manager/) |
-| **Enhanced Container Isolation (ECI)** *(optional)* | Enables unprivileged Docker-in-Docker sandboxing — Docker Desktop > Settings > General > "Use Enhanced Container Isolation" | [docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation](https://docs.docker.com/desktop/hardened-desktop/enhanced-container-isolation/) |
+| **A running cluster** | Kong ingress, the External Secrets Operator, and the `zzaia-secrets-store` ClusterSecretStore already installed | Provisioned separately (e.g. by the `zzaia-finance-data-engine` control repo) — this chart only deploys *into* an existing cluster's shared infra, never its own copy |
+| **Azure Key Vault access** | Source of truth for all workspace secrets — no Bitwarden, no in-cluster Vault seed | See [`deploy/k8s/AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) |
+| **`helm`, `kubectl`, `docker`** | Build images and deploy the chart | Standard installs |
 
 ---
 
@@ -53,7 +53,7 @@ On your **host machine**, run:
 claude setup-token
 ```
 
-Copy the printed token and set it as `CLAUDE_CODE_OAUTH_TOKEN` in Step 2. Valid for ~1 year. The extension picks it up immediately.
+Copy the printed token and store it as `CLAUDE_CODE_OAUTH_TOKEN` in the `ai` Key Vault secret (Step 2). Valid for ~1 year. The extension picks it up immediately.
 
 > **Important:** The token must be a single unbroken line. Terminal output may wrap it across multiple lines — copy the full token and remove any line breaks. A token with an embedded newline causes an `invalid header value` error.
 
@@ -61,215 +61,95 @@ The onboarding wizard is automatically suppressed — the image ships a `.claude
 
 **Option B — Interactive session inside the container (simplest, fully self-contained):**
 
-Start the container first (Step 3), open a terminal inside VS Code, and run:
+Start the workspace first (Step 3), open a terminal inside VS Code, and run:
 
 ```bash
 claude setup-token
 ```
 
-Claude Code prints a URL. **Do not expect a browser to open automatically** — the container has no display. Instead:
+Claude Code prints a URL. **Do not expect a browser to open automatically** — the pod has no display. Instead:
 
 1. Copy the URL from the terminal
 2. Open it in a browser **on your host machine**
 3. Complete authentication
 4. Copy the authorization code shown in the browser back into the terminal when prompted
 
-> **Important:** The OAuth callback URL is not reachable from inside the container — you must manually copy the URL and open it on the host, then copy the code back.
+> **Important:** The OAuth callback URL is not reachable from inside the pod — you must manually copy the URL and open it on the host, then copy the code back.
 
-Claude Code stores the full session (credentials + account info) in the home volume — the onboarding wizard is permanently suppressed and the session persists across all container restarts. No env var is needed.
-
----
-
-## Step 2 — Gather Your Values
-
-You will need the following values before starting:
-
-| Variable | Required | Description | Where to Get |
-|----------|----------|-------------|--------------|
-| `WORKSPACE_NAME` | ✅ | Unique name for this workspace instance (used as Docker Compose project name) | Choose any slug, e.g. `my-org` |
-| `SSH_PUBLIC_KEY` | ✅ | Your SSH public key (e.g. `ssh-ed25519 AAAA...`) | `cat ~/.ssh/id_ed25519.pub` — generate with `ssh-keygen -t ed25519` |
-| `SSH_PORT` | ✅ | Host port for SSH access | Default: `2222` |
-| `BWS_ACCESS_TOKEN` | Optional | Bitwarden Secrets Manager machine account token — if provided, vault-server bootstraps all secrets from Bitwarden automatically; if skipped, secrets are entered manually via Vault UI after first boot | From Bitwarden Secrets Manager; press Enter to skip |
-| `ADMIN_PASSWORD` | Optional | Sets the sudo password for the `user` account; also used as the SigNoz admin account and Neo4j password for Headroom. **Required for SigNoz observability** — must be 12+ characters with at least one uppercase letter, one lowercase letter, one digit, and one symbol (`~!@#$%^&*()_+-=[]{}|;:,.<>?/`). A weak password skips SigNoz provisioning silently — `mcp-signoz` will remain idle. | Example: `MyP@ss1234!x` — leave empty for no sudo, default Neo4j password (`headroom`), and no SigNoz MCP |
-
-All API keys, PATs, and cloud credentials are stored in Vault (AES-256-GCM encrypted at rest). Configure or update them via Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` after first boot.
+Claude Code stores the full session (credentials + account info) in the `workspace-home` PVC — the onboarding wizard is permanently suppressed and the session persists across all pod restarts. No env var is needed.
 
 ---
 
-## Optional: Configure Bitwarden Secrets Manager
+## Step 2 — Seed Azure Key Vault
 
-If you provide `BWS_ACCESS_TOKEN`, vault-server fetches all secrets automatically at startup. Create each secret in your Bitwarden Secrets Manager project using the exact key names below — the vault-server `bws secret list` output is matched by key name.
+Every secret the workspace needs — AI keys, MCP tool credentials, the git-sidecar SSH key, the admin password — lives in Azure Key Vault as one of nine JSON-object secrets, projected into the cluster by the External Secrets Operator. No secret ever lives in Git or in a Helm value.
 
-### AI / Claude Code
+> See [`deploy/k8s/AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) for the full table of secret names, the JSON keys each one holds, and copy-paste `az keyvault secret set` commands.
 
-| Secret Key | Required | Description |
-|------------|----------|-------------|
-| `ANTHROPIC_API_KEY` | If using API Key auth | Anthropic API key — [console.anthropic.com](https://console.anthropic.com) |
-| `CLAUDE_CODE_OAUTH_TOKEN` | If using OAuth auth | Long-lived OAuth token from `claude setup-token` |
-| `OPENAI_API_KEY` | Optional | OpenAI API key |
-| `GEMINI_API_KEY` | Optional | Google Gemini API key |
-| `TAVILY_API_KEY` | Optional | Tavily web search API key — used by MCP web-search tool |
+At minimum you need the `ai` secret (your Claude Code / cloud-provider credentials from Step 1) and, if you want sudo inside the workspace, the `admin` secret (`ADMIN_PASSWORD`). Everything else is optional and only required by the MCP tools you actually enable.
 
-### Credential Pool (optional — multiple Anthropic accounts)
-
-Add indexed keys to enable credential rotation and load distribution across multiple Pro, Max, or API accounts. bifrost distributes requests via weighted round-robin and automatically bypasses rate-limited or expired credentials.
-
-| Secret Key | Description |
-|------------|-------------|
-| `CLAUDE_OAUTH_TOKEN_1` | OAuth token for account #1 — `claude setup-token` on each account |
-| `CLAUDE_OAUTH_TOKEN_2` | OAuth token for account #2 |
-| `CLAUDE_OAUTH_TOKEN_N` | Continue pattern for additional accounts |
-| `ANTHROPIC_API_KEY_1` | API key fallback for index #1 (used when OAuth absent for same index) |
-| `ANTHROPIC_API_KEY_N` | Continue pattern for additional API keys |
-
-> Indexed keys are discovered automatically at startup by iterating `N = 1, 2, 3, ...` until a missing index is found. A mix of OAuth and API keys is supported — at each index, the OAuth token takes priority if both are present. The singular `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` keys are preserved as a fallback when no indexed keys exist.
-
-### Cloud Providers (alternative to API Key)
-
-| Secret Key | Required | Description |
-|------------|----------|-------------|
-| `AWS_ACCESS_KEY_ID` | If using Bedrock | AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | If using Bedrock | AWS secret key |
-| `AWS_REGION` | If using Bedrock | AWS region, e.g. `us-east-1` |
-| `ANTHROPIC_BEDROCK_BASE_URL` | Optional | Override Bedrock endpoint |
-| `CLAUDE_CODE_USE_VERTEX` | If using Vertex AI | Set to `1` |
-| `ANTHROPIC_VERTEX_PROJECT_ID` | If using Vertex AI | GCP project ID |
-| `CLOUD_ML_REGION` | If using Vertex AI | GCP region, e.g. `us-central1` |
-| `CLAUDE_CODE_USE_FOUNDRY` | If using Azure Foundry | Set to `1` |
-| `AZURE_FOUNDRY_BASE_URL` | If using Azure Foundry | Azure AI Foundry endpoint URL |
-
-### MCP Tools
-
-| Secret Key | Required | Description |
-|------------|----------|-------------|
-| `GITHUB_PERSONAL_ACCESS_TOKEN` | If using GitHub MCP | GitHub PAT with `repo` scope |
-| `ADO_MCP_AUTH_TOKEN` | If using Azure DevOps MCP | Azure DevOps PAT |
-| `AZURE_DEVOPS_ORGANIZATION` | If using Azure DevOps MCP | ADO organization name, e.g. `my-org` |
-| `POSTMAN_API_KEY` | Optional | Postman API key for MCP tool |
-| `NEW_RELIC_API_KEY` | Optional | New Relic API key for MCP tool |
-
-### AWS MCP Tools (optional — SNS/SQS, CloudWatch, ECS, PostgreSQL)
-
-| Secret Key | Required | Description |
-|------------|----------|-------------|
-| `AWS_ACCESS_KEY_ID` | If using AWS MCP tools | AWS IAM access key ID |
-| `AWS_SECRET_ACCESS_KEY` | If using AWS MCP tools | AWS IAM secret access key |
-| `AWS_REGION` | If using AWS MCP tools | AWS region, e.g. `us-east-1` |
-
-> Note: If you already set these under **Cloud Providers** (for Bedrock), the same keys are reused — no duplicate entry needed. The vault-server writes them to both `secret/cloud` and `secret/mcp/aws` automatically.
-
-> Vault paths used internally: `secret/ai`, `secret/mcp/github`, `secret/mcp/azure-devops`, `secret/mcp/aws`, `secret/cloud`, `secret/integrations`. The `secret/workspace` path (git-sidecar SSH keypair) is auto-generated by vault-server and does not require a BWS entry.
+> `ADMIN_PASSWORD` also becomes the SigNoz and Neo4j credentials where applicable. It has no strength requirement enforced by this chart, but a weak password is your own risk since it gates `sudo` inside the workspace.
 
 ---
 
-## Step 3 — Start the Workspace
+## Step 3 — Deploy the Workspace
 
-Run the deploy script for your platform. The script prompts securely for `BWS_ACCESS_TOKEN` (press Enter to skip and configure secrets manually via Vault UI after startup).
-
-**Ubuntu / WSL:**
-```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
-```
-
-**macOS:**
-```bash
-./deploy/mac.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
-```
-
-**Windows:**
-```powershell
-.\deploy\windows.ps1 -WorkspaceName my-org -SshPublicKey "ssh-ed25519 AAAA..."
-```
-
-**Infrastructure flags:** `--gpu`, `--observability`, `--profiles vscode,devcontainer`, `--nginx-proxy-port 80`, `--ssh-port 2222`, `--dind-data-path <path>`.
-
-**`--dind-data-path`** — sets the host directory where the Docker-in-Docker (DinD) daemon stores all container images and layers. Defaults to `/var/lib/docker/<WORKSPACE_NAME>-dind` on the root filesystem. Use this flag to redirect DinD storage to a dedicated disk or partition to prevent root filesystem exhaustion when many containers are built inside the workspace:
+One-time cluster wiring (Fleet GitRepo + local DNS wildcard), then build images and install the chart:
 
 ```bash
-# redirect DinD storage to a separate disk
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
-  --dind-data-path /mnt/nvme/dind-storage
+# One-time: wire this repo into the cluster's Fleet + local DNS
+./deploy/k8s/bootstrap.sh
+
+# Build and push every zzaia-* image, pin tags in a Helm values overlay
+bash deploy/k8s/build-images.sh
+
+# Deploy
+helm upgrade --install zzaia-workspace deploy/k8s/Chart \
+  --namespace zzaia-agentic-workspace --create-namespace \
+  -f deploy/k8s/Chart/values.yaml \
+  -f deploy/k8s/Chart/values-images.yaml
 ```
 
-> **Important:** The target mount point must already be mounted before running the deploy script. If a path under `/mnt/`, `/media/`, `/data/`, `/disk/`, or `/storage/` is provided and the directory resolves to the root filesystem, the deploy script fails with an error to prevent silent disk exhaustion.
-
-**SDK flags** (opt-in, installed at first container start):
-
-| Flag (Ubuntu/macOS) | Flag (Windows) | SDK installed | Auto-enables |
-|---------------------|---------------|---------------|--------------|
-| `--node` | `-Node` | Node.js 24 via NVM | — |
-| `--node-frontend` | `-NodeFrontend` | Angular CLI, Vite, TypeScript (npm globals) | `--node` |
-| `--java` | `-Java` | Temurin JDK 21 | — |
-| `--rust` | `-Rust` | Rust via rustup | — |
-| `--lua` | `-Lua` | Lua 5.4 + luarocks | — |
-| `--cpp` | `-Cpp` | clang, cmake, build-essential | — |
-| `--clojure` | `-Clojure` | Clojure CLI | `--java` |
-| `--go` | `-Go` | Go 1.24.4 | — |
-| `--kotlin` | `-Kotlin` | Kotlin via SDKMAN | `--java` |
-| `--ruby` | `-Ruby` | Ruby 3.4.4 via rbenv | — |
-| `--php` | `-Php` | PHP 8.2 + Composer | — |
-| `--swift` | `-Swift` | Swift 6.1.2 | — |
-
-**.NET and Python are always installed.** All other SDKs are opt-in. Complete example with all features enabled:
+For a production-shaped cluster, also layer `-f deploy/k8s/Chart/values-production.yaml` and set the Azure Key Vault identity:
 
 ```bash
-./deploy/ubuntu.sh \
-  --workspace-name my-org \
-  --ssh-public-key "ssh-ed25519 AAAA..." \
-  --admin-email admin@example.com \
-  --admin-password "MyP@ss1234!x" \
-  --gpu \
-  --observability \
-  --profiles vscode,devcontainer,jupyter,tunnel,portainer \
-  --nginx-proxy-port 80 \
-  --ssh-port 2222 \
-  --dind-data-path /mnt/dind-disk/dind-storage \
-  --node-frontend \
-  --java \
-  --rust \
-  --lua \
-  --cpp \
-  --clojure \
-  --go \
-  --kotlin \
-  --ruby \
-  --php \
-  --swift
+helm upgrade --install zzaia-workspace deploy/k8s/Chart \
+  --namespace zzaia-agentic-workspace --create-namespace \
+  -f deploy/k8s/Chart/values.yaml \
+  -f deploy/k8s/Chart/values-production.yaml \
+  -f deploy/k8s/Chart/values-images.yaml \
+  --set externalSecrets.azurekv.vaultUrl=https://<vault>.vault.azure.net \
+  --set externalSecrets.azurekv.clientId=<uuid> \
+  --set externalSecrets.azurekv.tenantId=<uuid>
 ```
 
-**With Bitwarden token** — vault-server bootstraps all secrets from Bitwarden at startup. Manage or rotate via Vault UI afterward.
+**GPU:** set `--set gpu.enabled=true` — this both requests `nvidia.com/gpu` and turns on the NVIDIA Container Toolkit inside `dind-server`. Requires the cluster's `nvidia` RuntimeClass and device plugin (owned by the infra chart, not this one).
 
-**Without token** (press Enter) — vault-server starts with an empty KV store. The script prints the root token retrieval command and the KV paths to populate via Vault UI.
+**Observability:** nothing to opt into — every pod ships logs/metrics/traces to the cluster's existing SigNoz via the shared OTel Collector by default. There is no separate observability stack to enable or disable per workspace.
 
-**After the first run**, all containers restart automatically when Docker starts (policy: `restart: unless-stopped`). On Linux servers without Docker Desktop, the stack recovers on host reboot as long as the containers were running when the host shut down — no manual intervention needed.
+**SDKs (Node, Java, Rust, …):** installed at runtime by the Ansible bootstrap inside `workspace-server`, controlled by the same `*_ENABLED` flags as before — now set via `workspaceServer.env` in `values.yaml` rather than a deploy-script flag.
 
-> **BWS token persistence**: when `BWS_ACCESS_TOKEN` is provided, the deploy script writes it to `~/.config/zzaia/bws_token` (mode 600) and passes it to vault-server as a Docker Compose secret mounted at `/run/secrets/bws_token`. This file survives host reboots, so vault-server can re-bootstrap from Bitwarden after an unexpected restart. BWS is only used at vault bootstrap; once secrets are stored in Vault KV, the token is no longer needed until the Vault volume is wiped.
+See [`deploy/k8s/README.md`](deploy/k8s/README.md) for the full build/deploy reference, including per-image rebuild and registry override.
 
 ---
 
 ## Step 4 — Access the Workspace
 
-All HTTP front-ends are served through a single `nginx-proxy` container, routed by subdomain (`<app>.<WORKSPACE_NAME>.local`) instead of per-app host ports. The deploy script now offers to add the required entries to your hosts file automatically (prompts for `sudo`/Administrator). Skip this with `--skip-hosts` (`-SkipHosts` on Windows); it's also skipped automatically for non-interactive runs or if declined. In any of those cases, add these lines to your local `/etc/hosts` manually (substitute your actual `WORKSPACE_NAME`, e.g. `my-org`):
+All HTTP front-ends are served through the cluster's Kong ingress, routed by subdomain under `*.workspace.zzaia.com`. Local resolution is a dnsmasq wildcard installed by `deploy/k8s/bootstrap.sh` (or run `./deploy/k8s/setup-workspace-dns.sh` directly) — no `/etc/hosts` editing needed.
 
-```
-127.0.0.1 vault.my-org.local vscode.my-org.local aspire.my-org.local jupyter.my-org.local portainer.my-org.local bifrost.my-org.local ssh.my-org.local
-```
+> Kong's proxy Service listens on **`:8443`**, not the default 443 (see the cluster repo's `deploy/ansible/roles/ring`) — every URL below needs that port. `.Values.ingress.httpsPort` controls it; the chart's own `helm install` output (NOTES.txt) always prints the correct port.
 
 | Access | URL / Command |
 |--------|--------------|
-| **VS Code** (browser) | `http://vscode.<WORKSPACE_NAME>.local` — requires `--profile vscode` at startup |
-| **SSH** | `ssh -p <SSH_PORT> user@ssh.<WORKSPACE_NAME>.local` (default port `2222`) — not proxied (not HTTP), hostname is a plain `/etc/hosts` alias to `127.0.0.1` |
+| **VS Code** (browser) | `https://vscode.workspace.zzaia.com:8443` |
+| **SSH** | `kubectl -n zzaia-agentic-workspace port-forward svc/workspace-server 2222:2222`, then `ssh -p 2222 user@localhost` — SSH is TCP, not routed through Kong |
 | **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
-| **Aspire Dashboard** | `http://aspire.<WORKSPACE_NAME>.local` |
-| **Vault UI** | `http://vault.<WORKSPACE_NAME>.local/ui` |
-| **Portainer** | `http://portainer.<WORKSPACE_NAME>.local` — requires `--profile portainer` at startup |
-| **Bifrost UI** | `http://bifrost.<WORKSPACE_NAME>.local` — gateway dashboard: logs, provider config, MCP clients |
-| **SigNoz UI** (observability) | `http://signoz.<WORKSPACE_NAME>.local` — only when `--observability` was used at startup |
-| **SigNoz MCP** (observability) | `http://signoz-mcp.<WORKSPACE_NAME>.local/mcp` — streamableHttp MCP endpoint for external agents |
+| **Aspire Dashboard** | `https://aspire.workspace.zzaia.com:8443` |
+| **Portainer** | `https://portainer.workspace.zzaia.com:8443` |
+| **Bifrost UI** | `https://bifrost.workspace.zzaia.com:8443` — gateway dashboard: logs, provider config, MCP clients |
+| **SigNoz UI** | The cluster's existing SigNoz instance (see the cluster repo's docs) — not deployed per-workspace |
 
-Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar containers. The Aspire dashboard starts empty and receives telemetry when an AppHost is running. Vault UI provides interactive secret management and audit logs.
-
-> `nginx-proxy` listens on `127.0.0.1:${NGINX_PROXY_PORT:-80}`. Override with the `--nginx-proxy-port` deploy flag (`-NginxProxyPort` on Windows) if port 80 is taken — e.g. when running multiple workspaces on the same host. None of the proxied apps enforce their own auth by default — the router is network-only (localhost-bound), matching the previous per-port exposure model. When overridden, every URL in the table above needs a `:PORT` suffix (e.g. `http://vault.<WORKSPACE_NAME>.local:81/ui`) — the deploy script's own "Access:" printout reflects this automatically.
+Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar pods, each scoped to only the Key Vault credential group it needs. The Aspire dashboard starts empty and receives telemetry when an AppHost is running.
 
 ---
 
@@ -321,84 +201,45 @@ All configured tools should show as connected. Then verify commands are availabl
 
 | Symptom | Fix |
 |---------|-----|
-| MCP shows disconnected | MCP packages are pre-installed in sidecar images (no runtime npx). Wait ~15s for Vault secret fetch + supergateway init, then retry `/mcp`. If a sidecar has no secret configured in Vault it enters idle mode (expected) |
-| Workspace slow to start | workspace-server runs tool installation on first boot; headroom waits for qdrant/neo4j — allow up to 90s on first boot |
-| Agent API calls failing | Run `docker logs <WORKSPACE_NAME>-headroom-1` — headroom may still be initializing |
-| SigNoz shows no data | Allow 2–3 min after startup for ClickHouse initialization; check `docker logs <WORKSPACE_NAME>-signoz-server-1` |
-| Container not starting | Run `docker logs <WORKSPACE_NAME>-workspace-server-1` or `docker logs <WORKSPACE_NAME>-mcp-azure-devops-1` |
-| Port already in use | Stop any existing stack via Docker Desktop before re-running |
-| SSH key rejected | Verify `SSH_PUBLIC_KEY` starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
-| Terminal `claude` shows onboarding wizard | Home volume was created before the fix — delete `<WORKSPACE_NAME>-home` volume and restart, or run `claude setup-token` inside the container |
-| Extension auth error: `invalid header value` | `CLAUDE_CODE_OAUTH_TOKEN` contains a newline from terminal line-wrap — remove all line breaks from the token and recreate the container |
-| Vault UI shows 'sealed' | vault-server auto-unseals on startup using keys in vault-data volume. Check logs: `docker logs <WORKSPACE_NAME>-vault-server-1` |
-
----
-
-## Running Multiple Workspaces Simultaneously
-
-Each workspace gets its own isolated Docker Compose stack identified by `WORKSPACE_NAME`. Use different ports per stack so they can run at the same time:
-
-```bash
-# Workspace 1 — default ports
-./deploy/ubuntu.sh --workspace-name org-one --ssh-public-key "ssh-ed25519 AAAA..." \
-    --nginx-proxy-port 80 --ssh-port 2222
-
-# Workspace 2 — different ports
-./deploy/ubuntu.sh --workspace-name org-two --ssh-public-key "ssh-ed25519 AAAA..." \
-    --nginx-proxy-port 81 --ssh-port 2223
-```
-
-Each stack is fully isolated: separate containers (`org-one-workspace-1`, `org-two-workspace-1`), separate MCP sidecars, separate Vault volumes, and separate internal networks. `--nginx-proxy-port` is the one that matters most here — all `*.local` subdomain routing (Vault, VS Code, Aspire, etc.) goes through it, so two workspaces sharing the default port 80 will fail to start together.
-
-> When `--nginx-proxy-port` (or `-NginxProxyPort`) is set to anything other than `80`, every `*.local` URL printed by the deploy script includes `:PORT` — use that exact URL in your browser. A `/etc/hosts` (or Windows hosts file) entry only maps a hostname to an IP; it never carries port information, so the port must come from the URL itself.
-
-> If both workspaces use `--observability`, also set distinct `--otel-grpc-port`/`--otel-http-port` (default `4317`/`4318`) — the SigNoz OTel Collector publishes these directly to the host (unlike the `nginx-proxy`-routed apps) since they receive OTLP telemetry from processes running outside Docker (e.g. an AppHost on the host machine).
-
-**Recommended port assignments:**
-
-| Workspace | `NGINX_PROXY_PORT` | `SSH_PORT` | `OTEL_GRPC_PORT` | `OTEL_HTTP_PORT` |
-|-----------|--------------------|------------|------------------|------------------|
-| org-one   | `80`                | `2222`     | `4317`           | `4318`           |
-| org-two   | `81`                | `2223`     | `4417`           | `4418`           |
-| org-three | `82`                | `2224`     | `4517`           | `4518`           |
-
-*(`OTEL_GRPC_PORT`/`OTEL_HTTP_PORT` only matter if more than one concurrent workspace uses `--observability`.)*
-| org-four  | `83`                | `2225`     |
+| MCP shows disconnected | MCP images are pre-installed (no runtime npx). Wait ~15s for the ExternalSecret to sync + supergateway init, then retry `/mcp`. A sidecar with no Key Vault entry for its own secret group CrashLoopBackOffs (by design, see the entrypoint's readiness contract) rather than idling silently |
+| Workspace slow to start | `workspace-server` runs tool installation on first boot; other pods wait on its `tools.ready` sentinel — allow up to 30 min on a cold `workspace-tools` PVC |
+| Agent API calls failing | `kubectl -n zzaia-agentic-workspace logs deploy/ml-server` — the LLM proxy may still be initializing |
+| Pod not starting | `kubectl -n zzaia-agentic-workspace describe pod <name>` then `kubectl -n zzaia-agentic-workspace logs <name>` |
+| ExternalSecret not syncing | `kubectl -n zzaia-agentic-workspace get externalsecret` — check `STATUS`; verify the Key Vault object name matches exactly (see AZURE_KEYVAULT.md) |
+| SSH key rejected | Verify `SSH_PUBLIC_KEY` in the `workspace` Key Vault secret starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
+| Terminal `claude` shows onboarding wizard | The `workspace-home` PVC predates the fix — delete and recreate it, or run `claude setup-token` inside the pod |
+| Extension auth error: `invalid header value` | `CLAUDE_CODE_OAUTH_TOKEN` contains a newline from terminal line-wrap — remove all line breaks from the token, update the `ai` Key Vault secret, and restart the affected pod |
+| `*.workspace.zzaia.com` doesn't resolve | Re-run `./deploy/k8s/setup-workspace-dns.sh` on the k3s host; verify with `getent hosts vscode.workspace.zzaia.com` |
 
 ---
 
 ## Secret Rotation
 
-To update secrets (API keys, PATs, cloud credentials), log in to the Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` using the root token stored in the `vault-data` volume:
+Update the value directly in Azure Key Vault (see [`AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) for the `az keyvault secret set` commands per group). The External Secrets Operator re-syncs on `externalSecrets.refreshInterval` (default `1h`) — no redeploy needed. To pick up a rotated value immediately:
 
 ```bash
-# Retrieve root token from vault-data volume
-docker run --rm -v <WORKSPACE_NAME>-vault-data:/vault/data alpine cat /vault/data/.init | grep root_token
+kubectl -n zzaia-agentic-workspace annotate externalsecret zzaia-workspace-secrets-<group> \
+  force-sync=$(date +%s) --overwrite
 ```
 
-Then navigate to the secret path in Vault UI and update the value. MCP sidecar containers re-fetch secrets at next restart.
+Then restart the pods that consume that group so the new env var takes effect:
 
-> Multiple volumes exist per workspace, each with an independent lifecycle:
+```bash
+kubectl -n zzaia-agentic-workspace rollout restart deployment/<name>
+```
+
+> PVC lifecycle (same concept as before, now Kubernetes-native):
 >
-> | Volume | Contains | Delete to… |
-> |--------|----------|-----------|
-> | `<WORKSPACE_NAME>-secrets` | SSH public key, persisted env | Rotate SSH key |
-> | `<WORKSPACE_NAME>-home` | Home directory (user config, credentials, workspace repos) | Reset all user state |
-> | `<WORKSPACE_NAME>-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next workspace-server start |
-> | `<WORKSPACE_NAME>-vault-data` | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); init/unseal keys at `/vault/data/.init` | Reset Vault secrets (caution: loses all stored values) |
+> | PVC | Contains | Delete to… |
+> |-----|----------|-----------|
+> | `workspace-home` | Home directory (user config, credentials, workspace repos) | Reset all user state |
+> | `workspace-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next `workspace-server` start |
+> | `workspace-sshkeys` | Host key material | Rotate host identity |
+> | `ml-tools` | ml-server's own toolchain | Force ml-server re-install |
 >
 > ```bash
-> # Rotate SSH key only
-> docker volume rm <WORKSPACE_NAME>-secrets
->
-> # Reset home (user configs, credentials, repos)
-> docker volume rm <WORKSPACE_NAME>-home
->
-> # Force tool re-install (delete tools volume)
-> docker volume rm <WORKSPACE_NAME>-tools
->
-> # Full decommission
-> docker volume rm <WORKSPACE_NAME>-secrets <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools <WORKSPACE_NAME>-vault-data
+> kubectl -n zzaia-agentic-workspace delete pvc zzaia-workspace-workspace-home
+> kubectl -n zzaia-agentic-workspace delete pvc zzaia-workspace-workspace-tools
 > ```
 
 ---

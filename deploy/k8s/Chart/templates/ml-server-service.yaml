@@ -1,0 +1,22 @@
+{{- if .Values.mlServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.mlServer.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.mlServer.name) | nindent 4 }}
+spec:
+  type: {{ .Values.mlServer.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.mlServer.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.mlServer.ports.http }}
+      targetPort: http
+      protocol: TCP
+    - name: embeddings
+      port: {{ .Values.mlServer.ports.embeddings }}
+      targetPort: embeddings
+      protocol: TCP
+{{- end }}

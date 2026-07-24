@@ -1,0 +1,86 @@
+{{- /*
+=============================================================================
+Ingress — replaces the compose nginx-proxy (docker/containers/nginx-proxy).
+Each compose `server { server_name <sub>.${WORKSPACE_NAME}.local; ... }` block
+becomes one Ingress host <sub>.<domain> routed through Kong. vault.* and
+signoz.* are NOT rendered here — those live in the shared infra namespace and
+are reused, not owned by this chart.
+
+Per-host enablement comes from each service's own `ingress.enabled` +
+`ingress.subdomain`; the chart-wide `ingress.enabled` gates the whole file.
+
+WEBSOCKET TIMEOUT (code-server / Jupyter / Aspire dashboard):
+  Kong's default proxy read timeout (60s) kills long-lived websockets. The
+  authoritative fix in Kong Ingress Controller 3.x (this cluster runs KIC
+  3.4.1 / Kong 3.7) is the Service-scoped annotations konghq.com/read-timeout
+  and konghq.com/write-timeout — verified against the KIC 3.x annotation
+  reference, they are ignored on Ingress objects. Those annotations therefore
+  belong on the vscode-sidecar and jupyter-sidecar *Service* objects (owned by
+  the sidecar author). This file additionally attaches konghq.com/override
+  (pointing at the KongIngress in kongingress.yaml) to the affected Ingresses
+  as a legacy KIC <=2.x compatibility path; on KIC 3.x it is a harmless no-op.
+=============================================================================
+*/ -}}
+{{- if .Values.ingress.enabled }}
+{{- $root := . }}
+{{- $v := .Values }}
+{{- $entries := list }}
+{{- if and $v.vscodeSidecar.enabled $v.vscodeSidecar.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.vscodeSidecar.name "subdomain" $v.vscodeSidecar.ingress.subdomain "port" $v.vscodeSidecar.ports.http "websocket" true) }}
+{{- end }}
+{{- if and $v.vscodeSidecar.enabled $v.vscodeSidecar.aspireIngress.enabled }}
+{{- $entries = append $entries (dict "name" $v.vscodeSidecar.name "subdomain" $v.vscodeSidecar.aspireIngress.subdomain "port" $v.vscodeSidecar.ports.aspire "websocket" true) }}
+{{- end }}
+{{- if and $v.jupyterSidecar.enabled $v.jupyterSidecar.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.jupyterSidecar.name "subdomain" $v.jupyterSidecar.ingress.subdomain "port" $v.jupyterSidecar.ports.http "websocket" true) }}
+{{- end }}
+{{- if and $v.bifrost.enabled $v.bifrost.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.bifrost.name "subdomain" $v.bifrost.ingress.subdomain "port" $v.bifrost.ports.http "websocket" false) }}
+{{- end }}
+{{- if and $v.mlServer.enabled $v.mlServer.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.mlServer.name "subdomain" $v.mlServer.ingress.subdomain "port" $v.mlServer.ports.http "websocket" false) }}
+{{- end }}
+{{- if and $v.portainer.enabled $v.portainer.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.portainer.name "subdomain" $v.portainer.ingress.subdomain "port" $v.portainer.ports.http "websocket" false) }}
+{{- end }}
+{{- if and $v.qdrant.enabled $v.qdrant.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.qdrant.name "subdomain" $v.qdrant.ingress.subdomain "port" $v.qdrant.ports.http "websocket" false) }}
+{{- end }}
+{{- if and $v.neo4j.enabled $v.neo4j.ingress.enabled }}
+{{- $entries = append $entries (dict "name" $v.neo4j.name "subdomain" $v.neo4j.ingress.subdomain "port" $v.neo4j.ports.http "websocket" false) }}
+{{- end }}
+{{- range $entries }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .subdomain }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" $root "component" .name) | nindent 4 }}
+  annotations:
+    {{- include "zzaia-workspace.ingressAnnotations" $root | nindent 4 }}
+    {{- if .websocket }}
+    konghq.com/override: {{ printf "%s-long-timeout" $root.Release.Name }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $root.Values.ingress.className }}
+  {{- if $root.Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ include "zzaia-workspace.ingressHost" (dict "root" $root "subdomain" .subdomain) | quote }}
+      secretName: {{ include "zzaia-workspace.tlsSecretName" $root | quote }}
+  {{- end }}
+  rules:
+    - host: {{ include "zzaia-workspace.ingressHost" (dict "root" $root "subdomain" .subdomain) | quote }}
+      http:
+        paths:
+          - path: {{ $root.Values.ingress.path }}
+            pathType: {{ $root.Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ .name }}
+                port:
+                  number: {{ .port }}
+{{- end }}
+{{- end }}

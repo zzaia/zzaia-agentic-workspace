@@ -1,0 +1,28 @@
+{{- /*
+Service fronting the workspace-server StatefulSet (SSH). Also serves as the
+StatefulSet's serviceName. Set workspaceServer.service.sshNodePort > 0 together
+with a NodePort/LoadBalancer service type to publish SSH outside the cluster.
+*/ -}}
+{{- if .Values.workspaceServer.enabled }}
+{{- $ss := .Values.workspaceServer }}
+{{- $svc := $ss.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $ss.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $ss.name) | nindent 4 }}
+spec:
+  type: {{ $svc.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $ss.name) | nindent 4 }}
+  ports:
+    - name: ssh
+      port: {{ $ss.ports.ssh }}
+      targetPort: {{ $ss.ports.ssh }}
+      protocol: TCP
+      {{- if and (gt (int $svc.sshNodePort) 0) (or (eq $svc.type "NodePort") (eq $svc.type "LoadBalancer")) }}
+      nodePort: {{ $svc.sshNodePort }}
+      {{- end }}
+{{- end }}

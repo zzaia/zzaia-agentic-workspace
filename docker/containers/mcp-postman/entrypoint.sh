@@ -18,55 +18,18 @@ fi
 
 log_info()    { echo -e "${_B}[mcp-postman]${_N} $*"; }
 log_warn()    { echo -e "${_Y}[mcp-postman] WARN:${_N} $*" >&2; }
+log_error()   { echo -e "${_R}[mcp-postman] ERROR:${_N} $*" >&2; }
 log_success() { echo -e "${_G}[mcp-postman] ✓${_N} $*"; }
 
-# ── AppRole login ─────────────────────────────────────────────────────────────
-vault_approle_login() {
-    local cred_file="/secrets/vault-approle-mcp.env"
-    [ -f "$cred_file" ] || return 1
-    local role_id secret_id
-    role_id=$(grep '^VAULT_ROLE_ID=' "$cred_file" | cut -d= -f2-)
-    secret_id=$(grep '^VAULT_SECRET_ID=' "$cred_file" | cut -d= -f2-)
-    [ -n "$role_id" ] && [ -n "$secret_id" ] || return 1
-    local resp
-    resp=$(wget -q -O - \
-        --post-data="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
-        --header="Content-Type: application/json" \
-        "${VAULT_ADDR}/v1/auth/approle/login" 2>/dev/null || echo '{}')
-    VAULT_TOKEN=$(printf '%s' "$resp" | jq -r '.auth.client_token // empty' 2>/dev/null || echo "")
-    [ -n "$VAULT_TOKEN" ] && export VAULT_TOKEN && return 0 || return 1
-}
-
-# ── Fetch secrets ─────────────────────────────────────────────────────────────
-fetch_secrets() {
-    log_info "Fetching secrets from Vault..."
-
-    local postman_api_key=""
-
-    if [ -n "${VAULT_ADDR:-}" ]; then
-        vault_approle_login || log_warn "AppRole login failed — secret will be empty"
-    fi
-
-    if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
-        local vault_data
-        vault_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/postman" 2>/dev/null || echo '{}')
-        postman_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.POSTMAN_API_KEY // empty' 2>/dev/null || echo "")
-    fi
-
-    unset VAULT_TOKEN
-    export POSTMAN_API_KEY="$postman_api_key"
-
-    log_success "Secrets loaded"
-}
-
 # ── Validate secrets ──────────────────────────────────────────────────────────
+# Secrets are projected into the pod environment by External Secrets Operator
+# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
-    if [ -z "${POSTMAN_API_KEY}" ]; then
-        log_warn "POSTMAN_API_KEY not set - mcp-postman idle."
-        trap 'exit 0' TERM INT
-        while :; do sleep 3600 & wait $!; done
+    if [ -z "${POSTMAN_API_KEY:-}" ]; then
+        log_error "POSTMAN_API_KEY not set — cannot start mcp-postman. Check the workspace credentials secret projection."
+        exit 1
     fi
+    log_success "Secrets present"
 }
 
 # ── Start server ──────────────────────────────────────────────────────────────
@@ -77,7 +40,6 @@ start_server() {
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 main() {
-    fetch_secrets
     validate_secrets
     start_server
 }

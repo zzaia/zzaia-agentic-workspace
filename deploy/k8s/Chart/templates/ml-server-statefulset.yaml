@@ -1,0 +1,110 @@
+{{- if .Values.mlServer.enabled }}
+{{- $bifrost := printf "http://%s:%v" .Values.llmProxy.bifrostService .Values.llmProxy.bifrostPort -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.mlServer.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.mlServer.name) | nindent 4 }}
+spec:
+  replicas: {{ .Values.mlServer.replicas }}
+  serviceName: {{ .Values.mlServer.name }}
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.mlServer.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.mlServer.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- if .Values.gpu.enabled }}
+      runtimeClassName: {{ .Values.gpu.runtimeClassName }}
+      {{- end }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{ . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.mlServer.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ .Values.mlServer.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.mlServer) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.mlServer) }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.mlServer.ports.http }}
+            - name: embeddings
+              containerPort: {{ .Values.mlServer.ports.embeddings }}
+          env:
+            - name: GPU_ENABLED
+              value: {{ .Values.gpu.enabled | quote }}
+            - name: INSTALL_PREFIX
+              value: {{ .Values.mlServer.env.installPrefix | quote }}
+            - name: VERSIONS_FILE
+              value: {{ .Values.mlServer.env.versionsFile | quote }}
+            - name: PORT
+              value: {{ .Values.mlServer.env.port | quote }}
+            - name: QDRANT_URL
+              value: {{ include "zzaia-workspace.qdrantUrl" . | quote }}
+            - name: NEO4J_URI
+              value: {{ include "zzaia-workspace.neo4jUri" . | quote }}
+            - name: NEO4J_USERNAME
+              value: {{ .Values.mlServer.env.neo4jUsername | quote }}
+            - name: NEO4J_DATABASE
+              value: {{ .Values.mlServer.env.neo4jDatabase | quote }}
+            - name: NEO4J_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
+                  key: {{ .Values.neo4j.auth.passwordSecretKey }}
+            - name: HEADROOM_TELEMETRY
+              value: {{ .Values.mlServer.env.headroomTelemetry | quote }}
+            - name: HEADROOM_MIN_TOKENS
+              value: {{ .Values.mlServer.env.headroomMinTokens | quote }}
+            - name: HEADROOM_COMPRESS_USER_MESSAGES
+              value: {{ .Values.mlServer.env.headroomCompressUserMessages | quote }}
+            # compose disables OTEL export on ml-server: it is the LLM proxy, not
+            # an instrumented app. Telemetry stays off here regardless of the
+            # cluster observability toggle.
+            - name: OTEL_TRACES_EXPORTER
+              value: "none"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: ANTHROPIC_TARGET_API_URL
+              value: {{ printf "%s/anthropic" $bifrost | quote }}
+            - name: GEMINI_TARGET_API_URL
+              value: {{ printf "%s/genai" $bifrost | quote }}
+            - name: OPENAI_TARGET_API_URL
+              value: {{ $bifrost | quote }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" .Values.mlServer.securityContext) | nindent 12 }}
+          resources:
+            requests:
+              {{- toYaml .Values.mlServer.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml .Values.mlServer.resources.limits | nindent 14 }}
+              {{- with (include "zzaia-workspace.gpuLimits" .) }}
+              {{ . | nindent 14 }}
+              {{- end }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.mlServer.ports.http "path" .Values.mlServer.probes.httpPath "cfg" .Values.mlServer.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.mlServer.ports.http "path" .Values.mlServer.probes.httpPath "cfg" .Values.mlServer.probes.readiness) | nindent 12 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" .Values.mlServer.ports.http "path" .Values.mlServer.probes.httpPath "cfg" .Values.mlServer.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: /workspace
+              readOnly: true
+            - name: ml-tools
+              mountPath: {{ .Values.volumes.mlTools.mountPath }}
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+            readOnly: true
+        - name: ml-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "mlTools") }}
+{{- end }}

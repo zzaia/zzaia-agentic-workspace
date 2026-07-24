@@ -9,66 +9,21 @@ export INSTALL_PREFIX="/opt/tools"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 
-# ── Load admin password from Docker secret for Ansible ───────────────────────
-# Exported only during bootstrap_workspace (Ansible run), then unset before sshd exec.
-# Agents connecting via SSH cannot see it in /proc/1/environ (sshd won't have it).
+# ── Load admin password for Ansible ──────────────────────────────────────────
+# ADMIN_PASSWORD is projected into the pod environment by External Secrets Operator
+# (Azure Key Vault → Kubernetes Secret → envFrom). Fall back to the legacy Docker
+# secret file for docker-compose back-compat. Exported only during bootstrap_workspace
+# (Ansible run), then unset before sshd exec, so agents connecting via SSH cannot see
+# it in /proc/1/environ (sshd won't have it).
 load_admin_password() {
+    if [ -n "${ADMIN_PASSWORD:-}" ]; then
+        return 0
+    fi
     # cap_drop:ALL removes DAC_OVERRIDE — must read as uid 1000 (file owner), not root.
     # DAC_OVERRIDE was re-added to cap_add for apt/dpkg support, but we still read as uid 1000 for defense-in-depth.
     local pw
     pw=$(runuser -u user -- cat /run/secrets/admin_password 2>/dev/null || echo "")
-    [ -n "$pw" ] && export ADMIN_PASSWORD="$pw" || log_warn "admin_password secret not found — sudo will be passwordless"
-}
-
-# ── Fetch Vault credentials via AppRole ───────────────────────────────────────
-fetch_vault_credentials() {
-    local cred_file="/secrets/vault-approle-workspace.env"
-    if [ ! -f "$cred_file" ]; then
-        log_warn "Vault AppRole credentials not found — starting without Vault secrets"
-        return 0
-    fi
-
-    local role_id secret_id
-    role_id=$(grep '^VAULT_ROLE_ID=' "$cred_file" | cut -d= -f2-)
-    secret_id=$(grep '^VAULT_SECRET_ID=' "$cred_file" | cut -d= -f2-)
-
-    if [ -z "$role_id" ] || [ -z "$secret_id" ]; then
-        log_warn "Invalid AppRole credentials — starting without Vault secrets"
-        return 0
-    fi
-
-    local login_response vault_token
-    login_response=$(wget -q -O - \
-        --post-data="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
-        --header="Content-Type: application/json" \
-        "${VAULT_ADDR:-http://vault-server:8200}/v1/auth/approle/login" 2>/dev/null || echo '{}')
-
-    vault_token=$(printf '%s' "$login_response" | jq -r '.auth.client_token // empty' 2>/dev/null || echo "")
-    unset role_id secret_id
-
-    if [ -z "$vault_token" ]; then
-        log_warn "Vault AppRole login failed — starting without Vault secrets"
-        return 0
-    fi
-
-    local vault="${VAULT_ADDR:-http://vault-server:8200}"
-
-    # Fetch git-sidecar agent key for SSH routing setup
-    local ws_data
-    ws_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
-        "${vault}/v1/secret/data/workspace" 2>/dev/null || echo '{}')
-    export GIT_SIDECAR_AGENT_KEY
-    GIT_SIDECAR_AGENT_KEY=$(printf '%s' "$ws_data" | jq -r '.data.data.GIT_SIDECAR_AGENT_KEY // empty' 2>/dev/null || echo "")
-
-    # Fetch ADO organization for org-specific git insteadOf routing
-    local ado_data
-    ado_data=$(wget -q -O - --header="X-Vault-Token: ${vault_token}" \
-        "${vault}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
-    export AZURE_DEVOPS_ORGANIZATION
-    AZURE_DEVOPS_ORGANIZATION=$(printf '%s' "$ado_data" | jq -r '.data.data.AZURE_DEVOPS_ORGANIZATION // empty' 2>/dev/null || echo "")
-
-    unset vault_token
-    log_success "Vault credentials loaded"
+    [ -n "$pw" ] && export ADMIN_PASSWORD="$pw" || log_warn "ADMIN_PASSWORD not set — sudo will be passwordless"
 }
 
 # ── Workspace bootstrap ───────────────────────────────────────────────────────
@@ -221,8 +176,10 @@ main() {
     log_info "Starting zzaia workspace-server..."
     log_info "Workspace: $WORKSPACE_NAME"
 
+    # Secrets (GIT_SIDECAR_AGENT_KEY, AZURE_DEVOPS_ORGANIZATION, ADMIN_PASSWORD, …) are
+    # projected into the pod environment by External Secrets Operator (Azure Key Vault →
+    # Kubernetes Secret → envFrom); the consumers below read them directly from the env.
     load_admin_password
-    fetch_vault_credentials
     bootstrap_workspace
     setup_git_sidecar
     unset ADMIN_PASSWORD

@@ -1,0 +1,78 @@
+{{- /*
+Provisioning identity for the workspace agent. Lets the in-cluster agent stand
+up and tear down ad-hoc infra IN ITS OWN NAMESPACE only. Everything here is
+NAMESPACED (ServiceAccount + Role + RoleBinding) — never a ClusterRole — so the
+grant cannot reach other namespaces or cluster-scoped objects.
+
+Contrast with the infra chart's k8s-mcp-data-engine ServiceAccount, which holds
+a read-only ClusterRole (get/list/watch) for observability. This one is
+read-write but confined: create/update/patch/delete on the workload primitives.
+
+Privilege-escalation guard: the rbac.authorization.k8s.io API group is
+DELIBERATELY EXCLUDED. The agent cannot create Roles, RoleBindings, ClusterRoles
+or ClusterRoleBindings, so it can never grant itself (or anything it deploys)
+more access than it already has.
+*/}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "zzaia-workspace.fullname" . }}-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "provisioner") | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "zzaia-workspace.fullname" . }}-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "provisioner") | nindent 4 }}
+rules:
+  # Core workload primitives the agent may provision.
+  - apiGroups: [""]
+    resources:
+      - services
+      - configmaps
+      - secrets
+      - persistentvolumeclaims
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Pod inspection + exec/logs for debugging what it deploys (read + attach only;
+  # pods are created indirectly through the controllers below, never directly).
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "pods/exec"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - statefulsets
+      - replicasets
+      - daemonsets
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # NOTE: rbac.authorization.k8s.io is intentionally absent — no privilege
+  # escalation. Do not add roles/rolebindings/clusterroles here.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "zzaia-workspace.fullname" . }}-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "provisioner") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "zzaia-workspace.fullname" . }}-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "zzaia-workspace.fullname" . }}-provisioner
+    namespace: {{ .Release.Namespace }}

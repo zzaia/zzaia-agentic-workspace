@@ -1,0 +1,46 @@
+defaultNamespace: zzaia-agentic-workspace
+
+helm:
+  releaseName: zzaia-workspace
+  chart: "."
+  valuesFiles:
+    - values.yaml
+
+targetCustomizations:
+  - name: local
+    clusterSelector:
+      matchLabels:
+        env: local
+    helm:
+      valuesFiles:
+        - values.yaml
+      values:
+        storageClass: local-path
+        images:
+          registry: "localhost:5000"
+          pullSecret: ""
+        gpu:
+          enabled: false
+        # Local dev still resolves secrets from Azure Key Vault — Bitwarden/BWS
+        # is gone. The ClusterSecretStore is owned by the infra chart.
+        externalSecrets:
+          enabled: true
+          provider: "azurekv"
+          createClusterSecretStore: false
+        tunnelSidecar:
+          enabled: false
+
+  - name: production
+    clusterSelector:
+      matchLabels:
+        env: production
+    helm:
+      valuesFiles:
+        - values.yaml
+        - values-production.yaml
+      values:
+        externalSecrets:
+          azurekv:
+            vaultUrl: ""
+            clientId: ""
+            tenantId: ""

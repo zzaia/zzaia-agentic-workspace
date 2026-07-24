@@ -3,8 +3,6 @@ FROM zepai/knowledge-graph-mcp:standalone
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
-    wget \
-    jq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 --python /app/mcp/.venv/bin/python install --no-cache-dir "anthropic>=0.49.0"

@@ -1,6 +1,6 @@
 FROM alpine:3.21
 
-RUN apk add --no-cache bash openssh git wget jq
+RUN apk add --no-cache bash openssh git
 
 RUN addgroup -g 1000 git && \
     adduser -D -u 1000 -G git -s /bin/sh -h /home/git git && \

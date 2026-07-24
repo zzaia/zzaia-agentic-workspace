@@ -1,0 +1,32 @@
+{{- /*
+Service for jupyter-sidecar. Fronted by the jupyter.<domain> Ingress host.
+
+Jupyter's http port is a long-lived websocket (kernel connection). Kong's
+default 60s read timeout kills it, so this Service carries the KIC 3.x
+Service-scoped timeout annotations — see ingress.yaml's WEBSOCKET TIMEOUT note
+and kongingress.yaml for why these, not the KongIngress CRD, are authoritative.
+*/ -}}
+{{- if .Values.jupyterSidecar.enabled }}
+{{- $svc := .Values.jupyterSidecar }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+  {{- if .Values.ingress.enabled }}
+  annotations:
+    konghq.com/read-timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 | quote }}
+    konghq.com/write-timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 | quote }}
+  {{- end }}
+spec:
+  type: {{ $svc.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $svc.ports.http }}
+      targetPort: {{ $svc.ports.http }}
+      protocol: TCP
+{{- end }}

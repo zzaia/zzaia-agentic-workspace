@@ -20,8 +20,8 @@ Enables VS Code browser access independent of workspace container lifecycle whil
 ```gherkin
 Background:
   Given zzaia-agentic-workspace:latest image is built
-  And docker compose orchestrates workspace and vscode-server containers
-  And workspace-home volume is shared between containers
+  And the Helm chart deploys workspace-server and vscode-sidecar as separate pods
+  And the workspace-home PVC is shared between pods
 ```
 
 ---
@@ -43,12 +43,12 @@ Scenario: VS Code browser access survives workspace restart
 ### Scenario: vscode-server disabled for SSH-only deployments
 
 ```gherkin
-Scenario: vscode-server disabled for SSH-only deployments
-  Given VSCODE profile not specified in docker compose command
-  When docker compose up runs without --profile vscode
-  Then vscode-server container does not start
+Scenario: vscode-sidecar disabled for SSH-only deployments
+  Given vscodeSidecar.enabled=false in the Helm values
+  When the chart is installed or upgraded
+  Then no vscode-sidecar Deployment or Service is created
   And workspace SSH and Dev Containers operate normally
-  And no port 8080 is exposed on the host
+  And no vscode.workspace.zzaia.com Ingress host is served
 ```
 
 ---
@@ -407,18 +407,15 @@ Scenario: SSH connection to workspace
 
 ```gherkin
 Scenario: Workspace startup sequence
-  Given docker compose up with vscode profile
-  When qdrant and neo4j start and become healthy
-  And headroom starts (after qdrant and neo4j healthy)
-  And headroom healthcheck passes at http://localhost:8787/health
-  When workspace starts (after headroom healthy)
-  Then SSH daemon is ready (healthcheck: TCP/2222)
-  And credential wiring completes (GitHub, ADO)
-  And workspace-home volume is initialized with WORKSPACE_NAME templating
-  When vscode-server starts (after workspace healthy)
-  Then code serve-web binds 0.0.0.0:8080
-  And mounts same workspace-home (reads pre-wired auth, profile, extensions)
-  And healthcheck passes at http://localhost:8080
+  Given the Helm chart is installed with vscodeSidecar.enabled=true
+  When all pods (qdrant, neo4j, ml-server, workspace-server, vscode-sidecar) schedule in parallel — Kubernetes has no compose-style depends_on
+  Then ml-server's own readiness probe retries against qdrant/neo4j until they answer, rather than being admission-blocked
+  And workspace-server's SSH readiness probe (TCP/2222) and credential envFrom (GitHub, ADO groups) are independent of ml-server's state
+  And workspace-server's Ansible bootstrap populates the workspace-tools PVC and writes the tools.ready sentinel file when done
+  And workspace-home PVC is initialized with WORKSPACE_NAME templating on first mount
+  When vscode-sidecar's startup probe gates on the tools.ready sentinel plus its own HTTP health check
+  Then code serve-web binds 0.0.0.0:8080 only once both conditions pass
+  And it mounts the same workspace-home PVC (reads pre-wired auth, profile, extensions)
 ```
 
 ---
@@ -433,7 +430,7 @@ Enables same container image to serve as workspace and vscode-server with runtim
 Background:
   Given zzaia-agentic-workspace:latest image is built
   And image contains VS Code extensions layer and workspace tools
-  And devcontainer.json and docker-compose.yml are included in image
+  And devcontainer.json is included in the image (the Kubernetes chart, not a bundled compose file, is the deployment manifest)
 ```
 
 ---
@@ -456,7 +453,7 @@ Scenario: Same image runs as workspace and vscode-server
 
 ```gherkin
 Scenario: WORKSPACE_NAME runtime templating
-  Given WORKSPACE_NAME=myteam set in docker compose environment
+  Given workspaceName: myteam set in the Helm values (surfaced to the pod as WORKSPACE_NAME)
   When workspace entrypoint runs
   Then all {{WORKSPACE_NAME}} placeholders in .json and .code-workspace files are replaced with myteam
   And zzaia.code-workspace is renamed to myteam.code-workspace
@@ -784,7 +781,6 @@ Scenario: All CLIs share the same OpenMemory memory store
 
 ## Out of Scope
 
-- Kubernetes deployment patterns (Docker Compose only)
-- Multi-workspace container orchestration beyond docker compose
-- GUI-based container management tools
+- Container orchestration platforms other than the Kubernetes/Helm deployment in `deploy/k8s/` (Docker Compose has been retired)
+- GUI-based container management tools beyond Portainer (already deployed)
 - Windows-native Docker socket access

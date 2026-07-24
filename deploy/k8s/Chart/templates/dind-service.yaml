@@ -1,0 +1,27 @@
+{{- if .Values.dind.enabled }}
+{{- /*
+dind-server Service. Exposes the (unauthenticated) dockerd TCP endpoint in-namespace.
+Access is restricted by templates/dind-networkpolicy.yaml — the Service alone
+grants no protection; only labelled clients can actually connect.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.dind.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" .Values.dind.name) | nindent 4 }}
+spec:
+  type: {{ .Values.dind.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.dind.name) | nindent 4 }}
+  ports:
+    - name: tcp
+      port: {{ .Values.dind.ports.tcp }}
+      targetPort: tcp
+      protocol: TCP
+    - name: tls
+      port: {{ .Values.dind.ports.tls }}
+      targetPort: tls
+      protocol: TCP
+{{- end }}

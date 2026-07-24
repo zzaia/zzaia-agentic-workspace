@@ -1,0 +1,19 @@
+{{- if .Values.bifrost.enabled }}
+{{- $c := .Values.bifrost }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $c.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $c.name) | nindent 4 }}
+spec:
+  type: {{ $c.service.type }}
+  selector:
+    {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $c.name) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $c.ports.http }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

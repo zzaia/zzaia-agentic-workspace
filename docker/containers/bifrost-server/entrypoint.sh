@@ -14,87 +14,40 @@ log_info()    { echo -e "${_B}[bifrost-server]${_N} $*"; }
 log_warn()    { echo -e "${_Y}[bifrost-server] WARN:${_N} $*" >&2; }
 log_success() { echo -e "${_G}[bifrost-server] ✓${_N} $*"; }
 
-vault_approle_login() {
-    local cred_file="/secrets/vault-approle-mcp.env"
-    [ -f "$cred_file" ] || return 1
-    local role_id secret_id
-    role_id=$(grep '^VAULT_ROLE_ID=' "$cred_file" | cut -d= -f2-)
-    secret_id=$(grep '^VAULT_SECRET_ID=' "$cred_file" | cut -d= -f2-)
-    [ -n "$role_id" ] && [ -n "$secret_id" ] || return 1
-    local resp
-    resp=$(wget -q -O - \
-        --post-data="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
-        --header="Content-Type: application/json" \
-        "${VAULT_ADDR}/v1/auth/approle/login" 2>/dev/null || echo '{}')
-    VAULT_TOKEN=$(printf '%s' "$resp" | jq -r '.auth.client_token // empty' 2>/dev/null || echo "")
-    [ -n "$VAULT_TOKEN" ] && export VAULT_TOKEN && return 0 || return 1
-}
+load_secrets() {
+    log_info "Loading secrets from environment..."
 
-fetch_secrets() {
-    log_info "Fetching secrets from Vault..."
-
-    local anthropic_api_key="" claude_oauth_token="" openai_api_key="" gemini_api_key="" new_relic_api_key="" aws_key_id=""
-    local tavily_api_key="" github_pat="" postman_api_key="" ado_auth_token=""
-    local bifrost_vkey_claude_pro="" bifrost_vkey_agents_generic=""
+    # Secrets are projected into the pod environment by External Secrets Operator
+    # (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+    local anthropic_api_key="${ANTHROPIC_API_KEY:-}"
+    local claude_oauth_token="${CLAUDE_CODE_OAUTH_TOKEN:-}"
+    local openai_api_key="${OPENAI_API_KEY:-}"
+    local gemini_api_key="${GEMINI_API_KEY:-}"
+    local new_relic_api_key="${NEW_RELIC_API_KEY:-}"
+    local tavily_api_key="${TAVILY_API_KEY:-}"
+    local aws_key_id="${AWS_ACCESS_KEY_ID:-}"
+    local github_pat="${GITHUB_PERSONAL_ACCESS_TOKEN:-}"
+    local postman_api_key="${POSTMAN_API_KEY:-}"
+    local ado_auth_token="${ADO_MCP_AUTH_TOKEN:-}"
+    local azure_portal_client_id="${AZURE_CLIENT_ID:-}"
+    local bifrost_vkey_claude_pro="${BIFROST_VIRTUAL_KEY_CLAUDE_PRO:-}"
+    local bifrost_vkey_agents_generic="${BIFROST_VIRTUAL_KEY_AGENTS_GENERIC:-}"
     local -a oauth_keys=() apikey_keys=()
 
-    if [ -n "${VAULT_ADDR:-}" ]; then
-        vault_approle_login || log_warn "AppRole login failed — no AI keys available"
-    fi
-
-    if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
-        local vault_data
-        vault_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/ai" 2>/dev/null || echo '{}')
-        anthropic_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.ANTHROPIC_API_KEY // empty' 2>/dev/null || echo "")
-        claude_oauth_token=$(printf '%s' "$vault_data" | jq -r '.data.data.CLAUDE_CODE_OAUTH_TOKEN // empty' 2>/dev/null || echo "")
-        openai_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.OPENAI_API_KEY // empty' 2>/dev/null || echo "")
-        gemini_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.GEMINI_API_KEY // empty' 2>/dev/null || echo "")
-        bifrost_vkey_claude_pro=$(printf '%s' "$vault_data" | jq -r '.data.data.BIFROST_VIRTUAL_KEY_CLAUDE_PRO // empty' 2>/dev/null || echo "")
-        bifrost_vkey_agents_generic=$(printf '%s' "$vault_data" | jq -r '.data.data.BIFROST_VIRTUAL_KEY_AGENTS_GENERIC // empty' 2>/dev/null || echo "")
-
-        local idx=1
-        while true; do
-            local oauth_val api_val
-            oauth_val=$(printf '%s' "$vault_data" | jq -r ".data.data.CLAUDE_OAUTH_TOKEN_${idx} // empty" 2>/dev/null || echo "")
-            api_val=$(printf '%s' "$vault_data" | jq -r ".data.data.ANTHROPIC_API_KEY_${idx} // empty" 2>/dev/null || echo "")
-            [ -z "$oauth_val" ] && [ -z "$api_val" ] && break
-            [ -n "$oauth_val" ] && oauth_keys+=("$oauth_val") && export ANTHROPIC_OAUTH_${idx}="$oauth_val"
-            [ -n "$api_val" ] && apikey_keys+=("$api_val") && export ANTHROPIC_APIKEY_${idx}="$api_val"
-            idx=$((idx + 1))
-        done
-
-        local integrations_data
-        integrations_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/integrations" 2>/dev/null || echo '{}')
-        new_relic_api_key=$(printf '%s' "$integrations_data" | jq -r '.data.data.NEW_RELIC_API_KEY // empty' 2>/dev/null || echo "")
-        tavily_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.TAVILY_API_KEY // empty' 2>/dev/null || echo "")
-
-        local aws_data
-        aws_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/aws" 2>/dev/null || echo '{}')
-        aws_key_id=$(printf '%s' "$aws_data" | jq -r '.data.data.AWS_ACCESS_KEY_ID // empty' 2>/dev/null || echo "")
-
-        local github_data
-        github_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/github" 2>/dev/null || echo '{}')
-        github_pat=$(printf '%s' "$github_data" | jq -r '.data.data.GITHUB_PERSONAL_ACCESS_TOKEN // empty' 2>/dev/null || echo "")
-
-        local postman_data
-        postman_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/postman" 2>/dev/null || echo '{}')
-        postman_api_key=$(printf '%s' "$postman_data" | jq -r '.data.data.POSTMAN_API_KEY // empty' 2>/dev/null || echo "")
-
-        local ado_data
-        ado_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/azure-devops" 2>/dev/null || echo '{}')
-        ado_auth_token=$(printf '%s' "$ado_data" | jq -r '.data.data.ADO_MCP_AUTH_TOKEN // empty' 2>/dev/null || echo "")
-
-        local azure_portal_data azure_portal_client_id=""
-        azure_portal_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-            "${VAULT_ADDR}/v1/secret/data/mcp/azure-portal" 2>/dev/null || echo '{}')
-        azure_portal_client_id=$(printf '%s' "$azure_portal_data" | jq -r '.data.data.AZURE_CLIENT_ID // empty' 2>/dev/null || echo "")
-    fi
+    # Optional numbered Anthropic key pool (two-tier mode). Not part of the base
+    # credential set — enumerated only if an operator additionally provides
+    # CLAUDE_OAUTH_TOKEN_N / ANTHROPIC_API_KEY_N env vars. Kept for forward-compat.
+    local idx=1
+    while true; do
+        local oauth_var="CLAUDE_OAUTH_TOKEN_${idx}"
+        local api_var="ANTHROPIC_API_KEY_${idx}"
+        local oauth_val="${!oauth_var:-}"
+        local api_val="${!api_var:-}"
+        [ -z "$oauth_val" ] && [ -z "$api_val" ] && break
+        [ -n "$oauth_val" ] && oauth_keys+=("$oauth_val") && export ANTHROPIC_OAUTH_${idx}="$oauth_val"
+        [ -n "$api_val" ] && apikey_keys+=("$api_val") && export ANTHROPIC_APIKEY_${idx}="$api_val"
+        idx=$((idx + 1))
+    done
 
     export TAVILY_AVAILABLE=""; [ -n "$tavily_api_key" ] && export TAVILY_AVAILABLE="true"
     export GITHUB_AVAILABLE=""; [ -n "$github_pat" ] && export GITHUB_AVAILABLE="true"
@@ -102,7 +55,6 @@ fetch_secrets() {
     export ADO_AVAILABLE=""; [ -n "$ado_auth_token" ] && export ADO_AVAILABLE="true"
     export AZURE_PORTAL_AVAILABLE=""; [ -n "$azure_portal_client_id" ] && export AZURE_PORTAL_AVAILABLE="true"
 
-    unset VAULT_TOKEN
     export NEW_RELIC_API_KEY_AVAILABLE=""
     [ -n "$new_relic_api_key" ] && export NEW_RELIC_API_KEY_AVAILABLE="true" && log_info "New Relic: API key available" || log_warn "New Relic: no API key — skipping newrelic MCP"
 
@@ -294,7 +246,7 @@ EOF
     fi
 
     if [ -z "$providers" ]; then
-        log_warn "No API keys configured — bifrost starts without providers (add keys via Vault UI)"
+        log_warn "No API keys configured — bifrost starts without providers (add keys to Azure Key Vault and re-sync the workspace credentials secret)"
     else
         log_success "Config generated with available providers"
     fi
@@ -306,7 +258,7 @@ start_server() {
 }
 
 main() {
-    fetch_secrets
+    load_secrets
     start_auth_proxy
     generate_config
     start_server

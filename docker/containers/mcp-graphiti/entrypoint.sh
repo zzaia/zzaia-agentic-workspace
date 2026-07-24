@@ -3,7 +3,9 @@ set -euo pipefail
 
 # Graphiti MCP Server — Agent memory backend via Neo4j knowledge graph
 # Routes LLM calls (entity extraction) through ml-server (Headroom) → bifrost-server → Anthropic
-# Embedder routing: GPU_ENABLED=true → local ml-server; else → cloud OpenAI via Vault
+# Embedder routing: GPU_ENABLED=true → local ml-server; else → cloud OpenAI.
+# OPENAI_API_KEY (cloud embedder path) is projected into the pod environment by
+# External Secrets Operator (Azure Key Vault → Kubernetes Secret → envFrom).
 
 if [ -t 1 ]; then
     _G='\033[0;32m'
@@ -18,53 +20,15 @@ log_info()    { echo -e "${_B}[mcp-graphiti]${_N} $*"; }
 log_warn()    { echo -e "${_Y}[mcp-graphiti] WARN:${_N} $*" >&2; }
 log_success() { echo -e "${_G}[mcp-graphiti] ✓${_N} $*"; }
 
-# ── Vault AppRole login ───────────────────────────────────────────────────────
-vault_approle_login() {
-    local cred_file="/secrets/vault-approle-mcp.env"
-    [ -f "$cred_file" ] || return 1
-    local role_id secret_id
-    role_id=$(grep '^VAULT_ROLE_ID=' "$cred_file" | cut -d= -f2-)
-    secret_id=$(grep '^VAULT_SECRET_ID=' "$cred_file" | cut -d= -f2-)
-    [ -n "$role_id" ] && [ -n "$secret_id" ] || return 1
-    local resp
-    resp=$(wget -q -O - \
-        --post-data="{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
-        --header="Content-Type: application/json" \
-        "${VAULT_ADDR}/v1/auth/approle/login" 2>/dev/null || echo '{}')
-    VAULT_TOKEN=$(printf '%s' "$resp" | jq -r '.auth.client_token // empty' 2>/dev/null || echo "")
-    [ -n "$VAULT_TOKEN" ] && export VAULT_TOKEN && return 0 || return 1
-}
-
-# ── Fetch credentials from Vault ──────────────────────────────────────────────
-fetch_secrets() {
-    log_info "Fetching secrets from Vault..."
-
-    local openai_api_key=""
-
-    # GPU_ENABLED=true: embedder from local ml-server (no Vault fetch needed)
-    # GPU_ENABLED=false: embedder from cloud OpenAI (fetch from Vault)
+# ── Validate embedder credentials ─────────────────────────────────────────────
+# OPENAI_API_KEY arrives via envFrom (ESO). Only the cloud embedder path needs it.
+validate_secrets() {
     if [ "${GPU_ENABLED:-false}" = "true" ]; then
-        log_info "GPU enabled — embedder will use local ml-server (no Vault fetch needed)"
+        log_info "GPU enabled — embedder will use local ml-server (no OpenAI key needed)"
+    elif [ -z "${OPENAI_API_KEY:-}" ]; then
+        log_warn "No OPENAI_API_KEY in environment — cloud embedder will be limited"
     else
-        if [ -n "${VAULT_ADDR:-}" ]; then
-            vault_approle_login || log_warn "AppRole login failed — no embedder key available"
-        fi
-
-        if [ -n "${VAULT_ADDR:-}" ] && [ -n "${VAULT_TOKEN:-}" ]; then
-            local vault_data
-            vault_data=$(wget -q -O - --header="X-Vault-Token: ${VAULT_TOKEN}" \
-                "${VAULT_ADDR}/v1/secret/data/ai" 2>/dev/null || echo '{}')
-            openai_api_key=$(printf '%s' "$vault_data" | jq -r '.data.data.OPENAI_API_KEY // empty' 2>/dev/null || echo "")
-        fi
-
-        unset VAULT_TOKEN
-        export OPENAI_API_KEY="${openai_api_key:-}"
-
-        if [ -z "$openai_api_key" ]; then
-            log_warn "No OpenAI API key from Vault — cloud embedder will be limited"
-        else
-            log_success "Secrets loaded (OpenAI for embeddings)"
-        fi
+        log_success "Embedder credentials present (OpenAI)"
     fi
 }
 
@@ -114,7 +78,7 @@ wait_for_ml_server() {
 # ── Prepare config YAML ───────────────────────────────────────────────────────
     # LLM: always route through ml-server (Headroom), regardless of GPU status.
     # ml-server itself forwards to bifrost-server (ANTHROPIC_TARGET_API_URL=http://bifrost-server:8080/anthropic,
-    # see docker-compose.yml's ml-server environment block) — the same convention every other
+    # see the ml-server env in deploy/k8s/Chart/values.yaml) — the same convention every other
     # client in this workspace uses (see docker/containers/workspace-server/entrypoint.sh's
     # setup_profile_env: ANTHROPIC_BASE_URL defaults to http://ml-server:8787). Pointing straight at
     # bifrost-server here would skip Headroom's compression/memory injection entirely.
@@ -212,7 +176,7 @@ main() {
     log_info "Starting mcp-graphiti..."
     log_info "Neo4j URI: ${NEO4J_URI:-bolt://database-neo4j:7687}"
 
-    fetch_secrets
+    validate_secrets
     wait_for_ml_server
     prepare_config
 

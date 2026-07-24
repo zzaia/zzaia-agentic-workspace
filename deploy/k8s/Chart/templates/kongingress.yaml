@@ -1,0 +1,33 @@
+{{- /*
+=============================================================================
+KongIngress — long read/write timeout for long-lived websocket routes
+(code-server, Jupyter, the Aspire dashboard). Replaces nginx-proxy's
+`proxy_read_timeout 3600s` (docker/containers/nginx-proxy/proxy.inc).
+
+VERIFIED against the Kong Ingress Controller 3.x annotation reference (this
+cluster runs KIC 3.4.1 / Kong 3.7):
+  * konghq.com/read-timeout and konghq.com/write-timeout are SERVICE-scoped
+    and are the authoritative mechanism on KIC 3.x. They must be set on the
+    vscode-sidecar and jupyter-sidecar *Service* objects (owned by the
+    sidecar author) with value "{{ mul .Values.ingress.readTimeoutSeconds 1000 }}".
+  * The KongIngress `proxy` section below is the legacy KIC <=2.x mechanism.
+    It is kept for clusters still honouring konghq.com/override and applies
+    only when referenced from a Service (or Ingress on old KIC). It is a
+    harmless no-op on KIC 3.x. Namespaced CRD -> lives in this release
+    namespace, no collision with the infra chart.
+=============================================================================
+*/ -}}
+{{- if .Values.ingress.enabled }}
+apiVersion: configuration.konghq.com/v1
+kind: KongIngress
+metadata:
+  name: {{ printf "%s-long-timeout" .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "ingress") | nindent 4 }}
+proxy:
+  protocol: http
+  connect_timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 }}
+  read_timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 }}
+  write_timeout: {{ mul .Values.ingress.readTimeoutSeconds 1000 }}
+{{- end }}

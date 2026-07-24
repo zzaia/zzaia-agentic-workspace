@@ -1,0 +1,24 @@
+apiVersion: fleet.cattle.io/v1alpha1
+kind: GitRepo
+metadata:
+  name: zzaia-agentic-workspace-local
+  namespace: fleet-local
+spec:
+  # This GitRepo is owned by the agentic-workspace repo and applied to the
+  # cluster once at bootstrap (kubectl apply -f deploy/fleet/gitrepo.yaml). It
+  # tells Fleet — running in the finance-data-engine-provisioned cluster — to
+  # reconcile THIS repo's Helm chart. It intentionally lives here, not in the
+  # finance-data-engine control repo, so the cluster repo carries no
+  # workspace-specific implementation.
+  repo: https://github.com/zzaia/zzaia-agentic-workspace.git
+  branch: feature/improve-agentic-system
+  paths:
+    - deploy/k8s/Chart
+  # Deploy namespace (zzaia-agentic-workspace) is owned by the chart's own
+  # fleet.yaml `defaultNamespace` — not pinned here, so the chart can create its
+  # cluster-scoped objects without Fleet's targetNamespace override rejecting them.
+  targets:
+    - name: local
+      clusterSelector:
+        matchLabels:
+          env: local

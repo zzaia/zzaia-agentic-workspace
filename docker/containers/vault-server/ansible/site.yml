@@ -1,6 +1,0 @@
----
-- name: vault-server bootstrap setup
-  hosts: local
-  gather_facts: no
-  roles:
-    - bws

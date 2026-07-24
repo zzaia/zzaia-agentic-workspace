@@ -1,0 +1,70 @@
+{{- /*
+=============================================================================
+Core-workspace PersistentVolumeClaims
+=============================================================================
+PVCs owned by the core-workspace unit:
+  workspaceHome     /home/user   — RW by workspace-server, vscode, jupyter,
+                                   containers-dev, tunnel; RO by ml-server,
+                                   mcp-codegraph. accessMode from values.
+  workspaceTools    /opt/tools   — LOCKED decision 4: STAYS a PVC, populated at
+                                   runtime by the workspace-server Ansible
+                                   bootstrap. Never baked into an image. RW by
+                                   workspace-server / containers-dev, RO by the
+                                   other /opt/tools consumers.
+  workspaceSshkeys  /var/lib/workspace/ssh-hostkeys — workspace-server only.
+  mlTools           /opt/ml-tools — ml-server only.
+
+NOTE — workspace-credentials is deliberately NOT a PVC here. Under compose it
+carried Vault AppRole env files written by the (now dropped) vault-server. It is
+replaced by the External Secrets target Secret
+(.Values.externalSecrets.targetSecretName) delivered via envFrom + the
+admin_password file mount. There is no volumes.workspaceCredentials key.
+
+SINGLE-NODE vs MULTI-NODE:
+  workspaceHome and workspaceTools are mounted RW by MULTIPLE pods at once. The
+  default storageClass (local-path) is node-local and effectively ReadWriteOnce,
+  so on single-node k3s every consumer lands on the one node and shares the
+  volume — this works because all sidecar Deployments use strategy: Recreate.
+  No RWX-capable storageClass (Longhorn / NFS) exists in the
+  finance-data-engine cluster repo today, so values-production.yaml ALSO uses
+  ReadWriteOnce for these two volumes and sets .Values.nodeSelector to pin
+  EVERY workload in the release to one node — the same single-node strategy
+  as local, just made explicit via a real node label instead of an implicit
+  single k3s node. If a real RWX class is provisioned later, switch these two
+  volumes back to ReadWriteMany and drop the nodeSelector.
+
+The PVC accessMode is taken verbatim from each .Values.volumes.<key>.accessMode
+so the production RWO override applies without touching these templates.
+=============================================================================
+*/ -}}
+{{- /*
+  Create a standalone PVC for every .Values.volumes entry that a workload
+  references via a static claimName. Two volumes are created elsewhere and MUST
+  be excluded to avoid duplicate PVCs:
+    portainerData      -> templates/portainer-pvc.yaml
+    gitSidecarHostkeys -> git-sidecar StatefulSet volumeClaimTemplate
+  Non-volume keys under .Values.volumes (registry/defaultTag/pullPolicy/…) are
+  skipped by the "must be a map with .enabled" guard below.
+*/ -}}
+{{- $pvcExcluded := list "portainerData" "gitSidecarHostkeys" }}
+{{- range $key, $vol := $.Values.volumes }}
+{{- if and (kindIs "map" $vol) (hasKey $vol "accessMode") (not (has $key $pvcExcluded)) }}
+{{- if $vol.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "zzaia-workspace.pvcName" (dict "root" $ "volume" $key) }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" $ "component" (kebabcase $key)) | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $vol.accessMode }}
+  storageClassName: {{ include "zzaia-workspace.volumeStorageClass" (dict "root" $ "volume" $vol) | quote }}
+  resources:
+    requests:
+      storage: {{ $vol.size }}
+{{- end }}
+{{- end }}
+{{- end }}

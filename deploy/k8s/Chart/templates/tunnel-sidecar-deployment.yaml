@@ -1,0 +1,79 @@
+{{- /*
+tunnel-sidecar (VS Code remote tunnel). OPT-IN: tunnelSidecar.enabled defaults to
+false because it opens an outbound tunnel to Microsoft. No Service (no listening
+port). Mounts workspace-home RW and workspace-tools READ-ONLY, so it participates
+in the same single-node PVC sharing described in vscode-sidecar-deployment.yaml —
+strategy: Recreate. compose declared NO admin_password secret for this service,
+so none is mounted here.
+*/ -}}
+{{- if .Values.tunnelSidecar.enabled }}
+{{- $svc := .Values.tunnelSidecar }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" $svc.name) | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 8 }}
+    spec:
+      {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
+      {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      securityContext:
+        {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" $svc.securityContext) | nindent 8 }}
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.tunnelSidecar) | quote }}
+          imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.tunnelSidecar) }}
+          securityContext:
+            {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $svc.securityContext) | nindent 12 }}
+          # No envFrom here: verified against entrypoint.sh that tunnel-sidecar
+          # reads none of the 23 credential keys — its AI env vars are the
+          # llmProxyEnv placeholder virtual keys below, not Key Vault secrets.
+          env:
+            - name: WORKSPACE_NAME
+              value: {{ .Values.workspaceName | quote }}
+            - name: VSCODE_CLI_DISABLE_KEYCHAIN_ENCRYPT
+              value: {{ $svc.env.disableKeychainEncrypt | quote }}
+            {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
+            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $svc.name)) }}
+            {{- . | nindent 12 }}
+            {{- end }}
+          resources:
+            requests:
+              {{- toYaml $svc.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml $svc.resources.limits | nindent 14 }}
+          startupProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "pgrep" "-f" "code tunnel") "cfg" $svc.probes.startup) | nindent 12 }}
+          livenessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "pgrep" "-f" "code tunnel") "cfg" $svc.probes.liveness) | nindent 12 }}
+          readinessProbe:
+            {{- include "zzaia-workspace.probe" (dict "kind" "exec" "command" (list "pgrep" "-f" "code tunnel") "cfg" $svc.probes.readiness) | nindent 12 }}
+          volumeMounts:
+            - name: workspace-home
+              mountPath: {{ .Values.volumes.workspaceHome.mountPath }}
+            - name: workspace-tools
+              mountPath: {{ .Values.volumes.workspaceTools.mountPath }}
+              readOnly: true
+      volumes:
+        - name: workspace-home
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceHome") }}
+        - name: workspace-tools
+          persistentVolumeClaim:
+            claimName: {{ include "zzaia-workspace.pvcName" (dict "root" . "volume" "workspaceTools") }}
+            readOnly: true
+{{- end }}

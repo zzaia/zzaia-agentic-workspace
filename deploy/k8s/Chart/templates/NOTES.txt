@@ -1,0 +1,77 @@
+{{ .Chart.Name }} {{ .Chart.Version }} deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+ENDPOINTS (Kong ingress, TLS secret {{ include "zzaia-workspace.tlsSecretName" . }})
+{{- if .Values.ingress.enabled }}
+{{- if .Values.vscodeSidecar.enabled }}{{ if .Values.vscodeSidecar.ingress.enabled }}
+  code-server   {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.vscodeSidecar.ingress.subdomain) }}
+{{- end }}{{ end }}
+{{- if .Values.vscodeSidecar.enabled }}{{ if .Values.vscodeSidecar.aspireIngress.enabled }}
+  aspire        {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.vscodeSidecar.aspireIngress.subdomain) }}
+{{- end }}{{ end }}
+{{- if .Values.jupyterSidecar.enabled }}{{ if .Values.jupyterSidecar.ingress.enabled }}
+  jupyter       {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.jupyterSidecar.ingress.subdomain) }}
+{{- end }}{{ end }}
+{{- if .Values.bifrost.enabled }}{{ if .Values.bifrost.ingress.enabled }}
+  bifrost       {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.bifrost.ingress.subdomain) }}
+{{- end }}{{ end }}
+{{- if .Values.mlServer.enabled }}{{ if .Values.mlServer.ingress.enabled }}
+  headroom      {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.mlServer.ingress.subdomain) }}
+{{- end }}{{ end }}
+{{- if .Values.portainer.enabled }}{{ if .Values.portainer.ingress.enabled }}
+  portainer     {{ include "zzaia-workspace.ingressUrl" (dict "root" . "subdomain" .Values.portainer.ingress.subdomain) }}
+{{- end }}{{ end }}
+
+  Local resolution requires the dnsmasq wildcard:
+    address=/{{ .Values.domain }}/127.0.0.1
+{{- else }}
+  Ingress is disabled — reach services via port-forward.
+{{- end }}
+
+SSH
+{{- if .Values.workspaceServer.enabled }}
+  workspace-server  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Values.workspaceServer.name }} {{ .Values.workspaceServer.ports.ssh }}:{{ .Values.workspaceServer.ports.ssh }}
+{{- end }}
+{{- if .Values.gitSidecar.enabled }}
+  git-sidecar       kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Values.gitSidecar.name }} {{ .Values.gitSidecar.ports.ssh }}:{{ .Values.gitSidecar.ports.ssh }}
+{{- end }}
+
+SHARED CLUSTER SERVICES (namespace "{{ .Values.sharedInfraNamespace }}" — NOT deployed by this chart)
+  vault   {{ include "zzaia-workspace.vaultAddr" . }}
+  otlp    {{ include "zzaia-workspace.otlpEndpoint" . }}
+  signoz  http://{{ include "zzaia-workspace.infraFqdn" (dict "root" . "service" .Values.observability.signozService) }}:{{ .Values.observability.signozPort }}
+
+SECRETS
+{{- if .Values.externalSecrets.enabled }}
+  Provider  {{ .Values.externalSecrets.provider }}
+{{- if eq .Values.externalSecrets.provider "azurekv" }}
+  Key Vault {{ .Values.externalSecrets.azurekv.vaultUrl | default "NOT SET — deployment will not resolve credentials" }}
+{{- end }}
+  Store     {{ .Values.externalSecrets.clusterSecretStoreName }} (ClusterSecretStore, owned by the infra chart)
+  Secrets   one per group ({{ join ", " .Values.externalSecrets.groupNames }}), named
+            "{{ include "zzaia-workspace.secretName" . }}-<group>" — each consumer envFroms
+            only the group(s) its entrypoint needs, never all of them.
+
+  Verify:
+    kubectl -n {{ .Release.Namespace }} get externalsecret
+    kubectl -n {{ .Release.Namespace }} get secret -l app.kubernetes.io/instance={{ .Release.Name }}
+{{- else }}
+  External Secrets is DISABLED. Every credential-consuming workload will start
+  degraded. Set externalSecrets.enabled=true plus azurekv.vaultUrl/clientId/tenantId.
+{{- end }}
+
+FIRST BOOT
+  workspace-server runs the Ansible bootstrap that populates the
+  {{ .Values.volumes.workspaceTools.mountPath }} PVC. That takes up to 30 minutes on a cold volume.
+  Nothing mounting {{ .Values.volumes.workspaceTools.mountPath }} becomes Ready until
+  {{ .Values.volumes.workspaceTools.readyFile }} exists.
+
+    kubectl -n {{ .Release.Namespace }} logs -f sts/{{ .Values.workspaceServer.name }}
+
+{{- if and .Values.volumes.workspaceHome.enabled (eq .Values.storageClass "local-path") }}
+
+WARNING
+  storageClass is "local-path", which does NOT support ReadWriteMany, but
+  volumes.workspaceHome and volumes.workspaceTools request RWX because several
+  workloads share them. Either install an RWX-capable StorageClass or pin every
+  consumer to a single node via nodeSelector.
+{{- end }}

@@ -1,0 +1,38 @@
+{{- /*
+=============================================================================
+cert-manager Certificate — wildcard TLS for *.<domain> into the chart's own
+TLS Secret (zzaia-workspace-tls) in THIS namespace. The infra chart's
+zzaia-wildcard-tls only covers *.fintech.zzaia.com and is infra-namespace
+scoped, so this namespace needs its own cert.
+
+ISSUER: the infra chart provisions a "selfsigned" ClusterIssuer
+(clusterissuer-selfsigned.yaml) — a real, working issuer requiring no
+external secrets, which .Values.ingress.tls.clusterIssuer defaults to.
+values-production.yaml overrides it once a real ACME ClusterIssuer exists in
+the target cluster (deploy/local.sh's own Let's Encrypt automation is
+deferred to the Fleet migration and does not exist yet either).
+=============================================================================
+*/ -}}
+{{- if and .Values.ingress.enabled .Values.ingress.tls.enabled }}
+{{- $issuerName := .Values.ingress.tls.clusterIssuer | default "selfsigned" }}
+{{- $issuerKind := .Values.ingress.tls.issuerKind | default "ClusterIssuer" }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "zzaia-workspace.tlsSecretName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "ingress") | nindent 4 }}
+spec:
+  secretName: {{ include "zzaia-workspace.tlsSecretName" . }}
+  secretTemplate:
+    labels:
+      {{- include "zzaia-workspace.componentLabels" (dict "root" . "component" "ingress") | nindent 6 }}
+  dnsNames:
+    - {{ printf "*.%s" .Values.domain | quote }}
+    - {{ .Values.domain | quote }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: {{ $issuerKind }}
+    group: cert-manager.io
+{{- end }}

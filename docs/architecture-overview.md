@@ -94,6 +94,18 @@ Multi-tenant agentic workspace running multiple AI coding agents (Claude Code, G
 
 ## Implementation ADRs — How the system achieves it
 
+> [!IMPORTANT]
+> **ADR 001, 002, 004, 006a, and 013b describe the retired Docker Compose /
+> Bitwarden / in-cluster-Vault architecture and are kept below as historical
+> record — they are not current.** The workspace now deploys as a Kubernetes
+> Helm chart (`deploy/k8s/Chart`) with secrets sourced from Azure Key Vault via
+> the External Secrets Operator. See **ADR 017** (end of this section) for the
+> successor decision, [`deploy/k8s/README.md`](../deploy/k8s/README.md) for the
+> deployment mechanics, and [`deploy/k8s/AZURE_KEYVAULT.md`](../deploy/k8s/AZURE_KEYVAULT.md)
+> for the secrets model. ADR 016 (observability) is similarly superseded —
+> the workspace now reuses the cluster's existing SigNoz rather than running
+> its own Fluent Bit/cAdvisor/SigNoz stack per workspace.
+
 ### ADR 001: Docker Compose Project Namespacing for Multi-Tenancy
 
 **Decision**: Each workspace instance is started with `docker compose -p $WORKSPACE_NAME`.
@@ -716,6 +728,21 @@ workspace-server                git-sidecar                    GitHub / ADO
 
 ---
 
+### ADR 017: Kubernetes Deployment with Azure Key Vault Secrets (supersedes ADR 001, 002, 004, 006a, 013b, 016)
+
+**Decision**: Retire Docker Compose entirely in favor of a Kubernetes Helm chart (`deploy/k8s/Chart`) deployed into an existing, externally-provisioned cluster's namespace. Secrets move from Bitwarden → in-cluster Vault seed to Azure Key Vault, projected via the External Secrets Operator (ESO). Observability reuses the cluster's existing SigNoz rather than running a per-workspace copy.
+
+- **Multi-tenancy** (was ADR 001): a Kubernetes namespace per deployment (`zzaia-agentic-workspace`) replaces the Compose project-name convention; PVCs replace named Docker volumes.
+- **Secrets** (was ADR 002, 004): one Azure Key Vault JSON-object secret per credential group (`ai`, `mcp-github`, `mcp-azure-devops`, `mcp-azure-portal`, `mcp-postman`, `mcp-aws`, `integrations`, `workspace`, `admin`), each materialised into its own Kubernetes Secret by ESO via the cluster's shared `zzaia-secrets-store` ClusterSecretStore. Every consumer's `envFrom` requests only the group(s) its own entrypoint reads — no workload receives another workload's credentials. See [`deploy/k8s/AZURE_KEYVAULT.md`](../deploy/k8s/AZURE_KEYVAULT.md).
+- **DinD storage** (was ADR 006a): a PVC replaces the host bind mount; `dind-server` remains privileged (unavoidable for Docker-in-Docker) but is gated by a NetworkPolicy restricting ingress on its daemon port to pods explicitly labelled `zzaia.com/dind-client: "true"`.
+- **HTTP routing**: `nginx-proxy` is retired in favor of the cluster's Kong ingress, routing `*.workspace.zzaia.com`.
+- **Observability** (was ADR 016): no per-workspace Fluent Bit/cAdvisor/SigNoz — every pod ships OTLP telemetry to the cluster's shared OTel Collector, which forwards to the cluster's existing SigNoz.
+- **Provisioning**: a namespaced (never cluster-scoped) RBAC Role bound to `workspace-server` lets the in-cluster agent create/update/delete workload primitives in its own namespace for ephemeral, ad-hoc infra — durable infra is a Git commit to the chart, reconciled by Fleet.
+
+**Rationale**: Removes duplicate infrastructure (the workspace no longer runs its own Vault, SigNoz, or reverse proxy — it reuses what the cluster already provides), fixes the Compose stack's structural coupling to a since-deleted `vault-server` image, and moves secret-of-truth to a managed cloud service with proper audit logging and access control instead of a self-hosted Vault instance bootstrapped from a machine-account token.
+
+---
+
 ## C4 Context Diagram
 
 ```mermaid
@@ -730,25 +757,33 @@ C4Context
     System_Ext(newrelic, "New Relic", "Observability and log diagnostics")
     System_Ext(github, "GitHub", "Repositories, issues, actions")
     System_Ext(ai, "AI APIs", "Anthropic, OpenAI, Vertex, Bedrock, Foundry")
-    System_Ext(docker, "Docker Desktop", "Container runtime on host OS")
+    System_Ext(k8s, "Kubernetes Cluster", "Externally provisioned — shared Vault, SigNoz, Kong ingress, ESO")
 
-    Rel(dev, workspace, "Accesses", "HTTP :8080 / SSH :2222 / Dev Containers")
+    Rel(dev, workspace, "Accesses", "HTTPS via Kong Ingress / kubectl port-forward SSH / Dev Containers")
     Rel(workspace, ado, "DevOps operations", "HTTPS via MCP sidecar")
     Rel(workspace, tavily, "Web search", "HTTPS via MCP sidecar")
     Rel(workspace, postman, "API management", "HTTPS via MCP sidecar")
     Rel(workspace, newrelic, "Log diagnostics", "HTTPS via MCP sidecar")
     Rel(workspace, github, "GitHub operations", "HTTPS via MCP sidecar")
-    Rel(workspace, ai, "Agent API calls", "HTTPS (direct or via Headroom proxy)")
-    Rel(docker, workspace, "Hosts", "Docker Compose")
+    Rel(workspace, ai, "Agent API calls", "HTTPS (direct or via Headroom/Bifrost proxy)")
+    Rel(k8s, workspace, "Hosts", "Helm chart, namespace zzaia-agentic-workspace")
 
     UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
 ```
 
 ## C4 Container Diagram
 
+> [!IMPORTANT]
+> This diagram depicts the retired Docker Compose topology (named volumes,
+> `depends_on`/`service_healthy`, `--profile` flags) and is kept as historical
+> record. For the current Kubernetes shape — workload kind, Service ports,
+> PVCs, Key Vault credential groups — see **Deployment Units**, **Shared
+> State (PersistentVolumeClaims)**, and **Connection Types** above, and
+> **ADR 017**.
+
 ```mermaid
 C4Container
-    title ZZAIA Agentic Workspace — Two-Layer Triple-Stack Architecture
+    title ZZAIA Agentic Workspace — Two-Layer Triple-Stack Architecture (historical: Docker Compose)
 
     Person(dev, "Developer", "Browser or SSH")
 
@@ -840,13 +875,9 @@ zzaia-agentic-workspace/
 │   ├── codex/               # OpenAI Codex — AGENTS.md, .codex/
 │   └── copilot/             # GitHub Copilot — .github/copilot-instructions.md
 ├── vscode/                  # VS Code profile — settings, extensions, launch configs, workspace file
-├── docker/
-│   ├── docker-compose.yml   # Stack — workspace-server + optional servers + headroom + 8 sidecars
-│   ├── docker-compose.gpu.yml # GPU overlay for NVIDIA hosts (opt-in)
-│   ├── docker-compose.observability.yml  # Observability overlay (opt-in, activated by --observability flag)
-│   ├── fluent-bit.conf                   # Fluent Bit Docker log collection config
-│   ├── otel-collector-config.yaml        # OTel Collector Prometheus scraper config
-│   ├── Makefile             # Docker build and compose helper commands
+├── docker/                  # Container image sources (built for Kubernetes, not compose)
+│   ├── DOCKER.md            # Image/build reference (Docker Compose has been removed)
+│   ├── Makefile             # k8s-images / k8s-list build targets
 │   ├── sshd_config          # SSH daemon hardening config
 │   └── containers/
 │       ├── workspace-server/   # Dockerfile, entrypoint.sh, scripts/, ansible/
@@ -854,12 +885,19 @@ zzaia-agentic-workspace/
 │       ├── database-qdrant/
 │       ├── database-neo4j/
 │       ├── dind-server/
-│       ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
+│       ├── portainer-server/
+│       ├── bifrost-server/
+│       ├── git-sidecar/
+│       ├── mcp-{tavily,azure-devops,postman,newrelic,github,aws-api,azure-portal,playwright,headroom,codegraph,graphiti}/
 │       └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
 ├── deploy/
-│   ├── ubuntu.sh            # Bitwarden Secrets Manager deployment script (apt, curl, docker compose)
-│   ├── mac.sh               # macOS deployment script (delegates to ubuntu.sh)
-│   └── windows.ps1          # PowerShell deployment script (Bitwarden Secrets Manager, docker compose)
+│   └── k8s/
+│       ├── Chart/                 # Helm chart — Deployments/StatefulSets/Services/Ingress/ExternalSecrets
+│       ├── build-images.sh        # Build + push every zzaia-* image, pin immutable tags
+│       ├── bootstrap.sh           # One-time: apply the Fleet GitRepo + local DNS wildcard
+│       ├── setup-workspace-dns.sh # *.workspace.zzaia.com dnsmasq wildcard
+│       ├── AZURE_KEYVAULT.md      # Secret inventory + ephemeral/durable provisioning contract
+│       └── README.md              # Full build/deploy reference
 ├── docs/
 │   ├── architecture-overview.md  # This document
 │   └── bdd-scenarios.md          # BDD scenarios for all workspace features
@@ -873,64 +911,74 @@ zzaia-agentic-workspace/
 
 ### Deployment Units
 
-| Container | Role | Port | Profile | Notes |
-|-----------|------|------|---------|-------|
-| `vault-server` | Production Vault (file backend, AES-256-GCM encryption at rest) | 8200 (internal) | always | Bootstraps from Bitwarden at startup; generates git-sidecar SSH keypair; enables AppRole auth; UI at `vault.<WORKSPACE_NAME>.local` via `nginx-proxy` |
-| `nginx-proxy` | Subdomain reverse proxy for HTTP front-ends (vault, vscode, aspire, jupyter, portainer, bifrost, signoz, signoz-mcp) | NGINX_PROXY_PORT (default 80) | always | Single host-exposed entrypoint; routes by `Host` header, `resolver 127.0.0.11` for lazy DNS on optional/profile-gated backends |
-| `git-sidecar` | SSH git proxy — routes clone/push to GitHub and Azure DevOps via PAT injection | 2223 (SSH, internal) | always | ForceCommand restricts every session to `git-proxy-cmd`; PATs never exposed to agents |
-| `dind-server` | Docker-in-Docker daemon | (internal) | always | Privileged, no port exposure; storage bind-mounted from `DIND_DATA_PATH` on host |
-| `workspace-server` | SSH daemon + Ansible bootstrap + agent runtime | 2222 (SSH) | always | Always starts, owns shared home + tools |
-| `ml-server` | Headroom AI proxy (compression + memory + code-graph) | 8787 (internal) | always | Non-root: uid=999(headroom) |
-| `database-qdrant` | Vector DB (Qdrant v1.17.1) | 6333 (internal) | always | Semantic cache + memory embeddings + code-graph, non-root: uid=999(qdrant) |
-| `database-neo4j` | Knowledge graph (Neo4j 5.14.0) | 7687/7474 (internal) | always | Knowledge graph + code-graph backend |
-| `mcp-headroom` | MCP gateway for ml-server (supergateway → ml-server) | 3008 (internal) | always | Non-root: uid=999(headroom) |
-| `mcp-playwright` | Headless Chromium MCP | 3006 (internal) | always | node:lts-alpine + supergateway, non-root: USER node |
-| `vscode-sidecar` | Browser VS Code (`code serve-web`) | VSCODE_PORT | `vscode` | Opt-in, depends on workspace-server healthy |
-| `jupyter-sidecar` | JupyterLab | JUPYTER_PORT | `jupyter` | Opt-in, depends on workspace-server healthy |
-| `containers-dev-sidecar` | Dev Containers support | stdin | `devcontainer` | Opt-in, depends on workspace-server healthy |
-| `tunnel-sidecar` | VS Code Tunnel (remote access via vscode.dev) | — | `tunnel` | Opt-in, depends on workspace-server healthy |
-| **Conditional MCP Adapters** | | | | |
-| `mcp-tavily` | Web search MCP adapter (node:lts-alpine + supergateway) | 3001 (internal) | conditional | USER node, fetches TAVILY_API_KEY from Vault |
-| `mcp-azure-devops` | Azure DevOps MCP adapter (node:lts-alpine + supergateway) | 3002 (internal) | conditional | USER node, fetches ADO_MCP_AUTH_TOKEN from Vault |
-| `mcp-postman` | Postman MCP adapter (node:lts-alpine + supergateway) | 3003 (internal) | conditional | USER node, fetches POSTMAN_API_KEY from Vault |
-| `mcp-newrelic` | New Relic MCP adapter (node:lts-alpine + supergateway) | 3004 (internal) | conditional | USER node, fetches NEW_RELIC_API_KEY from Vault |
-| `mcp-github` | GitHub MCP adapter (node:lts-alpine + supergateway) | 3005 (internal) | conditional | USER node, fetches GITHUB_PERSONAL_ACCESS_TOKEN from Vault |
-| **Observability (opt-in)** | | | | |
-| `observability-signoz` | Unified observability backend (logs/metrics/traces) | 8080 (UI, internal), 4317, 4318, 3100 | opt-in | ClickHouse-backed; web UI at `http://signoz.<WORKSPACE_NAME>.local` via `nginx-proxy` (only when observability overlay is active) |
-| `signoz-db` | ClickHouse storage for SigNoz | internal | opt-in | Database backend with 2G RAM allocation (only when observability overlay is active) |
-| `observability-fluent-bit` | Docker log collector → SigNoz Loki | — | opt-in | Tails Docker container logs via host bind mount (only when observability overlay is active) |
-| `observability-otel-collector` | Prometheus scraper → SigNoz OTLP | — | opt-in | Scrapes qdrant, neo4j, vault, cAdvisor metrics (only when observability overlay is active) |
-| `observability-cadvisor` | Container resource metrics | 8080 (internal) | opt-in | Privileged container collecting CPU, memory, network, I/O metrics (only when observability overlay is active) |
+> Updated for the Kubernetes deployment (ADR 017). "Vault" and "nginx-proxy"
+> rows are gone — the cluster's existing Vault/SigNoz are reused, and Kong
+> ingress replaces the reverse proxy. "Profile" (a Compose concept) is
+> replaced by each workload's `values.yaml` `enabled` flag and, for secrets,
+> its Key Vault `secretGroup`.
 
-### Shared State (Named Volumes)
+| Workload | Kind | Role | Port | Enabled by | Notes |
+|-----------|------|------|------|------------|-------|
+| `git-sidecar` | StatefulSet | SSH git proxy — routes clone/push to GitHub and Azure DevOps via PAT injection | 2223 (ClusterIP, internal) | `gitSidecar.enabled` | ForceCommand restricts every session to `git-proxy-cmd`; envFrom groups `mcp-github`, `mcp-azure-devops`, `workspace` |
+| `dind-server` | StatefulSet | Docker-in-Docker daemon | 2375/2376 (ClusterIP) | `dind.enabled` | Privileged (unavoidable); PVC-backed storage; NetworkPolicy restricts ingress to pods labelled `zzaia.com/dind-client: "true"` |
+| `portainer-server` | Deployment | Docker UI for DinD container management | via Ingress | `portainer.enabled` | Points at `tcp://dind-server:2375`, not a host socket; carries the dind-client label |
+| `workspace-server` | StatefulSet | SSH daemon + Ansible bootstrap + agent runtime + provisioning identity | 2222 (SSH) | `workspaceServer.enabled` | Owns shared home + tools PVCs; carries dind-client label; bound to the namespaced `provisioner` RBAC Role for ephemeral ad-hoc infra |
+| `ml-server` | StatefulSet | Headroom AI proxy (compression + memory + code-graph) | 8787 (ClusterIP) | `mlServer.enabled` | GPU-optional via `.Values.gpu.enabled` (RuntimeClass `nvidia`, owned by the infra chart) |
+| `bifrost-server` | Deployment | LLM gateway/proxy | via Ingress | `bifrost.enabled` | envFrom 7 of 9 credential groups (broadest of any workload — it is the central proxy) |
+| `database-qdrant` | StatefulSet | Vector DB (Qdrant v1.17.1) | 6333 (ClusterIP) | `qdrant.enabled` | Semantic cache + memory embeddings + code-graph |
+| `database-neo4j` | StatefulSet | Knowledge graph (Neo4j 5.14.0) | 7687/7474 (ClusterIP) | `neo4j.enabled` | Password sourced from the `admin` Key Vault group (reuses `ADMIN_PASSWORD`) |
+| `vscode-sidecar` | Deployment | Browser VS Code (`code serve-web`) + Aspire dashboard | via Ingress | `vscodeSidecar.enabled` | No credential envFrom (verified zero use); carries dind-client label; Kong Service-scoped 3600s timeout for the websocket |
+| `jupyter-sidecar` | Deployment | JupyterLab | via Ingress | `jupyterSidecar.enabled` | No credential envFrom; Kong Service-scoped 3600s timeout |
+| `containers-dev-sidecar` | Deployment | Dev Containers support | — (no Service) | `containersDevSidecar.enabled` | Carries dind-client label |
+| `tunnel-sidecar` | Deployment | VS Code Tunnel (remote access via vscode.dev) | — | `tunnelSidecar.enabled` | No credential envFrom |
+| **MCP fleet** (one `range`-templated Deployment+Service per entry in `.Values.mcpServers`) | | | | | |
+| `mcp-tavily` | Deployment | Web search MCP adapter | 3001 (ClusterIP) | `mcpServers.tavily.enabled` | `secretGroup: ai` (TAVILY_API_KEY) |
+| `mcp-azure-devops` | Deployment | Azure DevOps MCP adapter | 3002 (ClusterIP) | `mcpServers.azureDevops.enabled` | `secretGroup: mcp-azure-devops` |
+| `mcp-postman` | Deployment | Postman MCP adapter | 3003 (ClusterIP) | `mcpServers.postman.enabled` | `secretGroup: mcp-postman` |
+| `mcp-newrelic` | Deployment | New Relic MCP adapter | 3004 (ClusterIP) | `mcpServers.newrelic.enabled` | `secretGroup: integrations` |
+| `mcp-github` | Deployment | GitHub MCP adapter | 3005 (ClusterIP) | `mcpServers.github.enabled` | `secretGroup: mcp-github` |
+| `mcp-playwright` | Deployment | Headless Chromium MCP | 3006 (ClusterIP) | `mcpServers.playwright.enabled` | No secrets; `SYS_ADMIN` capability for the Chromium sandbox |
+| `mcp-headroom` | Deployment | MCP gateway for ml-server | 3008 (ClusterIP) | `mcpServers.headroom.enabled` | No secrets |
+| `mcp-aws-api` | Deployment | AWS API MCP adapter | 3010 (ClusterIP) | `mcpServers.awsApi.enabled` | `secretGroup: mcp-aws` |
+| `mcp-azure-portal` | Deployment | Azure Portal MCP adapter | 3015 (ClusterIP) | `mcpServers.azurePortal.enabled` | `secretGroup: mcp-azure-portal` |
+| `mcp-codegraph` | Deployment | Code-graph MCP adapter | 8000 (ClusterIP) | `mcpServers.codegraph.enabled` | No secrets; read-only `workspace-home` mount |
+| `mcp-graphiti` | Deployment | Knowledge-graph MCP adapter | 8000 (ClusterIP) | `mcpServers.graphiti.enabled` | `secretGroup: ai` (OPENAI_API_KEY, cloud embedder path) |
 
-| Volume | Mount | Contents |
+**Observability**: no per-workspace stack. Every pod ships OTLP to the cluster's shared OTel Collector, which forwards to the cluster's existing SigNoz (see ADR 017).
+
+### Shared State (PersistentVolumeClaims)
+
+| PVC | Mount | Contents |
 |--------|-------|----------|
-| `<ws>-home` | `/home/user` (all servers) | User configs, credentials, auth tokens, VS Code state, workspace repos |
-| `<ws>-tools` | `/opt/tools` (workspace-server rw, optional servers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed) |
-| `<ws>-secrets` | `/secrets` | SSH host keys and public key |
-| `<ws>-vault-data` | `/vault/data` (vault-server) | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); unseal keys at `/vault/data/.init` |
-| `git-sidecar-hostkeys` | `/etc/ssh` (git-sidecar) | SSH host keys for the git-sidecar daemon — persisted so client known_hosts entries survive container restarts |
-| `<ws>-database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
-| `<ws>-database-neo4j` | `/data` | Knowledge graph (Neo4j) |
-| `<ws>-signoz-db-data` | `/var/lib/clickhouse` (signoz-db) | SigNoz ClickHouse data (only present when observability overlay is active) |
+| `workspace-home` | `/home/user` (workspace-server, vscode/jupyter/containers-dev/tunnel-sidecar) | User configs, credentials, auth tokens, VS Code state, workspace repos — RWX, single-node-bound until an RWX storage class is added |
+| `workspace-tools` | `/opt/tools` (workspace-server rw, other consumers ro) | Runtime tools: Node.js, .NET, Python, CLIs (Ansible-installed); gated by a `tools.ready` sentinel file |
+| `workspace-sshkeys` | (workspace-server) | SSH host key material |
+| `git-sidecar-hostkeys` | `/etc/ssh` (git-sidecar) | SSH host keys for the git-sidecar daemon, via `volumeClaimTemplates` |
+| `ml-tools` | `/opt/ml-tools` (ml-server) | ml-server's own miniforge/toolchain, independent of `workspace-tools` |
+| `database-qdrant` | `/qdrant/storage` | Vector embeddings (Qdrant) |
+| `database-neo4j` | `/data` | Knowledge graph (Neo4j) |
+| `dind-data` | `/var/lib/docker` (dind-server) | Docker-in-Docker image/layer storage |
+| `portainer-data` | (portainer-server) | Portainer's own state |
+
+Nine Kubernetes Secrets, one per Key Vault credential group (`ai`, `integrations`, `mcp-github`, `mcp-azure-devops`, `mcp-azure-portal`, `mcp-postman`, `mcp-aws`, `workspace`, `admin`), replace the old `vault-data`/`workspace-credentials` volumes — see ADR 017.
 
 ### Connection Types
 
 | Type | Entry Point | Notes |
 |------|-------------|-------|
-| SSH | `workspace:2222` | sshd with pubkey auth |
-| Browser | `vscode-sidecar:VSCODE_PORT` | `code serve-web`, no token (profile: vscode) |
-| Jupyter | `jupyter-sidecar:JUPYTER_PORT` | JupyterLab (profile: jupyter) |
-| VS Code Tunnel | `tunnel-sidecar` | vscode.dev/tunnel/$WORKSPACE_NAME (profile: tunnel) |
-| Dev Containers | Docker socket → workspace | `devcontainer.json` in image (profile: devcontainer) |
-| VS Code Remote SSH | `workspace:2222` | Remote SSH extension |
+| SSH | `workspace-server:2222` | sshd with pubkey auth; `kubectl port-forward` from outside the cluster |
+| Browser | `https://vscode.workspace.zzaia.com` | `code serve-web` via Kong Ingress, no token |
+| Jupyter | `https://jupyter.workspace.zzaia.com` | JupyterLab via Kong Ingress |
+| VS Code Tunnel | `tunnel-sidecar` pod | vscode.dev/tunnel/$WORKSPACE_NAME |
+| Dev Containers | `dind-server:2375` | `devcontainer.json` in image; DOCKER_HOST points at the in-namespace dind Service |
+| VS Code Remote SSH | `workspace-server:2222` via port-forward | Remote SSH extension |
 
 ## Technology Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Container runtime | Docker Desktop (Linux / macOS / Windows) |
+| Deployment | Kubernetes + Helm (`deploy/k8s/Chart`), into a cluster provisioned separately |
+| Container images | Built via `deploy/k8s/build-images.sh`, unchanged from the pre-migration Dockerfiles |
 | Workspace OS | Ubuntu 24.04 LTS |
 | Agent runtimes | Claude Code, Gemini CLI, OpenAI Codex, GitHub Copilot |
 | Developer UI | Browser (code serve-web), SSH terminal, VS Code Dev Containers, VS Code Tunnel |
@@ -944,36 +992,35 @@ zzaia-agentic-workspace/
 | **Layer 2 — Supplementary (Agent-Initiated, Phase 2/3)** | |
 | **OpenMemory MCP** | **Structured memory queries (Phase 2) — Postgres + Qdrant backend, explicit retrieval via search_memory/add_memories** |
 | **CodeGraphContext MCP** | **Code graph queries (Phase 3) — Tree-sitter AST parsing, explicit retrieval via find_callers/class_hierarchy** |
-| **Observability (opt-in)** | |
-| **SigNoz** | **Unified logs + metrics + traces backend (ClickHouse-backed, OTLP receiver, Loki-compatible, Web UI :3301)** |
-| **Fluent Bit** | **Docker container log collection → SigNoz Loki endpoint** |
-| **OTel Collector** | **Prometheus scraper (qdrant, neo4j, vault, cAdvisor) → SigNoz OTLP gRPC** |
-| **cAdvisor** | **Container resource metrics (CPU, memory, network, I/O) for all containers** |
+| **Observability** | |
+| **Cluster SigNoz** (reused, not deployed here) | Every pod ships OTLP to the shared cluster OTel Collector, which forwards to the cluster's existing SigNoz — no per-workspace observability stack |
 | Tool provisioning | Ansible roles (workspace-server): **always-on**: system, user-setup, vscode-cli, dotnet, python, cli, path-config, credentials, gpu; **opt-in**: node, node-frontend, java, rust, lua, cpp, clojure, go, kotlin, ruby, php, swift; version pins in `group_vars/all.yml` |
 | MCP bridge | supergateway@3.4.3 (streamableHttp transport, pre-installed at build time) |
-| Multi-tenancy | Docker Compose project namespacing |
-| Secret lifecycle | BWS_ACCESS_TOKEN → vault-server bws fetch → Vault KV (AES-256-GCM at rest) → unset; manage via Vault UI |
+| Multi-tenancy | Kubernetes namespace per deployment (`zzaia-agentic-workspace`) |
+| Secret lifecycle | Azure Key Vault (source of truth) → External Secrets Operator → per-group Kubernetes Secret → `envFrom`, refreshed on `externalSecrets.refreshInterval` |
 | Telemetry | .NET Aspire Standalone Dashboard (OTLP receiver) |
 
 ## Security Model
 
 | Threat | Mitigation |
 |--------|-----------|
-| Agent exfiltrates API keys | Keys never in workspace container env after startup |
-| Agent modifies host filesystem | Only `/secrets` and `/home/user` volumes mounted; `cap_drop: ALL` |
-| Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities |
-| Secret visible in terminal | Vault auto-unseals using keys sealed in encrypted volume; no unseal key in .env |
-| Cross-stack secret leakage | Each stack on isolated bridge network; no shared volumes |
-| Port scanning from container | MCP ports bound to internal network only |
-| MCP container compromise | All MCP containers run as non-root (USER node / uid=999); isolation via bridge network |
-| Database container compromise | qdrant runs as uid=999(qdrant); neo4j isolated volume; no mount-out capabilities |
-| vault-server PAT exposure | vault-server is the only container that receives BWS_ACCESS_TOKEN; unset after bootstrap; no other container sees it |
+| Agent exfiltrates API keys | Each workload's `envFrom` is scoped to only the Key Vault credential group(s) its own entrypoint reads — no workload holds another's secrets |
+| Agent modifies host filesystem | Pods run in their own namespace with no host mounts (dind-server's privileged mode is the sole, documented exception); `cap_drop: ALL` on every other workload |
+| Agent escapes container | No `SYS_ADMIN`, `NET_ADMIN`, or `DAC_OVERRIDE` capabilities outside dind-server / mcp-playwright's sandboxed `SYS_ADMIN` grant |
+| Unauthenticated Docker daemon (dind-server) | A NetworkPolicy restricts ingress on its daemon port to pods explicitly labelled `zzaia.com/dind-client: "true"` in this namespace only |
+| Cross-namespace secret leakage | Every Kubernetes Secret this chart creates is namespace-scoped; the shared `zzaia-secrets-store` ClusterSecretStore is read-only from here, owned by the infra chart |
+| Port scanning from a pod | MCP Services are ClusterIP-only, not exposed via Ingress |
+| MCP pod compromise | All MCP containers run as non-root (uid=1000 or image-specific); each has its own scoped credential group, minimizing blast radius |
+| Database pod compromise | qdrant/neo4j run as their image's non-root user; no mount-out capabilities |
+| Cluster-wide privilege escalation | The provisioner RBAC Role is namespaced (never a ClusterRole) and explicitly excludes `rbac.authorization.k8s.io` — the agent cannot grant itself more access than it already has |
 
 ## Related Documentation
 
 - [QUICKSTART.md](../QUICKSTART.md) — Step-by-step setup instructions
 - [README.md](../README.md) — Project overview
-- [docker/](../docker/) — Dockerfile, Compose, entrypoint, and install scripts
+- [docker/](../docker/) — Dockerfile, entrypoint, and image build reference (Docker Compose has been removed; see `deploy/k8s/`)
+- [deploy/k8s/README.md](../deploy/k8s/README.md) — Helm chart build and deploy reference
+- [deploy/k8s/AZURE_KEYVAULT.md](../deploy/k8s/AZURE_KEYVAULT.md) — Secrets inventory and provisioning contract
 - [bdd-scenarios.md](bdd-scenarios.md) — BDD scenarios for all workspace features
 - [agents/claude/CLAUDE.md](../agents/claude/CLAUDE.md) — Claude Code command hierarchy and standards
 - [agents/claude/.mcp.json](../agents/claude/.mcp.json) — MCP server configuration
