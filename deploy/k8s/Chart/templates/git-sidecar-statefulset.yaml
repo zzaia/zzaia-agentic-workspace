@@ -4,10 +4,9 @@ git-sidecar — sshd on 2223 (NOT HTTP). Ported from compose service
 `git-sidecar` (docker/containers/git-sidecar). A StatefulSet so the SSH host
 keys live on a stable per-pod PVC (volumes.gitSidecarHostkeys -> /etc/ssh):
 the entrypoint runs `ssh-keygen -A` only when the keys are absent, so a
-persistent claim means host keys are generated ONCE and survive restarts —
-they are never regenerated on every restart. VAULT_ADDR points at the cluster
-Vault (best-effort); credentials arrive via envFrom against the mcp-github,
-mcp-azure-devops, and workspace groups — see externalsecrets.yaml.
+persistent claim means host keys are generated ONCE and survive restarts.
+Credentials arrive via envFrom against the mcp-github, mcp-azure-devops, and
+workspace groups — see externalsecrets.yaml.
 =============================================================================
 */ -}}
 {{- if .Values.gitSidecar.enabled }}
@@ -41,8 +40,6 @@ spec:
           image: {{ include "zzaia-workspace.image" (dict "root" . "image" .Values.images.gitSidecar) | quote }}
           imagePullPolicy: {{ include "zzaia-workspace.imagePullPolicy" (dict "root" . "image" .Values.images.gitSidecar) }}
           env:
-            - name: VAULT_ADDR
-              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
           envFrom:
             {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" . "groups" (list "mcp-github" "mcp-azure-devops" "workspace")) | nindent 12 }}
           ports:

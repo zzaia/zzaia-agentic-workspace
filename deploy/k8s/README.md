@@ -1,61 +1,75 @@
 # ZZAIA Agentic Workspace — Kubernetes deployment
 
 This directory holds the Helm chart (`Chart/`) and the image build pipeline
-(`build-images.sh`) that deploy the agentic workspace to Kubernetes. It replaces
-the retired Docker Compose stack (`docker/docker-compose.yml`,
-`deploy/ubuntu.sh`). See [`docker/DOCKER.md`](../../docker/DOCKER.md) for the
-legacy notes.
+(`build-images.sh`) that deploy the agentic workspace to a single-node k3s
+cluster provisioned via Ansible. The container **images are unchanged** — every
+`zzaia-*` image is still built from `docker/containers/*/Dockerfile` with the
+exact build context Compose used.
 
-The container **images are unchanged** — every `zzaia-*` image is still built
-from `docker/containers/*/Dockerfile` with the exact build context Compose used.
-Only the runtime (Compose → Kubernetes) and secrets source
-(Bitwarden/in-cluster Vault seed → Azure Key Vault via External Secrets
-Operator) changed. Two services were dropped: `vault-server` (the cluster Vault
-in the shared infra namespace is reused) and `nginx-proxy` (a Kong Ingress
-replaces it).
+## Architecture Overview
+
+The deployment is **self-contained and self-provisioning**:
+
+1. **Host provisioning** (Ansible `site.yml`): k3s cluster, local OCI registry,
+   Kong ingress, External Secrets Operator, bitwarden-sdk-server, Fleet (standalone),
+   and dnsmasq wildcard DNS.
+2. **Secrets**: Bitwarden Secrets Manager via ESO (ClusterSecretStore + ExternalSecrets).
+   Access token supplied at deploy time, never stored in git.
+3. **Workloads**: Fleet pull-mode reconciliation from this public repo (see
+   `deploy/fleet/gitrepo.yaml`). Only ml-server exposed via Kong ingress.
 
 ## Prerequisites
 
-- A running cluster with the shared infra namespace already up: cluster Vault,
-  SigNoz/OTel collector, the External Secrets Operator controller, its
-  `ClusterSecretStore` (`zzaia-secrets-store`), Kong ingress, and the
-  `zzaia-critical` PriorityClass. This chart references those; it does **not**
-  create them. Provisioned by the `zzaia-finance-data-engine` repo — that repo
-  carries no knowledge of this one.
-- The local OCI registry on `127.0.0.1:5000` (installed by the Ansible
-  `registry` role — `registry:2` bound to loopback). Host-side `docker push`
-  reaches the cluster through the containerd registry mirror.
-- `docker`, `helm`, `kubectl`, and `git`.
+Run `bash deploy/local.sh` on a Linux host with:
+- sudo access (for systemd, networking, Docker)
+- 16+ GB RAM, 50+ GB disk
+- Internet access (k3s, Helm repos, container images, Bitwarden)
 
-## 0. Bootstrap (one-time, this repo only)
+The script will prompt for the **Bitwarden Secrets Manager access token**
+(or skip with `--no-bws` if not ready yet).
 
-Everything this repo needs in the cluster — the Fleet `GitRepo` that makes
-Fleet reconcile `deploy/k8s/Chart`, and the local `*.workspace.zzaia.com` DNS
-wildcard — is applied from here, never from the cluster repo:
+## Deployment
+
+### One-command setup
 
 ```bash
-./deploy/k8s/bootstrap.sh              # GitRepo + DNS (run on the k3s host)
-./deploy/k8s/bootstrap.sh --skip-dns   # GitRepo only, e.g. from a remote workstation
-./deploy/k8s/bootstrap.sh --dns-only   # just the DNS wildcard
+# Provisions k3s cluster, deploys all infrastructure, builds images, and reconciles workloads
+bash deploy/local.sh
 ```
 
-See [`AZURE_KEYVAULT.md`](AZURE_KEYVAULT.md) for the one remaining manual step
-(seeding the nine Key Vault secrets) and the ephemeral-vs-durable provisioning
-contract. If you'd rather deploy without GitOps, skip this step and use
-`helm upgrade --install` directly in step 2 below.
+This runs the full flow: Ansible provisioning → TLS setup → image build/push → Fleet deployment.
 
-## 1. Build and push the images
+### Step-by-step (if needed)
+
+```bash
+# Just host provisioning (k3s + ring infrastructure)
+bash deploy/local.sh host
+
+# Just app deployment (images + workloads)
+bash deploy/local.sh app
+
+# Pause all workloads without destroying infrastructure
+bash deploy/local.sh pause
+
+# Resume workloads
+bash deploy/local.sh resume
+
+# Delete app namespaces (keep cluster + bootstrap ring)
+bash deploy/local.sh reset
+
+# Completely remove the cluster
+bash deploy/local.sh teardown
+```
+
+## Build and push images
 
 `build-images.sh` builds every surviving `zzaia-*` image, tags each with an
 **immutable** tag (the git short SHA) plus a **moving alias** (`latest` by
 default), pushes both to the registry, and writes a Helm values overlay
 (`Chart/values-images.yaml`) that pins `images.<name>.tag` to the immutable tag.
-The moving alias is a `docker pull` convenience only — Helm always references
-the pinned immutable tag, never `latest` (the chart's image helper fails the
-render on a bare `latest` tag).
 
 ```bash
-# Build + push all 23 images, write Chart/values-images.yaml
+# Build + push all 22 images, write Chart/values-images.yaml
 bash deploy/k8s/build-images.sh
 # or, from the docker/ directory:
 make k8s-images
@@ -81,23 +95,17 @@ bash deploy/k8s/build-images.sh --tag 1.4.0 mlServer mcpGithub
 REGISTRY=sjc.vultrcr.com/zzaia bash deploy/k8s/build-images.sh --alias prod
 ```
 
-The generated `Chart/values-images.yaml` looks like:
+## Secrets provisioning
 
-```yaml
-# Generated by deploy/k8s/build-images.sh — DO NOT EDIT BY HAND.
-images:
-  registry: "localhost:5000"
-  dind:
-    tag: "84c8687"
-  workspaceServer:
-    tag: "84c8687"
-  # ... one entry per built image
-```
+See [`BWS_SECRETS.md`](./BWS_SECRETS.md) for:
+- Required Bitwarden Secrets Manager secrets and their consumer groups
+- How the BWS access token is supplied and managed
+- ClusterSecretStore and ExternalSecret wiring
+- Rotation procedures
 
-## 2. Deploy the chart
+## Chart deployment (manual Helm, without GitOps)
 
-Apply the base values, the environment overrides, and the generated image
-overlay last so the pinned tags win:
+If you prefer not to use Fleet:
 
 ```bash
 helm upgrade --install zzaia-workspace deploy/k8s/Chart \
@@ -107,13 +115,11 @@ helm upgrade --install zzaia-workspace deploy/k8s/Chart \
   -f deploy/k8s/Chart/values-images.yaml
 ```
 
-For GitOps, commit `Chart/values-images.yaml` alongside the code it was built
-from and let Fleet reconcile it — the pinned SHA guarantees the release
-references the exact images produced by that commit.
+## Images
 
-## Images built
-
-23 images map one-to-one to the chart's `images.<key>` entries. Run
+22 images map one-to-one to the chart's `images.<key>` entries. Run
 `bash deploy/k8s/build-images.sh --list` for the current list. Build contexts
 match Compose: all use the repository root except `dind` (its own directory).
-`vault-server` and `nginx-proxy` are intentionally absent.
+`vault-server`, `nginx-proxy`, `signoz-server`, `mcp-signoz`, and `mcp-newrelic`
+are intentionally absent (observability moved to AppHost, secrets via Bitwarden,
+Kong replaces nginx).

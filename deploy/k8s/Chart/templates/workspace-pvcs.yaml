@@ -14,11 +14,10 @@ PVCs owned by the core-workspace unit:
   workspaceSshkeys  /var/lib/workspace/ssh-hostkeys — workspace-server only.
   mlTools           /opt/ml-tools — ml-server only.
 
-NOTE — workspace-credentials is deliberately NOT a PVC here. Under compose it
-carried Vault AppRole env files written by the (now dropped) vault-server. It is
-replaced by the External Secrets target Secret
-(.Values.externalSecrets.targetSecretName) delivered via envFrom + the
-admin_password file mount. There is no volumes.workspaceCredentials key.
+NOTE — workspace-credentials is deliberately NOT a PVC here. Credentials are
+delivered via External Secrets Operator as k8s Secrets
+(.Values.externalSecrets.targetSecretName) and envFrom'd into workloads. There
+is no volumes.workspaceCredentials key.
 
 SINGLE-NODE vs MULTI-NODE:
   workspaceHome and workspaceTools are mounted RW by MULTIPLE pods at once. The

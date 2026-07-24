@@ -1,20 +1,12 @@
 # ZZAIA Container — Docker
 
 > [!WARNING]
-> **Docker Compose has been removed.** `docker-compose.yml`, `docker-compose.gpu.yml`,
-> `docker-compose.observability.yml`, and `deploy/ubuntu.sh`/`mac.sh`/`windows.ps1`
-> no longer exist in this repo — the compose runtime they drove was broken
-> (it built a deleted `vault-server` image) and added no value once Kubernetes
-> was the supported path. The container **images** documented below are still
+> **Docker Compose has been removed.** The container **images** documented below are still
 > authoritative and are built unchanged for Kubernetes by
 > [`../deploy/k8s/build-images.sh`](../deploy/k8s/build-images.sh) (`make k8s-images`);
-> deploy via [`../deploy/k8s/README.md`](../deploy/k8s/README.md). Two compose
-> services were dropped in the move: `vault-server` (the cluster Vault is
-> reused) and `nginx-proxy` (a Kong Ingress replaces it). Secrets now come from
-> Azure Key Vault via the External Secrets Operator, not Bitwarden/BWS or the
-> in-cluster Vault seed. The `docker compose` command examples below are
-> **historical** — they describe a workflow that no longer runs — kept only
-> for the image/build/volume-concept context around them.
+> deploy via [`../deploy/k8s/README.md`](../deploy/k8s/README.md). Four services were dropped:
+> `vault-server`, `nginx-proxy`, `signoz-server`/`mcp-signoz`, and `mcp-newrelic`.
+> Secrets now come from Bitwarden Secrets Manager via the External Secrets Operator.
 
 Ubuntu 24.04 all-in-one container (`workspace-server`) with system packages installed at build time (`build-install.sh`) and runtime tooling provisioned via Ansible (`entrypoint.sh` runs `ansible-playbook site.yml`). Runs SSH daemon by default; optionally runs browser VS Code and Dev Containers on separate container services. MCP servers run as isolated sidecar containers — each receives only its own secret.
 
@@ -22,9 +14,9 @@ Ubuntu 24.04 all-in-one container (`workspace-server`) with system packages inst
 
 ## Prerequisites
 
-The workspace requires the following host software:
+The workspace requires the following host software when building and testing locally:
 
-- **Docker Desktop** — Container runtime and compose orchestration ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop))
+- **Docker Desktop** — Container runtime and image build  ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop))
 - **Enhanced Container Isolation (ECI)** *(optional)* — Enables unprivileged Docker-in-Docker sandboxing. Enable via Docker Desktop > Settings > General > "Use Enhanced Container Isolation".
 
 **GPU acceleration (optional, NVIDIA only):**
@@ -35,28 +27,7 @@ The workspace requires the following host software:
 - **NVIDIA Container Toolkit** — `nvidia-container-toolkit` package; see [GPU Acceleration](#gpu-acceleration-nvidia-only) section
 - **Native Docker Engine** — Not Docker Desktop; install via `apt-get install docker-ce` on Ubuntu
 
----
-
-## Start (once per environment)
-
-> **Retired path.** The commands below start the workspace under Docker Compose,
-> which is no longer maintained. For the supported Kubernetes deployment, build
-> the images with `make k8s-images` (or `bash ../deploy/k8s/build-images.sh`) and
-> follow [`../deploy/k8s/README.md`](../deploy/k8s/README.md).
-
-See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short version:
-
-```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..."
-# Prompts for BWS_ACCESS_TOKEN (optional — press Enter to configure secrets via Vault UI after startup)
-
-# With observability enabled:
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
-
-# With selective SDKs:
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." \
-  --java --rust --node-frontend --go --kotlin
-```
+> **For Kubernetes deployment**, see [`../deploy/k8s/README.md`](../deploy/k8s/README.md). Run `bash ../deploy/local.sh` to provision a complete k3s cluster and deploy workloads via Fleet. Local image building is optional — use `make k8s-images` to build images for development testing.
 
 ---
 
@@ -99,42 +70,11 @@ See [QUICKSTART.md](../QUICKSTART.md) for full step-by-step instructions. Short 
 
 SDKs are installed once and persist across container restarts. Delete the `workspace-tools` volume to force reinstallation.
 
-After the first run, start and stop the workspace from **Docker Desktop** or:
-
-```bash
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> start
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> stop
-```
-
-**Rebuild image after changes:**
-
-```bash
-docker compose -f docker/docker-compose.yml build
-# Then force-recreate:
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d --force-recreate workspace-server
-```
-
----
-
-## Access
-
-| Method | Address |
-|--------|---------|
-| VS Code (browser) | `http://vscode.<WORKSPACE_NAME>.local` via `nginx-proxy` (see QUICKSTART.md Step 4) |
-| SSH | `ssh -p <SSH_PORT> zzaia@ssh.<WORKSPACE_NAME>.local` (default port `2222`) — not proxied, hostname is a plain `/etc/hosts` alias to `127.0.0.1` |
-
-The Claude Code extension is pre-installed. Code-server logs (if vscode profile enabled):
-
-```bash
-docker logs <WORKSPACE_NAME>-vscode-server-1
-docker exec <WORKSPACE_NAME>-vscode-server-1 cat /tmp/code-server.log
-```
-
 ---
 
 ## Storage — Named Volumes
 
-The workspace uses multiple named Docker volumes per stack. Named volumes live entirely inside Docker's storage layer — no host filesystem ownership issues, no `sudo` required, no Docker Desktop VM permission pass-through problems.
+The workspace uses multiple named Docker volumes. Named volumes live entirely inside Docker's storage layer — no host filesystem ownership issues, no `sudo` required, no Docker Desktop VM permission pass-through problems.
 
 ### Volume layout
 
@@ -144,7 +84,6 @@ The workspace uses multiple named Docker volumes per stack. Named volumes live e
 | `workspace-home` | `<WORKSPACE_NAME>-home` | `/home/user` (workspace-server, vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) | Home directory with user configs, credentials, workspace repos | Shared across all servers |
 | `workspace-tools` | `<WORKSPACE_NAME>-tools` | `/opt/tools` (workspace-server rw, vscode-sidecar, containers-dev-sidecar, tunnel-sidecar :ro, jupyter-sidecar rw) | Runtime tools: Node.js, .NET, Python, CLIs, miniforge3, venv-development, venv-analytics (when GPU_ENABLED=true) | Delete to force tool re-install |
 | `ml-tools` | `<WORKSPACE_NAME>-ml-tools` | `/opt/ml-tools` (ml-server rw) | ML-server miniforge3, venv-system with headroom-ai, fastapi, uvicorn | Delete to force ml-server re-install |
-| `vault-data` | `<WORKSPACE_NAME>-vault-data` | `/vault/data` (vault-server) | HashiCorp Vault KV v2 (file backend, AES-256-GCM encryption at rest); unseal keys at `/vault/data/.init` | Persists across restarts |
 
 ### Home volume seeding
 
@@ -172,16 +111,6 @@ ML-server runtime installs to `/opt/ml-tools` in the separate `ml-tools` volume:
 - Workspace home (`workspace-home`) is mounted read-only for headroom code-graph/memory access
 - `ml-server` does NOT mount `workspace-tools` — independent sealed environment
 
-**After image updates:** To pick up new tool versions, delete both the home and tools volumes:
-
-```bash
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> down
-docker volume rm <WORKSPACE_NAME>-home <WORKSPACE_NAME>-tools
-docker compose -f docker/docker-compose.yml -p <WORKSPACE_NAME> up -d
-```
-
-All server configs, credentials, and tools will be re-installed fresh on the next start.
-
 ### Volume lifecycle
 
 ```bash
@@ -202,29 +131,13 @@ docker volume rm my-org-tools
 
 # Reset ml-tools (forces ml-server miniforge re-download and package re-install)
 docker volume rm my-org-ml-tools
-
-# Full decommission
-docker volume rm my-org-secrets my-org-home my-org-tools my-org-ml-tools
 ```
 
 ---
 
-## Secrets and Vault
+## Secrets and Credentials
 
-**vault-server** is the central secret store:
-
-| Service | Port | Role |
-|---------|------|------|
-| `vault-server` | 8200 | Production Vault (file backend, AES-256-GCM encryption at rest) — bootstrapped from Bitwarden at startup; Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui` via `nginx-proxy` |
-| `git-sidecar` | 2223 (SSH) | SSH git proxy — workspace agents clone/push private repos via this relay; credentials never leave the container |
-
-**Secret distribution pattern**:
-- At deploy time: deploy script passes `BWS_ACCESS_TOKEN` to vault-server container only
-- vault-server fetches secrets from Bitwarden using bws CLI at startup and stores them in Vault KV v2 (encrypted at rest)
-- vault-server generates an ed25519 SSH keypair and stores it at `secret/workspace` (`GIT_SIDECAR_AGENT_KEY` + `GIT_SIDECAR_AGENT_PUBKEY`)
-- vault-server enables AppRole auth and binds `git-sidecar-policy` (read `secret/workspace`, `secret/mcp/github`, `secret/mcp/azure-devops`)
-- All other containers fetch only their needed secrets from Vault at runtime via `VAULT_ADDR=http://vault-server:8200`
-- After bootstrap, manage secrets via Vault UI at `http://vault.<WORKSPACE_NAME>.local/ui`
+**Credentials are supplied at deploy time via Bitwarden Secrets Manager.** For Kubernetes deployment, the External Secrets Operator (ESO) syncs them continuously into k8s Secrets. See [`../deploy/k8s/BWS_SECRETS.md`](../deploy/k8s/BWS_SECRETS.md) for the full configuration.
 
 **git-sidecar — SSH Git Proxy**:
 
@@ -233,7 +146,7 @@ The `git-sidecar` service is an SSH relay that lets workspace agents (`git clone
 | Item | Details |
 |------|---------|
 | Port | `2223` (SSH, internal Docker network only) |
-| Auth | SSH key generated by vault-server, stored at `secret/workspace.GIT_SIDECAR_AGENT_PUBKEY`; installed as the sole `authorized_keys` entry |
+| Auth | SSH key provided via ESO Secret, stored at `/home/git/.ssh/authorized_keys` |
 | ForceCommand | Every SSH session is restricted to `git-proxy-cmd` — no shell, no port forwarding |
 | Token file | `GITHUB_PERSONAL_ACCESS_TOKEN` + `ADO_MCP_AUTH_TOKEN` written to `/home/git/.git-proxy/tokens` (chmod 600) at startup; never exposed as env vars |
 
@@ -244,60 +157,9 @@ The `git-sidecar` service is an SSH relay that lets workspace agents (`git clone
 | `github/<owner>/<repo>` | `https://x-access-token:<PAT>@github.com/<owner>/<repo>.git` |
 | `ado/<org>/<project>/<repo>` | `https://anything:<TOKEN>@dev.azure.com/<org>/<project>/_git/<repo>` |
 
-Usage from inside `workspace-server`:
-```bash
-# Clone a private GitHub repo
-git clone ssh://git@git-sidecar:2223/github/my-org/my-repo
-
-# Clone a private Azure DevOps repo
-git clone ssh://git@git-sidecar:2223/ado/my-org/my-project/my-repo
-```
-
-If `GIT_SIDECAR_AGENT_PUBKEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, or `ADO_MCP_AUTH_TOKEN` are missing from Vault, git-sidecar enters idle mode (exits cleanly on SIGTERM) and does not start the SSH daemon.
-
 ---
 
-## Observability — SigNoz Stack
-
-When deployed with `--observability`, the workspace includes a full observability stack: SigNoz (logs, metrics, traces UI), Fluent Bit (log collection), OTel Collector (metric and trace aggregation), and cAdvisor (container metrics).
-
-### SigNoz Auto-Provisioning
-
-At deploy time, if `--observability` is enabled:
-
-1. **Health check:** `signoz-server` entrypoint waits for SigNoz to be healthy (`/api/v1/health`)
-2. **Admin account:** Registers `admin@<WORKSPACE_NAME>.local` with the password from `SIGNOZ_ADMIN_PASSWORD` (generated once, preserved across re-deployments in `.env`)
-3. **Service account:** Creates a `mcp-signoz` service account with viewer role (assigned via SpiceDB tuple in SQLite)
-4. **API key:** Generates an API key and writes it to the `signoz-mcp-creds` shared volume at `/signoz-data/mcp-api-key`
-5. **mcp-signoz reads key:** The `mcp-signoz` container reads the key from the volume and exports it as `SIGNOZ_TOKEN` for the `signoz-mcp-server` process
-
-Re-running is idempotent — provisioning is skipped if `/signoz-data/mcp-api-key` already exists.
-
-### Fluent Bit Log Isolation
-
-Fluent Bit reads all Docker container logs from `/var/lib/docker/containers/*/` but filters by workspace using docker metadata enrichment and a grep filter:
-
-1. **docker_metadata filter:** Enriches each log record with `container_name` from the Docker socket
-2. **grep filter:** Keeps only logs where `container_name` matches `/${WORKSPACE_NAME}-*` (Docker Compose prefixes container names with the project name)
-3. **DB persistence:** Fluent Bit state is stored in `/var/lib/fluent-bit/state/` on a named Docker volume, so logs are never re-read on restart
-
-This ensures each workspace's Fluent Bit instance only forwards logs from its own containers to SigNoz, even if multiple compose stacks run on the same Docker host.
-
-### Access
-
-SigNoz is routed through `nginx-proxy` by subdomain, like the rest of the workspace's HTTP front-ends:
-
-```bash
-./deploy/ubuntu.sh --workspace-name my-org --ssh-public-key "ssh-ed25519 AAAA..." --observability
-# SigNoz UI:  http://signoz.my-org.local
-# SigNoz MCP: http://signoz-mcp.my-org.local/mcp
-```
-
-The MCP endpoint accepts standard JSON-RPC 2.0 over HTTP with `Accept: application/json, text/event-stream`. External agents can call it directly without entering the Docker network.
-
----
-
-**MCP Services and Proxy**
+## MCP Services
 
 **Proxy server** runs as the central bridge for LLM API calls:
 
@@ -305,17 +167,22 @@ The MCP endpoint accepts standard JSON-RPC 2.0 over HTTP with `Accept: applicati
 |---------|------|------|
 | ml-server | 8787 | Central LLM API proxy (headroom) — all containers point to `http://ml-server:8787` |
 
-Each MCP server runs as an isolated sidecar container on the internal `mcp` Docker network. Ports are not exposed to the host. If a secret is not provided, the sidecar exits cleanly (code 0) and does not restart.
+Each MCP server runs as an isolated sidecar container. Credentials come from ESO ExternalSecrets. If a secret is not provided, the sidecar exits cleanly (code 0).
 
-| Service | Port | Secret (fetched from Vault) |
+| Service | Port | Secret (from Bitwarden Secrets Manager) |
 |---------|------|--------|
 | mcp-tavily | 3001 | `TAVILY_API_KEY` |
 | mcp-azure-devops | 3002 | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` |
 | mcp-postman | 3003 | `POSTMAN_API_KEY` |
-| mcp-newrelic | 3004 | `NEW_RELIC_API_KEY` |
-| mcp-signoz | 3009 | API key auto-provisioned by `signoz-server` entrypoint; shared via Docker volume. Reachable via `nginx-proxy` at `signoz-mcp.<WORKSPACE_NAME>.local`. |
+| mcp-github | 3005 | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| mcp-aws-api | 3010 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` |
+| mcp-azure-portal | 3015 | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` |
+| mcp-playwright | 3006 | (no secrets required) |
+| mcp-codegraph | — | (stdio server, no secrets) |
+| mcp-graphiti | — | (stdio server, no secrets) |
+| mcp-headroom | 3007 | (stdio server, no secrets) |
 
-`playwright` and `aspire` run as local stdio servers inside the workspace container (no secrets required).
+`playwright` and `headroom` run as local stdio servers inside the workspace container.
 
 ---
 
@@ -349,145 +216,5 @@ Each MCP server runs as an isolated sidecar container on the internal `mcp` Dock
 | `--go` | Go 1.24.4 |
 | `--kotlin` | Kotlin 2.1.21 via SDKMAN (+ Java auto-enabled) |
 | `--ruby` | Ruby 3.4.4 via rbenv |
-| `--php` | PHP 8.2, Composer |
+| `--php` | PHP 8.2 + Composer |
 | `--swift` | Swift 6.1.2 |
-
----
-
-## GPU Acceleration (NVIDIA only)
-
-**Only NVIDIA GPUs are supported.** AMD GPUs and Apple Silicon are not supported.
-
-**Docker Desktop is not supported for GPU passthrough.** Docker Desktop runs containers inside a VM, which blocks CDI device injection. Use native Docker Engine (`apt-get install docker-ce`).
-
-### Host requirements
-
-1. NVIDIA drivers installed (`nvidia-smi` must succeed)
-2. NVIDIA Container Toolkit:
-
-```bash
-# Install toolkit
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
-  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
-  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-
-# Generate CDI spec
-sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
-
-# Configure Docker runtime
-[ -s /etc/docker/daemon.json ] || echo '{}' | sudo tee /etc/docker/daemon.json
-sudo nvidia-ctk runtime configure --runtime=docker
-sudo systemctl restart docker
-```
-
-### Enabling GPU in the workspace
-
-Use the docker-compose GPU override file to enable GPU support. GPU is completely optional — the primary compose file has zero CUDA footprint on CPU-only deployments.
-
-**Two-file compose pattern:**
-
-```bash
-# CPU-only (no GPU packages, no CUDA footprint)
-docker compose -f docker/docker-compose.yml -p "$WORKSPACE_NAME" up -d
-
-# With GPU support (opt-in via override file)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml -p "$WORKSPACE_NAME" up -d
-```
-
-### What GPU mode does
-
-#### Shared Conda CUDA (workspace-server group)
-
-Instead of each container needing its own CUDA base image, CUDA libraries are installed once in the shared `workspace-tools` volume:
-
-- `workspace-server` installs `cuda-runtime` and `cuda-nvcc` via conda into `/opt/tools/miniforge3/` when `GPU_ENABLED=true`
-- All sidecars (vscode-sidecar, containers-dev-sidecar, jupyter-sidecar, tunnel-sidecar) mount `/opt/tools` and inherit the CUDA installation via existing PATH/LD_LIBRARY_PATH
-- NVIDIA Container Toolkit injects `libcuda.so.1` (driver stub) per-container when GPU devices are bound in compose
-- All containers with GPU_ENABLED=true reserve all available NVIDIA GPUs
-
-#### Custom DinD Image with NVIDIA Container Toolkit
-
-The workspace uses a custom Docker-in-Docker image (`containers/dind/`) that extends the official `docker:28.1.1-dind` with conditional NVIDIA Container Toolkit support:
-
-**How it works:**
-
-1. **Image:** Custom Dockerfile in `containers/dind/Dockerfile` extends `docker:28.1.1-dind` (Alpine)
-2. **Entrypoint:** Custom `entrypoint.sh` checks `GPU_ENABLED` environment variable at container startup
-3. **GPU mode:** When `GPU_ENABLED=true`:
-   - Entrypoint downloads and installs NVIDIA Container Toolkit binaries for Alpine (x86_64/arm64)
-   - Docker daemon starts with toolkit ready
-   - Inner containers can use `docker run --gpus all` to access GPUs
-4. **CPU mode:** When `GPU_ENABLED=false`:
-   - No toolkit installed, zero NVIDIA overhead
-   - Standard Docker daemon
-
-**Compose integration:**
-
-- **Base:** `docker-compose.yml` builds and uses `zzaia-dind-nvidia:latest` image
-- **GPU override:** `docker-compose.gpu.yml` sets `GPU_ENABLED=true` and reserves GPU devices for dind service
-- **Build:** `docker compose build` automatically builds the custom image if not present
-
-**GPU DinD support in workspace-server:**
-
-When `GPU_ENABLED=true`, workspace-server entrypoint also:
-
-1. Installs NVIDIA Container Toolkit inside workspace-server (redundant but ensures availability)
-2. Generates CDI spec: `nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml`
-3. Configures inner Docker daemon with nvidia runtime: `nvidia-ctk runtime configure --runtime=docker`
-4. This runs in entrypoint BEFORE sshd starts
-
-Users can then start inner containers with `docker run --privileged` or `--gpus all` to access GPU.
-
-#### ML packages
-
-- `ml-server` uses `ARG GPU_ENABLED=true` to select `nvidia/cuda:12.1.1-runtime-ubuntu24.04` base image (isolated from shared tools)
-- `ml-server` installs PyTorch from CUDA 12.1 index (`https://download.pytorch.org/whl/cu121`) into its own `ml-tools` volume
-- ML packages persist in their respective volumes (`ml-tools` for ml-server, `workspace-tools` for all workspace containers)
-
-**Important:** ECI (Enhanced Container Isolation) must be disabled for DinD GPU support to work. Docker Desktop VM isolation prevents CDI device injection into inner containers.
-
----
-
-## Security
-
-| Control | Value |
-|---------|-------|
-| Docker sandbox | DinD via `runc` runtime; enable Docker Desktop ECI for unprivileged isolation (optional) |
-| Workspace secrets | SSH key only — no API keys in workspace container |
-| MCP secrets | Isolated per sidecar container, internal network only |
-| Secret handling | vault-server fetches secrets from Bitwarden at startup — never written to host disk or .env files |
-| Secrets storage | Named Docker volume (`<WORKSPACE_NAME>-vault-data`), not host path; Vault auto-unseals using keys sealed in encrypted volume |
-| Host network | Bridge only, workspace ports bound to `127.0.0.1` |
-| MCP ports | Internal only — not exposed to host; `mcp-signoz` is reachable via `nginx-proxy` at `signoz-mcp.<WORKSPACE_NAME>.local` |
-| Capabilities | Drop ALL + minimum required (CHOWN, FOWNER, SETGID, SETUID, AUDIT_WRITE) |
-| Root login | Disabled |
-| Sudo access | Passwordless by default; set `ADMIN_PASSWORD` to require password for sudo (restricts installs) |
-| vault-server PAT exposure | vault-server is the only container that receives BWS_ACCESS_TOKEN; unset after bootstrap; no other container sees it |
-
----
-
-## Files
-
-```
-docker/
-├── Dockerfile               — Image definition (Ubuntu 24.04)
-├── entrypoint.sh           — workspace-server entrypoint: fetch Vault creds → ansible-playbook site.yml → profile/MCP setup → sshd
-├── sshd_config             — Port 2222, key-auth only
-├── DOCKER.md               — This file
-└── containers/
-    ├── workspace-server/   — Workspace container definition
-    ├── vscode-sidecar/     — VS Code editor sidecar
-    ├── ml-server/          — ML inference server (headroom-ai, FastAPI)
-    ├── jupyter-sidecar/    — Jupyter notebook server
-    ├── containers-dev-sidecar/  — Dev containers CLI host
-    ├── tunnel-sidecar/         — VS Code tunnel relay (Microsoft relay, no ports needed)
-    ├── dind/               — Custom Docker-in-Docker with NVIDIA Container Toolkit support
-    │   ├── Dockerfile      — DinD image extending docker:28.1.1-dind with toolkit installation
-    │   ├── entrypoint.sh   — Custom entrypoint: conditionally installs NVIDIA toolkit if GPU_ENABLED=true
-    │   ├── test-build.sh   — Build verification script
-    │   └── README.md       — DinD image documentation
-    ├── mcp-**/             — MCP server sidecar containers (tavily, github, postman, etc.)
-    └── database-**/        — Database containers (neo4j, qdrant)
-```

@@ -14,11 +14,6 @@ maintainers:
   - name: ZZAIA Team
   - name: Platform Team
     email: platform@zzaia.com
-# NOTE: This chart deploys workloads ONLY. It intentionally does NOT deploy:
-#   - Vault            -> reuses the cluster Vault in .Values.sharedInfraNamespace
-#   - SigNoz / OTEL    -> reuses the cluster collector in .Values.sharedInfraNamespace
-#   - External Secrets Operator controller -> pre-installed on the cluster
-#   - ClusterSecretStore "zzaia-secrets-store", PriorityClass "zzaia-critical",
-#     RuntimeClass "nvidia" -> owned by the zzaia-finance-data-engine-infra chart.
-# Every cluster-scoped object this chart DOES create is prefixed with the
-# release namespace to avoid colliding with that chart.
+# NOTE: This chart deploys workloads + ClusterSecretStore for Bitwarden Secrets Manager.
+# Pre-installed cluster components: External Secrets Operator, Kong, PriorityClass,
+# RuntimeClass (nvidia, if available).

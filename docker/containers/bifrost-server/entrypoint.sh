@@ -18,12 +18,11 @@ load_secrets() {
     log_info "Loading secrets from environment..."
 
     # Secrets are projected into the pod environment by External Secrets Operator
-    # (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+    # (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
     local anthropic_api_key="${ANTHROPIC_API_KEY:-}"
     local claude_oauth_token="${CLAUDE_CODE_OAUTH_TOKEN:-}"
     local openai_api_key="${OPENAI_API_KEY:-}"
     local gemini_api_key="${GEMINI_API_KEY:-}"
-    local new_relic_api_key="${NEW_RELIC_API_KEY:-}"
     local tavily_api_key="${TAVILY_API_KEY:-}"
     local aws_key_id="${AWS_ACCESS_KEY_ID:-}"
     local github_pat="${GITHUB_PERSONAL_ACCESS_TOKEN:-}"
@@ -54,9 +53,6 @@ load_secrets() {
     export POSTMAN_AVAILABLE=""; [ -n "$postman_api_key" ] && export POSTMAN_AVAILABLE="true"
     export ADO_AVAILABLE=""; [ -n "$ado_auth_token" ] && export ADO_AVAILABLE="true"
     export AZURE_PORTAL_AVAILABLE=""; [ -n "$azure_portal_client_id" ] && export AZURE_PORTAL_AVAILABLE="true"
-
-    export NEW_RELIC_API_KEY_AVAILABLE=""
-    [ -n "$new_relic_api_key" ] && export NEW_RELIC_API_KEY_AVAILABLE="true" && log_info "New Relic: API key available" || log_warn "New Relic: no API key — skipping newrelic MCP"
 
     export AWS_MCP_AVAILABLE=""
     [ -n "$aws_key_id" ] && export AWS_MCP_AVAILABLE="true" && log_info "AWS: credentials available" || log_warn "AWS: no credentials — skipping AWS MCP tools"
@@ -119,9 +115,6 @@ generate_config() {
     local providers=""
     local sep=""
     local workspace_key="${BIFROST_WORKSPACE_KEY:-sk-bf-workspace-agent-001}"
-    local newrelic_entry=""
-    [ -n "${NEW_RELIC_API_KEY_AVAILABLE:-}" ] && \
-        newrelic_entry='      { "name": "newrelic", "connection_type": "http", "connection_string": "http://mcp-newrelic:3004/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true },'
 
     local tavily_entry=""
     [ -n "${TAVILY_AVAILABLE:-}" ] && \
@@ -221,7 +214,6 @@ generate_config() {
       ${ado_entry}
       ${azure_portal_entry}
       ${postman_entry}
-      ${newrelic_entry}
       ${github_entry}
       { "name": "playwright", "connection_type": "http", "connection_string": "http://mcp-playwright:3006/mcp", "allow_on_all_virtual_keys": true, "is_code_mode_client": true }${aws_entries}
     ]
@@ -246,7 +238,7 @@ EOF
     fi
 
     if [ -z "$providers" ]; then
-        log_warn "No API keys configured — bifrost starts without providers (add keys to Azure Key Vault and re-sync the workspace credentials secret)"
+        log_warn "No API keys configured — bifrost starts without providers (add secrets to Bitwarden Secrets Manager and ESO will sync the workspace credentials secret)"
     else
         log_success "Config generated with available providers"
     fi

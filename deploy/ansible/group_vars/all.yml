@@ -1,0 +1,19 @@
+---
+kubeconfig_path: /etc/rancher/k3s/k3s.yaml
+kubectl_version: v1.31.4
+
+k3s_kubelet_args:
+  - "system-reserved=cpu=500m,memory=1Gi"
+  - "kube-reserved=cpu=500m,memory=1Gi"
+  - "eviction-hard=memory.available<500Mi,nodefs.available<10%"
+
+dnsmasq_listen_address: 127.0.0.55
+
+dns_wildcard_domains:
+  - workspace.zzaia.com
+
+k3s_containerd_template: /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl
+# The config.toml k3s actually generates at startup. Modern k3s auto-detects the
+# nvidia container runtime (toolkit installed before k3s) and writes it here — so
+# we grep THIS to decide whether the manual nvidia-ctk template step is even needed.
+k3s_containerd_config: /var/lib/rancher/k3s/agent/etc/containerd/config.toml

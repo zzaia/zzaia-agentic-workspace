@@ -10,8 +10,6 @@ env, so no config ConfigMap is mounted here — we only supply credentials + wir
     this chart; verified against entrypoint.sh, which excludes only the
     workspace and admin groups. No file mount: the entrypoint reads every key
     as an env var, never from a /secrets path.
-  - VAULT_ADDR points at the shared cluster Vault (best-effort secret refresh).
-  - shared OTEL envFrom + per-pod OTEL_SERVICE_NAME.
 */}}
 {{- $c := .Values.bifrost }}
 apiVersion: apps/v1
@@ -49,20 +47,9 @@ spec:
             - name: http
               containerPort: {{ $c.ports.http }}
               protocol: TCP
-          env:
-            - name: VAULT_ADDR
-              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
-            {{- if .Values.observability.enabled }}
-            - name: OTEL_SERVICE_NAME
-              value: {{ $c.name | quote }}
-            {{- end }}
           envFrom:
             {{- $bifrostGroups := list "ai" "integrations" "mcp-github" "mcp-azure-devops" "mcp-azure-portal" "mcp-postman" "mcp-aws" }}
             {{- include "zzaia-workspace.credentialsEnvFrom" (dict "root" . "groups" $bifrostGroups) | nindent 12 }}
-            {{- if .Values.observability.enabled }}
-            - configMapRef:
-                name: {{ .Release.Name }}-observability
-            {{- end }}
           resources:
             {{- toYaml $c.resources | nindent 12 }}
           livenessProbe:

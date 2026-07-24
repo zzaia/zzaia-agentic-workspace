@@ -8,16 +8,13 @@
 # Only values that DIFFER from values.yaml appear here (DRY). Resource sizes,
 # ports, probes and the service topology are inherited.
 
-# --- Secrets: Azure Key Vault is the only source of truth ---------------------
-# REPLACE_ME values must be supplied at deploy time (--set or a sealed overlay).
+# --- Secrets: Bitwarden Secrets Manager -----
+# Configure organizationId at deploy time (--set or a sealed overlay).
 externalSecrets:
   enabled: true
-  provider: "azurekv"
-  azurekv:
-    vaultUrl: "https://REPLACE_ME_VAULT_NAME.vault.azure.net"
-    authType: "WorkloadIdentity"
-    clientId: "REPLACE_ME_CLIENT_ID"
-    tenantId: "REPLACE_ME_TENANT_ID"
+  provider: "bitwardensecretsmanager"
+  bitwardensecretsmanager:
+    organizationId: "REPLACE_ME_WITH_BWS_ORGANIZATION_ID"
 
 # --- Storage -----------------------------------------------------------------
 # No RWX-capable StorageClass exists in the finance-data-engine cluster repo

@@ -8,148 +8,112 @@
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| **A running cluster** | Kong ingress, the External Secrets Operator, and the `zzaia-secrets-store` ClusterSecretStore already installed | Provisioned separately (e.g. by the `zzaia-finance-data-engine` control repo) — this chart only deploys *into* an existing cluster's shared infra, never its own copy |
-| **Azure Key Vault access** | Source of truth for all workspace secrets — no Bitwarden, no in-cluster Vault seed | See [`deploy/k8s/AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) |
-| **`helm`, `kubectl`, `docker`** | Build images and deploy the chart | Standard installs |
+| **`ansible-playbook`** | Provision k3s cluster, Kong, ESO, Fleet, and local OCI registry | `apt install ansible-core` or `pipx install --include-deps ansible-core` |
+| **Bitwarden Secrets Manager token (optional)** | Bootstrap workspace secrets at deploy time; ESO keeps them in sync thereafter | [Bitwarden Secrets Manager account](https://bitwarden.com/products/secrets-manager/) — generate an organization token |
 
 ---
 
-## Step 1 — Choose Authentication
+## Step 1 — Provision the Cluster
 
-Only **one** method is needed. Claude Code checks them in this priority order:
-
-| Priority | Method | Best For |
-|----------|--------|---------|
-| 1 | **Cloud Provider** (Bedrock / Vertex / Foundry) | Enterprise / no token expiry |
-| 2 | **API Key** | Pay-per-token / simplest setup |
-| 3 | **Pro / Max (OAuth)** | Subscription accounts |
-
-> If multiple methods are configured, the highest-priority one wins.
-
-### Cloud Provider variables
-
-| Provider | Variables to Set |
-|----------|-----------------|
-| **AWS Bedrock** | `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` + `AWS_REGION` (+ optional `ANTHROPIC_BEDROCK_BASE_URL`) |
-| **Google Vertex AI** | `CLAUDE_CODE_USE_VERTEX=1` + `ANTHROPIC_VERTEX_PROJECT_ID` + `CLOUD_ML_REGION` |
-| **Azure AI Foundry** | `CLAUDE_CODE_USE_FOUNDRY=1` + `AZURE_FOUNDRY_BASE_URL` |
-
-### API Key
-
-Set `ANTHROPIC_API_KEY` — obtain from [console.anthropic.com](https://console.anthropic.com).
-
-### Pro / Max (OAuth)
-
-| | Extension | Terminal `claude` REPL |
-|---|---|---|
-| **Option A** (`CLAUDE_CODE_OAUTH_TOKEN` env var) | ✅ | ✅ after one-time `.claude.json` seed |
-| **Option B** (`claude setup-token` inside container) | ✅ | ✅ fully self-contained |
-
-**Option A — Long-lived env var token:**
-
-On your **host machine**, run:
+The Ansible playbook self-provisions everything. Run:
 
 ```bash
-claude setup-token
+bash deploy/local.sh up
 ```
 
-Copy the printed token and store it as `CLAUDE_CODE_OAUTH_TOKEN` in the `ai` Key Vault secret (Step 2). Valid for ~1 year. The extension picks it up immediately.
+This will:
+1. Check for `ansible-playbook` prerequisite
+2. Prompt for optional Bitwarden Secrets Manager token (BWS_ACCESS_TOKEN)
+3. Run the Ansible playbook (`deploy/ansible/site.yml`) which:
+   - Installs docker, kubectl, helm, k3s
+   - Starts a single-node k3s cluster
+   - Provisions a local OCI registry (127.0.0.1:5000)
+   - Installs Kong (ingress, DB-less, single HTTPS listener on port 8443)
+   - Installs External Secrets Operator (ESO)
+   - Installs Bitwarden SDK server (for secret injection)
+   - Deploys Fleet in standalone mode (no Rancher)
+   - Generates self-signed TLS wildcard certificate
+   - Configures local DNS wildcard (dnsmasq)
 
-> **Important:** The token must be a single unbroken line. Terminal output may wrap it across multiple lines — copy the full token and remove any line breaks. A token with an embedded newline causes an `invalid header value` error.
+At the end, the script prints the cluster URL and next steps.
 
-The onboarding wizard is automatically suppressed — the image ships a `.claude.json` with `hasCompletedOnboarding: true` that seeds the home volume on first start.
+**Optional parameters:**
+- `NO_BWS=true` — skip Bitwarden (secrets must be configured manually later via ESO)
+- `CLUSTER_NAME=custom-name` — use a custom cluster name (default: `zzaia-local`)
 
-**Option B — Interactive session inside the container (simplest, fully self-contained):**
-
-Start the workspace first (Step 3), open a terminal inside VS Code, and run:
-
-```bash
-claude setup-token
-```
-
-Claude Code prints a URL. **Do not expect a browser to open automatically** — the pod has no display. Instead:
-
-1. Copy the URL from the terminal
-2. Open it in a browser **on your host machine**
-3. Complete authentication
-4. Copy the authorization code shown in the browser back into the terminal when prompted
-
-> **Important:** The OAuth callback URL is not reachable from inside the pod — you must manually copy the URL and open it on the host, then copy the code back.
-
-Claude Code stores the full session (credentials + account info) in the `workspace-home` PVC — the onboarding wizard is permanently suppressed and the session persists across all pod restarts. No env var is needed.
+> See [`deploy/ansible/site.yml`](deploy/ansible/site.yml) for the full playbook and role details.
 
 ---
 
-## Step 2 — Seed Azure Key Vault
+## Step 2 — Configure Secrets (ESO + Bitwarden)
 
-Every secret the workspace needs — AI keys, MCP tool credentials, the git-sidecar SSH key, the admin password — lives in Azure Key Vault as one of nine JSON-object secrets, projected into the cluster by the External Secrets Operator. No secret ever lives in Git or in a Helm value.
+External Secrets Operator continuously syncs secrets from Bitwarden Secrets Manager into Kubernetes Secrets. Supply the `BWS_ACCESS_TOKEN` at deploy time (Step 1); ESO handles all rotation and reconciliation thereafter.
 
-> See [`deploy/k8s/AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) for the full table of secret names, the JSON keys each one holds, and copy-paste `az keyvault secret set` commands.
+**Workspace secrets are defined in Bitwarden Secrets Manager as:**
 
-At minimum you need the `ai` secret (your Claude Code / cloud-provider credentials from Step 1) and, if you want sudo inside the workspace, the `admin` secret (`ADMIN_PASSWORD`). Everything else is optional and only required by the MCP tools you actually enable.
+See [`deploy/k8s/BWS_SECRETS.md`](deploy/k8s/BWS_SECRETS.md) for the complete table of secret names, expected keys, and Bitwarden credential setup instructions.
 
-> `ADMIN_PASSWORD` also becomes the SigNoz and Neo4j credentials where applicable. It has no strength requirement enforced by this chart, but a weak password is your own risk since it gates `sudo` inside the workspace.
+**At minimum, configure in Bitwarden:**
+- **ml-server** — Claude Code / cloud-provider credentials (one of: `ANTHROPIC_API_KEY`, `AWS_*` for Bedrock, `CLAUDE_CODE_USE_VERTEX`, `CLAUDE_CODE_USE_FOUNDRY`)
+- (Optional) **workspace-admin** — `ADMIN_PASSWORD` for sudo access inside the workspace
+
+Everything else is optional and only required by the MCP tools you actually enable.
+
+**ESO behavior:**
+- ESO reads the `bitwarden-access-token` Secret created by `deploy/local.sh` in the `external-secrets` namespace
+- ESO creates/updates k8s Secrets in the `zzaia-agentic-workspace` namespace based on Bitwarden secrets
+- Refresh interval: default 1h; set via `externalSecrets.refreshInterval` in values.yaml
+- No manual secret management — only update Bitwarden, ESO handles the rest
+
+> If you skipped Bitwarden at deploy time (`NO_BWS=true`), you can manually create k8s Secrets or update `deploy/k8s/Chart/values.yaml` to point to a different ESO backend (Vault, AWS Secrets Manager, etc.).
 
 ---
 
-## Step 3 — Deploy the Workspace
+## Step 3 — Deploy Workloads via Fleet
 
-One-time cluster wiring (Fleet GitRepo + local DNS wildcard), then build images and install the chart:
+Fleet automatically reconciles this repo into the cluster. Workloads are defined in `deploy/k8s/Chart` and deployed continuously via GitOps.
+
+**Fleet is already configured by `deploy/local.sh`:**
+- GitRepo points to this public repository: `https://github.com/zzaia/zzaia-agentic-workspace`
+- Namespace: `zzaia-agentic-workspace`
+- Target: `deploy/k8s/Chart` (Helm chart)
+- Auto-reconcile on push
+
+**Manual deployment (if needed):**
 
 ```bash
-# One-time: wire this repo into the cluster's Fleet + local DNS
-./deploy/k8s/bootstrap.sh
-
-# Build and push every zzaia-* image, pin tags in a Helm values overlay
-bash deploy/k8s/build-images.sh
-
-# Deploy
+# Re-deploy the chart (normally unnecessary — Fleet does this automatically)
 helm upgrade --install zzaia-workspace deploy/k8s/Chart \
   --namespace zzaia-agentic-workspace --create-namespace \
-  -f deploy/k8s/Chart/values.yaml \
-  -f deploy/k8s/Chart/values-images.yaml
+  -f deploy/k8s/Chart/values.yaml
 ```
 
-For a production-shaped cluster, also layer `-f deploy/k8s/Chart/values-production.yaml` and set the Azure Key Vault identity:
+**Customizations via Helm:**
 
-```bash
-helm upgrade --install zzaia-workspace deploy/k8s/Chart \
-  --namespace zzaia-agentic-workspace --create-namespace \
-  -f deploy/k8s/Chart/values.yaml \
-  -f deploy/k8s/Chart/values-production.yaml \
-  -f deploy/k8s/Chart/values-images.yaml \
-  --set externalSecrets.azurekv.vaultUrl=https://<vault>.vault.azure.net \
-  --set externalSecrets.azurekv.clientId=<uuid> \
-  --set externalSecrets.azurekv.tenantId=<uuid>
-```
-
-**GPU:** set `--set gpu.enabled=true` — this both requests `nvidia.com/gpu` and turns on the NVIDIA Container Toolkit inside `dind-server`. Requires the cluster's `nvidia` RuntimeClass and device plugin (owned by the infra chart, not this one).
-
-**Observability:** nothing to opt into — every pod ships logs/metrics/traces to the cluster's existing SigNoz via the shared OTel Collector by default. There is no separate observability stack to enable or disable per workspace.
-
-**SDKs (Node, Java, Rust, …):** installed at runtime by the Ansible bootstrap inside `workspace-server`, controlled by the same `*_ENABLED` flags as before — now set via `workspaceServer.env` in `values.yaml` rather than a deploy-script flag.
-
-See [`deploy/k8s/README.md`](deploy/k8s/README.md) for the full build/deploy reference, including per-image rebuild and registry override.
+See [`deploy/k8s/README.md`](deploy/k8s/README.md) for:
+- Building and pushing custom images to the local registry (127.0.0.1:5000)
+- Per-image rebuild and registry override
+- Production values overlay
+- GPU enablement
+- ESO backend switching (from Bitwarden to Vault, AWS Secrets Manager, etc.)
 
 ---
 
 ## Step 4 — Access the Workspace
 
-All HTTP front-ends are served through the cluster's Kong ingress, routed by subdomain under `*.workspace.zzaia.com`. Local resolution is a dnsmasq wildcard installed by `deploy/k8s/bootstrap.sh` (or run `./deploy/k8s/setup-workspace-dns.sh` directly) — no `/etc/hosts` editing needed.
+All HTTP front-ends are served through Kong ingress, routed by subdomain under `*.workspace.zzaia.com`. Local DNS resolution is automatic (dnsmasq installed by Ansible) — no `/etc/hosts` editing needed.
 
-> Kong's proxy Service listens on **`:8443`**, not the default 443 (see the cluster repo's `deploy/ansible/roles/ring`) — every URL below needs that port. `.Values.ingress.httpsPort` controls it; the chart's own `helm install` output (NOTES.txt) always prints the correct port.
+> Kong listens on **`:8443`** (not 443). Every URL below includes this port.
 
 | Access | URL / Command |
 |--------|--------------|
-| **VS Code** (browser) | `https://vscode.workspace.zzaia.com:8443` |
-| **SSH** | `kubectl -n zzaia-agentic-workspace port-forward svc/workspace-server 2222:2222`, then `ssh -p 2222 user@localhost` — SSH is TCP, not routed through Kong |
-| **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container → workspace |
-| **Aspire Dashboard** | `https://aspire.workspace.zzaia.com:8443` |
-| **Portainer** | `https://portainer.workspace.zzaia.com:8443` |
-| **Bifrost UI** | `https://bifrost.workspace.zzaia.com:8443` — gateway dashboard: logs, provider config, MCP clients |
-| **SigNoz UI** | The cluster's existing SigNoz instance (see the cluster repo's docs) — not deployed per-workspace |
+| **ml-server** (main external ingress) | `https://headroom.workspace.zzaia.com:8443` — LLM proxy for Claude Code and other agents |
+| **SSH** | `kubectl -n zzaia-agentic-workspace port-forward svc/workspace-server 2222:2222`, then `ssh -p 2222 user@localhost` |
+| **Dev Containers** | VS Code → Remote Explorer → Attach to Running Container |
+| **Aspire Dashboard** | Only available locally during dev; run via `workspace/host/` AppHost |
+| **Bifrost Code Mode UI** | `https://bifrost.workspace.zzaia.com:8443` — Starlark sandbox dashboard |
 
-Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via isolated sidecar pods, each scoped to only the Key Vault credential group it needs. The Aspire dashboard starts empty and receives telemetry when an AppHost is running.
+Claude Code, Gemini, Copilot, and Codex extensions are pre-installed. All MCP tools connect automatically via bifrost Code Mode, each scoped to only its required credential group.
 
 ---
 
@@ -201,45 +165,43 @@ All configured tools should show as connected. Then verify commands are availabl
 
 | Symptom | Fix |
 |---------|-----|
-| MCP shows disconnected | MCP images are pre-installed (no runtime npx). Wait ~15s for the ExternalSecret to sync + supergateway init, then retry `/mcp`. A sidecar with no Key Vault entry for its own secret group CrashLoopBackOffs (by design, see the entrypoint's readiness contract) rather than idling silently |
-| Workspace slow to start | `workspace-server` runs tool installation on first boot; other pods wait on its `tools.ready` sentinel — allow up to 30 min on a cold `workspace-tools` PVC |
-| Agent API calls failing | `kubectl -n zzaia-agentic-workspace logs deploy/ml-server` — the LLM proxy may still be initializing |
+| MCP shows disconnected | MCP sidecar pods wait for ESO to sync secrets. Check: `kubectl -n zzaia-agentic-workspace get pods` — sidecars should be `Running` once ExternalSecret syncs. |
+| Workspace slow to start | ml-server initializes on first boot; allow up to 5 min. Check logs: `kubectl -n zzaia-agentic-workspace logs deploy/ml-server` |
+| Agent API calls failing | Check ml-server logs: `kubectl -n zzaia-agentic-workspace logs deploy/ml-server` — verify Claude Code credentials are configured in Bitwarden |
 | Pod not starting | `kubectl -n zzaia-agentic-workspace describe pod <name>` then `kubectl -n zzaia-agentic-workspace logs <name>` |
-| ExternalSecret not syncing | `kubectl -n zzaia-agentic-workspace get externalsecret` — check `STATUS`; verify the Key Vault object name matches exactly (see AZURE_KEYVAULT.md) |
-| SSH key rejected | Verify `SSH_PUBLIC_KEY` in the `workspace` Key Vault secret starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
-| Terminal `claude` shows onboarding wizard | The `workspace-home` PVC predates the fix — delete and recreate it, or run `claude setup-token` inside the pod |
-| Extension auth error: `invalid header value` | `CLAUDE_CODE_OAUTH_TOKEN` contains a newline from terminal line-wrap — remove all line breaks from the token, update the `ai` Key Vault secret, and restart the affected pod |
-| `*.workspace.zzaia.com` doesn't resolve | Re-run `./deploy/k8s/setup-workspace-dns.sh` on the k3s host; verify with `getent hosts vscode.workspace.zzaia.com` |
+| ExternalSecret not syncing | `kubectl -n zzaia-agentic-workspace get externalsecrets` — check `STATUS` and `ERROR` columns. Verify BWS token is valid. |
+| SSH key rejected | Verify `SSH_PUBLIC_KEY` in Bitwarden starts with `ssh-ed25519`, `ssh-rsa`, or `ecdsa-` |
+| `*.workspace.zzaia.com` doesn't resolve | Verify dnsmasq is running: `getent hosts headroom.workspace.zzaia.com` should resolve to 127.0.0.1. If not, re-run dnsmasq setup from Ansible output. |
+| Bitwarden integration not working | Verify `BWS_ACCESS_TOKEN` is valid. Check ESO status: `kubectl -n external-secrets logs deploy/external-secrets -f` |
 
 ---
 
 ## Secret Rotation
 
-Update the value directly in Azure Key Vault (see [`AZURE_KEYVAULT.md`](deploy/k8s/AZURE_KEYVAULT.md) for the `az keyvault secret set` commands per group). The External Secrets Operator re-syncs on `externalSecrets.refreshInterval` (default `1h`) — no redeploy needed. To pick up a rotated value immediately:
+Update the value directly in Bitwarden Secrets Manager. The External Secrets Operator re-syncs on `externalSecrets.refreshInterval` (default `1h`) — no redeploy needed. To pick up a rotated value immediately:
 
 ```bash
-kubectl -n zzaia-agentic-workspace annotate externalsecret zzaia-workspace-secrets-<group> \
+kubectl -n zzaia-agentic-workspace annotate externalsecrets zzaia-workspace-secrets \
   force-sync=$(date +%s) --overwrite
 ```
 
-Then restart the pods that consume that group so the new env var takes effect:
+Then restart the pods that use that secret:
 
 ```bash
 kubectl -n zzaia-agentic-workspace rollout restart deployment/<name>
 ```
 
-> PVC lifecycle (same concept as before, now Kubernetes-native):
+> **PVC lifecycle** (Kubernetes native):
 >
 > | PVC | Contains | Delete to… |
 > |-----|----------|-----------|
-> | `workspace-home` | Home directory (user config, credentials, workspace repos) | Reset all user state |
-> | `workspace-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next `workspace-server` start |
-> | `workspace-sshkeys` | Host key material | Rotate host identity |
-> | `ml-tools` | ml-server's own toolchain | Force ml-server re-install |
+> | `zzaia-workspace-home` | Home directory (user config, workspace repos, SSH keys) | Reset all user state |
+> | `zzaia-workspace-tools` | Runtime tools (Node.js, .NET, Python, CLIs) | Force tool re-install on next ml-server start |
+> | `zzaia-workspace-sshkeys` | SSH host keys | Rotate host identity |
 >
+> Example:
 > ```bash
-> kubectl -n zzaia-agentic-workspace delete pvc zzaia-workspace-workspace-home
-> kubectl -n zzaia-agentic-workspace delete pvc zzaia-workspace-workspace-tools
+> kubectl -n zzaia-agentic-workspace delete pvc zzaia-workspace-home
 > ```
 
 ---
@@ -252,7 +214,6 @@ kubectl -n zzaia-agentic-workspace rollout restart deployment/<name>
 | `/behavior:devops:work-item` | Read or manage work items | [↗](agents/claude/.claude/commands/behavior/devops/work-item.md) |
 | `/behavior:devops:pull-request` | Manage pull requests | [↗](agents/claude/.claude/commands/behavior/devops/pull-request.md) |
 | `/behavior:devops:pipeline` | Run or debug CI/CD pipelines | [↗](agents/claude/.claude/commands/behavior/devops/pipeline.md) |
-| `/behavior:devops:new-relic` | New Relic log diagnostics | [↗](agents/claude/.claude/commands/behavior/devops/new-relic.md) |
 | `/behavior:development:develop` | Apply targeted changes to a branch | [↗](agents/claude/.claude/commands/behavior/development/develop.md) |
 | `/behavior:development:build` | Multi-framework builds | [↗](agents/claude/.claude/commands/behavior/development/build.md) |
 | `/behavior:development:test` | Comprehensive testing | [↗](agents/claude/.claude/commands/behavior/development/test.md) |

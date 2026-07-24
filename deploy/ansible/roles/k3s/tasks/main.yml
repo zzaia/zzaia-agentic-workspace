@@ -1,0 +1,134 @@
+---
+- name: Ensure /etc/rancher/k3s exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Configure k3s to mirror the local registry (loopback 5000, plain HTTP)
+  ansible.builtin.copy:
+    dest: /etc/rancher/k3s/registries.yaml
+    mode: "0644"
+    content: |
+      mirrors:
+        "localhost:5000":
+          endpoint:
+            - "http://localhost:5000"
+  become: true
+  notify: Restart k3s
+
+- name: Install the CNI conflist pre-seed script (guards against containerd's one-time CNI scan race on every k3s start)
+  ansible.builtin.copy:
+    dest: /usr/local/bin/zzaia-k3s-cni-preseed.sh
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      set -e
+      mkdir -p /var/lib/rancher/k3s/agent/etc/cni/net.d
+      if [ ! -s /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist ]; then
+        cat > /var/lib/rancher/k3s/agent/etc/cni/net.d/10-flannel.conflist <<'EOF'
+      {
+        "name":"cbr0",
+        "cniVersion":"1.0.0",
+        "plugins":[
+          {
+            "type":"flannel",
+            "delegate":{
+              "hairpinMode":true,
+              "forceAddress":true,
+              "isDefaultGateway":true
+            }
+          },
+          {
+            "type":"portmap",
+            "capabilities":{
+              "portMappings":true
+            }
+          },
+          {
+            "type":"bandwidth",
+            "capabilities":{
+              "bandwidth":true
+            }
+          }
+        ]
+      }
+      EOF
+      fi
+  become: true
+
+- name: Ensure the k3s.service.d drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/k3s.service.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Install a systemd drop-in so the CNI pre-seed runs before every k3s start (not just first boot)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s.service.d/10-cni-preseed.conf
+    mode: "0644"
+    content: |
+      [Service]
+      ExecStartPre=/usr/local/bin/zzaia-k3s-cni-preseed.sh
+  become: true
+
+- name: Reload systemd to pick up the k3s CNI pre-seed drop-in
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+
+- name: Check if k3s service is already active
+  ansible.builtin.systemd:
+    name: k3s
+  register: k3s_service_status
+  become: true
+  failed_when: false
+  changed_when: false
+
+- name: Install k3s single-node cluster
+  when: k3s_service_status.status is not defined or k3s_service_status.status.ActiveState != "active"
+  become: true
+  block:
+    - name: Run k3s install script
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_CHANNEL=v1.35 sh -s - \
+          --write-kubeconfig-mode 644 \
+          --disable traefik \
+          {{ k3s_kubelet_args | map('regex_replace', '^(.*)$', '--kubelet-arg=\1') | map('quote') | join(' ') }}
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Ensure k3s service is enabled and started
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+
+- name: Ensure the k3s kubeconfig is world-readable
+  become: true
+  ansible.builtin.file:
+    path: "{{ kubeconfig_path }}"
+    mode: "0644"
+
+- name: Apply any pending k3s config (registry mirror) before workloads
+  ansible.builtin.meta: flush_handlers
+
+- name: Wait for the k3s API server port to accept connections
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 6443
+    delay: 2
+    timeout: 180
+
+- name: Wait for the k3s node to be Ready
+  ansible.builtin.command: >
+    kubectl wait --for=condition=Ready node --all --timeout=20s
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  register: k3s_node_ready
+  until: k3s_node_ready.rc == 0
+  retries: 15
+  delay: 5
+  changed_when: false

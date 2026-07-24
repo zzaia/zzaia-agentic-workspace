@@ -1,0 +1,21 @@
+---
+- name: Ensure ~/.kube directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.kube"
+    state: directory
+    mode: "0700"
+
+- name: Copy k3s kubeconfig to user's kube config
+  become: true
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    remote_src: true
+    owner: "{{ ansible_env.USER }}"
+    mode: "0600"
+
+- name: Set kubectl context to default
+  ansible.builtin.command: kubectl config use-context default
+  environment:
+    KUBECONFIG: "{{ ansible_env.HOME }}/.kube/config"
+  changed_when: false

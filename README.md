@@ -14,18 +14,18 @@
 
 | # | Benefit |
 |---|---------|
-| 1 | **Minimal setup time** — a single Helm install (`helm upgrade --install zzaia-workspace deploy/k8s/Chart`) deploys every package, language runtime, and tool automatically onto Kubernetes. After the first image build, starting the workspace requires no manual configuration — just fill in your secrets and go. |
-| 2 | **Standardized Ubuntu environment** — the workspace runs inside a container on Ubuntu regardless of whether the host machine is Linux, macOS, or Windows. Every developer gets an identical, reproducible environment with no "works on my machine" surprises. |
-| 3 | **Local and remote access** — access the full VS Code IDE from a browser tab (no local installation required), connect over SSH, or deploy remotely and reach it from any device. Supports WASM-based browser access for fully server-side execution. |
-| 4 | **Long-lived authentication** — authenticate Claude Code once at deployment time using an OAuth refresh token, API key, or cloud provider credentials. Tokens auto-refresh across container restarts; you never see another login prompt during daily use. |
-| 5 | **Secret isolation** — Azure Key Vault is the source of truth, projected into the cluster via the External Secrets Operator. Each MCP sidecar (Tavily, Azure DevOps, Postman, New Relic) and every other pod receives only its own credential group at deploy time — never the full set. The AI agent context never has access to credentials, eliminating accidental secret leakage. |
-| 6 | **Confident agentic YOLO mode** — container isolation from the host system makes it genuinely safe to run Claude Code with `--dangerously-skip-permissions`. Autonomous agentic workflows execute without fear of unintended changes to the host or other projects. |
-| 7 | **Familiar VS Code experience** — the full VS Code feature set works in-browser: extensions marketplace, profiles, themes, keybindings, and other AI coding assistants such as GitHub Copilot, Gemini, and Codex run side-by-side with Claude Code. |
-| 8 | **Persistent customization** — optional admin access lets you install additional tools and change configurations inside the running container. All changes survive restarts because the home directory is backed by a persistent Docker volume. |
-| 9 | **Cost-effective Pro and Max subscription support** — Claude Code works with Anthropic Pro and Max subscriptions, not only pay-per-token API keys. Teams can maximize the value of existing plans rather than paying separately for every token consumed by automation. |
+| 1 | **Self-provisioning k3s cluster** — run `deploy/local.sh up` to automatically provision a single-node k3s cluster with Ansible. The only host prerequisite is `ansible-playbook`. The playbook installs docker, kubectl, helm, k3s, a local OCI registry, and the bootstrap ring. |
+| 2 | **Minimal bootstrap infrastructure** — the ring runs only Kong (ingress, DB-less), External Secrets Operator, Bitwarden SDK server, and Fleet standalone (no Rancher, Dapr, or cert-manager). Simple, auditable, extensible. |
+| 3 | **GitOps-based workload deployment** — Fleet in pull-mode reconciles workloads from this public repo (`deploy/k8s/Chart`). No manual kubectl — just push changes and Fleet converges the cluster. |
+| 4 | **Secrets via Bitwarden Secrets Manager** — ESO keeps k8s Secrets continuously in sync with Bitwarden. Supply the `BWS_ACCESS_TOKEN` only at deploy time; ESO handles all rotation and reconciliation. No Vault, no Azure Key Vault, no manual secret management. Details: [`deploy/k8s/BWS_SECRETS.md`](deploy/k8s/BWS_SECRETS.md). |
+| 5 | **Kong exposes only ml-server** — the single external ingress at `headroom.<domain>` routes to ml-server on port 8787. No other services exposed; no auth plugins. Simpler attack surface, easier reasoning about traffic. |
+| 6 | **Self-contained for local development** — use the workspace alongside the Aspire AppHost in `workspace/host/` to run all services locally with integrated testing. Observability is handled by Aspire during dev; the k3s cluster focuses on production-grade orchestration. |
+| 7 | **Extensible to remote clusters** — the Ansible playbook is designed to run on remote machines. `deploy/local.sh` uses `localhost` Ansible connection; deploy to `finance-data-engine` or other remote hosts by changing the target. Same architecture everywhere. |
+| 8 | **Long-lived authentication** — authenticate Claude Code once at deployment time using an OAuth refresh token, API key, or cloud provider credentials. Tokens auto-refresh across pod restarts; you never see another login prompt during daily use. |
+| 9 | **Secret isolation** — ESO + Bitwarden is the source of truth. Each pod receives only its own credential group at deploy time. The AI agent context never has access to credentials, eliminating accidental secret leakage. |
 | 10 | **Full development lifecycle automation** — the workspace ships with pre-composed commands and skills that cover the entire lifecycle: repository management, implementation, testing, code review, architecture documentation, and release — all in a semi-automated, agent-driven workflow. |
 | 11 | **Deep Azure DevOps integration** — built-in remote commands connect directly to Azure DevOps for reading and updating work items, triggering and diagnosing pipelines, creating and reviewing pull requests, and navigating wikis — all without leaving the workspace terminal. |
-| 12 | **Full-stack observability, no duplicate infra** — every pod ships logs, metrics, and traces to the cluster's existing SigNoz instance via the shared OTel Collector; no separate observability stack to deploy or maintain per workspace. |
+| 12 | **Multi-agent support** — Claude Code, Gemini CLI, OpenAI Codex, and GitHub Copilot are pre-installed and share the same MCP tool surface. Teams choose the best agent for each task. |
 
 ## 🚀 Quick Start
 
@@ -160,7 +160,6 @@ DevOps platform operations across Azure DevOps and GitHub.
 - [**`/behavior:devops:work-item`**](agents/claude/.claude/commands/behavior/devops/work-item.md) - Work item retrieval and management
 - [**`/behavior:devops:pull-request`**](agents/claude/.claude/commands/behavior/devops/pull-request.md) - Pull request management
 - [**`/behavior:devops:pipeline`**](agents/claude/.claude/commands/behavior/devops/pipeline.md) - Run or diagnose pipelines (`--action run|debug`)
-- [**`/behavior:devops:new-relic`**](agents/claude/.claude/commands/behavior/devops/new-relic.md) - New Relic log diagnostics (`--action debug`)
 
 ### Workspace
 
@@ -224,12 +223,22 @@ The `workspace/host/` directory contains a .NET Aspire AppHost — a template fo
 
 > See [workspace/host/README.md](workspace/host/README.md) for full setup details.
 
-## 🐳 Container
+## 🚀 Deployment Architecture
 
-The `docker/` directory provides the SSH-accessible Ubuntu image with all workspace tools pre-installed, deployed onto Kubernetes via `deploy/k8s/Chart`. Secrets live in Azure Key Vault and are projected into each pod's own credential group by the External Secrets Operator. MCP servers run as isolated sidecar pods and receive only the group(s) their own secrets belong to.
+The workspace deploys as a self-provisioning Kubernetes cluster. Run `deploy/local.sh up` to automatically provision a single-node k3s cluster with Ansible. The playbook installs all prerequisites, configures Kong, ESO, Fleet, and deploys workloads via GitOps.
 
-> See [docs/architecture-overview.md](docs/architecture-overview.md) for architectural decisions and security model.
-> See [docker/DOCKER.md](docker/DOCKER.md) for image/build reference and [deploy/k8s/README.md](deploy/k8s/README.md) for deployment.
+**Key characteristics:**
+- Single-node k3s cluster with local OCI registry (127.0.0.1:5000)
+- Bootstrap ring: Kong (ingress, DB-less), ESO, bitwarden-sdk-server, Fleet standalone
+- Secrets: ESO + Bitwarden Secrets Manager (no Vault, no Azure Key Vault)
+- Workloads via Fleet pull-mode from this repo's `deploy/k8s/Chart`
+- Kong exposes only ml-server at `headroom.<domain>:8443`
+- TLS: self-signed wildcard, local DNS via dnsmasq
+
+**For local development:** Use the .NET Aspire AppHost in `workspace/host/` to run services alongside the cluster with integrated observability and testing.
+
+> See [docs/architecture-overview.md](docs/architecture-overview.md) for architectural ADRs.
+> See [deploy/local.sh](deploy/local.sh) for deployment mechanics and [deploy/k8s/BWS_SECRETS.md](deploy/k8s/BWS_SECRETS.md) for secrets configuration.
 
 ## 🤖 Specialized Agents
 
@@ -296,29 +305,24 @@ workspace/               # Multi-repository workspace
 
 ## 🔌 MCP Tools Integration
 
-External service integrations via Model Context Protocol servers. Each runs as an isolated sidecar container and fetches its own secret from Vault at startup. Tools are wired into `.mcp.json` on the shared `workspace-home` volume by the workspace-server entrypoint — all agent containers (workspace-server, vscode-sidecar, jupyter-sidecar, containers-dev-sidecar) inherit the config automatically.
+Agents access external services via Model Context Protocol (MCP). Tools are configured in `.mcp.json` and received by all agents (Claude Code, Gemini, Copilot, etc.). Credentials are supplied via ESO + Bitwarden at pod startup — agents never see raw secrets.
 
-| Tool | Purpose | Secret | Transport |
-|------|---------|--------|-----------|
-| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` | direct `mcp-tavily:3001` |
-| **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` | direct `mcp-azure-devops:3002` |
-| **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` | direct `mcp-postman:3003` |
-| **New Relic** | Log diagnostics and observability | `NEW_RELIC_API_KEY` | direct `mcp-newrelic:3004` |
-| **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` | direct `mcp-github:3005` |
-| **Playwright** | Browser automation, screenshots | None (always-on) | direct `mcp-playwright:3006` |
-| **Headroom** | Context compression proxy tools | None (always-on) | direct `mcp-headroom:3008` |
-| **SigNoz** | Query logs, metrics, and traces via SigNoz | `SIGNOZ_MCP_API_KEY` (auto-provisioned) | direct `mcp-signoz:3009` |
-| **AWS SNS/SQS** | Publish/consume SNS topics and SQS queues | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-sns-sqs:3010` |
-| **AWS CloudWatch** | Query metrics, alarms, and log groups | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-cloudwatch:3011` |
-| **AWS CloudWatch X-Ray** | Distributed traces and Application Signals | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-cloudwatch-xray:3012` |
-| **AWS ECS** | Inspect and query ECS clusters and tasks | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-ecs:3013` |
-| **AWS PostgreSQL** | AWS-managed PostgreSQL (RDS/Aurora) access | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | bifrost Code Mode `mcp-aws-postgres:3014` |
-| **bifrost** | Code Mode (Starlark sandbox + upstream AWS tools) | virtual key `sk-bf-workspace-agent-001` | `bifrost-server:8080/mcp` |
+| Tool | Purpose | Credential | Mode |
+|------|---------|-----------|------|
+| **Tavily** | Web search, extract, crawl, map | `TAVILY_API_KEY` | bifrost Code Mode |
+| **Azure DevOps** | Work items, PRs, pipelines, repos | `ADO_MCP_AUTH_TOKEN`, `AZURE_DEVOPS_ORGANIZATION` | bifrost Code Mode |
+| **Postman** | Collections, environments, requests | `POSTMAN_API_KEY` | bifrost Code Mode |
+| **GitHub** | Repositories, issues, PRs, actions | `GITHUB_PERSONAL_ACCESS_TOKEN` | bifrost Code Mode |
+| **Playwright** | Browser automation, screenshots | None (always-on) | bifrost Code Mode |
+| **AWS SNS/SQS** | Publish/consume SNS topics and SQS queues | `AWS_*` keys (optional) | bifrost Code Mode |
+| **AWS CloudWatch** | Query metrics, alarms, and log groups | `AWS_*` keys (optional) | bifrost Code Mode |
+| **AWS CloudWatch X-Ray** | Distributed traces and Application Signals | `AWS_*` keys (optional) | bifrost Code Mode |
+| **AWS ECS** | Inspect and query ECS clusters and tasks | `AWS_*` keys (optional) | bifrost Code Mode |
+| **AWS PostgreSQL** | AWS-managed PostgreSQL (RDS/Aurora) access | `AWS_*` keys (optional) | bifrost Code Mode |
+| **bifrost** | Code Mode (Starlark sandbox + upstream tool proxies) | virtual key `sk-bf-workspace-agent-001` | `/mcp` endpoint |
 | **Aspire** | AppHost resource inspection | None (workspace process) | stdio |
 
-> All sidecar MCP servers use `supergateway@3.4.3 --stateful --outputTransport streamableHttp`. Stateful mode creates one isolated child process per client session, enabling safe concurrent use by multiple agent containers. Secrets never leave the sidecar containers.
->
-> **bifrost Code Mode** exposes Starlark sandbox tools and proxies upstream AWS MCP tools at its `/mcp` endpoint. Non-AWS tools (tavily, azure_devops, postman, github, playwright, newrelic) are also registered as Code Mode clients. See [ADR 007B](docs/architecture-overview.md) for the full architecture.
+> All tools go through **bifrost Code Mode** (Starlark sandbox), which proxies access to upstream MCP servers. This enforces governance, centralizes secret management, and keeps agents isolated from raw credentials. See [ADR 007B](docs/architecture-overview.md) for the architecture.
 
 ## 🛡️ Quality Standards
 

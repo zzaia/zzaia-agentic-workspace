@@ -6,9 +6,9 @@
 # appears in this file.
 #
 # DROPPED vs compose (deliberate, do not re-add):
-#   vault-server  -> cluster Vault in .Values.sharedInfraNamespace is reused
-#   nginx-proxy   -> Kong Ingress replaces it (see .Values.ingress)
-#   bws_token / Bitwarden secret -> replaced by External Secrets + Azure Key Vault
+#   vault-server -> not needed; cluster uses Bitwarden Secrets Manager
+#   nginx-proxy -> Kong Ingress replaces it (see .Values.ingress)
+#   signoz-server, mcp-signoz, mcp-newrelic -> observability moved to AppHost
 #
 # Resource requests/limits: `limits` are taken verbatim from each compose
 # service's `deploy.resources.limits`. Compose declared NO requests (except
@@ -33,9 +33,9 @@ domain: "workspace.zzaia.com"
 # and is scoped to the infra namespace.
 tlsSecretName: "zzaia-workspace-tls"
 
-# Namespace hosting the shared cluster services this chart consumes but does
-# NOT deploy: Vault, SigNoz, the OTEL collector. All cross-namespace references
-# MUST be built as <service>.<sharedInfraNamespace>.svc.cluster.local.
+# Namespace hosting cluster infrastructure (Kong, ESO, etc.)
+# All cross-namespace service references MUST be built as
+# <service>.<sharedInfraNamespace>.svc.cluster.local.
 sharedInfraNamespace: "infra"
 
 # --- Feature toggles ---------------------------------------------------------
@@ -252,11 +252,6 @@ images:
     repository: "zzaia/zzaia-mcp-postman"
     tag: ""
     pullPolicy: ""
-  mcpNewrelic:
-    registry: ""
-    repository: "zzaia/zzaia-mcp-newrelic"
-    tag: ""
-    pullPolicy: ""
   mcpGithub:
     registry: ""
     repository: "zzaia/zzaia-mcp-github"
@@ -300,33 +295,34 @@ images:
     tag: "1.36"
     pullPolicy: IfNotPresent
 
-# --- External Secrets (Azure Key Vault) --------------------------------------
+# --- External Secrets (Bitwarden Secrets Manager) -----------------------------
 # Shape MIRRORS deploy/k8s/infra/Chart values + external-secrets-store.yaml.
-# Bitwarden/BWS is GONE. Azure Key Vault is the only source of truth.
+# External Secrets Operator — syncs credentials from Bitwarden Secrets Manager
 externalSecrets:
   enabled: true
-  provider: "azurekv"
-  pathPrefix: "zzaia"
+  provider: "bitwardensecretsmanager"
   refreshInterval: "1h"
-  azurekv:
-    vaultUrl: ""            # https://<name>.vault.azure.net — REQUIRED
-    authType: "WorkloadIdentity"
-    clientId: ""            # REQUIRED — annotates the ServiceAccount
-    tenantId: ""            # REQUIRED — annotates the ServiceAccount
-  # ServiceAccount created in THIS namespace and referenced by the store.
-  serviceAccountName: "external-secrets"
-  # Reuse the infra chart's ClusterSecretStore. Do NOT recreate it.
+  # THIS chart creates the ClusterSecretStore (changed from finance-data-engine reuse)
+  createClusterSecretStore: true
   clusterSecretStoreName: "zzaia-secrets-store"
-  createClusterSecretStore: false
-  # Base name; the actual per-group Secret is "<targetSecretName>-<group>" (see
-  # zzaia-workspace.groupSecretName). One ExternalSecret+Secret pair is
-  # materialised per entry below, so a consumer's envFrom
-  # (zzaia-workspace.credentialsEnvFrom) can request only the group(s) it needs
-  # instead of all 23 keys in one blob.
+  # Bitwarden Secrets Manager provider configuration
+  bitwardensecretsmanager:
+    # Secret containing the BWS access token (created by deploy/local.sh)
+    accessTokenSecretName: "bitwarden-access-token"
+    accessTokenSecretNamespace: "external-secrets"
+    # Bitwarden organization ID — owner must set this
+    organizationId: ""
+    # BWS SDK server endpoint (deployed in external-secrets namespace by ansible/ring)
+    bitwardenServerSDKURL: "http://bitwarden-sdk-server.external-secrets.svc.cluster.local:5000"
+    # Optional: override Bitwarden API/Identity URLs (leave empty for defaults)
+    apiURL: ""
+    identityURL: ""
+    # Optional: CA bundle for TLS verification
+    caBundle: ""
+  # Base name; actual per-group Secret is "<targetSecretName>-<group>"
   targetSecretName: "zzaia-workspace-secrets"
-  # Every distinct .data[].remoteKey value below, i.e. one group per Key Vault
-  # JSON-blob object. externalsecrets.yaml ranges over this list and, per
-  # group, filters .data to the entries whose remoteKey matches.
+  # One group per credential logical group. externalsecrets.yaml ranges over this
+  # and filters .data to entries whose remoteKey matches.
   groupNames:
     - "ai"
     - "integrations"
@@ -337,107 +333,77 @@ externalSecrets:
     - "mcp-aws"
     - "workspace"
     - "admin"
-  # remoteRef.key = Azure Key Vault secret name (JSON blob);
-  # remoteRef.property = field inside it. Property names are the exact env var
-  # names the container entrypoints read (verified against containers/*/entrypoint.sh).
+  # Bitwarden Secrets Manager model — each entry references one BWS secret.
+  # remoteKey = group name (used for filtering into per-group k8s Secrets).
+  # secretName = the exact Bitwarden secret name/ID to retrieve (via remoteRef.key).
+  # secretKey = the k8s Secret key name (must match container entrypoint env var names).
   data:
     - secretKey: ANTHROPIC_API_KEY
       remoteKey: "ai"
-      property: "ANTHROPIC_API_KEY"
+      secretName: "anthropic-api-key"
     - secretKey: CLAUDE_CODE_OAUTH_TOKEN
       remoteKey: "ai"
-      property: "CLAUDE_CODE_OAUTH_TOKEN"
+      secretName: "claude-code-oauth-token"
     - secretKey: OPENAI_API_KEY
       remoteKey: "ai"
-      property: "OPENAI_API_KEY"
+      secretName: "openai-api-key"
     - secretKey: GEMINI_API_KEY
       remoteKey: "ai"
-      property: "GEMINI_API_KEY"
+      secretName: "gemini-api-key"
     - secretKey: TAVILY_API_KEY
       remoteKey: "ai"
-      property: "TAVILY_API_KEY"
+      secretName: "tavily-api-key"
     - secretKey: BIFROST_VIRTUAL_KEY_CLAUDE_PRO
       remoteKey: "ai"
-      property: "BIFROST_VIRTUAL_KEY_CLAUDE_PRO"
+      secretName: "bifrost-virtual-key-claude-pro"
     - secretKey: BIFROST_VIRTUAL_KEY_AGENTS_GENERIC
       remoteKey: "ai"
-      property: "BIFROST_VIRTUAL_KEY_AGENTS_GENERIC"
-    - secretKey: NEW_RELIC_API_KEY
-      remoteKey: "integrations"
-      property: "NEW_RELIC_API_KEY"
+      secretName: "bifrost-virtual-key-agents-generic"
     - secretKey: GITHUB_PERSONAL_ACCESS_TOKEN
       remoteKey: "mcp-github"
-      property: "GITHUB_PERSONAL_ACCESS_TOKEN"
+      secretName: "github-personal-access-token"
     - secretKey: ADO_MCP_AUTH_TOKEN
       remoteKey: "mcp-azure-devops"
-      property: "ADO_MCP_AUTH_TOKEN"
+      secretName: "ado-mcp-auth-token"
     - secretKey: AZURE_DEVOPS_ORGANIZATION
       remoteKey: "mcp-azure-devops"
-      property: "AZURE_DEVOPS_ORGANIZATION"
+      secretName: "azure-devops-organization"
     - secretKey: AZURE_CLIENT_ID
       remoteKey: "mcp-azure-portal"
-      property: "AZURE_CLIENT_ID"
+      secretName: "azure-client-id"
     - secretKey: AZURE_CLIENT_SECRET
       remoteKey: "mcp-azure-portal"
-      property: "AZURE_CLIENT_SECRET"
+      secretName: "azure-client-secret"
     - secretKey: AZURE_TENANT_ID
       remoteKey: "mcp-azure-portal"
-      property: "AZURE_TENANT_ID"
+      secretName: "azure-tenant-id"
     - secretKey: AZURE_SUBSCRIPTION_ID
       remoteKey: "mcp-azure-portal"
-      property: "AZURE_SUBSCRIPTION_ID"
+      secretName: "azure-subscription-id"
     - secretKey: POSTMAN_API_KEY
       remoteKey: "mcp-postman"
-      property: "POSTMAN_API_KEY"
+      secretName: "postman-api-key"
     - secretKey: AWS_ACCESS_KEY_ID
       remoteKey: "mcp-aws"
-      property: "AWS_ACCESS_KEY_ID"
+      secretName: "aws-access-key-id"
     - secretKey: AWS_SECRET_ACCESS_KEY
       remoteKey: "mcp-aws"
-      property: "AWS_SECRET_ACCESS_KEY"
+      secretName: "aws-secret-access-key"
     - secretKey: AWS_REGION
       remoteKey: "mcp-aws"
-      property: "AWS_REGION"
+      secretName: "aws-region"
     - secretKey: GIT_SIDECAR_AGENT_KEY
       remoteKey: "workspace"
-      property: "GIT_SIDECAR_AGENT_KEY"
+      secretName: "git-sidecar-agent-key"
     - secretKey: SSH_PUBLIC_KEY
       remoteKey: "workspace"
-      property: "SSH_PUBLIC_KEY"
+      secretName: "ssh-public-key"
     - secretKey: ADMIN_EMAIL
       remoteKey: "admin"
-      property: "email"
+      secretName: "admin-email"
     - secretKey: ADMIN_PASSWORD
       remoteKey: "admin"
-      property: "password"
-
-# --- Cluster Vault (consumed, NOT deployed) ----------------------------------
-# Replaces compose's vault-server. Entrypoints still speak the Vault HTTP API,
-# so they need a reachable VAULT_ADDR.
-vault:
-  # Service name in .Values.sharedInfraNamespace (infra chart: vault-data-engine-service.yaml).
-  serviceName: "vault-data-engine"
-  port: 8200
-  # "" => helper builds http://<serviceName>.<sharedInfraNamespace>.svc.cluster.local:<port>
-  addr: ""
-
-# --- Observability (consumed, NOT deployed) ----------------------------------
-# SigNoz + the OTEL collector live in .Values.sharedInfraNamespace.
-observability:
-  enabled: true
-  otlpService: "otel-collector-data-engine"
-  otlpGrpcPort: 4317
-  otlpHttpPort: 4318
-  # "" => helper builds http://<otlpService>.<sharedInfraNamespace>.svc.cluster.local:<otlpHttpPort>
-  otlpEndpoint: ""
-  otlpProtocol: "http/protobuf"
-  serviceNamespace: "zzaia-agentic-workspace"
-  tracesExporter: "otlp"
-  metricsExporter: "otlp"
-  logsExporter: "otlp"
-  # SigNoz UI in the infra namespace — used by NOTES.txt only.
-  signozService: "signoz-data-engine"
-  signozPort: 8080
+      secretName: "admin-password"
 
 # --- LLM proxy wiring --------------------------------------------------------
 # In compose every IDE/agent container pointed at ml-server:8787 and bifrost:8080
@@ -503,7 +469,7 @@ portainer:
   service:
     type: ClusterIP
   ingress:
-    enabled: true
+    enabled: false
     subdomain: "portainer"
   securityContext:
     runAsUser: 0             # image has no USER; portainer binary needs /data ownership
@@ -569,7 +535,7 @@ bifrost:
   service:
     type: ClusterIP
   ingress:
-    enabled: true
+    enabled: false
     subdomain: "bifrost"
   securityContext:
     runAsUser: 0             # Dockerfile: USER root
@@ -739,10 +705,10 @@ vscodeSidecar:
   service:
     type: ClusterIP
   ingress:
-    enabled: true
+    enabled: false
     subdomain: "vscode"
   aspireIngress:
-    enabled: true
+    enabled: false
     subdomain: "aspire"
   env:
     aspireAllowUnsecuredTransport: true
@@ -775,7 +741,7 @@ jupyterSidecar:
   service:
     type: ClusterIP
   ingress:
-    enabled: true
+    enabled: false
     subdomain: "jupyter"
   env:
     installPrefix: /opt/tools
@@ -910,14 +876,6 @@ mcpServers:
     port: 3003
     portName: "http"
     secretGroup: "mcp-postman"        # POSTMAN_API_KEY
-
-  newrelic:
-    enabled: true
-    name: "mcp-newrelic"
-    image: "mcpNewrelic"
-    port: 3004
-    portName: "http"
-    secretGroup: "integrations"       # NEW_RELIC_API_KEY
 
   github:
     enabled: true

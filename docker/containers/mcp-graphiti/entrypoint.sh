@@ -5,7 +5,7 @@ set -euo pipefail
 # Routes LLM calls (entity extraction) through ml-server (Headroom) → bifrost-server → Anthropic
 # Embedder routing: GPU_ENABLED=true → local ml-server; else → cloud OpenAI.
 # OPENAI_API_KEY (cloud embedder path) is projected into the pod environment by
-# External Secrets Operator (Azure Key Vault → Kubernetes Secret → envFrom).
+# External Secrets Operator (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom).
 
 if [ -t 1 ]; then
     _G='\033[0;32m'

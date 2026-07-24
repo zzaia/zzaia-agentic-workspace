@@ -23,7 +23,7 @@ log_success() { echo -e "${_G}[mcp-postman] ✓${_N} $*"; }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
     if [ -z "${POSTMAN_API_KEY:-}" ]; then
         log_error "POSTMAN_API_KEY not set — cannot start mcp-postman. Check the workspace credentials secret projection."

@@ -1,0 +1,84 @@
+---
+- name: Detect NVIDIA GPU
+  ansible.builtin.command: nvidia-smi -L
+  register: gpu_detect
+  changed_when: false
+  failed_when: false
+
+- name: Set gpu_present fact
+  ansible.builtin.set_fact:
+    gpu_present: "{{ gpu_detect.rc == 0 }}"
+
+- name: Check for nvidia-container-toolkit
+  ansible.builtin.command: which nvidia-ctk
+  register: nvidia_ctk_check
+  changed_when: false
+  failed_when: false
+  when: gpu_present
+
+- name: Install NVIDIA Container Toolkit
+  when: gpu_present and nvidia_ctk_check.rc != 0
+  become: true
+  block:
+    - name: Determine distribution id
+      ansible.builtin.shell: . /etc/os-release && echo "${ID}${VERSION_ID}"
+      register: os_distribution
+      changed_when: false
+
+    - name: Fetch NVIDIA container toolkit GPG key
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        dest: /tmp/nvidia-container-toolkit-keyring.gpg.asc
+        mode: "0644"
+
+    - name: Dearmor GPG key into keyring
+      ansible.builtin.shell: gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg /tmp/nvidia-container-toolkit-keyring.gpg.asc
+      args:
+        creates: /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+    - name: Fetch NVIDIA container toolkit apt list
+      ansible.builtin.get_url:
+        url: "https://nvidia.github.io/libnvidia-container/{{ os_distribution.stdout }}/libnvidia-container.list"
+        dest: /tmp/libnvidia-container.list
+        mode: "0644"
+
+    - name: Install signed-by apt source list
+      ansible.builtin.shell: >
+        sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g'
+        /tmp/libnvidia-container.list | tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      changed_when: true
+
+    - name: Install nvidia-container-toolkit package
+      ansible.builtin.apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: true
+
+# Prefer k3s's own auto-detection: if the toolkit was installed before k3s
+# started, k3s already added the nvidia runtime to the generated config.toml —
+# in which case the manual nvidia-ctk template step below is skipped (writing a
+# partial .tmpl would drop k3s's own containerd settings and break the node).
+- name: Check if k3s containerd already exposes the nvidia runtime
+  ansible.builtin.command: "grep -q nvidia {{ k3s_containerd_config }}"
+  register: nvidia_runtime_present
+  changed_when: false
+  failed_when: false
+  when: gpu_present
+
+- name: Ensure k3s containerd directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_containerd_template | dirname }}"
+    state: directory
+    mode: "0755"
+  become: true
+  when: gpu_present and nvidia_runtime_present.rc != 0
+
+- name: Configure k3s containerd to expose the nvidia runtime
+  ansible.builtin.command: >
+    nvidia-ctk runtime configure --runtime=containerd --config={{ k3s_containerd_template }}
+  become: true
+  when: gpu_present and nvidia_runtime_present.rc != 0
+  notify: restart k3s
+
+- name: Apply any pending k3s restart for GPU runtime config before workloads are scheduled
+  ansible.builtin.meta: flush_handlers

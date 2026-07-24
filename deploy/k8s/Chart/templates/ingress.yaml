@@ -1,13 +1,11 @@
 {{- /*
 =============================================================================
-Ingress — replaces the compose nginx-proxy (docker/containers/nginx-proxy).
-Each compose `server { server_name <sub>.${WORKSPACE_NAME}.local; ... }` block
-becomes one Ingress host <sub>.<domain> routed through Kong. vault.* and
-signoz.* are NOT rendered here — those live in the shared infra namespace and
-are reused, not owned by this chart.
+Ingress — Kong ingress controller handles routing via Ingress resources.
+Each service's `ingress.enabled` + `ingress.subdomain` determines whether a
+host is rendered here. The chart-wide `ingress.enabled` gates the whole file.
 
-Per-host enablement comes from each service's own `ingress.enabled` +
-`ingress.subdomain`; the chart-wide `ingress.enabled` gates the whole file.
+Only ml-server is currently exposed; other services have ingress.enabled: false.
+=============================================================================
 
 WEBSOCKET TIMEOUT (code-server / Jupyter / Aspire dashboard):
   Kong's default proxy read timeout (60s) kills long-lived websockets. The

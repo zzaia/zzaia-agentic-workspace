@@ -10,7 +10,7 @@ ADO_TOKEN=""
 
 # ── Load secrets from environment ─────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 # The git-sidecar agent public key is derived from its private key
 # (GIT_SIDECAR_AGENT_KEY); no separate public-key secret is provisioned.
 load_secrets() {

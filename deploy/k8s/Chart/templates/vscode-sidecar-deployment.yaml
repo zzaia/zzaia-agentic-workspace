@@ -70,9 +70,6 @@ spec:
             - name: VSCODE_DOTNET_RUNTIME_DISABLE_MUTEX
               value: {{ $svc.env.dotnetRuntimeDisableMutex | quote }}
             {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
-            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $svc.name)) }}
-            {{- . | nindent 12 }}
-            {{- end }}
           resources:
             requests:
               {{- toYaml $svc.resources.requests | nindent 14 }}

@@ -224,61 +224,6 @@ Usage: name: {{ include "zzaia-workspace.clusterScopedName" (dict "root" . "name
 {{- end }}
 
 {{/*
-Cluster Vault address (VAULT_ADDR). Honours an explicit .Values.vault.addr.
-Usage: value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
-*/}}
-{{- define "zzaia-workspace.vaultAddr" -}}
-{{- if .Values.vault.addr -}}
-{{- .Values.vault.addr -}}
-{{- else -}}
-{{- printf "http://%s:%v" (include "zzaia-workspace.infraFqdn" (dict "root" . "service" .Values.vault.serviceName)) .Values.vault.port -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-OTLP HTTP endpoint in the shared infra namespace.
-Usage: value: {{ include "zzaia-workspace.otlpEndpoint" . | quote }}
-*/}}
-{{- define "zzaia-workspace.otlpEndpoint" -}}
-{{- if .Values.observability.otlpEndpoint -}}
-{{- .Values.observability.otlpEndpoint -}}
-{{- else -}}
-{{- printf "http://%s:%v" (include "zzaia-workspace.infraFqdn" (dict "root" . "service" .Values.observability.otlpService)) .Values.observability.otlpHttpPort -}}
-{{- end -}}
-{{- end }}
-
-{{/*
-OTLP gRPC endpoint in the shared infra namespace.
-*/}}
-{{- define "zzaia-workspace.otlpGrpcEndpoint" -}}
-{{- printf "http://%s:%v" (include "zzaia-workspace.infraFqdn" (dict "root" . "service" .Values.observability.otlpService)) .Values.observability.otlpGrpcPort -}}
-{{- end }}
-
-{{/*
-Standard OTEL env vars. Emits nothing when observability.enabled is false.
-MAY RENDER EMPTY -> call it wrapped:
-  {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" "ml-server")) }}{{ . | nindent 8 }}{{- end }}
-*/}}
-{{- define "zzaia-workspace.otelEnv" -}}
-{{- if .root.Values.observability.enabled -}}
-- name: OTEL_EXPORTER_OTLP_ENDPOINT
-  value: {{ include "zzaia-workspace.otlpEndpoint" .root | quote }}
-- name: OTEL_EXPORTER_OTLP_PROTOCOL
-  value: {{ .root.Values.observability.otlpProtocol | quote }}
-- name: OTEL_SERVICE_NAME
-  value: {{ .component | quote }}
-- name: OTEL_RESOURCE_ATTRIBUTES
-  value: {{ printf "service.name=%s,service.namespace=%s,deployment.environment=%s" .component .root.Values.observability.serviceNamespace .root.Release.Namespace | quote }}
-- name: OTEL_TRACES_EXPORTER
-  value: {{ .root.Values.observability.tracesExporter | quote }}
-- name: OTEL_METRICS_EXPORTER
-  value: {{ .root.Values.observability.metricsExporter | quote }}
-- name: OTEL_LOGS_EXPORTER
-  value: {{ .root.Values.observability.logsExporter | quote }}
-{{- end }}
-{{- end }}
-
-{{/*
 LLM proxy env shared by workspace-server, vscode, jupyter, containers-dev and
 tunnel sidecars — the ANTHROPIC, OPENAI and GEMINI env block from compose.
 Usage: {{- include "zzaia-workspace.llmProxyEnv" . | nindent 8 }}

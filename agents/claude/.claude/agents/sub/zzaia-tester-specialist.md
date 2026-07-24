@@ -6,7 +6,6 @@ mcpServers:
    - playwright
    - postman
    - aspire
-   - new-relic
    - headroom
    - bifrost
    - codegraph

@@ -1,0 +1,12 @@
+---
+- name: ZZAIA Agentic Workspace - Local Host Provisioning
+  hosts: local
+  gather_facts: true
+  roles:
+    - prereqs
+    - registry
+    - k3s
+    - gpu
+    - kubeconfig
+    - ring
+    - dns

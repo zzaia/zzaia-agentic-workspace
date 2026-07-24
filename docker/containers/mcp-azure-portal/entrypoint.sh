@@ -23,7 +23,7 @@ log_success() { echo -e "${_G}[mcp-azure-portal] ✓${_N} $*"; }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
     if [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${AZURE_TENANT_ID:-}" ]; then
         log_error "Azure credentials (AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/AZURE_TENANT_ID) not set — cannot start mcp-azure-portal. Check the workspace credentials secret projection."

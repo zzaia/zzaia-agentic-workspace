@@ -23,7 +23,7 @@ log_success() { echo -e "${_G}[mcp-azure-devops] ✓${_N} $*"; }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
     if [ -z "${ADO_MCP_AUTH_TOKEN:-}" ] || [ -z "${AZURE_DEVOPS_ORGANIZATION:-}" ]; then
         log_error "ADO_MCP_AUTH_TOKEN or AZURE_DEVOPS_ORGANIZATION not set — cannot start mcp-azure-devops. Check the workspace credentials secret projection."

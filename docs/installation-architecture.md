@@ -1,6 +1,6 @@
-# ZZAIA Agentic Workspace — Installation Architecture
+# ZZAIA Agentic Workspace — Deployment Architecture
 
-Ubuntu 24.04-based Docker container for multi-agent agentic development workspace. Tool provisioning uses Ansible roles running inside the workspace-server container at startup. Roles are organized by tool group and execute in three plays: system setup (root), user-space tools (become_user: user, INSTALL_PREFIX=/opt/tools), and credentials/GPU (root). All user-space tools install to a separate volume for easy management. Single-source version pinning via `group_vars/all.yml`.
+Self-provisioning single-node Kubernetes cluster with Ansible playbook. The cluster provisions Kong (ingress), External Secrets Operator (ESO), bitwarden-sdk-server, and Fleet standalone (no Rancher, Dapr, or cert-manager). Workloads deploy via GitOps (Fleet pull-mode). Secrets sync continuously from Bitwarden to Kubernetes via ESO. Single-source configuration via Ansible playbook roles and Helm values.
 
 ---
 
@@ -221,59 +221,39 @@ Deploy scripts accept `DEPLOY_PROFILES` as a CLI parameter:
 ## Project Structure
 
 ```
-docker/
-├── docker-compose.yml                 # vault-server + workspace-server + optional sidecars + headroom + MCP adapters
-├── docker-compose.gpu.yml             # GPU overlay (opt-in)
-├── Makefile                           # Docker build and compose helpers
-├── sshd_config                        # SSH daemon config
-└── containers/
-    ├── vault-server/
-    │   └── Dockerfile                 # HashiCorp Vault (file backend)
-    ├── workspace-server/
-    │   ├── Dockerfile                 # Ubuntu 24.04, system tools, Ansible
-    │   ├── entrypoint.sh              # workspace-server startup: setup-user → ansible-playbook → setup-credentials → sshd
-    │   ├── scripts/
-    │   │   ├── setup-user.sh          # Home seed, docker socket, sudo
-    │   │   └── setup-credentials.sh   # Claude, GitHub, Azure auth setup
-    │   └── ansible/
-    │       ├── site.yml               # Main playbook (3 plays: system, user-tools, credentials/gpu)
-    │       ├── ansible.cfg            # Ansible config
-    │       ├── inventory.ini           # Inventory (localhost)
-    │       ├── group_vars/
-    │       │   └── all.yml            # Version pins and variables for all roles
-    │       └── roles/
-    │           ├── system/            # System packages, config (root play)
-    │           ├── user-setup/        # User creation, home directory
-    │           ├── vscode-cli/        # VS Code CLI
-    │           ├── dotnet/            # .NET SDK + aspire + aspirate (always-on)
-    │           ├── python/            # Miniforge3 + pip + conda envs (always-on)
-    │           ├── cli/               # gh, k6, d2, dapr, RTK, docker CLI, azure-cli
-    │           ├── path-config/       # .bashrc, .profile PATH setup (conditional blocks per SDK)
-    │           ├── credentials/       # Claude, GitHub, Azure auth
-    │           ├── gpu/               # CUDA/GPU support (conditional)
-    │           ├── node/              # Node.js via NVM + npm globals (opt-in: --node)
-    │           ├── node-frontend/     # Angular CLI, Vite, TypeScript npm globals (opt-in: --node-frontend)
-    │           ├── java/              # Temurin JDK 21 via apt (opt-in: --java)
-    │           ├── rust/              # Rust via rustup (opt-in: --rust)
-    │           ├── lua/               # Lua 5.4 + luarocks via apt (opt-in: --lua)
-    │           ├── cpp/               # clang, cmake, build-essential via apt (opt-in: --cpp)
-    │           ├── clojure/           # Clojure CLI via official installer (opt-in: --clojure, requires java)
-    │           ├── go/                # Go binary from go.dev (opt-in: --go)
-    │           ├── kotlin/            # Kotlin via SDKMAN (opt-in: --kotlin, requires java)
-    │           ├── ruby/              # Ruby via rbenv (opt-in: --ruby)
-    │           ├── php/               # PHP 8.2 + Composer (opt-in: --php)
-    │           └── swift/             # Swift binary from swift.org (opt-in: --swift)
-    ├── ml-server/
-    ├── database-qdrant/
-    ├── database-neo4j/
-    ├── dind-server/
-    ├── mcp-{tavily,azure-devops,postman,newrelic,github,playwright,headroom}/
-    └── {vscode,jupyter,containers-dev,tunnel}-sidecar/
-
 deploy/
-├── ubuntu.sh                          # Ubuntu/WSL deployment script (bws, curl, docker compose)
-├── mac.sh                             # macOS deployment script (delegates to ubuntu.sh)
-└── windows.ps1                        # PowerShell deployment script (bws, docker compose)
+├── local.sh                           # Ansible-driven k3s provisioning (entrypoint for `bash deploy/local.sh up|down|reset`)
+├── ansible/
+│   ├── site.yml                       # Main playbook (roles: prereqs → registry → k3s → gpu → kubeconfig → ring → dns)
+│   └── roles/
+│       ├── prereqs/                   # Check for ansible-playbook, gather facts
+│       ├── registry/                  # Provision local OCI registry (127.0.0.1:5000)
+│       ├── k3s/                       # Install k3s, configure kubeconfig
+│       ├── gpu/                       # NVIDIA GPU support (conditional)
+│       ├── kubeconfig/                # Set up local kubectl access
+│       ├── ring/                      # Install Kong, ESO, bitwarden-sdk-server, Fleet
+│       └── dns/                       # Configure dnsmasq wildcard DNS (*.workspace.zzaia.com)
+└── k8s/
+    ├── README.md                      # Build, push images, deploy via Fleet
+    ├── BWS_SECRETS.md                 # Bitwarden Secrets Manager configuration
+    └── Chart/                         # Helm chart for ml-server, bifrost, mcp sidecars
+        ├── values.yaml                # Default values
+        ├── values-production.yaml      # Production values overlay
+        ├── templates/
+        │   ├── deployment-ml-server.yaml
+        │   ├── deployment-bifrost.yaml
+        │   ├── externalsecret-*.yaml   # ESO SecretStore and ExternalSecrets (Bitwarden sync)
+        │   ├── svc-*.yaml              # Kong routing rules
+        │   └── ...
+        └── Chart.yaml
+
+docker/
+├── DOCKER.md                          # Image build and registry reference
+└── images/
+    ├── ml-server/                     # Headroom proxy + LLM server
+    ├── bifrost-server/                # Code Mode gateway + credential pooling
+    ├── mcp-*/                         # MCP sidecar containers (tavily, azure-devops, postman, github, playwright)
+    └── ...
 ```
 
 ## Architecture Components

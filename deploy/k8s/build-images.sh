@@ -35,10 +35,11 @@ declare -a SELECTED=()
 # One row per surviving service:  <container-dir>|<values-key>|<repository>|<context>
 #   context = root  -> build context is the repo root (compose `context: ..`)
 #           = self  -> build context is the container dir  (compose dind case)
-# vault-server and nginx-proxy are DROPPED (cluster Vault + Kong Ingress replace
-# them) and are intentionally absent. Repository names are copied verbatim from
-# deploy/k8s/Chart/values.yaml — they are NOT mechanical from the directory name
-# (portainer-server -> zzaia-portainer, database-qdrant -> zzaia-qdrant, ...).
+# vault-server, nginx-proxy, signoz-server, mcp-signoz, and mcp-newrelic are DROPPED.
+# vault-server and nginx-proxy: cluster Vault + Kong Ingress replace them.
+# signoz-server, mcp-signoz, mcp-newrelic: observability removed (deployed via AppHost instead).
+# Repository names are copied verbatim from deploy/k8s/Chart/values.yaml — they are NOT
+# mechanical from the directory name (portainer-server -> zzaia-portainer, database-qdrant -> zzaia-qdrant, ...).
 IMAGES=(
   "dind-server|dind|zzaia/zzaia-dind-nvidia|self"
   "portainer-server|portainer|zzaia/zzaia-portainer|root"
@@ -55,7 +56,6 @@ IMAGES=(
   "mcp-tavily|mcpTavily|zzaia/zzaia-mcp-tavily|root"
   "mcp-azure-devops|mcpAzureDevops|zzaia/zzaia-mcp-azure-devops|root"
   "mcp-postman|mcpPostman|zzaia/zzaia-mcp-postman|root"
-  "mcp-newrelic|mcpNewrelic|zzaia/zzaia-mcp-newrelic|root"
   "mcp-github|mcpGithub|zzaia/zzaia-mcp-github|root"
   "mcp-aws-api|mcpAwsApi|zzaia/zzaia-mcp-aws-api|root"
   "mcp-azure-portal|mcpAzurePortal|zzaia/zzaia-mcp-azure-portal|root"
@@ -77,7 +77,7 @@ ZZAIA workspace — build & push Kubernetes images, then pin them in Helm values
 
 Usage: bash deploy/k8s/build-images.sh [OPTIONS] [IMAGE_KEY ...]
 
-With no IMAGE_KEY the full set is built (23 images). Pass one or more Helm
+With no IMAGE_KEY the full set is built (22 images). Pass one or more Helm
 values keys (e.g. mlServer mcpGithub) to build only those.
 
 Options:

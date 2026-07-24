@@ -20,7 +20,7 @@ The ZZAIA system routes all LLM requests through a Bifrost credential pooling la
 - **Enforces spend caps or budget alerts** — circuit-breaker reacts to 429 *after* the provider sees the request, not before budget is spent
 - **Handles 529 (overloaded) gracefully** — no separate backoff strategy for capacity pressure
 - **Guarantees cache_control injection** — Anthropic's prompt caching feature is opt-in per-agent and not centrally enforced
-- **Attributes costs to agents or sessions** — SigNoz observability (ADR 016) covers infrastructure metrics only, not $ per task
+- **Attributes costs to agents or sessions** — Infrastructure observability is out of scope for this cluster; LLM cost tracking requires a separate provider integration (Helicone, Langfuse, Portkey)
 
 This document proposes four high-priority interventions and three medium-priority refinements to close these gaps.
 
@@ -33,10 +33,10 @@ The following capabilities are already operational and require no remediation:
 - **RTK shell compression** (ADR 010): 81% average token reduction on command outputs via bash hooks
 - **Headroom triple-stack** (ADR 011): HTTP reverse proxy with context compression, session memory injection, and code-graph indexing; deployed with `--memory --code-graph`
 - **Bifrost credential pooling and rotation** (ADR 008, 013): Multi-key rotation, 401/429 circuit-breaker, per-provider credential scoping
-- **Vault secret isolation** (ADR 002, 004): Credential storage and injection via HashiCorp Vault
-- **SigNoz observability stack** (ADR 016): Infrastructure-level monitoring (container CPU, memory, network); does NOT include LLM cost attribution
-- **OpenMemory MCP** (ADR 012): Supplementary structured memory queries via agent-initiated MCP tools
+- **ESO + Bitwarden secret management** (replaces Vault): Credentials stored in Bitwarden Secrets Manager, synced to Kubernetes by External Secrets Operator
+- **Graphiti MCP** (replaces OpenMemory, ADR 012): Supplementary structured memory queries via agent-initiated MCP tools
 - **CodeGraphContext MCP** (ADR 003): Supplementary code graph queries for call-graph and symbol navigation
+- **Workspace observability**: handled by Aspire AppHost for local dev; in-cluster observability is out of scope for this simplified cluster
 
 No changes to these components are required by this recommendation. Cost and longevity interventions build on top.
 
@@ -137,7 +137,7 @@ Static rules are faster to deploy and tune by hand (watch agent logs for 1–2 w
 **What it does**:
 - Tracks cumulative tokens or $ spent per session, per day, per agent within Bifrost
 - Rejects new requests if adding them would exceed a configured budget
-- Emits alerts (log, SigNoz metric, webhook) when spend approaches 80%, 95%, 100% of budget
+- Emits alerts (log, webhook) when spend approaches 80%, 95%, 100% of budget
 - Supports hierarchical scoping: virtual-key → agent → session → provider
 
 **Implementation approach**:
@@ -180,8 +180,8 @@ bifrost-with-budget:
 **Integration**:
 - Replaces or wraps the existing Bifrost layer (both use HTTP + credential pooling)
 - All agents and router point `ANTHROPIC_BASE_URL=http://portkey-gateway:8000` instead of current Bifrost URL
-- Portkey exposes budget metrics to SigNoz via Prometheus endpoint (`/metrics`)
-- Alerts integrate with existing SigNoz dashboard (ADR 016)
+- Portkey exposes budget metrics via Prometheus endpoint (`/metrics`) for cost tracking dashboard
+- Alerts can be sent to webhooks, logs, or external observability platforms
 
 **Estimated impact**: Prevents catastrophic overruns; enables per-agent cost accountability. No direct savings, but budgets force optimization focus (e.g., "task-clarifier hit $10 budget — why?" → triggers investigation of unnecessary reruns or context inflation).
 
@@ -196,7 +196,7 @@ bifrost-with-budget:
 - Applies exponential backoff: wait 1s, then 2s, 4s, 8s, 16s (capped at 5 retries, ~30s total)
 - Adds jitter (±20% random) to prevent thundering herd
 - After final retry, fails over to next credential pool (if available) instead of returning error immediately
-- Logs 529 event with timestamp for SigNoz dashboard (separate from 429/401 metrics)
+- Logs 529 event with timestamp for observability (separate from 429/401 metrics)
 
 **Implementation approach**:
 
@@ -233,7 +233,7 @@ async def bifrost_retry_middleware(request, call_next):
 
 **Rationale**: 529 is not an account or rate-limit issue — it signals Anthropic's API is under capacity load. The default HTTP behavior (fail fast) is incorrect here. Exponential backoff with jitter is the standard pattern for capacity backpressure (TCP congestion control, Kubernetes pod eviction). Capping retries at 5 (~30s) prevents indefinite waits for runaway requests.
 
-**Infrastructure**: No new services; modifies existing Bifrost error handling code. Logs metrics to SigNoz for visibility into Anthropic API capacity events.
+**Infrastructure**: No new services; modifies existing Bifrost error handling code. Logs metrics for visibility into Anthropic API capacity events.
 
 **Estimated impact**: Increases availability during Anthropic API capacity events; prevents cascading agent failures. Unmeasured but likely prevents 1–2 critical incidents per quarter (based on Anthropic API incident history).
 
@@ -247,7 +247,7 @@ async def bifrost_retry_middleware(request, call_next):
 - Bifrost intercepts all Anthropic API calls and checks for `cache_control` in the request
 - If missing, injects a default `cache_control` for known high-cache-hit patterns (system prompts, code snippets, documentation)
 - Validates cache control syntax and compatibility (cache_control only valid on Claude 3.5 Sonnet / Opus, not Haiku)
-- Logs cache injection decisions to SigNoz for audit
+- Logs cache injection decisions for audit
 
 **Implementation approach**:
 
@@ -280,9 +280,9 @@ async def bifrost_cache_control_middleware(request: Request, call_next):
 1. **ToS compliance**: Anthropic's terms require OpenCode traffic to use a distinct key for billing/attribution separation
 2. **Cache-scoping integrity**: Prompt caching is scoped per API key; mixing OpenCode and Claude Code on a single pooled key corrupts the cache hit rate
 
-Recommendation: Create a separate `openmemory-opencode-key` in Vault (ADR 002, 004), point OpenCode agents to it directly (bypass Bifrost/router), and apply cache_control enforcement as a pre-agent hook in OpenCode's MCP configuration.
+Recommendation: Create a separate `opencode-key` in Bitwarden Secrets Manager, point OpenCode agents to it directly (bypass Bifrost/router), and apply cache_control enforcement as a pre-agent hook in OpenCode's MCP configuration.
 
-**Infrastructure**: Modifies Bifrost request/response interceptor. No new services. Cache metrics integrated into SigNoz.
+**Infrastructure**: Modifies Bifrost request/response interceptor. No new services. Cache metrics logged for observability.
 
 **Estimated impact**: 5–15% additional cost savings on re-executed tasks (assuming 30–50% of requests are cache-eligible and currently missing cache_control). Higher impact if task-clarifier or doc-specialist are frequently called with the same system prompts.
 

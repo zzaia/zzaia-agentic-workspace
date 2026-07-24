@@ -23,7 +23,7 @@ log_success() { echo -e "${_G}[mcp-aws-api] ✓${_N} $*"; }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
     if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ] || [ -z "${AWS_REGION:-}" ]; then
         log_error "AWS credentials (AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY/AWS_REGION) not set — cannot start mcp-aws-api. Check the workspace credentials secret projection."

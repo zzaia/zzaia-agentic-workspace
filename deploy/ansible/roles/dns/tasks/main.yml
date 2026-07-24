@@ -1,0 +1,82 @@
+---
+- name: Mask dnsmasq to prevent auto-start during install
+  become: true
+  ansible.builtin.systemd_service:
+    name: dnsmasq
+    masked: true
+  ignore_errors: true
+
+- name: Install dnsmasq
+  become: true
+  ansible.builtin.apt:
+    name: dnsmasq
+    state: present
+    update_cache: false
+
+- name: Create dnsmasq config directory
+  become: true
+  ansible.builtin.file:
+    path: /etc/dnsmasq.d
+    state: directory
+    mode: '0755'
+
+- name: Write dnsmasq wildcard configuration
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/dnsmasq.d/zzaia.conf
+    content: |
+      listen-address={{ dnsmasq_listen_address }}
+      port=53
+      bind-interfaces
+      no-resolv
+      no-poll
+      cache-size=1000
+      {% for domain in dns_wildcard_domains %}
+      address=/{{ domain }}/127.0.0.1
+      {% endfor %}
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart dnsmasq
+
+- name: Create systemd-resolved config directory
+  become: true
+  ansible.builtin.file:
+    path: /etc/systemd/resolved.conf.d
+    state: directory
+    mode: '0755'
+
+- name: Write systemd-resolved configuration for split-DNS routing
+  become: true
+  ansible.builtin.copy:
+    dest: /etc/systemd/resolved.conf.d/zzaia.conf
+    content: |
+      [Resolve]
+      DNS={{ dnsmasq_listen_address }}
+      {% for domain in dns_wildcard_domains %}
+      Domains=~{{ domain }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd-resolved
+
+- name: Remove legacy /etc/hosts zzaia entries
+  become: true
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.0\.1\s+.*\s+#\s+zzaia-local$'
+    state: absent
+
+- name: Unmask and enable dnsmasq
+  become: true
+  ansible.builtin.systemd_service:
+    name: dnsmasq
+    masked: false
+    enabled: true
+
+- name: Start dnsmasq
+  become: true
+  ansible.builtin.systemd_service:
+    name: dnsmasq
+    state: started

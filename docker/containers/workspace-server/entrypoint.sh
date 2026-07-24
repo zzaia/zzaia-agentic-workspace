@@ -11,7 +11,7 @@ source "$SCRIPT_DIR/common.sh"
 
 # ── Load admin password for Ansible ──────────────────────────────────────────
 # ADMIN_PASSWORD is projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom). Fall back to the legacy Docker
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom). Fall back to the legacy Docker
 # secret file for docker-compose back-compat. Exported only during bootstrap_workspace
 # (Ansible run), then unset before sshd exec, so agents connecting via SSH cannot see
 # it in /proc/1/environ (sshd won't have it).
@@ -177,7 +177,7 @@ main() {
     log_info "Workspace: $WORKSPACE_NAME"
 
     # Secrets (GIT_SIDECAR_AGENT_KEY, AZURE_DEVOPS_ORGANIZATION, ADMIN_PASSWORD, …) are
-    # projected into the pod environment by External Secrets Operator (Azure Key Vault →
+    # projected into the pod environment by External Secrets Operator (Bitwarden Secrets Manager →
     # Kubernetes Secret → envFrom); the consumers below read them directly from the env.
     load_admin_password
     bootstrap_workspace

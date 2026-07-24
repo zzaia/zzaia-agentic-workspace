@@ -1,0 +1,116 @@
+---
+- name: Add Helm repositories for the bootstrap ring
+  kubernetes.core.helm_repository:
+    name: "{{ item.name }}"
+    repo_url: "{{ item.url }}"
+    force_update: true
+  loop:
+    - { name: kong, url: "https://charts.konghq.com" }
+    - { name: external-secrets, url: "https://charts.external-secrets.io" }
+    - { name: rancher-fleet, url: "https://rancher.github.io/fleet-helm-charts/" }
+
+- name: Install External Secrets Operator
+  kubernetes.core.helm:
+    name: external-secrets
+    chart_ref: external-secrets/external-secrets
+    chart_version: "0.14.3"
+    release_namespace: external-secrets
+    create_namespace: true
+    wait: true
+    timeout: "300s"
+    kubeconfig: "{{ kubeconfig_path }}"
+    values:
+      crds:
+        enabled: true
+
+- name: Install bitwarden-sdk-server in external-secrets namespace
+  kubernetes.core.helm:
+    name: bitwarden-sdk-server
+    chart_ref: bitwarden-sdk-server
+    chart_version: "1.0.0"
+    release_namespace: external-secrets
+    create_namespace: true
+    wait: false
+    timeout: "300s"
+    kubeconfig: "{{ kubeconfig_path }}"
+    repo: "https://bitwarden.github.io/sdk-server-helm/"
+    values:
+      service:
+        type: ClusterIP
+        port: 5000
+  ignore_errors: true
+
+- name: Remove stale Rancher admission webhooks before the Kong install
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: "{{ item }}"
+    name: rancher.cattle.io
+    kubeconfig: "{{ kubeconfig_path }}"
+  loop:
+    - ValidatingWebhookConfiguration
+    - MutatingWebhookConfiguration
+  failed_when: false
+
+- name: Install Kong ingress controller
+  kubernetes.core.helm:
+    name: kong
+    chart_ref: kong/kong
+    chart_version: "3.4.1"
+    release_namespace: kong
+    create_namespace: true
+    wait: false
+    timeout: "600s"
+    kubeconfig: "{{ kubeconfig_path }}"
+    values:
+      ingressController:
+        enabled: true
+      admin:
+        enabled: true
+      proxy:
+        type: LoadBalancer
+        http:
+          enabled: false
+        tls:
+          nodePort: 30443
+          servicePort: 8443
+      env:
+        database: "off"
+      image:
+        tag: "3.7"
+
+- name: Wait for Kong to be ready (non-fatal)
+  ansible.builtin.command: >
+    kubectl -n kong wait --for=condition=ready pod
+    --selector=app.kubernetes.io/name=kong --timeout=600s
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  changed_when: false
+  failed_when: false
+
+- name: Install Fleet CRD helm release
+  kubernetes.core.helm:
+    name: fleet-crd
+    chart_ref: rancher-fleet/fleet-crd
+    chart_version: "0.9.1"
+    release_namespace: fleet-system
+    create_namespace: true
+    wait: true
+    timeout: "300s"
+    kubeconfig: "{{ kubeconfig_path }}"
+
+- name: Install Fleet helm release
+  kubernetes.core.helm:
+    name: fleet
+    chart_ref: rancher-fleet/fleet
+    chart_version: "0.9.1"
+    release_namespace: fleet-system
+    create_namespace: true
+    wait: true
+    timeout: "600s"
+    kubeconfig: "{{ kubeconfig_path }}"
+    values:
+      gitDriver: "default"
+      agentEnvVars:
+        - name: FLEET_AGENT_NAMESPACE
+          value: fleet-system

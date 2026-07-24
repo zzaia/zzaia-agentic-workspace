@@ -65,8 +65,6 @@ spec:
           {{- if $hasEnv }}
           env:
             {{- if $hasCreds }}
-            - name: VAULT_ADDR
-              value: {{ include "zzaia-workspace.vaultAddr" $ | quote }}
             {{- end }}
             {{- range $k, $v := $cfg.env }}
             - name: {{ $k }}

@@ -21,12 +21,11 @@ targetCustomizations:
           pullSecret: ""
         gpu:
           enabled: false
-        # Local dev still resolves secrets from Azure Key Vault — Bitwarden/BWS
-        # is gone. The ClusterSecretStore is owned by the infra chart.
+        # Local dev uses Bitwarden Secrets Manager for credentials.
         externalSecrets:
           enabled: true
-          provider: "azurekv"
-          createClusterSecretStore: false
+          provider: "bitwardensecretsmanager"
+          createClusterSecretStore: true
         tunnelSidecar:
           enabled: false
 
@@ -40,7 +39,5 @@ targetCustomizations:
         - values-production.yaml
       values:
         externalSecrets:
-          azurekv:
-            vaultUrl: ""
-            clientId: ""
-            tenantId: ""
+          bitwardensecretsmanager:
+            organizationId: ""

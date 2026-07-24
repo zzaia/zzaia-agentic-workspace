@@ -5,7 +5,6 @@ tools: *
 model: haiku
 mcpServers: 
   - azure-devops
-  - new-relic
   - headroom
   - bifrost
   - codegraph

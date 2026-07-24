@@ -35,28 +35,23 @@ SSH
   git-sidecar       kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Values.gitSidecar.name }} {{ .Values.gitSidecar.ports.ssh }}:{{ .Values.gitSidecar.ports.ssh }}
 {{- end }}
 
-SHARED CLUSTER SERVICES (namespace "{{ .Values.sharedInfraNamespace }}" — NOT deployed by this chart)
-  vault   {{ include "zzaia-workspace.vaultAddr" . }}
-  otlp    {{ include "zzaia-workspace.otlpEndpoint" . }}
-  signoz  http://{{ include "zzaia-workspace.infraFqdn" (dict "root" . "service" .Values.observability.signozService) }}:{{ .Values.observability.signozPort }}
-
 SECRETS
 {{- if .Values.externalSecrets.enabled }}
   Provider  {{ .Values.externalSecrets.provider }}
-{{- if eq .Values.externalSecrets.provider "azurekv" }}
-  Key Vault {{ .Values.externalSecrets.azurekv.vaultUrl | default "NOT SET — deployment will not resolve credentials" }}
-{{- end }}
-  Store     {{ .Values.externalSecrets.clusterSecretStoreName }} (ClusterSecretStore, owned by the infra chart)
+  Store     {{ .Values.externalSecrets.clusterSecretStoreName }} (ClusterSecretStore, created by this chart)
   Secrets   one per group ({{ join ", " .Values.externalSecrets.groupNames }}), named
             "{{ include "zzaia-workspace.secretName" . }}-<group>" — each consumer envFroms
             only the group(s) its entrypoint needs, never all of them.
+
+  Bitwarden Secrets Manager token (from deploy/local.sh):
+    kubectl -n {{ .Values.externalSecrets.bitwardensecretsmanager.accessTokenSecretNamespace }} get secret {{ .Values.externalSecrets.bitwardensecretsmanager.accessTokenSecretName }}
 
   Verify:
     kubectl -n {{ .Release.Namespace }} get externalsecret
     kubectl -n {{ .Release.Namespace }} get secret -l app.kubernetes.io/instance={{ .Release.Name }}
 {{- else }}
   External Secrets is DISABLED. Every credential-consuming workload will start
-  degraded. Set externalSecrets.enabled=true plus azurekv.vaultUrl/clientId/tenantId.
+  degraded. Set externalSecrets.enabled=true and configure Bitwarden Secrets Manager.
 {{- end }}
 
 FIRST BOOT

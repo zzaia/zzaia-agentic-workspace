@@ -1,7 +1,7 @@
 ---
 name: behavior:development:test:ui
-description: Execute a single BDD step via Playwright browser automation with New Relic and console diagnostics
-argument-hint: "--step <bdd-step> --environment <url> --application <new-relic-app> [--description <text>]"
+description: Execute a single BDD step via Playwright browser automation with browser console diagnostics
+argument-hint: "--step <bdd-step> --environment <url> [--description <text>]"
 user-invocable: true
 agent: zzaia-tester-specialist
 metadata:
@@ -12,9 +12,6 @@ metadata:
     - name: environment
       description: Live URL to execute the browser interaction against
       required: true
-    - name: application
-      description: New Relic application name for server-side diagnostics
-      required: true
     - name: description
       description: Additional context or instructions for the operation
       required: false
@@ -22,7 +19,7 @@ metadata:
 
 ## PURPOSE
 
-Execute a single BDD step as a browser interaction via Playwright, collect New Relic and browser console diagnostics, and return a concise step report.
+Execute a single BDD step as a browser interaction via Playwright, collect browser console diagnostics, and return a concise step report with execution time.
 
 ## EXAMPLES
 
@@ -41,14 +38,13 @@ Execute a single BDD step as a browser interaction via Playwright, collect New R
    - Call `/capability:playwright:navigate --url <environment> --description "<step>"`
    - Capture: interaction result, screenshot on failure, execution time
 
-3. **Collect Diagnostics**
+3. **Collect Browser Diagnostics**
 
-   - Call `/behavior:devops:new-relic --action debug --application-name <application>` for server-side logs
    - Call `/capability:playwright:debug --url <environment>` for browser console logs
 
 4. **Report Step Result**
 
-   - Return: step name, result (pass/fail), execution time, browser and server anomalies
+   - Return: step name, result (pass/fail), execution time, browser anomalies
 
 ## DELEGATION
 
@@ -64,27 +60,22 @@ sequenceDiagram
     participant C as behavior:development:test:ui
     participant PW as /capability:playwright
     participant TS as zzaia-tester-specialist
-    participant NR as /behavior:devops:new-relic
 
     C->>PW: /capability:playwright:navigate --url <environment> --description <step>
     PW-->>C: Interaction result (pass/fail, timing)
-    C->>NR: --action debug --application-name <application>
-    NR-->>C: Server-side logs and anomalies
     C->>PW: /capability:playwright:debug --url <environment>
     PW-->>C: Browser console logs
-    C-->>C: Step report (pass/fail, timing, anomalies)
+    C-->>C: Step report (pass/fail, timing, console logs)
 ```
 
 ## ACCEPTANCE CRITERIA
 
 - Browser step executed via Playwright
-- New Relic diagnostics collected regardless of pass/fail
 - Browser console logs captured regardless of pass/fail
-- Concise step report returned with result, timing, and anomalies
+- Concise step report returned with result and timing
 
 ## OUTPUT
 
 - Step name and result (pass/fail)
 - Execution time
 - Browser console errors and warnings
-- Server-side anomalies from New Relic

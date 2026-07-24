@@ -37,7 +37,7 @@ spec:
       # Binds the namespaced provisioner Role (provisioner-rbac.yaml) — this is
       # the pod the in-cluster agent runs from, so it is the one that needs
       # Tier-1 ephemeral create/update/delete on workload primitives in this
-      # namespace (see deploy/k8s/AZURE_KEYVAULT.md's two-tier contract).
+      # namespace (see deploy/k8s/BWS_SECRETS.md for secrets architecture).
       serviceAccountName: {{ include "zzaia-workspace.fullname" . }}-provisioner
       {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
       {{- if .Values.gpu.enabled }}
@@ -65,17 +65,12 @@ spec:
           env:
             {{- include "zzaia-workspace.featureEnv" . | nindent 12 }}
             {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
-            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $ss.name)) }}
-            {{- . | nindent 12 }}
-            {{- end }}
             - name: INSTALL_PREFIX
               value: {{ $ss.env.installPrefix | quote }}
             - name: SSH_PORT
               value: {{ $sshPort | quote }}
             - name: DOCKER_HOST
               value: {{ include "zzaia-workspace.dockerHost" . | quote }}
-            - name: VAULT_ADDR
-              value: {{ include "zzaia-workspace.vaultAddr" . | quote }}
             - name: ASPIRE_ALLOW_UNSECURED_TRANSPORT
               value: {{ $ss.env.aspireAllowUnsecuredTransport | quote }}
           resources:

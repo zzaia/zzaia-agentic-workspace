@@ -23,7 +23,7 @@ log_success() { echo -e "${_G}[mcp-github] ✓${_N} $*"; }
 
 # ── Validate secrets ──────────────────────────────────────────────────────────
 # Secrets are projected into the pod environment by External Secrets Operator
-# (Azure Key Vault → Kubernetes Secret → envFrom), so they are already present.
+# (Bitwarden Secrets Manager → ESO → Kubernetes Secret → envFrom), so they are already present.
 validate_secrets() {
     if [ -z "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
         log_error "GITHUB_PERSONAL_ACCESS_TOKEN not set — cannot start mcp-github. Check the workspace credentials secret projection."

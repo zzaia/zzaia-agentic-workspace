@@ -48,10 +48,6 @@
         "url": "http://mcp-postman:3003/mcp",
         "type": "http"
       },
-      "new-relic": {
-        "url": "http://mcp-newrelic:3004/mcp",
-        "type": "http"
-      },
       "github": {
         "url": "http://mcp-github:3005/mcp",
         "type": "http"

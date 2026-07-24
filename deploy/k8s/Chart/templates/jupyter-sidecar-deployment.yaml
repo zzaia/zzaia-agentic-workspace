@@ -60,9 +60,6 @@ spec:
             - name: INSTALL_PREFIX
               value: {{ $svc.env.installPrefix | quote }}
             {{- include "zzaia-workspace.llmProxyEnv" . | nindent 12 }}
-            {{- with (include "zzaia-workspace.otelEnv" (dict "root" . "component" $svc.name)) }}
-            {{- . | nindent 12 }}
-            {{- end }}
           resources:
             requests:
               {{- toYaml $svc.resources.requests | nindent 14 }}
