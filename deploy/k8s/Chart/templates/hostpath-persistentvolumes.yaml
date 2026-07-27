@@ -1,0 +1,49 @@
+{{- /*
+=============================================================================
+Static hostPath PersistentVolumes (optional per-volume binding)
+=============================================================================
+When a .Values.volumes.<key> entry sets a non-empty .hostPath, this template
+renders a static PersistentVolume bound to that node directory path.
+
+Each PV includes a claimRef that pre-binds it to the corresponding PVC
+(same pvcName + namespace), preventing any other claim from grabbing it.
+The hostPath type defaults to DirectoryOrCreate, which auto-creates the
+node directory at mount time (via kubelet, root:root 0755). Per-service
+fixPermissions initContainers chown the mount after binding.
+
+This template is skipped entirely if no volumes have hostPath set (default OFF,
+keeping dynamic local-path provisioning).
+
+NOTE: hostPath PVs are single-node only — the pod lands on whatever node has
+the persistent data at that path. This is appropriate for single-node k3s dev,
+local Vultr, and high-volume databases (qdrant, neo4j, dind) that must not be
+recreated on every redeploy.
+=============================================================================
+*/ -}}
+{{- $pvcExcluded := list "gitSidecarHostkeys" }}
+{{- range $key, $vol := $.Values.volumes }}
+{{- if and (kindIs "map" $vol) (hasKey $vol "accessMode") (not (has $key $pvcExcluded)) }}
+{{- if and $vol.enabled $vol.hostPath }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ printf "%s-%s-pv" $.Release.Name ($key | kebabcase) | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "zzaia-workspace.componentLabels" (dict "root" $ "component" (kebabcase $key)) | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ $vol.size }}
+  accessModes:
+    - {{ $vol.accessMode }}
+  persistentVolumeReclaimPolicy: {{ $.Values.storageReclaimPolicy | default "Retain" }}
+  storageClassName: ""
+  hostPath:
+    path: {{ $vol.hostPath | quote }}
+    type: {{ $vol.hostPathType | default "DirectoryOrCreate" }}
+  claimRef:
+    namespace: {{ $.Release.Namespace }}
+    name: {{ include "zzaia-workspace.pvcName" (dict "root" $ "volume" $key) }}
+{{- end }}
+{{- end }}
+{{- end }}

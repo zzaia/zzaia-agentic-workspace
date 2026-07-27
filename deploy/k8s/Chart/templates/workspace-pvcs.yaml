@@ -60,7 +60,12 @@ metadata:
 spec:
   accessModes:
     - {{ $vol.accessMode }}
+{{- if $vol.hostPath }}
+  storageClassName: ""
+  volumeName: {{ printf "%s-%s-pv" $.Release.Name ($key | kebabcase) | trunc 63 | trimSuffix "-" }}
+{{- else }}
   storageClassName: {{ include "zzaia-workspace.volumeStorageClass" (dict "root" $ "volume" $vol) | quote }}
+{{- end }}
   resources:
     requests:
       storage: {{ $vol.size }}

@@ -14,7 +14,12 @@ metadata:
 spec:
   accessModes:
     - {{ .Values.volumes.portainerData.accessMode }}
+{{- if .Values.volumes.portainerData.hostPath }}
+  storageClassName: ""
+  volumeName: {{ printf "%s-portainer-data-pv" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
   storageClassName: {{ include "zzaia-workspace.volumeStorageClass" (dict "root" . "volume" .Values.volumes.portainerData) | quote }}
+{{- end }}
   resources:
     requests:
       storage: {{ .Values.volumes.portainerData.size }}

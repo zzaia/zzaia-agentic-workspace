@@ -87,6 +87,14 @@ imagePullSecrets: []
 # "vultr-block-storage" = Vultr NVMe SSD (production, see values-production.yaml)
 storageClass: "local-path"
 storageReclaimPolicy: Retain
+#
+# Per-volume hostPath binding (optional, default-off dynamic provisioning):
+# Set .Values.volumes.<key>.hostPath to an absolute node directory path
+# (e.g., /mnt/databases/qdrant) to bind that PVC to a STATIC hostPath PersistentVolume
+# instead of dynamic provisioning. The PV is pre-created with claimRef to the PVC,
+# and data persists across redeploys (ReclaimPolicy: Retain). Node directory is
+# auto-created on pod mount via DirectoryOrCreate. Single-node only — hostPath is
+# local to one node. Leave hostPath empty ("") for dynamic local-path provisioning.
 
 # One entry per compose named volume that survives. accessMode ReadWriteMany is
 # REQUIRED where the volume is mounted by more than one workload — local-path
@@ -100,6 +108,10 @@ volumes:
     size: 100Gi
     accessMode: ReadWriteOnce
     storageClass: ""        # "" => inherit .Values.storageClass
+    hostPath: ""            # "" => dynamic provisioning via storageClass. Set an absolute
+                            # node path (e.g. /mnt/databases/qdrant) to bind a STATIC hostPath
+                            # PersistentVolume instead — survives across redeploys on that path.
+    hostPathType: DirectoryOrCreate
     mountPath: /home/user
   # compose: workspace-tools (/opt/tools). LOCKED: stays a PVC, populated at
   # runtime by the workspace-server Ansible bootstrap. Never baked into an image.
@@ -109,6 +121,8 @@ volumes:
     size: 50Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /opt/tools
     # Sentinel written by mark_bootstrap_ready() in workspace-server/entrypoint.sh.
     # Consumed by readiness probes of every /opt/tools consumer.
@@ -119,6 +133,8 @@ volumes:
     size: 128Mi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /var/lib/workspace/ssh-hostkeys
   # compose: ml-tools -> ml-server only.
   mlTools:
@@ -126,6 +142,8 @@ volumes:
     size: 40Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /opt/ml-tools
   # compose: database-qdrant -> database-qdrant only.
   databaseQdrant:
@@ -133,6 +151,8 @@ volumes:
     size: 20Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /qdrant/storage
   # compose: database-neo4j -> database-neo4j only.
   databaseNeo4j:
@@ -140,6 +160,8 @@ volumes:
     size: 20Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /data
   # compose: portainer-data -> portainer-server only. KEPT (portainer is kept).
   portainerData:
@@ -147,6 +169,8 @@ volumes:
     size: 5Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /data
   # compose: git-sidecar-hostkeys -> git-sidecar only.
   gitSidecarHostkeys:
@@ -154,6 +178,8 @@ volumes:
     size: 128Mi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /var/lib/workspace/ssh-hostkeys
   # compose: bind mount ${DIND_DATA_PATH}:/var/lib/docker -> dind-server only.
   # Promoted to a PVC; the /sys/fs/cgroup bind is a hostPath on the workload.
@@ -162,6 +188,8 @@ volumes:
     size: 100Gi
     accessMode: ReadWriteOnce
     storageClass: ""
+    hostPath: ""
+    hostPathType: DirectoryOrCreate
     mountPath: /var/lib/docker
   # compose: vault-data -> DROPPED. Cluster Vault owns its own storage.
   # compose: workspace-credentials -> NOT a PVC. It carried Vault AppRole env

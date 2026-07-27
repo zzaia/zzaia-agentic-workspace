@@ -103,6 +103,33 @@ See [`BWS_SECRETS.md`](./BWS_SECRETS.md) for:
 - ClusterSecretStore and ExternalSecret wiring
 - Rotation procedures
 
+## Storage
+
+### Dynamic provisioning (default)
+
+All volumes use dynamic provisioning via the storageClass (e.g., `local-path` for k3s dev,
+`vultr-block-storage` for production). Set `.Values.volumes.<key>` to enable or disable
+individual volumes; no hostPath binding is configured by default.
+
+### Static host volumes (optional)
+
+Optionally bind any volume to a **static node directory** to persist data across redeploys:
+
+```bash
+helm upgrade --install zzaia-workspace ./Chart \
+  --set volumes.databaseQdrant.hostPath=/mnt/databases/qdrant \
+  --set volumes.databaseNeo4j.hostPath=/mnt/databases/neo4j \
+  --set volumes.dindData.hostPath=/mnt/databases/dind
+```
+
+When `hostPath` is set on a volume:
+- A static PersistentVolume is created and pre-bound to the PVC.
+- The node directory is auto-created on pod mount (DirectoryOrCreate).
+- Data survives uninstall and redeploy (ReclaimPolicy: Retain).
+- Single-node only — use for local k3s or single-node production setups.
+
+Leave `hostPath` empty (default) for dynamic provisioning. See `Chart/README.md` for details.
+
 ## Chart deployment (manual Helm, without GitOps)
 
 If you prefer not to use Fleet:

@@ -110,6 +110,38 @@ local k3s's implicit single-node behavior.
 Ansible bootstrap. It is never baked into an image. Nothing that mounts it becomes
 Ready until `/opt/tools/.bootstrap/tools.ready` exists — up to 30 minutes cold.
 
+## Custom / persistent host volumes
+
+By default, all volumes use dynamic provisioning via the storageClass (e.g., `local-path`).
+Optionally bind a volume to a **static node directory** by setting its `.Values.volumes.<key>.hostPath`:
+
+```yaml
+--set volumes.databaseQdrant.hostPath=/mnt/databases/qdrant \
+--set volumes.databaseNeo4j.hostPath=/mnt/databases/neo4j \
+--set volumes.dindData.hostPath=/mnt/databases/dind
+```
+
+Or in a values file:
+
+```yaml
+volumes:
+  databaseQdrant:
+    hostPath: /mnt/databases/qdrant
+  databaseNeo4j:
+    hostPath: /mnt/databases/neo4j
+  dindData:
+    hostPath: /mnt/databases/dind
+```
+
+When `hostPath` is set:
+- A static PersistentVolume is created and pre-bound (claimRef) to the PVC.
+- The node directory is auto-created on first pod mount (DirectoryOrCreate).
+- Data **survives uninstall and redeploy** (ReclaimPolicy: Retain).
+- **Single-node only** — hostPath volumes are local to one node.
+
+Leave `hostPath` empty (default) to keep dynamic provisioning. Any `.Values.volumes.<key>`
+with `accessMode` can opt in by setting `hostPath` to an absolute node path.
+
 ## Resources
 
 `limits` are taken verbatim from each compose service's `deploy.resources.limits`.
