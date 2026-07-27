@@ -58,4 +58,10 @@ spec:
             {{- include "zzaia-workspace.probe" (dict "kind" "http" "port" $c.ports.http "path" $c.probes.httpPath "cfg" $c.probes.readiness) | nindent 12 }}
           startupProbe:
             {{- include "zzaia-workspace.probe" (dict "kind" "tcp" "port" $c.ports.http "cfg" $c.probes.startup) | nindent 12 }}
+          volumeMounts:
+            - name: app-data
+              mountPath: /app/data
+      volumes:
+        - name: app-data
+          emptyDir: {}
 {{- end }}

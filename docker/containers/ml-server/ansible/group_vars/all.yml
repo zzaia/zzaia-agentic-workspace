@@ -1,6 +1,6 @@
 ---
 python_version: "3.12"
-headroom_ai_version: "0.22.2"
+headroom_ai_version: "0.22.4"
 fastapi_version: "0.136.1"
 uvicorn_version: "0.47.0"
 torch_version: "2.5.1"

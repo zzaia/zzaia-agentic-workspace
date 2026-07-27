@@ -3,10 +3,20 @@
 # Usage:
 #   helm upgrade --install zzaia-workspace ./Chart \
 #     -n zzaia-agentic-workspace --create-namespace \
-#     -f values.yaml -f values-production.yaml
+#     -f values.yaml -f values-images.yaml -f values-production.yaml
 #
 # Only values that DIFFER from values.yaml appear here (DRY). Resource sizes,
 # ports, probes and the service topology are inherited.
+
+# --- TLS & Ingress -------------------------------------------------------
+# Enable cert-manager Certificate resource (production uses real ACME issuers)
+ingress:
+  tls:
+    certManager: true
+
+# PriorityClass is owned by the infra chart in production
+priorityClass:
+  create: false
 
 # --- Secrets: Bitwarden Secrets Manager -----
 # Configure organizationId at deploy time (--set or a sealed overlay).

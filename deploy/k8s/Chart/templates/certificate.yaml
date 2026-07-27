@@ -11,9 +11,13 @@ external secrets, which .Values.ingress.tls.clusterIssuer defaults to.
 values-production.yaml overrides it once a real ACME ClusterIssuer exists in
 the target cluster (deploy/local.sh's own Let's Encrypt automation is
 deferred to the Fleet migration and does not exist yet either).
+
+This Certificate is gated by ingress.tls.certManager. When false (validation
+mode), the pre-created zzaia-workspace-tls Secret is used directly without
+cert-manager. When true (production), cert-manager manages the certificate.
 =============================================================================
 */ -}}
-{{- if and .Values.ingress.enabled .Values.ingress.tls.enabled }}
+{{- if and .Values.ingress.enabled .Values.ingress.tls.enabled (default false .Values.ingress.tls.certManager) }}
 {{- $issuerName := .Values.ingress.tls.clusterIssuer | default "selfsigned" }}
 {{- $issuerKind := .Values.ingress.tls.issuerKind | default "ClusterIssuer" }}
 apiVersion: cert-manager.io/v1

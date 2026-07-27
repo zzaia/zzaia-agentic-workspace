@@ -58,6 +58,12 @@
         INSTALL_DIR: "{{ install_prefix }}/.aspire"
       when: not aspire_stat.stat.exists
       changed_when: false
+      ignore_errors: yes
+
+    - name: Re-check if Aspire is installed after install attempt
+      ansible.builtin.stat:
+        path: "{{ install_prefix }}/.aspire/bin/aspire"
+      register: aspire_stat_post
 
     - name: Create Aspire symlink
       ansible.builtin.file:
@@ -68,7 +74,7 @@
         state: link
         force: yes
         follow: no
-      when: aspire_stat.stat.exists or true
+      when: aspire_stat_post.stat.exists
 
 - name: Install aspirate tool
   ansible.builtin.shell: |

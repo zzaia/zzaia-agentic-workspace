@@ -234,17 +234,54 @@ data:
   # ... more keys
 ```
 
+## Validation Mode (No Bitwarden Token)
+
+Deploy the cluster end-to-end WITHOUT a Bitwarden token first using fallback dev secrets:
+
+```bash
+bash deploy/local.sh up --no-bws
+```
+
+This mode:
+- Skips the BWS token prompt
+- Disables `externalSecrets.enabled` (no ESO sync)
+- Renders fallback Secrets from `.Values.secrets.*` dev defaults (see `deploy/k8s/Chart/values.yaml`)
+- Deploys via Helm directly (not Fleet)
+- Allows full cluster validation: all pods start, endpoints respond, etc.
+
+The fallback Secret names match what ESO would create (`zzaia-workspace-secrets-<group>`), so all pod `envFrom` references work identically.
+
+Once validated, migrate to real secrets by providing a token:
+```bash
+export BWS_ACCESS_TOKEN=<token>
+bash deploy/local.sh up
+```
+
+This redeploys via Fleet with `externalSecrets.enabled=true`, ESO syncs real secrets from Bitwarden, and the fallback Secrets are removed.
+
 ## Provisioning Checklist
 
-1. **Before deploying:**
+1. **Validate without a token (optional, recommended first step):**
+   - [ ] Run `bash deploy/local.sh up --no-bws`
+   - [ ] Verify all pods are running:
+     ```bash
+     kubectl -n zzaia-agentic-workspace get pods
+     ```
+   - [ ] Check endpoints respond (e.g., ml-server):
+     ```bash
+     kubectl -n zzaia-agentic-workspace port-forward svc/ml-server 8787:8787
+     # Then access http://localhost:8787/health
+     ```
+
+2. **Before deploying with real secrets:**
    - [ ] Create BWS organization and machine account
-   - [ ] Note the machine account access token (use it with `--no-bws` to skip if not ready, or supply at deploy time)
+   - [ ] Note the machine account access token
    - [ ] Create all required secrets in BWS (see "Required BWS Secrets" table above)
    - [ ] Set `externalSecrets.bitwardensecretsmanager.organizationId` in `deploy/k8s/Chart/values-production.yaml`
 
-2. **At deploy time:**
-   - [ ] Run `bash deploy/local.sh`
-   - [ ] When prompted, enter the BWS access token (or `--no-bws` to skip)
+3. **Deploy with real secrets:**
+   - [ ] Run `bash deploy/local.sh up` (you'll be prompted for the token)
+   - [ ] Or: `export BWS_ACCESS_TOKEN=<token> && bash deploy/local.sh up`
    - [ ] Verify ESO reconciliation:
      ```bash
      kubectl -n zzaia-agentic-workspace get externalsecret

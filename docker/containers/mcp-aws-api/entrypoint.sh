@@ -45,4 +45,4 @@ main() {
     start_server
 }
 
-main "$@"
+main

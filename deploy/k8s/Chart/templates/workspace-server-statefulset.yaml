@@ -39,6 +39,7 @@ spec:
       # Tier-1 ephemeral create/update/delete on workload primitives in this
       # namespace (see deploy/k8s/BWS_SECRETS.md for secrets architecture).
       serviceAccountName: {{ include "zzaia-workspace.fullname" . }}-provisioner
+      automountServiceAccountToken: false
       {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
       {{- if .Values.gpu.enabled }}
       runtimeClassName: {{ .Values.gpu.runtimeClassName }}

@@ -40,13 +40,15 @@ spec:
               value: {{ .Values.neo4j.env.acceptLicenseAgreement | quote }}
             # Password sourced from the ESO-materialised credentials Secret and
             # interpolated into NEO4J_AUTH via the k8s $(VAR) reference form.
-            - name: NEO4J_PASSWORD
+            # NOTE: Intermediate env var name MUST NOT start with NEO4J_ to avoid
+            # neo4j treating it as a config setting (which fails strict validation).
+            - name: GRAPHDB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "zzaia-workspace.groupSecretName" (dict "root" . "group" "admin") }}
                   key: {{ .Values.neo4j.auth.passwordSecretKey }}
             - name: NEO4J_AUTH
-              value: {{ printf "%s/$(NEO4J_PASSWORD)" .Values.neo4j.env.username | quote }}
+              value: {{ printf "%s/$(GRAPHDB_PASSWORD)" .Values.neo4j.env.username | quote }}
             - name: NEO4J_server_memory_heap_initial__size
               value: {{ .Values.neo4j.env.heapInitialSize | quote }}
             - name: NEO4J_server_memory_heap_max__size

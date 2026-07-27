@@ -27,6 +27,7 @@ spec:
       labels:
         {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" $svc.name) | nindent 8 }}
     spec:
+      automountServiceAccountToken: false
       {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
       {{- if .Values.gpu.enabled }}
       runtimeClassName: {{ .Values.gpu.runtimeClassName }}

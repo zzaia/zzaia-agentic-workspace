@@ -43,6 +43,7 @@ spec:
       {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
       {{- . | nindent 6 }}
       {{- end }}
+      automountServiceAccountToken: false
       securityContext:
         {{- include "zzaia-workspace.podSecurityContext" (dict "ctx" .Values.portainer.securityContext) | nindent 8 }}
       containers:

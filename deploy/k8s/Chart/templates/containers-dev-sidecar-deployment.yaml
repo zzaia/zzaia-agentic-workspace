@@ -41,6 +41,7 @@ spec:
         {{- include "zzaia-workspace.componentSelectorLabels" (dict "root" . "component" .Values.containersDevSidecar.name) | nindent 8 }}
         zzaia.com/dind-client: "true"
     spec:
+      automountServiceAccountToken: false
       {{- include "zzaia-workspace.scheduling" . | nindent 6 }}
       {{- with (include "zzaia-workspace.imagePullSecrets" .) }}
       {{- . | nindent 6 }}

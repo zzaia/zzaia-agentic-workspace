@@ -69,7 +69,13 @@ agentClis:
   copilot: false
 
 # --- Scheduling --------------------------------------------------------------
-# PriorityClass "zzaia-critical" is owned by the infra chart — referenced only.
+# PriorityClass "zzaia-critical" configuration
+priorityClass:
+  create: false              # true in validation mode, false in production (owned by infra)
+  name: "zzaia-critical"
+  value: 2000
+  globalDefault: false
+  description: "Critical workloads — blocks eviction during node pressure"
 priorityClassName: "zzaia-critical"
 nodeSelector: {}
 tolerations: []
@@ -92,7 +98,7 @@ volumes:
   workspaceHome:
     enabled: true
     size: 100Gi
-    accessMode: ReadWriteMany
+    accessMode: ReadWriteOnce
     storageClass: ""        # "" => inherit .Values.storageClass
     mountPath: /home/user
   # compose: workspace-tools (/opt/tools). LOCKED: stays a PVC, populated at
@@ -101,7 +107,7 @@ volumes:
   workspaceTools:
     enabled: true
     size: 50Gi
-    accessMode: ReadWriteMany
+    accessMode: ReadWriteOnce
     storageClass: ""
     mountPath: /opt/tools
     # Sentinel written by mark_bootstrap_ready() in workspace-server/entrypoint.sh.
@@ -148,7 +154,7 @@ volumes:
     size: 128Mi
     accessMode: ReadWriteOnce
     storageClass: ""
-    mountPath: /etc/ssh
+    mountPath: /var/lib/workspace/ssh-hostkeys
   # compose: bind mount ${DIND_DATA_PATH}:/var/lib/docker -> dind-server only.
   # Promoted to a PVC; the /sys/fs/cgroup bind is a hostPath on the workload.
   dindData:
@@ -312,12 +318,17 @@ externalSecrets:
     accessTokenSecretNamespace: "external-secrets"
     # Bitwarden organization ID — owner must set this
     organizationId: ""
-    # BWS SDK server endpoint (deployed in external-secrets namespace by ansible/ring)
-    bitwardenServerSDKURL: "http://bitwarden-sdk-server.external-secrets.svc.cluster.local:5000"
+    # BWS SDK server endpoint (deployed via external-secrets subchart by ansible/ring).
+    # Service name: external-secrets-bitwarden-sdk-server (release name + chart name).
+    # HTTPS is REQUIRED for secure communication with the SDK server.
+    # The serving certificate is self-signed and stored in bitwarden-sdk-server-tls Secret.
+    bitwardenServerSDKURL: "https://external-secrets-bitwarden-sdk-server.external-secrets.svc.cluster.local:5000"
     # Optional: override Bitwarden API/Identity URLs (leave empty for defaults)
     apiURL: ""
     identityURL: ""
-    # Optional: CA bundle for TLS verification
+    # Optional: CA bundle for TLS verification (base64-encoded PEM).
+    # Populated by deploy/local.sh when deploy_bitwarden_sdk=true.
+    # For self-signed certs, this is the certificate itself (not a separate CA).
     caBundle: ""
   # Base name; actual per-group Secret is "<targetSecretName>-<group>"
   targetSecretName: "zzaia-workspace-secrets"
@@ -405,6 +416,52 @@ externalSecrets:
       remoteKey: "admin"
       secretName: "admin-password"
 
+# --- Fallback Secrets (externalSecrets.enabled=false) -------------------------
+# DEV/VALIDATION ONLY — never put real credentials here. When externalSecrets.enabled=false,
+# these dev defaults are rendered into Secrets so the cluster validates end-to-end WITHOUT
+# a Bitwarden token. When externalSecrets.enabled=true, ESO materialises real secrets and
+# these values are ignored. Keys MUST match the secretKey entries in
+# .Values.externalSecrets.data exactly (env var names, UPPER_SNAKE_CASE).
+secrets:
+  # AI providers
+  ANTHROPIC_API_KEY: "sk-ant-dev-localdev"
+  CLAUDE_CODE_OAUTH_TOKEN: "dev-localdev"
+  OPENAI_API_KEY: "sk-dev-localdev"
+  GEMINI_API_KEY: "AIzaDev-localdev"
+  TAVILY_API_KEY: "tvly-dev-localdev"
+  BIFROST_VIRTUAL_KEY_CLAUDE_PRO: "sk-bf-claude-pro-001"
+  BIFROST_VIRTUAL_KEY_AGENTS_GENERIC: "sk-bf-agents-generic-001"
+  # GitHub MCP
+  GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_dev-localdev"
+  # Azure DevOps MCP
+  ADO_MCP_AUTH_TOKEN: "dev-localdev"
+  AZURE_DEVOPS_ORGANIZATION: "dev-org"
+  # Azure Portal MCP
+  AZURE_CLIENT_ID: "dev-client-id"
+  AZURE_CLIENT_SECRET: "dev-client-secret"
+  AZURE_TENANT_ID: "dev-tenant-id"
+  AZURE_SUBSCRIPTION_ID: "dev-subscription-id"
+  # Postman MCP
+  POSTMAN_API_KEY: "pmak_dev-localdev"
+  # AWS MCP
+  AWS_ACCESS_KEY_ID: "AKIADEV-localdev"
+  AWS_SECRET_ACCESS_KEY: "dev-localdev"
+  AWS_REGION: "us-east-1"
+  # Workspace
+  # Dev SSH key (ed25519 OpenSSH format, valid for ssh-keygen -y -f parsing in git-sidecar)
+  GIT_SIDECAR_AGENT_KEY: |-
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    QyNTUxOQAAACAFoWJi4b/wJiy9Bl+nRp6nY7BVuWKP7lgrMY/r3fJW/AAAAJB5g/9QeYP/
+    UAAAAAtzc2gtZWQyNTUxOQAAACAFoWJi4b/wJiy9Bl+nRp6nY7BVuWKP7lgrMY/r3fJW/A
+    AAAED5PWwTE5pHwlk3SGVbvl3ABwQv6xQeclN7BvlkYCejPgWhYmLhv/AmLL0GX6dGnqdj
+    sFW5Yo/uWCsxj+vd8lb8AAAADWRldkB3b3Jrc3BhY2U=
+    -----END OPENSSH PRIVATE KEY-----
+  SSH_PUBLIC_KEY: "ssh-rsa AAAA... dev@workspace"
+  # Admin
+  ADMIN_EMAIL: "admin@workspace.local"
+  ADMIN_PASSWORD: "dev-password"
+
 # --- LLM proxy wiring --------------------------------------------------------
 # In compose every IDE/agent container pointed at ml-server:8787 and bifrost:8080
 # with literal Bifrost virtual keys. Those literals stay non-secret routing
@@ -469,7 +526,7 @@ portainer:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "portainer"
   securityContext:
     runAsUser: 0             # image has no USER; portainer binary needs /data ownership
@@ -535,7 +592,7 @@ bifrost:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "bifrost"
   securityContext:
     runAsUser: 0             # Dockerfile: USER root
@@ -601,7 +658,7 @@ qdrant:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "qdrant"
   securityContext:
     # Dockerfile creates a system user via `useradd -r` (no explicit uid).
@@ -636,7 +693,7 @@ neo4j:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "neo4j"
   env:
     acceptLicenseAgreement: "yes"
@@ -684,7 +741,7 @@ gitSidecar:
     fsGroup: 1000            # Dockerfile: adduser -u 1000 git
     allowPrivilegeEscalation: true
     capabilitiesDrop: ["ALL"]
-    capabilitiesAdd: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
+    capabilitiesAdd: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
   resources:
     requests: { cpu: 25m, memory: 64Mi }
     limits:   { cpu: 100m, memory: 512Mi }  # compose limits: 0.1 / 512m
@@ -705,10 +762,10 @@ vscodeSidecar:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "vscode"
   aspireIngress:
-    enabled: false
+    enabled: true
     subdomain: "aspire"
   env:
     aspireAllowUnsecuredTransport: true
@@ -741,7 +798,7 @@ jupyterSidecar:
   service:
     type: ClusterIP
   ingress:
-    enabled: false
+    enabled: true
     subdomain: "jupyter"
   env:
     installPrefix: /opt/tools
@@ -849,6 +906,7 @@ mcpDefaults:
     limits:   { cpu: 100m, memory: 128Mi }
   shmSizeMi: 0               # >0 => emptyDir{medium: Memory} at /dev/shm
   env: {}
+  secretEnv: {}
 
 # Keys are short names; `name` is the k8s Deployment/Service name and must match
 # the compose service name so in-cluster URLs stay identical.
@@ -943,6 +1001,7 @@ mcpServers:
     portName: "http"
     secretGroup: "mcp-aws"     # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
     env:
+      AUTH_TYPE: "no-auth"
       AWS_API_MCP_TRANSPORT: "streamable-http"
       AWS_API_MCP_PORT: "3010"
       AWS_API_MCP_HOST: "0.0.0.0"
@@ -950,8 +1009,8 @@ mcpServers:
       requests: { cpu: 100m, memory: 128Mi }
       limits:   { cpu: 300m, memory: 512Mi } # compose limits: 0.3 / 512M
     probe:
-      type: http                             # compose: wget http://127.0.0.1:3010/health
-      path: /health
+      type: tcp                              # AWS API MCP server has no /health endpoint; probe TCP port 3010 instead
+      path: ""
       liveness:  { initialDelaySeconds: 60, periodSeconds: 30, timeoutSeconds: 5, failureThreshold: 3 }
       readiness: { initialDelaySeconds: 20, periodSeconds: 15, timeoutSeconds: 5, failureThreshold: 3 }
       startup:   { periodSeconds: 5, failureThreshold: 24 }
@@ -1010,10 +1069,18 @@ mcpServers:
     # mcpDefaults true/blanket default; now scoped explicitly.
     secretGroup: "ai"
     env:
+      NEO4J_URI: "bolt://database-neo4j:7687"
       NEO4J_USER: "neo4j"
       NEO4J_DATABASE: "neo4j"
       GRAPHITI_GROUP_ID: "main"
       SEMAPHORE_LIMIT: "10"
+    # NEO4J_PASSWORD sourced from the same admin secret that neo4j uses.
+    # Authenticates graphiti with neo4j using the shared ADMIN_PASSWORD.
+    secretEnv:
+      NEO4J_PASSWORD:
+        secretKeyRef:
+          name: admin                         # Resolved to zzaia-workspace-secrets-admin via groupSecretName helper
+          key: "ADMIN_PASSWORD"
     securityContext:
       # Dockerfile: `useradd -r graphiti` (no explicit uid) on
       # zepai/knowledge-graph-mcp:standalone. VERIFY before first deploy.
@@ -1048,6 +1115,10 @@ ingress:
   tls:
     enabled: true
     secretName: ""           # "" => inherit .Values.tlsSecretName
+    # Use cert-manager to manage the certificate (true = production, false = validation)
+    # When false, uses pre-created zzaia-workspace-tls Secret directly without cert-manager.
+    # When true, cert-manager Certificate CRD is created to manage renewal.
+    certManager: false
     # Infra chart now provisions a "selfsigned" ClusterIssuer (see its
     # clusterissuer-selfsigned.yaml) — this default is a REAL, working
     # issuer, not a placeholder. Override to a real ACME ClusterIssuer name

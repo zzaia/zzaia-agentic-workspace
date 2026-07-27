@@ -70,6 +70,13 @@ spec:
             - name: {{ $k }}
               value: {{ $v | quote }}
             {{- end }}
+            {{- range $k, $v := $cfg.secretEnv }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "zzaia-workspace.groupSecretName" (dict "root" $ "group" $v.secretKeyRef.name) }}
+                  key: {{ $v.secretKeyRef.key }}
+            {{- end }}
           {{- end }}
           securityContext:
             {{- include "zzaia-workspace.containerSecurityContext" (dict "ctx" $cfg.securityContext) | nindent 12 }}

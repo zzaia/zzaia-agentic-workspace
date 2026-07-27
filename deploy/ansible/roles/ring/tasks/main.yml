@@ -9,7 +9,76 @@
     - { name: external-secrets, url: "https://charts.external-secrets.io" }
     - { name: rancher-fleet, url: "https://rancher.github.io/fleet-helm-charts/" }
 
-- name: Install External Secrets Operator
+- name: Generate self-signed certificate for bitwarden-sdk-server
+  block:
+    - name: Create temp directory for cert generation
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: _bws_certs
+      register: cert_tmpdir
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Generate private key for bitwarden-sdk-server
+      community.crypto.openssl_privatekey:
+        path: "{{ cert_tmpdir.path }}/bws-server.key"
+        type: RSA
+        size: 2048
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Generate CSR for bitwarden-sdk-server
+      community.crypto.openssl_csr:
+        path: "{{ cert_tmpdir.path }}/bws-server.csr"
+        privatekey_path: "{{ cert_tmpdir.path }}/bws-server.key"
+        common_name: "external-secrets-bitwarden-sdk-server.external-secrets.svc.cluster.local"
+        subject_alt_name:
+          - "DNS:external-secrets-bitwarden-sdk-server.external-secrets.svc.cluster.local"
+          - "DNS:external-secrets-bitwarden-sdk-server.external-secrets.svc"
+          - "DNS:external-secrets-bitwarden-sdk-server"
+          - "DNS:bitwarden-sdk-server.external-secrets.svc.cluster.local"
+          - "DNS:localhost"
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Generate self-signed certificate for bitwarden-sdk-server
+      community.crypto.x509_certificate:
+        path: "{{ cert_tmpdir.path }}/bws-server.crt"
+        csr_path: "{{ cert_tmpdir.path }}/bws-server.csr"
+        privatekey_path: "{{ cert_tmpdir.path }}/bws-server.key"
+        provider: selfsigned
+        selfsigned_not_after: "+365d"
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Read certificate and key for Secret
+      ansible.builtin.slurp:
+        src: "{{ item }}"
+      register: cert_key_content
+      loop:
+        - "{{ cert_tmpdir.path }}/bws-server.crt"
+        - "{{ cert_tmpdir.path }}/bws-server.key"
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Create Kubernetes Secret for bitwarden-sdk-server TLS
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: bitwarden-sdk-server-tls
+            namespace: external-secrets
+          type: kubernetes.io/tls
+          data:
+            tls.crt: "{{ cert_key_content.results[0].content }}"
+            tls.key: "{{ cert_key_content.results[1].content }}"
+        kubeconfig: "{{ kubeconfig_path }}"
+      when: deploy_bitwarden_sdk | default(true)
+
+    - name: Clean up temporary certificate files
+      ansible.builtin.file:
+        path: "{{ cert_tmpdir.path }}"
+        state: absent
+      when: deploy_bitwarden_sdk | default(true)
+
+- name: Install External Secrets Operator with bitwarden-sdk-server subchart
   kubernetes.core.helm:
     name: external-secrets
     chart_ref: external-secrets/external-secrets
@@ -22,23 +91,14 @@
     values:
       crds:
         enabled: true
-
-- name: Install bitwarden-sdk-server in external-secrets namespace
-  kubernetes.core.helm:
-    name: bitwarden-sdk-server
-    chart_ref: bitwarden-sdk-server
-    chart_version: "1.0.0"
-    release_namespace: external-secrets
-    create_namespace: true
-    wait: false
-    timeout: "300s"
-    kubeconfig: "{{ kubeconfig_path }}"
-    repo: "https://bitwarden.github.io/sdk-server-helm/"
-    values:
-      service:
-        type: ClusterIP
-        port: 5000
-  ignore_errors: true
+      bitwarden-sdk-server:
+        enabled: "{{ deploy_bitwarden_sdk | default(true) }}"
+        service:
+          type: ClusterIP
+          port: 5000
+        tls:
+          enabled: "{{ deploy_bitwarden_sdk | default(true) }}"
+          secretName: bitwarden-sdk-server-tls
 
 - name: Remove stale Rancher admission webhooks before the Kong install
   kubernetes.core.k8s:
